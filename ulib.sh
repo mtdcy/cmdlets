@@ -4,17 +4,19 @@ export LANG=C
 
 set -eo pipefail
 
-# check on file changes on ulib.sh
-UPKG_STRICT=${UPKG_STRICT:-1}
+# options
+UPKG_STRICT=${UPKG_STRICT:-1}               # check on file changes on ulib.sh
+ULOG_MODE=${ULOG_MODE:-tty}                 # tty,plain,silent
+UPKG_CHECKS=${UPKG_CHECKS:=1}               # enable check/tests
+ULOG_FILE=${ULOG_FILE:-upkg_static.log}     # default: current work dir
 
-# tty,plain,silent
-ULOG_MODE=${ULOG_MODE:-tty}
-
-# enable check/tests
-UPKG_CHECKS=${UPKG_CHECKS:=1}
-
-#
-ULOG_FILE=${ULOG_FILE:-upkg_static.log}
+# conditionals
+is_darwin() { [[ "$OSTYPE" == "darwin"* ]]; }
+is_msys()   { [ "$OSTYPE" = "msys" ]; }
+is_linux()  { [[ "$OSTYPE" == "linux"* ]]; }
+is_glibc()  { ldd --version 2>&1 | grep -qFi "glibc"; }
+# 'ldd --version' in alpine always return 1
+is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl"; }
 
 # ulog [error|info|warn] "message"
 ulog() {
@@ -85,27 +87,6 @@ ulog_command() {
 ulog_command_silent() {
     ulog info "..Run" "$@"
     eval "$*" 2>&1 | ULOG_MODE=silent ulog_capture
-}
-
-is_darwin() {
-    [[ "$OSTYPE" == "darwin"* ]]
-}
-
-is_msys() {
-    [ "$OSTYPE" = "msys" ]
-}
-
-is_linux() {
-    [[ "$OSTYPE" == "linux"* ]]
-}
-
-is_glibc() {
-    { ldd --version 2>&1; } | grep -Fi "glibc" > /dev/null
-}
-
-is_musl() {
-    # 'ldd --version' in alpine always return 1
-    { ldd --version 2>&1 || true; } | grep -Fi "musl" > /dev/null
 }
 
 _prefix() {
