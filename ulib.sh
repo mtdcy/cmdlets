@@ -23,27 +23,30 @@ ulog() {
     local date="$(date '+%m-%d %H:%M:%S')"
     if [ "$ULOG_MODE" = "tty" ]; then
         local lvl=""
-        [ $# -gt 1 ] && lvl=$(echo "$1" | tr 'A-Z' 'a-z') && shift 1
+        [ $# -gt 1 ] && lvl=$(echo "$1" | tr 'A-Z' 'a-z')
         local message=""
 
         # https://github.com/yonchu/shell-color-pallet/blob/master/color16
         case "$lvl" in
             "error")
+                shift 1
                 message="[$date] \\033[31m$1\\033[39m ${*:2}"
                 ;;
             "info")
+                shift 1
                 message="[$date] \\033[32m$1\\033[39m ${*:2}"
                 ;;
             "warn")
+                shift 1
                 message="[$date] \\033[33m$1\\033[39m ${*:2}"
                 ;;
             *)
-                message="[$date] $*"
+                message="[$date] \\033[32m$1\\033[39m ${*:2}"
                 ;;
         esac
         echo -e "$message" > "$(tty)"
     else
-        echo -e "[$date] $*"
+        echo -e "[$date] \\033[32m$1\\033[39m ${*:2}"
     fi
 }
 

@@ -9,7 +9,7 @@ define TEMPLATE
 # shellcheck disable=SC2034
 
 #1. build with docker
-export DOCKER_IMAGE=
+export DOCKER_IMAGE=cmdlets
 
 #2. build with remote host
 export REMOTE_HOST=
@@ -31,15 +31,14 @@ export DISTCC_OPTS=
 export HOST=
 export DEST=
 endef
-export TEMPLATE
 
+export TEMPLATE
 cmdlets.env:
 	@echo "$$TEMPLATE" > $@
 	@echo "== Please edit $@ first, then"
 	@echo "    source $@"
-	@echo "    make prepare-host-homebrew"
-	@echo "OR  make prepare-host-debian"
-	@echo "OR  make prepare-docker-image"
+	@echo "    make prepare-host"
+	@echo "OR  make prepare-docker"
 	@echo "OR  make prepare-remote-homebrew"
 	@echo "OR  make prepare-remote-debian"
 	@echo ""
@@ -47,12 +46,12 @@ cmdlets.env:
 
 ##############################################################################
 # commands run in remote host or docker
-CMD ?=
+CMD :=
 
-# pass throught envs to build.sh on remote or docker
-ENVs = UPKG_NJOBS=$(UPKG_NJOBS)   \
-	   ULOG_MODE=$(ULOG_MODE)     \
-	   UPKG_STRICT=$(UPKG_STRICT)
+# ulib.sh options
+opts := UPKG_NJOBS ULOG_MODE UPKG_STRICT
+
+OPTS := $(foreach v,$(opts),$(if $($(v)),$(v)=$($(v))))
 
 # contants: use '-acz' for remote without time sync.
 REMOTE_SYNC = rsync -e 'ssh' -a --exclude='.*'
@@ -60,29 +59,8 @@ REMOTE_SYNC = rsync -e 'ssh' -a --exclude='.*'
 # no distcc settings pass through to remote
 REMOTE_EXEC = ssh $(REMOTE_HOST) -tq TERM=xterm
 
-ifneq ($(DOCKER_IMAGE),)
-ifeq ($(ULOG_MODE),tty)
-DOCKER_EXEC = docker run --rm -it                   \
-			  -u $(USER):$(GROUP)                   \
-			  -v $(WORKDIR):$(WORKDIR)              \
-			  -v $(PACKAGES):$(WORKDIR)/packages    \
-			  -e DISTCC_VERBOSE="$(DISTCC_VERBOSE)" \
-			  -e DISTCC_HOSTS="$(DISTCC_HOSTS)"     \
-			  -e DISTCC_OPTS="$(DISTCC_OPTS)"       \
-			  --name $(DOCKER_IMAGE)                \
-			  $(DOCKER_IMAGE) bash -li -c
-else
-DOCKER_EXEC = docker run --rm                       \
-			  -u $(USER):$(GROUP)                   \
-			  -v $(WORKDIR):$(WORKDIR)              \
-			  -v $(PACKAGES):$(WORKDIR)/packages    \
-			  -e DISTCC_VERBOSE="$(DISTCC_VERBOSE)" \
-			  -e DISTCC_HOSTS="$(DISTCC_HOSTS)"     \
-			  -e DISTCC_OPTS="$(DISTCC_OPTS)"       \
-			  --name $(DOCKER_IMAGE)                \
-			  $(DOCKER_IMAGE) bash -l -c
-endif
-endif
+# host environment variables => docker/remote
+ENVS := DISTCC_VERBOSE DISTCC_HOSTS DISTCC_OPTS
 
 # wired: '$(shell test -t 1)' report wrong state
 test-tty:
@@ -102,51 +80,39 @@ WORKDIR = $(shell pwd)
 
 vpath %.u libs
 
-# Example:
-#  	#1. REMOTE_HOST=10.10.10.234 make zlib
-# 	#2. DOCKER_IMAGE=cmdlets make zlib
 %: %.u
-ifneq ($(REMOTE_HOST),)
-	make exec-remote CMD="make $@" # replay cmd in remote
-else ifneq ($(DOCKER_IMAGE),)
-	make exec-docker CMD="make $@" # replay cmd in docker
-else
-	$(ENVs) ./build.sh $@
-endif
+	make exec CMD="./build.sh $@"
 
 clean:
-ifneq ($(REMOTE_HOST),)
-	make exec-remote CMD="make $@"
-else
-	$(ENVs) rm -rf out
-endif
+	make exec CMD="rm -rf out"
 
 distclean: clean
-ifneq ($(REMOTE_HOST),)
-	make exec-remote CMD="make $@"
-else ifneq ($(DOCKER_IMAGE),)
-	make exec-docker CMD="make $@"
-else
-	$(ENVs) rm -rf prebuilts/$(ARCH)
-endif
+	make exec CMD="rm -rf prebuilts/$(ARCH)"
 
 shell:
+	make exec CMD='$$$$SHELL -li'
+
 ifneq ($(REMOTE_HOST),)
-	make exec-remote CMD="make $@"
+exec: exec-remote
 else ifneq ($(DOCKER_IMAGE),)
-	make exec-docker CMD="make $@"
+exec: exec-docker
 else
-	$(ENVs) exec $$SHELL -li
+exec:
+	$(CMD)
 endif
 
-.PHONY: clean distclean shell
+ifneq ($(REMOTE_HOST),)
+prepare: prepare-remote
+else ifneq ($(DOCKER_IMAGE),)
+prepare: prepare-docker
+else
+prepare: prepare-host
+endif
+
+.PHONY: clean distclean shell prepare
 
 ##############################################################################
-# prepare remote & docker
-
-# sync time between host and docker
-#  => don't use /etc/timezone, as timedatectl won't update this file
-TIMEZONE = $(shell realpath --relative-to /usr/share/zoneinfo /etc/localtime)
+# host
 
 BREW_PACKAGES 	= wget curl git                                    \
 				  gnu-tar xz lzip unzip                            \
@@ -167,21 +133,17 @@ prepare-host-homebrew:
 prepare-host-debian:
 	sudo apt install -y $(DEB_PACKAGES)
 
-prepare-remote:
-	test -f ~/.ssh/id_rsa || ssh-keygen
-	ssh-copy-id $(REMOTE_HOST)
+ifneq (,$(shell which apt-get))
+prepare-host: prepare-host-debian
+else ifneq (,$(shell which brew))
+prepare-host: prepare-host-homebrew
+endif
 
-# Please install 'Command Line Tools' first
-#  => start a login shell to invoke brew prefixes
-prepare-remote-homebrew: prepare-remote
-	$(REMOTE_EXEC) '$$SHELL -li -c "brew install $(BREW_PACKAGES)"'
-
-prepare-remote-debian: prepare-remote
-	$(REMOTE_EXEC) 'sudo apt install -y $(DEB_PACKAGES)'
-
-# TODO
-prepare-remote-msys2:
-	$(REMOTE_EXEC)
+##############################################################################
+# docker
+# sync time between host and docker
+#  => don't use /etc/timezone, as timedatectl won't update this file
+TIMEZONE = $(shell realpath --relative-to /usr/share/zoneinfo /etc/localtime)
 
 prepare-docker-image:
 	docker build                                  	\
@@ -199,34 +161,70 @@ prepare-docker-image-alpine:
 		--build-arg MIRROR=http://mirrors.mtdcy.top \
 		.
 
-##############################################################################
-# remote:
-# 	#1. rsync with ssh is the best way, no extra utils or services is needed.
-# 	#2. using default $SHELL instead of bash, as remote may set PATH for default login shell only.
-# 	#3. always request a TTY => https://community.hpe.com/t5/operating-system-linux/sshmake-session-quot-tput-no-value-for-term-and-no-t-specified/td-p/5255040
-push-remote:
-	@bash ulib.sh ulog info "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
-	@$(REMOTE_SYNC) --exclude='packages' --exclude='prebuilts' --exclude='out' $(WORKDIR)/ $(REMOTE_HOST):$(REMOTE_WORKDIR)/
+# alias
+prepare-docker: prepare-docker-image
 
-pull-remote:
-	@bash ulib.sh ulog info "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
-	@$(REMOTE_SYNC) --exclude='$(ARCH)' $(REMOTE_HOST):$(REMOTE_WORKDIR)/prebuilts/ $(WORKDIR)/prebuilts/
+# permissons
+DOCKER_ARGS := -u $(USER):$(GROUP)
 
-exec-remote: push-remote
-	@bash ulib.sh ulog info "SHELL" "$(CMD) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
-	$(REMOTE_EXEC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(ENVs) $(CMD)"'
-	@make pull-remote
-	@bash ulib.sh ulog info "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+# working dir
+DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR)
 
-##############################################################################
-# docker
+# packages mount incase there is a link locally
+DOCKER_ARGS += -v $(PACKAGES):$(WORKDIR)/packages
+
+# name the docker container
+DOCKER_ARGS += --name $(DOCKER_IMAGE)
+
+# envs
+DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
+
+ifeq ($(ULOG_MODE),tty)
+DOCKER_EXEC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE) bash -li -c
+else
+DOCKER_EXEC = docker run --rm $(DOCKER_ARGS) $(DOCKER_IMAGE) bash -l -c
+endif
+
 exec-docker:
-	@bash ulib.sh ulog info "SHELL" "$(CMD) @ docker ($(DOCKER_IMAGE))"
-	$(DOCKER_EXEC) 'cd $(WORKDIR) && $(ENVs) $(CMD)'
-	@bash ulib.sh ulog info "@END@" "Leaving $(DOCKER_IMAGE)"
+	$(DOCKER_EXEC) 'cd $(WORKDIR) && $(OPTS) $(CMD)'
 
 # TODO
 exec-remote-docker:
+
+##############################################################################
+# remote:
+prepare-remote-ssh:
+	test -f ~/.ssh/id_rsa || ssh-keygen
+	ssh-copy-id $(REMOTE_HOST)
+
+# Please install 'Command Line Tools' first
+#  => start a login shell to invoke brew prefixes
+prepare-remote-homebrew: prepare-remote
+	$(REMOTE_EXEC) '$$SHELL -li -c "brew install $(BREW_PACKAGES)"'
+
+prepare-remote-debian: prepare-remote
+	$(REMOTE_EXEC) 'sudo apt install -y $(DEB_PACKAGES)'
+
+# TODO
+prepare-remote-msys2:
+	$(REMOTE_EXEC)
+
+#1. rsync with ssh is the best way, no extra utils or services is needed.
+#2. using default $SHELL instead of bash, as remote may set PATH for default login shell only.
+#3. always request a TTY => https://community.hpe.com/t5/operating-system-linux/sshmake-session-quot-tput-no-value-for-term-and-no-t-specified/td-p/5255040
+push-remote:
+	@bash ulib.sh ulog "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(REMOTE_SYNC) --exclude='packages' --exclude='prebuilts' --exclude='out' $(WORKDIR)/ $(REMOTE_HOST):$(REMOTE_WORKDIR)/
+
+pull-remote:
+	@bash ulib.sh ulog "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
+	@$(REMOTE_SYNC) --exclude='$(ARCH)' $(REMOTE_HOST):$(REMOTE_WORKDIR)/prebuilts/ $(WORKDIR)/prebuilts/
+
+exec-remote: push-remote
+	@bash ulib.sh ulog "SHELL" "$(CMD) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	$(REMOTE_EXEC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(OPTS) $(CMD)"'
+	@make pull-remote
+	@bash ulib.sh ulog "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 
 ##############################################################################
 # Install prebuilts @ Host
