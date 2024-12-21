@@ -169,12 +169,13 @@ DOCKER_ARGS := -u $(USER):$(GROUP)
 
 # working dir
 DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR)
+DOCKER_ARGS += -w $(WORKDIR)
 
 # packages mount incase there is a link locally
 DOCKER_ARGS += -v $(PACKAGES):$(WORKDIR)/packages
 
-# name the docker container
-DOCKER_ARGS += --name $(DOCKER_IMAGE)
+# name the docker container => nameless allow multiple instances
+#DOCKER_ARGS += --name $(DOCKER_IMAGE)
 
 # envs
 DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
@@ -186,7 +187,7 @@ DOCKER_EXEC = docker run --rm $(DOCKER_ARGS) $(DOCKER_IMAGE) bash -l -c
 endif
 
 exec-docker:
-	$(DOCKER_EXEC) 'cd $(WORKDIR) && $(OPTS) $(CMD)'
+	$(DOCKER_EXEC) '$(OPTS) $(CMD)'
 
 # TODO
 exec-remote-docker:
