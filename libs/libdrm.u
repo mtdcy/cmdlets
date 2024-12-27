@@ -1,0 +1,20 @@
+
+#
+# shellcheck disable=SC2034
+upkg_lic=""
+upkg_ver=2.4.120
+upkg_url=https://dri.freedesktop.org/libdrm/libdrm-$upkg_ver.tar.xz
+upkg_sha=3bf55363f76c7250946441ab51d3a6cc0ae518055c0ff017324ab76cdefb327a
+
+upkg_static() {
+    mkdir -pv build && cd build &&
+    meson setup \
+            -Dudev=false             \
+            -Dcairo-tests=disabled   \
+            -Dvalgrind=disabled      \
+            .. &&
+    ninja &&
+    ninja install
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

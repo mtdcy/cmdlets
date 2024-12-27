@@ -1,0 +1,129 @@
+name: Build cmdlets latest
+
+on:
+  push:
+    paths:
+      - Makefile
+      - ulib.sh
+      - libs/**.u
+      - .github/workflows/build-latest.yml
+    branches:
+      - main
+
+jobs:
+  build-with-docker:
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    strategy:
+      matrix:
+        container:
+          - ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:ubuntu-latest
+          - ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:alpine-latest
+    steps:
+      - name: Checkout (main)
+        uses: https://git.mtdcy.top/actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          show-progress: false
+
+      - name: Prepare
+        id: prepare
+        shell: bash
+        run: |
+          set -x
+          chown -R buildbot:buildbot .
+
+          # fix: detected dubious ownership in repository
+          git config --global --add safe.directory "$PWD"
+
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/id_rsa <<< "${{ secrets.HOST_SSH_ID_RSA }}"
+          chmod 0600 ~/.ssh/id_rsa
+          workdir=cmdlets-$$
+          ssh -o StrictHostKeyChecking=no \
+            ${{ vars.REMOTE_HOST_MACOS }} \
+            mkdir -p "$workdir"
+          echo "workdir=$workdir" >> "$GITHUB_OUTPUT"
+
+          files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
+          for x in "${files[@]}"; do
+            x=$(basename ${x%.u})
+            [[ "$x" =~ ^_ ]] && continue ## ignored files
+            [[ "$x" =~ ^@ ]] && continue ## ignored files
+            cmdlets+=("$x")
+          done
+          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
+          echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
+
+      - name: Build (docker)
+        if: always()
+        shell: su buildbot -c "bash -e {0}"
+        run: |
+          set -x
+          export NJOBS=1
+
+          ret=0
+          fails=()
+          cmdlets=${{ steps.prepare.outputs.cmdlets }}
+          for x in ${cmdlets//,/ }; do
+            bash ulib.sh compile "$x" || {
+              ret=$?
+              fails+=("$x")
+            }
+          done
+
+          [ "$ret" -eq 0 ] || echo "fails: ${fails[*]}" | tee -a logs/fails.log
+          exit $ret
+
+      - name: Deploy (artifacts)
+        if: always()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc --exclude='packages.lst'
+          path: prebuilts/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/latest/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Deploy (packages)
+        if: always()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: packages/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Deploy (logs)
+        if: failure()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: logs/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/logs/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Notify on failure
+        if: failure()
+        shell: bash
+        run: |
+          curl --version
+          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
+              -H 'Content-Type: application/json' \
+              --data @<(cat <<EOF
+              {
+                "token": "${{ secrets.NOTIFY_TOKEN }}",
+                "title": "${{ github.repository }} ${{ job.status }}",
+                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
+              }
+          EOF
+              )

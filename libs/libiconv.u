@@ -1,0 +1,43 @@
+# GNU libiconv is a conversion library
+#
+# shellcheck disable=SC2034
+
+upkg_desc="Character sets conversion library"
+upkg_page="https://www.gnu.org/software/libiconv/"
+
+upkg_lic="GPL-3.0-or-later|LGPL-2.0-or-later"
+upkg_ver=1.18
+upkg_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$upkg_ver.tar.gz
+upkg_sha=3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8
+
+upkg_args=(
+    --disable-option-checking
+    --disable-dependency-tracking
+    --enable-silent-rules
+
+    --enable-extra-encodings
+
+    # no these for single static executables
+    --disable-nls
+    --disable-rpath
+
+    --disable-shared
+    --enable-static
+    )
+
+upkg_static() {
+    configure &&
+
+    make V=1 &&
+
+    # fast check
+    version src/iconv_no_i18n &&
+
+    # check & install
+    make check install &&
+
+    # visual check
+    check "$PREFIX/bin/iconv"
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

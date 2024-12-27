@@ -1,0 +1,790 @@
+#!/bin/bash
+# shellcheck shell=bash
+
+export LANG=C
+
+set -eo pipefail
+
+# options
+export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
+export UPKG_CHECKS=${UPKG_CHECKS:=1}    # enable check/tests
+export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top/packages}
+
+export ULOGS=${ULOGS:-tty}          # tty,plain,silent
+export NJOBS=${NJOBS:-$(nproc)}
+
+# internal envs
+export UPKG_ROOT="$(dirname "$0")"
+
+# absolute path
+export UPKG_ROOT="$(realpath "$UPKG_ROOT")"
+
+# ccache
+export CCACHE_DIR="$UPKG_ROOT/.ccache"
+
+# conditionals
+is_darwin() { [[ "$OSTYPE" == "darwin"* ]];                         }
+is_msys()   { [ "$OSTYPE" = "msys" ];                               }
+is_linux()  { [[ "$OSTYPE" == "linux"* ]];                          }
+is_glibc()  { ldd --version 2>&1 | grep -qFi "glibc";               }
+# 'ldd --version' in alpine always return 1
+is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
+is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
+
+# ulog [error|info|warn] "leading" "message"
+_ulog() {
+    local lvl date message
+
+    [ $# -gt 1 ] && lvl="$(tr 'A-Z' 'a-z' <<< "$1")"
+    date="$(date '+%m-%d %H:%M:%S')"
+
+    # https://github.com/yonchu/shell-color-pallet/blob/master/color16
+    case "$lvl" in
+        "error")
+            shift 1
+            message="[$date] \\033[31m$1\\033[39m ${*:2}"
+            ;;
+        "info")
+            shift 1
+            message="[$date] \\033[32m$1\\033[39m ${*:2}"
+            ;;
+        "warn")
+            shift 1
+            message="[$date] \\033[33m$1\\033[39m ${*:2}"
+            ;;
+        *)
+            message="[$date] \\033[32m$1\\033[39m ${*:2}"
+            ;;
+    esac
+    echo -e "$message" | sed "s#$UPKG_ROOT/##g"
+}
+
+ulogi() { _ulog info  "$@"; }
+ulogw() { _ulog warn  "$@"; }
+uloge() { _ulog error "$@"; return 1; }
+
+_logfile() {
+    echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
+}
+
+# | _capture
+_capture() {
+    if [ "$ULOGS" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+        # tput: DON'T combine caps, not universal.
+        local head endl i
+        head=$(tput hpa 0)
+        endl=$(tput el)
+        i=0
+        tput rmam       # line break off
+        tput dim        # half bright mode => not always work
+        tee -a "$(_logfile)" | while read -r line; do
+            printf '%s' "${head}#$i: ${line//$'\n'/}${endl}"
+            i=$((i + 1))
+        done
+        tput hpa 0 el   # clear line
+        tput smam       # line break on
+        tput sgr0       # reset
+    elif [ "$ULOGS" = "plain" ]; then
+        tee -a "$(_logfile)"
+    else
+        cat >> "$(_logfile)"
+    fi
+}
+
+# command <command>
+command() {
+    ulogi "..Run" "$@"
+    eval -- "$*" 2>&1 | _capture
+}
+
+echocmd() {
+    echo "$*"
+    eval -- "$*"
+}
+
+_prefix() {
+    [ "$upkg_type" = "app" ] && echo "$APREFIX" || echo "$PREFIX"
+}
+
+_filter_options() {
+    local opts;
+    while [ $# -gt 0 ]; do
+        # -j1
+        [[ "$1" =~ ^-j[0-9]+$ ]] && opts+=" $1" && shift && continue || true
+        case "$1" in
+            *=*)    opts+=" $1";    shift   ;;
+            -*)     opts+=" $1 $2"; shift 2 ;;
+            *)      shift ;;
+        esac
+    done
+    echo "$opts"
+}
+
+_filter_targets() {
+    local tgts;
+    while [ $# -gt 0 ]; do
+        [[ "$1" =~ ^-j[0-9]+$ ]] && shift && continue || true
+        case "$1" in
+            *=*)    shift   ;;
+            -*)     shift 2 ;;
+            *)      tgts+=" $1"; shift ;;
+        esac
+    done
+    echo "$tgts"
+}
+
+is_msys && BINEXT=".exe" || BINEXT=""
+
+_ENVS=(
+    CC:gcc
+    CXX:g++
+    AR:ar
+    AS:as
+    LD:ld
+    NM:nm
+    RANLIB:ranlib
+    STRIP:strip
+    NASM:nasm
+    YASM:yasm
+    MAKE:make
+    CMAKE:cmake
+    MESON:meson
+    NINJA:ninja
+    PKG_CONFIG:pkg-config
+    PATCH:patch
+    INSTALL:install
+)
+
+# setup
+# TODO: add support for toolchain define
+_setup() {
+    local arch
+    case "$OSTYPE" in
+        darwin*)    arch="$(uname -m)-apple-darwin" ;;
+        *)          arch="$(uname -m)-$OSTYPE"      ;;
+    esac
+
+    PREFIX="$(pwd -P)/prebuilts/$arch"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
+    export PREFIX
+
+    WORKDIR="$(pwd -P)/out/$arch"
+    mkdir -p "$WORKDIR"
+    export WORKDIR
+
+    local which=which
+    is_darwin && which="xcrun --find" || true
+
+    local k v p
+    for x in "${_ENVS[@]}"; do
+        IFS=':' read -r k v _ <<< "$x"
+
+        p="$($which "$v" 2>/dev/null)"
+        [ -n "$p" ] || p="$($which "$v$BINEXT" 2>/dev/null)"
+
+        eval -- export "$k=$p"
+    done
+
+    if test -n "$DISTCC_HOSTS"; then
+        if which distcc &>/dev/null; then
+            ulogi "....." "apply distcc settings"
+            CC="distcc"
+            #CXX="distcc" # => cause c++ build failed.
+
+            export NJOBS=$((NJOBS * $(wc -w <<< "$DISTCC_HOSTS")))
+        fi
+    fi
+
+    # common flags for c/c++
+    local FLAGS=(
+        -g -O3              # debug with O3
+        -fPIC -DPIC         # PIC
+        -ffunction-sections #
+    )
+    # Notes:
+    #   1. some libs may fail with '-fdata-sections'
+    #   2. some test may fail with '-DNDEBUG'
+
+    #export LDFLAGS="-L$PREFIX/lib -Wl,-rpath,$PREFIX/lib -Wl,-gc-sections"
+
+    # macOS does not support statically linked binaries
+    if is_darwin; then
+        LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
+    else
+        FLAGS+=( --static ) # static linking => two '--' vs ldflags
+        if is_clang; then
+            LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
+        else
+            LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
+        fi
+    fi
+
+    CFLAGS="${FLAGS[*]}"
+    CXXFLAGS="${FLAGS[*]}"
+    CPP="$CC -E"
+    CPPFLAGS="-I$PREFIX/include"
+
+    export CFLAGS CXXFLAGS CPP CPPFLAGS LDFLAGS
+
+    # pkg-config
+    export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+
+    # for running test
+    # LD_LIBRARY_PATH or rpath?
+    export LD_LIBRARY_PATH=$PREFIX/lib
+
+    # meson
+    # builti options: https://mesonbuild.com/Builtin-options.html
+    #  libdir: some package prefer install to lib/<machine>/
+    MESON_ARGS="                                    \
+        -Dprefix=$PREFIX                            \
+        -Dlibdir=lib                                \
+        -Dbuildtype=release                         \
+        -Ddefault_library=static                    \
+        -Dpkg_config_path=$PKG_CONFIG_PATH          \
+    "
+        #-Dprefer_static=true                        \
+
+    # remove spaces
+    export MESON="$(sed -e 's/ \+/ /g' <<<"$MESON")"
+
+    # export again after cmake and others
+    export PKG_CONFIG="$PKG_CONFIG --static"
+
+    # global common args for configure
+    local _UPKG_ARG0=(
+        --prefix="$PREFIX"
+        --disable-option-checking
+        --enable-silent-rules
+        --disable-dependency-tracking
+
+        # static
+        --disable-shared
+        --enable-static
+
+        # no nls & rpath for single static cmdlet.
+        --disable-nls
+        --disable-rpath
+    )
+
+    # remove spaces
+    export UPKG_ARG0="${_UPKG_ARG0[*]}"
+}
+
+# cleanup arguments ...
+cleanup() {
+    # deprecated
+    true
+}
+
+configure() {
+    local cmdline
+
+    cmdline="./configure --prefix=$(_prefix)"
+
+    # append user args
+    cmdline+=" ${upkg_args[*]} $*"
+
+    # suffix options, override user's
+    cmdline=$(sed                       \
+        -e 's/--enable-shared //g'      \
+        -e 's/--disable-static //g'     \
+        <<<"$cmdline")
+
+    # remove spaces
+    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+
+    command "$cmdline"
+}
+
+make() {
+    local cmdline="$MAKE"
+    local targets=()
+
+    cmdline+=" $(_filter_options "$@")"
+    IFS=' ' read -r -a targets <<< "$(_filter_targets "$@")"
+
+    # default target
+    [ -z "${targets[*]}" ] && targets=(all)
+
+    # set default njobs
+    [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$NJOBS"
+
+    # remove spaces
+    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+
+    # expand targets, as '.NOTPARALLEL' may not set for targets
+    for x in "${targets[@]}"; do
+        case "$x" in
+            # deparallels for install target
+            install)    cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
+            install/*)  cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
+        esac
+        command "$cmdline" "$x"
+    done
+}
+
+cmake() {
+    local opts=()
+
+    # only apply '-static' to EXE_LINKER_FLAGS
+    CFLAGS="${CFLAGS//\ --static/}"
+    CXXFLAGS="${CXXFLAGS//\ --static/}"
+    LDFLAGS="${LDFLAGS//\ -static/}"
+
+    opts+=(
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_INSTALL_PREFIX="$(_prefix)"
+        -DCMAKE_PREFIX_PATH="$PREFIX"
+        -DCMAKE_C_FLAGS="'$CFLAGS'"
+        -DCMAKE_CXX_FLAGS="'$CXXFLAGS'"
+        -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS'"
+        #-DCMAKE_C_COMPILER="$CC"
+        #-DCMAKE_CXX_COMPILER="$CXX"
+        #-DCMAKE_AR="$AR"
+        #-DCMAKE_LINKER="$LD"
+        #-DCMAKE_MAKE_PROGRAM="$MAKE"
+        -DCMAKE_ASM_NASM_COMPILER="$NASM"
+        -DCMAKE_ASM_YASM_COMPILER="$YASM"
+    )
+
+    # link static executable
+    is_darwin || [[ "${upkg_args[*]}" =~ CMAKE_EXE_LINKER_FLAGS ]] || opts+=(
+        -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS -static'"
+    )
+
+    # cmake using a mixed path style with MSYS Makefiles, why???
+    is_msys && opts+=( -G"MSYS Makefiles" )
+
+    # cmake
+    command $CMAKE "${opts[*]}" "${upkg_args[@]}" "$@"
+
+}
+
+meson() {
+    local cmdline="$MESON"
+
+    # append user args
+    cmdline+=" $(_filter_targets "$@") ${MESON_ARGS[*]} $(_filter_options "$@")"
+
+    # remove spaces
+    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+
+    command "$cmdline"
+}
+
+ninja() {
+    local cmdline="$NINJA"
+
+    # append user args
+    cmdline+=" $*"
+
+    # remove spaces
+    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+
+    command "$cmdline"
+}
+
+install() {
+    if [[ "$*" =~ \s- ]]; then
+        echocmd "$*"
+    else
+        # install include xxx.h ...
+        # install lib libxxx.a ...
+        "$INSTALL" -v -m644 "${@:2}" "$(_prefix)/$1"
+    fi
+}
+
+# cmdlet executable name [alias ...]
+cmdlet() {
+    # strip or not ?
+    local args=(-v)
+    file "$1" | grep -qFw 'not stripped' && args+=(-s)
+
+    if [ $# -lt 2 ]; then
+        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/"
+    else
+        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2"
+        if [ $# -gt 2 ]; then
+            for x in "${@:3}"; do
+                ln -sfv "$2" "$(_prefix)/bin/$x"
+            done
+        fi
+    fi
+
+}
+
+# perform quick check with cmdlet version
+# version /path/to/cmdlet [--version]
+# version cmdlet [--version]
+version() {
+    # deprecated
+    true
+}
+
+# perform visual check on cmdlet
+check() {
+    ulogi "..Run" "check $*"
+
+    local bin="$1"
+    if [ -e "$(_prefix)/bin/$1" ]; then
+        bin="$(_prefix)/bin/$1"
+    fi
+
+    # print to tty instead of capture it
+    file "$bin"
+
+    # check version if options/arguments provide
+    if [ $# -gt 1 ]; then
+        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$upkg_ver"
+    fi
+
+    # check linked libraries
+    if is_linux; then
+        file "$bin" | grep -Fw "statically linked" || {
+            echocmd ldd "$bin"
+        }
+    elif is_darwin; then
+        echocmd otool -L "$bin" # | grep -v "libSystem.*"
+    else
+        uloge "FIXME: $OSTYPE"
+    fi
+}
+
+# applet <name>
+applet() {
+    local pkgname sha
+    # install the entrypoint
+    $INSTALL -v -m755 "$@" "$APREFIX" 2>&1 || return 1
+
+    # pkgname
+    pkgname="$upkg_name-$upkg_ver"
+    [ -z "$upkg_rev" ] || pkgname="$pkgname-$upkg_rev"
+    pkgname="$pkgname.tar.gz"
+
+    cd "$APREFIX" &&
+
+    # make a pkg
+    touch "$pkgname" &&
+    tar -czf "$pkgname" --exclude="$pkgname" --exclude='revision' . &&
+
+    sha="$(sha256sum "$pkgname")" &&
+
+    touch revision &&
+
+    sed "/$pkgname/d" revision &&
+
+    sha256sum "$pkgname" >> revision
+}
+
+# env: UPKG_MIRROR
+# _fetch <url> <sha256> [local]
+_fetch() {
+    local url=$1
+    local sha=$2
+    local zip=$3
+
+    # to current dir
+    [ -n "$zip" ] || zip="$(basename "$url")"
+
+    ulogi ".Getx" "$url"
+
+    #1. try local file first
+    if [ -e "$zip" ]; then
+        local x
+        IFS=' ' read -r x _ <<<"$(sha256sum "$zip")"
+        [ "$x" = "$sha" ] && ulogi "..Got" "$zip" && return 0
+
+        ulogw "Warn." "expected $sha, actual $x, broken?"
+        rm "$zip"
+    fi
+
+    local args=(--fail -L --progress-bar -o "$zip")
+    mkdir -p "$(dirname "$zip")"
+
+    #2. try mirror
+    curl "${args[@]}" "$UPKG_MIRROR/$(basename "$zip")" 2>/dev/null ||
+    #3. try original
+    curl "${args[@]}" "$url" || {
+        uloge "Error" "get $url failed."
+        return 1
+    }
+    ulogi "..Got" "$(sha256sum "$zip" | cut -d' ' -f1)"
+}
+
+# _unzip <file> [strip]
+#  => unzip to current dir
+_unzip() {
+    ulogi ".Zipx" "$1 >> $(pwd)"
+
+    [ -r "$1" ] || {
+        uloge "Error" "open $1 failed."
+        return 1
+    }
+
+    # skip leading directories, default 1
+    local skip=${2:-1}
+    local arg0=(--strip-components=$skip)
+
+    if tar --version | grep -qFw "bsdtar"; then
+        arg0=(--strip-components $skip)
+    fi
+    # XXX: bsdtar --strip-components fails with some files like *.tar.xz
+    #  ==> install gnu-tar with brew on macOS
+
+    case "$1" in
+        *.tar.lz)   tar "${arg0[@]}" --lzip -xvf "$1"   ;;
+        *.tar.bz2)  tar "${arg0[@]}" -xvjf "$1"         ;;
+        *.tar.gz)   tar "${arg0[@]}" -xvzf "$1"         ;;
+        *.tar.xz)   tar "${arg0[@]}" -xvJf "$1"         ;;
+        *.tar)      tar "${arg0[@]}" -xvf "$1"          ;;
+        *.tbz2)     tar "${arg0[@]}" -xvjf "$1"         ;;
+        *.tgz)      tar "${arg0[@]}" -xvzf "$1"         ;;
+        *)
+            rm -rf * &>/dev/null  # see notes below
+            case "$1" in
+                *.rar)  unrar x "$1"                    ;;
+                *.zip)  unzip -o "$1"                   ;;
+                *.7z)   7z x "$1"                       ;;
+                *.bz2)  bunzip2 "$1"                    ;;
+                *.gz)   gunzip "$1"                     ;;
+                *.Z)    uncompress "$1"                 ;;
+                *)      false                           ;;
+            esac &&
+
+            # universal skip method, faults:
+            #  #1. have to clear dir before extraction.
+            #  #2. will fail with bad upkg_zip_strip.
+            while [ $skip -gt 0 ]; do
+                mv -f */* . || true
+                skip=$((skip - 1))
+            done &&
+            find . -type d -empty -delete || true
+            ;;
+    esac 2>&1 | ULOGS=silent _capture
+}
+
+# prepare package sources and patches
+_prepare() {
+    # check upkg_zip
+    [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
+    upkg_zip="$UPKG_ROOT/packages/${upkg_zip##*/}"
+
+    # check upkg_zip_strip, default: 1
+    upkg_zip_strip=${upkg_zip_strip:-1}
+
+    # check upkg_patch_*
+    if [ -n "$upkg_patch_url" ]; then
+        [ -n "$upkg_patch_zip" ] || upkg_patch_zip="$(basename "$upkg_patch_url")"
+        upkg_patch_zip="$UPKG_ROOT/packages/${upkg_patch_zip##*/}"
+
+        upkg_patch_strip=${upkg_patch_strip:-0}
+    fi
+
+    # download files
+    _fetch "$upkg_url" "$upkg_sha" "$upkg_zip" || return $?
+
+    # unzip to current fold
+    _unzip "$upkg_zip" "$upkg_zip_strip" || return $?
+
+    # patches
+    if [ -n "$upkg_patch_url" ]; then
+        # download patches
+        _fetch "$upkg_patch_url" "$upkg_patch_sha" "$upkg_patch_zip"
+
+        # unzip patches into current dir
+        _unzip "$upkg_patch_zip" "$upkg_patch_strip"
+    fi
+
+    # apply patches
+    mkdir -p patches
+    for x in "${upkg_patches[@]}"; do
+        # url(sha)
+        if [[ "$x" =~ ^http* ]]; then
+            IFS='()' read -r a b _ <<< "$x"
+
+            # download to patches/
+            "$a" "$b" "patches/$(basename "$a")"
+
+            x="patches/$a"
+        fi
+
+        # apply patch
+        command "patch -p1 < $x"
+    done
+}
+
+_deps_get() {
+    ( source "$UPKG_ROOT/libs/$1.u"; echo "${upkg_dep[@]}"; )
+}
+
+# _upkg_deps lib
+_upkg_deps() {
+    local leaf=()
+    local deps=($(_deps_get $1))
+
+    while [ "${#deps[@]}" -ne 0 ]; do
+        local x=("$(_deps_get ${deps[0]})")
+
+        if [ ${#x[@]} -ne 0 ]; then
+            for y in "${x[@]}"; do
+                [[ "${leaf[*]}" =~ "$y" ]] || {
+                    # prepend to deps and continue the while loop
+                    deps=(${x[@]} ${deps[@]})
+                    continue
+                }
+            done
+        fi
+
+        # leaf lib or all deps are meet.
+        leaf+=(${deps[0]})
+        deps=("${deps[@]:1}")
+    done
+    echo "${leaf[@]}"
+}
+
+# compile <lib list>
+#  => auto build deps
+compile() {
+    # prepare
+    _setup
+
+    touch "$PREFIX/packages.lst"
+
+    # get full dep list before build
+    local libs=()
+    for lib in "$@"; do
+        local deps=($(_upkg_deps "$lib"))
+
+        # find unmeets.
+        local unmeets=()
+        for x in "${deps[@]}"; do
+            #1. x.u been updated
+            #2. ulib.sh been updated (UPKG_STRICT)
+            #3. x been installed (skip)
+            #4. x not installed
+            if [ "$UPKG_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$x" ]; then
+                if [ "$UPKG_ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
+                    unmeets+=($x)
+                elif [ "ulib.sh" -nt "$WORKDIR/.$x" ]; then
+                    unmeets+=($x)
+                fi
+            elif grep -w "^$x" $PREFIX/packages.lst &>/dev/null; then
+                continue
+            else
+                unmeets+=($x)
+            fi
+        done
+
+        # does x exists in list?
+        for x in "${unmeets[@]}"; do
+            grep -Fw "$x" <<<"${libs[@]}" &>/dev/null || libs+=($x)
+        done
+
+        # append the lib to list.
+        libs+=($lib)
+    done
+
+    ulogi "Build" "$* (${libs[*]})"
+
+    local i=0
+    for ulib in "${libs[@]}"; do
+        i=$((i + 1))
+
+        (   # start subshell before source
+            set -eo pipefail
+            ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
+
+            ulogi ".Load" "$ulib.u"
+
+            # shellcheck source=libs/zlib.u
+            source "libs/$ulib.u"
+
+            [ "$upkg_type" = "PHONY" ] && return
+
+            # check upkg_name
+            [ -n "$upkg_name" ] || upkg_name="$ulib"
+
+            # sanity check
+            [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
+            [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
+
+            # set PREFIX for app
+            [ "$upkg_type" = "app" ] && APREFIX="$PREFIX/app/$upkg_name"
+
+            # prepare work dir
+            mkdir -p "$PREFIX"
+            mkdir -p "$(dirname "$(_logfile)")"
+
+            local workdir="$WORKDIR/$ulib-$upkg_ver"
+            [ "$UPKG_STRICT" -eq 0 ] || rm -rf "$workdir"
+            mkdir -p "$workdir" && cd "$workdir"
+
+            echo -e "**** start build $ulib ****\n$(date)\n" > "$(_logfile)"
+
+            ulogi ".Path" "$PWD"
+
+            # delete lib from packages.lst before build
+            sed -i "/^$ulib.*$/d" "$PREFIX/packages.lst"
+
+            # build library
+            _prepare && upkg_static &&
+
+            # append lib to packages.lst
+            echo "$ulib $upkg_ver $upkg_lic" >> "$PREFIX/packages.lst" &&
+
+            # record @ work dir
+            touch "$WORKDIR/.$ulib" &&
+
+            ulogi "<<<<<" "$ulib@$upkg_ver\n" || {
+                uloge "Error" "build $ulib failed.\n" || true
+                tail -v "$(_logfile)"
+                return 127
+            }
+        )
+    done # End for
+}
+
+search() {
+    _setup
+
+    ulogi "Search $PREFIX"
+    for x in "$@"; do
+        # binaries ?
+        ulogi "Search binaries ..."
+        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+
+        # libraries?
+        ulogi "Search libraries ..."
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+
+        # headers?
+        ulogi "Search headers ..."
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+
+        # pkg-config?
+        ulogi "Search pkgconfig ..."
+        if $PKG_CONFIG --exists "$x"; then
+            ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
+            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" | sed "s%^$UPKG_ROOT/%%")"
+            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" | sed "s%^$UPKG_ROOT/%%")"
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   | sed "s%^$UPKG_ROOT/%%")"
+            # TODO: add a sanity check here
+        fi
+
+        x=lib$x
+        if $PKG_CONFIG --exists "$x"; then
+            ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
+            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" | sed "s%^$UPKG_ROOT/%%")"
+            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" | sed "s%^$UPKG_ROOT/%%")"
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   | sed "s%^$UPKG_ROOT/%%")"
+            # TODO: add a sanity check here
+        fi
+    done
+}
+
+if [ "$(basename "$0")" = "ulib.sh" ]; then
+    "$@"
+fi
+
+# vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

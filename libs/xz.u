@@ -1,0 +1,39 @@
+# General-purpose data compression with high compression ratio
+# shellcheck disable=SC2034
+
+upkg_name=xz
+upkg_lic="BSD"
+upkg_ver=5.6.3
+upkg_rev=0
+upkg_url=https://github.com/tukaani-project/xz/releases/download/v$upkg_ver/xz-$upkg_ver.tar.gz
+#upkg_url=https://downloads.sourceforge.net/project/lzmautils/xz-$upkg_ver.tar.gz
+upkg_sha=b1d45295d3f71f25a4c9101bd7c8d16cb56348bbef3bbc738da0351e17c73317
+upkg_dep=()
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # no these for single static executables.
+    --disable-nls --disable-rpath
+
+    --disable-shared
+    --enable-static
+)
+
+upkg_static() {
+    rm CMakeLists.txt # force use configure
+
+    configure &&
+
+    make V=1 &&
+
+    # check & install
+    make check install &&
+
+    # visual verify
+    check xz --version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

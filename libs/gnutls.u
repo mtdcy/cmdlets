@@ -1,0 +1,39 @@
+# GNU Transport Layer Security (TLS) Library
+
+# shellcheck disable=SC2034
+upkg_lic='LGPL|GPL'
+upkg_ver=3.8.4
+upkg_url=https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-${upkg_ver}.tar.xz
+upkg_sha=2bea4e154794f3f00180fa2a5c51fe8b005ac7a31cd58bd44cdfa7f36ebc3a9b
+upkg_dep=(zlib brotli gmp libidn2 libtasn1 nettle libunistring)
+
+upkg_args=(
+    --disable-dependency-tracking
+    --disable-silent-rules
+    --disable-dependency-tracking
+
+    --without-p11-kit
+    --enable-openssl-compatibility
+
+    --disable-nls
+    --disable-rpath
+
+    --disable-doc
+    --disable-manpages
+    --disable-valgrind-tests
+    --disable-tools     # have trouble to build static one
+
+    --disable-shared
+    --enable-static
+)
+
+upkg_static() {
+    #1. gnutls_priority_set_direct detect failed
+    #export PKG_CONFIG="$PKG_CONFIG --static" ==> moved to ulib.sh
+
+    configure &&
+    make &&
+    make check install
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

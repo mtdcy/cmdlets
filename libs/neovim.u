@@ -1,0 +1,100 @@
+# Ambitious Vim-fork focused on extensibility and agility
+#
+# shellcheck disable=SC2034
+
+upkg_type=app
+upkg_name=nvim
+
+upkg_lic="Apache-2.0"
+upkg_ver=0.10.3
+upkg_rev=0
+upkg_url=https://github.com/neovim/neovim/archive/refs/tags/v$upkg_ver.tar.gz
+upkg_zip=neovim-$upkg_ver.tar.gz
+upkg_sha=39fab47d241da7b9418823cc563c689d522c1c4b2def04036393834f3f1ca94c
+
+# build deps, cannot be bundled except MSVC
+upkg_dep=(libiconv)
+
+upkg_args=(
+    # bundled
+    -DUSE_BUNDLED=ON
+    -DUSE_BUNDLED_LUAJIT=ON # prefer luajit over lua
+    #-DUSE_BUNDLED_LUA=ON
+
+    -DENABLE_LIBINTL=OFF
+
+    -DBUILD_STATIC_LIBS=ON
+    -DBUILD_SHARED_LIBS=OFF
+
+    # cache deps package
+    -DDEPS_DOWNLOAD_DIR="$UPKG_ROOT/packages"
+
+    # we have trouble to build static nvim
+    #  => luajit crashes because of dlopen
+    -DCMAKE_EXE_LINKER_FLAGS=''
+)
+
+is_darwin && upkg_args+=(
+    # build for old macOS
+    -DMACOSX_DEPLOYMENT_TARGET=10.13
+)
+
+# https://github.com/neovim/neovim/blob/master/BUILD.md
+upkg_static() {
+    # workarounds: neovim/luajit has trouble to find libaries
+    #export LUA_PATH="$PWD/.deps/usr/share/lua/5.1/?.lua;;" &&
+    #export LUA_CPATH="$PWD/.deps/usr/lib/lua/5.1/?.so;;" &&
+
+    mkdir -p build .deps
+
+    ### prepare app ###
+    # quote 'EOF' to avoid variable expanding.
+
+    # $VIMROOT => $VIM => $VIMRUNTIME
+    cat << 'EOF' > cmake.config/pathdef.c.in
+#include "${PROJECT_SOURCE_DIR}/src/nvim/vim.h"
+char *default_vim_dir = "$VIMROOT/share/nvim";                  /* $VIM         */
+char *default_vimruntime_dir = "$VIMROOT/share/nvim/runtime";   /* $VIMRUNTIME  */
+char *default_lib_dir = "$VIMROOT/lib/nvim";                    /* runtime ABI  */
+EOF
+
+    # app entry script
+    cat << 'EOF' > build/nvim
+#!/bin/bash
+export LANG=${LANG:-en_US.UTF-8}
+export LC_ALL=${LC_ALL:-$LANG}
+
+export VIMROOT="$(cd "$(dirname "$0")"; pwd -P)"
+export VIM="$VIMROOT/share/nvim"    # default_vim_dir
+export VIMRUNTIME="$VIM/runtime"    # default_vimruntime_dir
+
+exec "$VIMROOT/bin/nvim" "$@"
+EOF
+
+    ### prepare deps ###
+    (
+        unset CFLAGS CXXFLAGS LDFLAGS
+        cd .deps &&
+        cmake ../cmake.deps &&
+        make V=1
+        # installed locally by custom command
+    ) &&
+
+    ### build nvim ###
+    cd build &&
+
+    cmake .. &&
+
+    make V=1 &&
+
+    # install
+    make install &&
+
+    # install applet entrypoint
+    applet nvim &&
+
+    # visual check
+    check nvim -V1 -v
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

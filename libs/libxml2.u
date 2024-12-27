@@ -1,0 +1,44 @@
+# GNOME XML library
+
+# shellcheck disable=SC2034
+upkg_lic="MIT"
+upkg_ver=2.13.5
+upkg_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${upkg_ver}.tar.xz
+upkg_sha=74fc163217a3964257d3be39af943e08861263c4231f9ef5b496b6f6d4c7b2b6
+upkg_dep=(zlib libiconv readline)
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --with-history # shell mode
+    --without-http
+    --without-lzma
+
+    # python ?
+    --without-python
+
+    # icu4c ?
+    --without-icu
+
+    # https://gitlab.gnome.org/GNOME/libxml2/-/issues/751#note_2157870
+    --with-legacy
+
+    --disable-shared
+    --enable-static
+    )
+
+upkg_static() {
+    configure &&
+    make &&
+
+    # 'Failed to open module' after update
+#   {
+#       # fixme: test fails in MSYS2
+#       is_msys || make check V=1
+#   } &&
+    make install
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

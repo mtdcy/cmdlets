@@ -1,0 +1,61 @@
+# shellcheck disable=SC2034
+upkg_name="gtar"
+upkg_desc="GNU version of the tar archiving utility"
+
+upkg_lic='GPL-3.0-or-later'
+upkg_ver=1.35
+upkg_rev=0
+upkg_url=https://ftp.gnu.org/gnu/tar/tar-$upkg_ver.tar.xz
+upkg_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
+upkg_dep=(gzip bzip2 xz zstd lzip lzop libiconv)
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # always disable nls for single static executable, or
+    #  => PREFIX/share/locale will hardcoded into executable
+    --disable-nls
+    # disable rpath for single static executable
+    --disable-rpath
+    #
+    --without-selinux
+    --disable-acl
+    #
+    --disable-doc
+    --disable-man
+)
+
+# rmt: avoid hardcoded $PREFIX into executable
+#  => default path on Linux, no rmt on macOS.
+upkg_args+=(--with-rmt="/usr/sbin/rmt")
+
+upkg_static() {
+    # BUG: undefined reference to `libiconv_open'
+    # iconv is detected during configure process but -liconv is missing
+    # from LDFLAGS as of gnu-tar 1.35. Remove once iconv linking works
+    # without this. See https://savannah.gnu.org/bugs/?64441.
+    # fix commit, https://git.savannah.gnu.org/cgit/tar.git/commit/?id=8632df39, remove in next release
+    export LIBS="-liconv"
+
+    configure &&
+
+    make V=1 &&
+
+    # simple test
+    {
+        echo "test" > test.txt
+        ./src/tar -czvf test.tar.gz test.txt
+        [ "test" = "$(./src/tar -xOzf test.tar.gz)" ]
+    } &&
+
+    # provide default 'tar' and 'gtar'
+    cmdlet src/tar gtar tar &&
+
+    # visual verify
+    check gtar --version
+}
+
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

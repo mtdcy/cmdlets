@@ -1,0 +1,53 @@
+# An internationalization and localization (i18n and l10n) system commonly used for writing multilingual programs.
+
+# shellcheck disable=SC2034
+upkg_lic='GPL'
+upkg_ver=0.23
+upkg_url=https://ftp.gnu.org/gnu/gettext/gettext-${upkg_ver}.tar.gz
+upkg_sha=945dd7002a02dd7108ad0510602e13416b41d327898cf8522201bc6af10907a6
+upkg_dep=(libunistring libxml2 ncurses libiconv)
+
+upkg_args=(
+    --disable-option-checking
+    --disable-dependency-tracking
+    --enable-silent-rules
+
+    #--with-included-libunistring
+    #--with-included-libxml
+
+    --disable-examples
+    --disable-java
+    --disable-csharp
+
+    #--disable-nls
+    --disable-rpath
+
+    # static only
+    --disable-shared
+    --enable-static
+
+    # Don't use VCS systems to create these archives
+    --without-git
+    --without-cvs
+    --without-xz
+)
+
+# libintl.h for macOS only, Linux use glibc:/usr/include/libintl.h
+is_glibc || upkg_args+=(--with-included-gettext)
+
+upkg_static() {
+    # install doesn't support multiple make jobs
+    configure &&
+    make &&
+
+    # check fail: test-term-ostream-xterm.sh, may be ncurses problem
+    #  => https://lists.gnu.org/archive/html/bug-gettext/2020-06/msg00016.html
+    if is_musl; then
+        # fail: test-canonicalize | test-u8-conv-from-enc
+        make install
+    else
+        TERM=xterm make check install
+    fi
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

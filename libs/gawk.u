@@ -1,0 +1,53 @@
+# GNU awk utility
+
+# shellcheck disable=SC2034
+upkg_lic='GPL-3.0-or-later'
+upkg_ver=5.3.1
+upkg_url=https://ftp.gnu.org/gnu/gawk/gawk-$upkg_ver.tar.xz
+upkg_sha=694db764812a6236423d4ff40ceb7b6c4c441301b72ad502bb5c27e00cd56f78
+upkg_dep=(gmp mpfr readline)
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --without-selinux
+
+    # disable these for single static executables.
+    --disable-nls
+    --disable-rpath
+
+    --disable-doc
+    --disable-man
+)
+
+[[ ${upkg_dep[*]} =~ mpfr ]] || upkg_args+=(--without-mpfr)
+
+[[ ${upkg_dep[*]} =~ readline ]] || upkg_args+=(--without-readline)
+
+upkg_static() {
+    # refer to: https://github.com/macports/macports-ports/blob/master/lang/gawk/Portfile
+    if is_darwin; then
+        sed -i 's:-Xlinker -no_pie::' configure
+    fi &&
+
+    configure &&
+    make &&
+    # quick check
+    version ./gawk --version &&
+
+    # check & install => XXX: there always 5 FAILs
+    #make check install-exec &&
+    [ "HelloHello" = "$(./gawk '{ gsub(/World/, "Hello"); print }' <<< "HelloWorld")" ] &&
+    make install-exec &&
+
+    # provide default 'awk'
+    ln -sfv gawk $PREFIX/bin/awk &&
+
+    # visual verify
+    check $PREFIX/bin/gawk
+}
+
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

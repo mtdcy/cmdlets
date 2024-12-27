@@ -1,0 +1,90 @@
+# Bourne-Again SHell, a UNIX command interpreter
+#
+# HEAD version for feature inspection:
+#   #1. DON'T use this version as default interpreter
+#
+# shellcheck disable=SC2034
+
+upkg_name="base"
+upkg_lic="GPL-3.0-or-later"
+upkg_ver=5.2.37
+upkg_url=https://ftp.gnu.org/gnu/bash/bash-$upkg_ver.tar.gz
+upkg_sha=9599b22ecd1d5787ad7d3b7bf0c59f312b3396d1e281175dd1f8a4014da621ff
+upkg_dep=(ncurses libiconv readline)
+
+upkg_args=(
+    #--disable-option-checking -> make sure all options are recognized.
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # enable features for HEAD version
+    --enable-alias
+    --enable-alt-array-implementation
+    --enable-arith-for-command
+    --enable-array-variables
+    --enable-brace-expansion
+    --enable-casemod-attributes
+    --enable-casemod-expansions
+    --enable-command-timing
+    --enable-cond-command
+    --enable-cond-regexp
+    --enable-coprocesses
+    --enable-direxpand-default
+    --enable-directory-stack
+    --enable-dparen-arithmetic
+    --enable-extended-glob
+    --enable-extended-glob-default
+    --enable-function-import
+    --enable-glob-asciiranges-default
+    --enable-help-builtin
+    --enable-job-control
+    --enable-multibyte
+    --enable-net-redirections
+    --enable-process-substitution
+    --enable-progcomp
+    --enable-select
+    #--enalbe-prompt-string-decoding -> unrecognized
+
+    --enable-readline
+    --with-installed-readline
+
+    --with-curses
+
+    --disable-nls
+    --disable-rpath
+
+    # https://github.com/robxu9/bash-static/blob/master/build.sh
+    --without-bash-malloc
+)
+
+# static link with libc won't work on macOS
+is_darwin || upkg_args+=(--enable-static-link)
+
+upkg_static() {
+    # make uninstall ==> will compile first and then fail always
+    rm -fv "$PREFIX/bin/bash" || true
+
+    # macOS defined this:
+    #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
+    export CFLAGS+=" -DSSH_SOURCE_BASHRC"
+
+    # musl has strtoimax
+    if is_musl; then
+        # https://github.com/robxu9/bash-static/blob/master/custom/bash-musl-strtoimax-debian-1023053.patch
+        sed -i 's/bash_cv_func_strtoimax =.*;/bash_cv_func_strtoimax = no;/' m4/strtoimax.m4
+        autoconf -f
+    fi &&
+
+    # config & make
+    configure &&
+
+    make V=1 &&
+
+    # install
+    make install &&
+
+    # visual check
+    check bash --version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

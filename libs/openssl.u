@@ -1,0 +1,65 @@
+# Cryptography and SSL/TLS Toolkit
+#
+# Headers Only:
+#  we built shared libraries, but not suppose to use it.
+
+# shellcheck disable=SC2034
+upkg_lic='Apache-2.0'
+upkg_ver=3.4.0
+upkg_rev=0
+upkg_url=https://www.openssl.org/source/openssl-$upkg_ver.tar.gz
+upkg_sha=e15dda82fe2fe8139dc2ac21a36d4ca01d5313c75f99f46c4e8a27709b7294bf
+upkg_dep=()
+
+upkg_args=(
+    --prefix=$PREFIX
+
+    --libdir=lib
+
+    # host paths
+    --openssldir=/etc/ssl
+
+    --api=3.0
+
+    no-ssl3
+    no-ssl3-method
+    no-zlib
+
+    no-shared
+
+    "$CFLAGS"
+
+    "$CPPFLAGS"
+
+    "$LDFLAGS"
+)
+
+is_linux  && upkg_args+=(linux-x86_64)
+
+is_darwin && upkg_args+=(darwin64-x86_64 enable-ec_nistp_64_gcc_128)
+
+upkg_static() {
+    ./Configure ${upkg_args[@]} &&
+
+    {
+        # use host paths
+        engines=$(find /lib/ /usr/lib/ -type d -name "engines-3" | head -n1) || true
+        if [ -n "$engines" ]; then
+            modules="${engines/%engines-3/ossl-modules}"
+            sed -e "s!^ENGINESDIR=.*\$!ENGINESDIR=${engines}!" \
+                -e "s!^MODULESDIR=.*\$!MODULESDIR=${modules}!" \
+                -i Makefile
+        fi
+    } &&
+
+    make &&
+
+    # don't install engines and modules
+    make install_dev install_runtime &&
+
+    # verify
+    check $PREFIX/bin/openssl
+}
+
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

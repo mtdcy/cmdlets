@@ -1,0 +1,8 @@
+prebuilts/
+packages/
+out/
+logs/
+cmdlets.env
+.ccache
+*.swp
+.DS_Store
