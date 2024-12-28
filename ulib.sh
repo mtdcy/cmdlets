@@ -9,6 +9,7 @@ set -eo pipefail
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
 export UPKG_CHECKS=${UPKG_CHECKS:=1}    # enable check/tests
 export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top/packages}
+export UPKG_REPO=${UPKG_REPO:-http://pub.mtdcy.top/cmdlets/latest}
 
 export ULOGS=${ULOGS:-tty}          # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
@@ -56,7 +57,7 @@ _ulog() {
             message="[$date] \\033[32m$1\\033[39m ${*:2}"
             ;;
     esac
-    echo -e "$message" | sed "s#$UPKG_ROOT/##g"
+    echo -e "$message"
 }
 
 ulogi() { _ulog info  "$@"; }
@@ -249,7 +250,7 @@ _setup() {
     export MESON="$(sed -e 's/ \+/ /g' <<<"$MESON")"
 
     # export again after cmake and others
-    export PKG_CONFIG="$PKG_CONFIG --static"
+    export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
 
     # global common args for configure
     local _UPKG_ARG0=(
@@ -409,21 +410,118 @@ install() {
 
 # cmdlet executable name [alias ...]
 cmdlet() {
+    ulogi "..Bin" "install cmdlet $1 => $2 (alias ${*:3})"
     # strip or not ?
     local args=(-v)
     file "$1" | grep -qFw 'not stripped' && args+=(-s)
 
     if [ $# -lt 2 ]; then
-        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/"
+        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/" || return 1
     else
-        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2"
+        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2" || return 1
         if [ $# -gt 2 ]; then
             for x in "${@:3}"; do
                 ln -sfv "$2" "$(_prefix)/bin/$x"
             done
         fi
-    fi
+    fi | _capture
 
+}
+
+# _library file subdir [libname] [alias]
+#  => return installed files and links if alias exists
+_install() {
+    $INSTALL -m644 "$1" "$(_prefix)/$2" || return 1
+
+    local installed=("$2/$(basename "$1")")
+    if [ -n "$4" ]; then # install with alias
+        if [[ "$1" =~ $3.${1##*.}$ ]]; then
+            for alias in "${@:4}"; do
+                ln -sf "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
+                installed+=("$2/$alias.${1##*.}")
+            done
+        elif [[ "$1" =~ ${3#lib}.${1##*.}$ ]]; then
+            for alias in "${@:4}"; do
+                ln -sf "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
+                installed+=("$2/${alias#lib}.${1##*.}")
+            done
+        fi
+    fi
+    echo "${installed[@]}"
+}
+
+# library   name:alias1:alias2          \
+#           include/xxx     xxx.h       \
+#           lib             libxxx.a    \
+#           lib/pkgconfig   libxxx.pc
+library() {
+    local libname alias subdir installed
+    IFS=':' read -r libname alias <<< "$1"
+    IFS=':' read -r -a alias <<< "$alias"
+    shift # skip libname and alias
+
+    ulogi "..Lib" "install library $libname => (alias ${alias[*]})"
+    while [ $# -ne 0 ]; do
+        case "$1" in
+            *.h)
+                [[ "$subdir" =~ ^include ]] || subdir="include"
+                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                ;;
+            *.a|*.la|*.so|*.so.*)
+                [[ "$subdir" =~ ^lib ]] || subdir="lib"
+                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                ;;
+            *.pc)
+                [[ "$subdir" =~ ^lib\/pkgconfig ]] || subdir="lib/pkgconfig"
+                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                ;;
+            include*|lib*|bin*)
+                subdir="$1"
+                mkdir -pv "$(_prefix)/$subdir"
+                ;;
+            *)
+                uloge "Error" "unknown library options $1"
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    {
+        local revision="$libname-revision"
+
+        pushd "$PREFIX"
+
+        # pollute revision file
+        echocmd curl --fail -sL -o "$revision" \
+            "$UPKG_REPO/$(basename "$PREFIX")/$libname-revision" ||
+        touch "$revision"
+
+        # append version and revision
+        libname+="-$upkg_ver"
+        [ -z "$upkg_rev" ] || libname+="-$upkg_rev"
+        libname+=".tar.gz"
+
+        echocmd tar -cvzf "$libname" "${installed[@]}"
+
+        sed -i "/$libname/d" "$revision"
+
+        sha256sum "$libname" >> "$revision"
+
+        cat "$revision"
+
+        popd
+    } | _capture
+}
+
+# _fix_pc path/to/xxx.pc
+_fix_pc() {
+    local prefix=$(_prefix)
+    if grep -qFw "$prefix" "$1"; then
+        sed -e 's!^prefix=.*$!prefix=\${PREFIX}!' \
+            -e "s!$prefix!\${prefix}!g" \
+            -i "$1"
+    fi
 }
 
 # perform quick check with cmdlet version
@@ -466,28 +564,38 @@ check() {
 
 # applet <name>
 applet() {
-    local pkgname sha
+    local pkgname revision
     # install the entrypoint
-    $INSTALL -v -m755 "$@" "$APREFIX" 2>&1 || return 1
+    $INSTALL -v -m755 "$@" "$APREFIX" || return 1
 
-    # pkgname
-    pkgname="$upkg_name-$upkg_ver"
-    [ -z "$upkg_rev" ] || pkgname="$pkgname-$upkg_rev"
-    pkgname="$pkgname.tar.gz"
+    {
+        revision="$upkg_name-revision"
 
-    cd "$APREFIX" &&
+        pushd "$APREFIX"
 
-    # make a pkg
-    touch "$pkgname" &&
-    tar -czf "$pkgname" --exclude="$pkgname" --exclude='revision' . &&
+        # pollute revision file
+        echocmd curl --fail -s -o "$revision" \
+            "$UPKG_REPO/$(basename "$PREFIX")/app/$revision" ||
+        touch "$revision"
 
-    sha="$(sha256sum "$pkgname")" &&
+        # pkgname
+        pkgname="$upkg_name-$upkg_ver"
+        [ -z "$upkg_rev" ] || pkgname+="-$upkg_rev"
+        pkgname+=".tar.gz"
 
-    touch revision &&
+        # make a package
+        touch "$pkgname"
+        tar -czf "$pkgname" --exclude="$pkgname" --exclude="$revision" .
 
-    sed "/$pkgname/d" revision &&
+        sed -i "/$pkgname/d" "$revision"
 
-    sha256sum "$pkgname" >> revision
+        # record package
+        sha256sum "$pkgname" >> "$revision"
+
+        cat "$revision"
+
+        popd
+    } | _capture
 }
 
 # env: UPKG_MIRROR
@@ -779,18 +887,18 @@ search() {
         ulogi "Search pkgconfig ..."
         if $PKG_CONFIG --exists "$x"; then
             ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" | sed "s%^$UPKG_ROOT/%%")"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" | sed "s%^$UPKG_ROOT/%%")"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   | sed "s%^$UPKG_ROOT/%%")"
+            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
+            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
             # TODO: add a sanity check here
         fi
 
         x=lib$x
         if $PKG_CONFIG --exists "$x"; then
             ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" | sed "s%^$UPKG_ROOT/%%")"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" | sed "s%^$UPKG_ROOT/%%")"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   | sed "s%^$UPKG_ROOT/%%")"
+            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
+            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
             # TODO: add a sanity check here
         fi
     done

@@ -4,6 +4,7 @@
 upkg_name=zstd
 upkg_lic="BSD or GPLv2"
 upkg_ver=1.5.6
+upkg_rev=1
 upkg_url=https://github.com/facebook/zstd/releases/download/v$upkg_ver/zstd-$upkg_ver.tar.gz
 upkg_sha=8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1
 upkg_dep=(zlib xz lz4)

@@ -30,7 +30,24 @@ upkg_static() {
     make V=1 &&
 
     # check & install
-    make check install &&
+    make check &&
+
+    # make install
+    library liblzma \
+        include         src/liblzma/api/lzma.h \
+        include/lzma    $(ls src/liblzma/api/lzma/*.h | xargs) \
+        lib             src/liblzma/.libs/liblzma.{a,la} \
+        lib/pkgconfig   src/liblzma/liblzma.pc \
+        &&
+
+    cmdlet src/xz/xz xz xzcat lzcat lzma &&
+    cmdlet src/xzdec/xzdec &&
+    cmdlet src/xzdec/lzmadec &&
+    cmdlet src/lzmainfo/lzmainfo &&
+    cmdlet src/scripts/xzdiff xzdiff lzdiff  &&
+    cmdlet src/scripts/xzgrep xzgrep xzegrep xzfgrep &&
+    cmdlet src/scripts/xzmore xzmore lzmore &&
+    cmdlet src/scripts/xzless xzless lzless &&
 
     # visual verify
     check xz --version
