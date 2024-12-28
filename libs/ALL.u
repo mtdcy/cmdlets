@@ -4,6 +4,7 @@
 upkg_type=PHONY
 
 upkg_ver=0.1.0
+upkg_rev=1
 
 upkg_dep=(
     # zip
@@ -15,9 +16,13 @@ upkg_dep=(
     # editor
     neovim
     # net
-    wget iperf3
+    wget curl iperf3
     # multimedia
-    ffmpeg ffmpeg@4 mac
+    ffmpeg
+    ffmpeg@6
+    ffmpeg@5
+    ffmpeg@4
+    mac
     # misc
     neofetch
 )
