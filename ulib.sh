@@ -441,9 +441,10 @@ check() {
 
     # check linked libraries
     if is_linux; then
-        file "$bin" | grep -Fw "statically linked" || {
+        file "$bin" | grep -Fw "dynamically linked" && {
+            ulogw "....." "$bin is dynamically linked"
             echocmd ldd "$bin"
-        }
+        } || true
     elif is_darwin; then
         echocmd otool -L "$bin" # | grep -v "libSystem.*"
     else
