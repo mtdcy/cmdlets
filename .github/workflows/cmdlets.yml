@@ -1,0 +1,55 @@
+name: Check cmdlets.sh
+
+on:
+  push:
+    paths:
+      - cmdlets.sh
+      - .github/workflows/cmdlets.yml
+    branches:
+      - main
+
+jobs:
+  check-cmdlist.sh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (main)
+        uses: https://git.mtdcy.top/actions/checkout@v3
+        with:
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Check cmdlets.sh
+        shell: bash
+        run: |
+          set -x
+
+          export PATH=$PWD:$PATH
+
+          # cmdlet: xz
+          cmdlets.sh install xz
+          xz --version
+
+          # library: libz.a
+          cmdlets.sh library libz
+          ls -lh lib/libz.a
+          ls -lh include/zlib.h
+
+          # applet: neovim
+          cmdlets.sh install nvim
+          nvim -V1 -v
+
+      - name: Notify on failure
+        if: failure()
+        shell: bash
+        run: |
+          curl --version
+          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
+              -H 'Content-Type: application/json' \
+              --data @<(cat <<EOF
+              {
+                "token": "${{ secrets.NOTIFY_TOKEN }}",
+                "title": "${{ github.repository }} ${{ job.status }}",
+                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
+              }
+          EOF
+              )
