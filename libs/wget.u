@@ -8,7 +8,7 @@ upkg_url=https://ftp.gnu.org/gnu/wget/wget-$upkg_ver.tar.gz
 upkg_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
 upkg_dep=(zlib xz libidn2)
 
-# using system openssl on macOS
+# using system tls on macOS
 is_darwin || upkg_dep+=(openssl)
 
 upkg_args=(
@@ -16,17 +16,18 @@ upkg_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
+    # default paths
+    --sysconfdir=/etc
+
     --with-zlib
     --with-libidn
+    --with-ssl=openssl
 
     # from homebrew:wget
     --disable-pcre
     --disable-pcre2
     --without-included-regex
     --without-libpsl
-
-    --with-ssl=openssl
-    --with-libssl-prefix=$PREFIX
 
     #--enable-opie       # FTP opie
     #--enable-digest     # HTTP digest
@@ -43,6 +44,13 @@ upkg_args=(
 )
 
 upkg_static() {
+    # gethostbyname => dynamically linked
+    is_glibc && {
+        CFLAGS="${CFLAGS//--static/}"
+        CXXFLAGS="${CXXFLAGS//--static/}"
+        LDFLAGS="${LDFLAGS//-static/}"
+    }
+
     configure &&
 
     make &&
@@ -53,13 +61,14 @@ upkg_static() {
     # check & install
     # no top level check: https://git.alpinelinux.org/aports/tree/main/wget/APKBUILD
     {
-        is_glibc && make install -C tests check
+        # check fails on macOS, no libperl-www/HTTP-Daemon
+        is_darwin || make -C tests check
     } &&
 
     make -C src install-exec &&
 
     # verify
-    check $PREFIX/bin/wget
+    check wget --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
