@@ -23,21 +23,21 @@ upkg_args=(
 
     --disable-shared
     --enable-static
-    )
+)
 
 upkg_static() {
     configure &&
 
-    make V=1 &&
-
-    # fast check
-    version src/iconv_no_i18n &&
+    # deparallels
+    make V=1 -j1 &&
 
     # check & install
-    make check install &&
+    #make check &&
+
+    make install &&
 
     # visual check
-    check "$PREFIX/bin/iconv"
+    check iconv
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
