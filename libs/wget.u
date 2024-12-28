@@ -45,11 +45,7 @@ upkg_args=(
 
 upkg_static() {
     # gethostbyname => dynamically linked
-    is_glibc && {
-        CFLAGS="${CFLAGS//--static/}"
-        CXXFLAGS="${CXXFLAGS//--static/}"
-        LDFLAGS="${LDFLAGS//-static/}"
-    }
+    is_glibc && dynamicalize
 
     configure &&
 

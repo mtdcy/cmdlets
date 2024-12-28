@@ -271,6 +271,18 @@ _setup() {
     export UPKG_ARG0="${_UPKG_ARG0[*]}"
 }
 
+dynamicalize() {
+    CFLAGS="${CFLAGS//--static/}"
+    CXXFLAGS="${CXXFLAGS//--static/}"
+    LDFLAGS="${LDFLAGS//-static/}"
+
+    export CFLAGS CXXFLAGS LDFLAGS
+}
+
+deparallelize() {
+    export NJOBS=1
+}
+
 # cleanup arguments ...
 cleanup() {
     # deprecated
