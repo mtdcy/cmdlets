@@ -38,6 +38,7 @@ cmdlets.sh action [parameter(s)]
 
 Supported actions:
     install <cmdlet>    - install cmdlet.
+    library <libname>   - install library to current directory.
 EOF
 }
 
@@ -46,7 +47,7 @@ pull() {
     # accept ENV:CMDLETS_ARCH
     local arch="${CMDLETS_ARCH:-$ARCH}"
     local dest="$arch/app/$1"
-    if curl --fail -s -o "/tmp/$1-revision" "$REPO/$dest/revision"; then
+    if curl --fail -s -o "/tmp/$1-revision" "$REPO/$dest/$1-revision"; then
         info "Pull applet $1 => $dest\n"
 
         local sha pkgname
@@ -68,6 +69,23 @@ pull() {
         error "Pull $1 failed\n"
         return 1
     fi
+}
+
+# pull library to current directory
+pull-library() {
+    local arch="${CMDLETS_ARCH:-$ARCH}"
+
+    if ! curl --fail -s -o "/tmp/$1-revision" "$REPO/$arch/$1-revision"; then
+        info "Pull library $1 failed\n"
+        return 1
+    fi
+
+    local sha libname
+    IFS=' ' read -r sha libname _ <<< "$(tail -n1 /tmp/$1-revision)"
+    curl --fail -# "$REPO/$arch/$libname" | tar -xz
+
+    # update pkgconfig .pc
+    find lib/pkgconfig -name "*.pc" -exec sed -e "s:^prefix=.*$:prefix=$PWD:" -i {} \;
 }
 
 install() {
@@ -110,6 +128,9 @@ elif [ "$name" = "cmdlets.sh" ]; then
             else
                 install
             fi
+            ;;
+        library) # fetch libs
+            pull-library "$2"
             ;;
         help|*)
             usage
