@@ -4,6 +4,8 @@ set -eo pipefail
 
 export LANG="${LANG:-en_US.UTF-8}"
 
+export STRIP="${CMDLETS_STRIP:-1}"
+
 # never resolve symbolic here
 ROOT="$(cd "$(dirname "$0")"; pwd)/prebuilts"
 
@@ -55,6 +57,9 @@ pull() {
 
         mkdir -p "$ROOT/$dest"
         curl --fail -# "$REPO/$dest/$pkgname" | tar -C "$ROOT/$dest" -xz
+        if [ "$STRIP" -ne 0 ] && which strip &>/dev/null; then
+            find "$ROOT/$dest" -type f -exec strip -s {} \; 2>/dev/null
+        fi
 
         chmod a+x "$ROOT/$dest/$1"
     elif curl --fail -s -o /dev/null -I "$REPO/$arch/bin/$1"; then
@@ -63,6 +68,9 @@ pull() {
 
         mkdir -p "$(dirname "$ROOT/$dest")"
         curl --fail -# -o "$ROOT/$dest" "$REPO/$dest"
+        if [ "$STRIP" -ne 0 ] && which strip &>/dev/null; then
+            strip -s "$ROOT/$dest"
+        fi
 
         chmod a+x "$ROOT/$dest"
     else
