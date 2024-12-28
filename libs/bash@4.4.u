@@ -13,18 +13,24 @@ upkg_args=(
     --enable-readline
     --without-installed-readline
 
-    --disable-nls # not ready
 
     --with-curses
+
+    --disable-nls
+    --disable-rpath
+
+    # https://github.com/robxu9/bash-static/blob/master/build.sh
+    --without-bash-malloc
 )
 
 upkg_static() {
-    # fail with implicit function declaration on macOS
-    # export CFLAGS+=" -std=c89 -Wno-error=implicit-function-declaration" -> not working
-    is_darwin && {
-        ulogw "**** Not supported on macOS! ****"
+    # fail with implicit function declarations
+    is_glibc || {
+        ulogw "*****" "**** Not supported on $OSTYPE! ****"
         return 0
     }
+
+    CFLAGS+=" -std=c89 -Wno-error=implicit-function-declaration"
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
