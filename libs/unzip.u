@@ -7,7 +7,7 @@ upkg_lic='Info-ZIP'
 upkg_ver=6.0
 upkg_url=https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz
 upkg_sha=036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37
-upkg_dep=(libiconv)
+upkg_dep=(libiconv bzip2)
 
 # patches from ubuntu: https://packages.ubuntu.com/kinetic/unzip
 upkg_patch_url=http://archive.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu6.debian.tar.xz
@@ -50,30 +50,26 @@ upkg_patches=(
 )
 
 upkg_args=(
-    CC=$CC
-    LOC=\"'-DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_WORKING_ISPRINT'\"
+    CC="'$CC'"
+    CFLAGS="'$CFLAGS $CPPFLAGS -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_WORKING_ISPRINT'"
+    LF2="'$LDFLAGS -liconv'"
     D_USE_BZ2=-DUSE_BZIP2
     L_BZ2=-lbz2
-    LFLAGS1=-liconv
 )
 
 # targets:
-is_darwin && upkg_args+=(macosx) || upkg_args+=(generic)
+is_darwin && upkg_args+=(bsd) || upkg_args+=(unzips)
 
 upkg_static() {
-    sed -e '/^CC = .*$/d'      \
-        -e '/^CFLAGS = .*$/d'  \
-        -e '/^prefix = .*$/d'  \
-        -e 's/prefix/PREFIX/g' \
-        -i unix/Makefile &&
-
-    make -f unix/Makefile "${upkg_args[@]}" &&
+    make -f unix/Makefile "${upkg_args[@]}" V=1 &&
 
     # check & install
-    make -f unix/Makefile check install &&
+    make -f unix/Makefile check &&
+
+    make -f unix/Makefile install prefix="$PREFIX" &&
 
     # verify
-    check "$PREFIX/bin/unzip"
+    check unzip
 }
 
 
