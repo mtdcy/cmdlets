@@ -1,0 +1,70 @@
+# URL retrival utility and library
+
+# shellcheck disable=SC2034
+upkg_desc="Get a file from an HTTP, HTTPS or FTP server"
+upkg_lic="curl"
+upkg_ver=8.11.1
+upkg_url=https://curl.se/download/curl-$upkg_ver.tar.bz2
+upkg_sha=e9773ad1dfa21aedbfe8e1ef24c9478fa780b1b3d4f763c98dd04629b5e43485
+upkg_dep=(brotli openssl zstd zlib libidn2 nghttp2)
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # default paths
+    --sysconfdir=/etc
+    #--with-ca-path=/etc/ssl
+
+    --with-libidn2
+    --with-zstd
+    --with-zlib
+    --with-brotli
+    --with-nghttp2
+
+    --with-openssl
+    --with-ca-fallback # built-in CA
+    --without-ca-path
+    --without-ca-bundle
+    --with-secure-transport
+    --with-default-ssl-backend=openssl
+
+    --without-libssh2
+    --without-libpsl
+    --disable-ldap
+
+    --without-zsh-functions-dir
+    --without-fish-functions-dir
+
+    --disable-nls
+    --disable-rpath
+
+    --disable-doc
+    --disable-man
+
+    --disable-shared
+    --enable-static
+)
+
+upkg_static() {
+    # gethostbyname => dynamically linked
+    is_glibc && {
+        CFLAGS="${CFLAGS//--static/}"
+        CXXFLAGS="${CXXFLAGS//--static/}"
+        LDFLAGS="${LDFLAGS//-static/}"
+    }
+
+    configure  &&
+
+    make V=1 &&
+
+    # fast check
+    ./src/curl --fail -v -o /dev/null ${upkg_url%/*} &&
+
+    make install &&
+
+    check curl --version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

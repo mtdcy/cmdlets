@@ -1,0 +1,35 @@
+
+# shellcheck disable=SC2034
+upkg_desc="HTTP/2 C Library"
+upkg_lic="MIT"
+upkg_ver=1.64.0
+upkg_url=https://github.com/nghttp2/nghttp2/releases/download/v$upkg_ver/nghttp2-$upkg_ver.tar.gz
+upkg_sha=20e73f3cf9db3f05988996ac8b3a99ed529f4565ca91a49eb0550498e10621e8
+upkg_dep=()
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --enable-lib-only
+
+    --disable-nls
+    --disable-rpath
+
+    --disable-doc
+    --disable-man
+
+    --disable-shared
+    --enable-static
+)
+
+upkg_static() {
+    configure  &&
+
+    make -C lib V=1 &&
+
+    make -C lib install
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
