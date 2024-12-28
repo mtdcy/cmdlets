@@ -16,6 +16,7 @@ upkg_args=(
 
     --localstatedir=/var/locate
 
+    --with-included-regex
     --without-selinux
     --disable-acl
 
@@ -33,12 +34,23 @@ upkg_args=(
 )
 
 upkg_static() {
+    # borrow from alpine
+    CFLAGS+=" -flto=auto"
+    CXXFLAGS+=" -flto=auto"
+
+    # no '-static' with glibc
+    is_glibc && {
+        CFLAGS="${CFLAGS//--static/}"
+        CXXFLAGS="${CXXFLAGS//--static/}"
+        LDFLAGS="${LDFLAGS//-static/}"
+    }
+
     configure &&
 
     make &&
 
     # test only find
-    make -C tests/find check
+    make -C find check &&
 
     # install cmdlets and symlinks
     cmdlet find/find gfind find &&
@@ -46,7 +58,7 @@ upkg_static() {
     cmdlet locate/locate        &&
 
     # verify
-    check find --version
+    check gfind --version
 }
 
 
