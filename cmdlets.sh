@@ -10,10 +10,6 @@ ROOT="$(cd "$(dirname "$0")"; pwd)/prebuilts"
 REPO=https://pub.mtdcy.top/cmdlets/latest
 BASE=https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh
 
-if curl --fail -sIL -o /dev/null https://git.mtdcy.top; then
-    BASE=https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh
-fi
-
 error() { echo -ne "\\033[31m$*\\033[39m"; }
 info()  { echo -ne "\\033[32m$*\\033[39m"; }
 warn()  { echo -ne "\\033[33m$*\\033[39m"; }
@@ -76,6 +72,10 @@ pull() {
 
 install() {
     local dest tmpfile
+
+    if curl --fail -sIL -o /dev/null https://git.mtdcy.top/mtdcy/cmdlets/; then
+        BASE=https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh
+    fi
 
     dest="$(which cmdlets.sh 2>/dev/null | xargs dirname)"
     if [ -z "$dest" ]; then
