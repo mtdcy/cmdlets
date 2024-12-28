@@ -12,14 +12,14 @@ upkg_args=(
     --disable-dependency-tracking
     --enable-silent-rules
 
-    #--with-included-libunistring
-    #--with-included-libxml
+    --without-included-libunistring
+    --without-included-libxml
 
     --disable-examples
     --disable-java
     --disable-csharp
 
-    #--disable-nls
+    --disable-nls
     --disable-rpath
 
     # static only
@@ -33,21 +33,15 @@ upkg_args=(
 )
 
 # libintl.h for macOS only, Linux use glibc:/usr/include/libintl.h
-is_glibc || upkg_args+=(--with-included-gettext)
+is_linux || upkg_args+=(--with-included-gettext)
 
 upkg_static() {
     # install doesn't support multiple make jobs
     configure &&
+
     make &&
 
-    # check fail: test-term-ostream-xterm.sh, may be ncurses problem
-    #  => https://lists.gnu.org/archive/html/bug-gettext/2020-06/msg00016.html
-    if is_musl; then
-        # fail: test-canonicalize | test-u8-conv-from-enc
-        make install
-    else
-        TERM=xterm make check install
-    fi
+    TERM=xterm make check install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
