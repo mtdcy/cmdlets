@@ -1,9 +1,9 @@
 # GNU File, Shell, and Text utilities
-#
-# shellcheck disable=SC2034
 
+# shellcheck disable=SC2034
 upkg_lic="GPL-3.0-or-later"
 upkg_ver=9.4
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/coreutils/coreutils-$upkg_ver.tar.xz
 upkg_sha=ea613a4cf44612326e917201bbbcdfbd301de21ffc3b59b6e5c07e040b275e52
 upkg_dep=(gmp libiconv)
@@ -28,16 +28,19 @@ upkg_args=(
 [[ "${upkg_dep[*]}" =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
 
 upkg_static() {
-    # clear installed files
-    cleanup || true
+    is_glibc && dynamicalize
 
     configure &&
-    make &&
-    # check & install => there are some FAILs, help-version.sh|uid|zero
-    # $MAKE check &&
-    make install install-exec
-    # virsual verify
 
+    make &&
+
+    # check => there are some FAILs, help-version.sh|uid|zero
+    # make check &&
+
+    make install-exec &&
+
+    # virsual verify
+    check yes --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
