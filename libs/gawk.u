@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 upkg_lic='GPL-3.0-or-later'
 upkg_ver=5.3.1
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/gawk/gawk-$upkg_ver.tar.xz
 upkg_sha=694db764812a6236423d4ff40ceb7b6c4c441301b72ad502bb5c27e00cd56f78
 upkg_dep=(gmp mpfr readline)
@@ -33,20 +34,18 @@ upkg_static() {
     fi &&
 
     configure &&
+
     make &&
-    # quick check
-    version ./gawk --version &&
 
-    # check & install => XXX: there always 5 FAILs
-    #make check install-exec &&
+    # check => XXX: there always 5 FAILs
+    #make check &&
     [ "HelloHello" = "$(./gawk '{ gsub(/World/, "Hello"); print }' <<< "HelloWorld")" ] &&
-    make install-exec &&
 
-    # provide default 'awk'
-    ln -sfv gawk $PREFIX/bin/awk &&
+    #make install-exec &&
+    cmdlet gawk gawk awk &&
 
     # visual verify
-    check $PREFIX/bin/gawk
+    check gawk --version
 }
 
 
