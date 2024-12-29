@@ -1,10 +1,9 @@
 # Utility for directing compilation
-#
-# shellcheck disable=SC2034
 
+# shellcheck disable=SC2034
 upkg_lic='GPL-3.0-only'
 upkg_ver=4.4.1
-upkg_rev=0
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/make/make-$upkg_ver.tar.lz
 upkg_sha=8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9
 upkg_dep=(libiconv)
@@ -21,23 +20,22 @@ upkg_args=(
 
     --disable-doc
     --disable-man
-
-    --program-prefix=g
 )
 
-[[ "${upkg_dep[*]}" =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
+[[ "${upkg_dep[*]}" =~ libiconv ]] || upkg_args+=(--without-libiconv)
 
 upkg_static() {
     configure &&
+
     make &&
-    # test
-    version ./make --version &&
+
     # check & install
-    make check install-exec &&
-    # provide default 'make'
-    ln -sfv gmake $PREFIX/bin/make &&
+    make check &&
+
+    cmdlet make gmake make &&
+
     # verify
-    check $PREFIX/bin/gmake
+    check gmake --version
 }
 
 
