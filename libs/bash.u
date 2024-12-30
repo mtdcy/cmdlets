@@ -2,15 +2,15 @@
 #
 # HEAD version for feature inspection:
 #   #1. DON'T use this version as default interpreter
-#
-# shellcheck disable=SC2034
 
+# shellcheck disable=SC2034
 upkg_name="base"
 upkg_lic="GPL-3.0-or-later"
 upkg_ver=5.2.37
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/bash/bash-$upkg_ver.tar.gz
 upkg_sha=9599b22ecd1d5787ad7d3b7bf0c59f312b3396d1e281175dd1f8a4014da621ff
-upkg_dep=(ncurses libiconv readline)
+upkg_dep=(ncurses libiconv) # readline embbed
 
 upkg_args=(
     #--disable-option-checking -> make sure all options are recognized.
@@ -46,7 +46,8 @@ upkg_args=(
     #--enalbe-prompt-string-decoding -> unrecognized
 
     --enable-readline
-    --with-installed-readline
+    #--with-installed-readline
+    # => embbed readline always included
 
     --with-curses
 
@@ -61,8 +62,7 @@ upkg_args=(
 is_darwin || upkg_args+=(--enable-static-link)
 
 upkg_static() {
-    # make uninstall ==> will compile first and then fail always
-    rm -fv "$PREFIX/bin/bash" || true
+    is_glibc && dynamicalize
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
@@ -81,7 +81,8 @@ upkg_static() {
     make V=1 &&
 
     # install
-    make install &&
+    #make install &&
+    cmdlet bash &&
 
     # visual check
     check bash --version
