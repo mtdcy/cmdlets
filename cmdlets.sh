@@ -6,9 +6,6 @@ export LANG="${LANG:-en_US.UTF-8}"
 
 export STRIP="${CMDLETS_STRIP:-1}"
 
-# never resolve symbolic here
-ROOT="$(cd "$(dirname "$0")"; pwd)/prebuilts"
-
 REPO=https://pub.mtdcy.top/cmdlets/latest
 BASE=https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh
 
@@ -103,9 +100,12 @@ install() {
         BASE=https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh
     fi
 
-    dest="$(which cmdlets.sh 2>/dev/null | xargs dirname)"
-    if [ -z "$dest" ]; then
-        [[ "$PATH" =~ $HOME/.bin ]] && dest="$HOME/.bin" || dest="/usr/local/bin"
+    if which cmdlets.sh &>/dev/null; then
+        dest="$(dirname "$(which cmdlets.sh)")"
+    elif [[ "$PATH" =~ $HOME/.bin ]]; then
+        dest="$HOME/.bin"
+    else
+        dest="/usr/local/bin"
     fi
 
     info "Install cmdlets => $dest\n"
@@ -120,7 +120,6 @@ install() {
 }
 
 name="$(basename "$0")"
-
 if [ "$name" = "install" ] && [ $# -eq 0 ]; then
     install
     exit
@@ -146,6 +145,9 @@ elif [ "$name" = "cmdlets.sh" ]; then
     esac
     exit
 fi
+
+# never resolve symbolic here
+ROOT="$(cd "$(dirname "$0")"; pwd)/prebuilts"
 
 # preapre cmdlet
 cmdlet="$ROOT/$ARCH/app/$name/$name"
