@@ -1,0 +1,135 @@
+name: Update revision
+
+on:
+  schedule:
+    - cron: '0 0 * * 5'
+
+  push:
+    paths:
+      - .github/workflows/update-revision.yml
+    branches:
+      - main
+
+jobs:
+  build-with-docker:
+    runs-on: ubuntu-latest
+    container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:ubuntu-latest
+    steps:
+      - name: Checkout (main)
+        uses: https://git.mtdcy.top/actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.COMMIT_TOKEN }}
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Update (revision)
+        shell: bash
+        run: |
+          pwd -P
+
+          git config --global user.name "bot"
+          git config --global user.email "bot@mtdcy.top"
+
+          commits=/tmp/commits-$$.txt
+          for ulib in libs/*; do
+            ulib="$(basename "${ulib%.u}")"
+
+            # ignores
+            [[ "$ulib" =~ ^ALL ]] && continue
+            [[ "$ulib" =~ ^\.  ]] && continue
+
+            # update revision
+            (
+              pwd -P
+
+              . ulib.sh && load $ulib
+
+              IFS='=.' read -r m n r _ <<< "$upkg_ver"
+
+              [ -n "$r" ] || exit 0
+
+              r=$((r + 1))
+
+              ulogi "try update $ulib:$upkg_ver => $m.$n.$r"
+
+              sed -e "s/$upkg_ver/$m.$n.$r/" \
+                  -e 's/upkg_rev=.*$/upkg_rev=0/' \
+                  -i "libs/$ulib.u" &&
+              fetch "$ulib" &&
+              compile "$ulib" && {
+                # update sha
+                IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$upkg_zip")"
+                sed -e "s/upkg_sha=.*$/upkg_sha=$sha/" \
+                    -i "libs/$ulib.u"
+
+                git add "libs/$ulib.u"
+                echo "$ulib => $m.$n.$r" >> "$commits"
+              } || {
+                echocmd git checkout "libs/$ulib.u" # reset
+                uloge "build $ulib:$m.$n.$r failed"
+              } || true
+            ) || true
+          done
+
+          git status
+
+          git commit -F- <<EOF
+          [AutoUpdated] update libs
+
+          $(cat "$commits")
+          EOF
+
+          git push
+
+      - name: Deploy (artifacts)
+        if: always()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc --exclude='packages.lst'
+          path: prebuilts/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/latest/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Deploy (packages)
+        if: always()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: packages/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Deploy (logs)
+        if: failure()
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: logs/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/logs/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
+      - name: Notify on failure
+        if: failure()
+        shell: bash
+        run: |
+          curl --version
+          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
+              -H 'Content-Type: application/json' \
+              --data @<(cat <<EOF
+              {
+                "token": "${{ secrets.NOTIFY_TOKEN }}",
+                "title": "${{ github.repository }} ${{ job.status }}",
+                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
+              }
+          EOF
+              )
