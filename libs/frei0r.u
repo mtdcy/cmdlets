@@ -21,8 +21,7 @@ upkg_static() {
             --enable-pic
         )
 
-        configure "${upkg_args[@]}" &&
-        make install
+        configure && make && make install
     fi
 
     return $?

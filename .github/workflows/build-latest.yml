@@ -49,8 +49,7 @@ jobs:
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in "${files[@]}"; do
             x=$(basename ${x%.u})
-            [[ "$x" =~ ^_ ]] && continue ## ignored files
-            [[ "$x" =~ ^@ ]] && continue ## ignored files
+            [[ "$x" =~ ^\. ]] && continue ## ignored files
             cmdlets+=("$x")
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)

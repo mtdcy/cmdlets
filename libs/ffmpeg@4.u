@@ -8,7 +8,7 @@ upkg_sha=f9514e0d3515aee5a271283df71636e1d1ff7274b15853bcd84e144be416ab07
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 
 # shellcheck source=@ffmpeg.u
-. libs/@ffmpeg.u
+. libs/.ffmpeg.u
 
 # Unknown option "--enable-libharfbuzz".
 upkg_args=(${upkg_args[@]//--enable-libharfbuzz/})
