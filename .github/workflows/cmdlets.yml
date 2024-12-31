@@ -12,18 +12,16 @@ jobs:
   check-cmdlist.sh:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (main)
-        uses: https://git.mtdcy.top/actions/checkout@v3
-        with:
-          fetch-depth: 1
-          show-progress: false
-
       - name: Check cmdlets.sh
         shell: bash
         run: |
           set -x
 
-          export PATH=$PWD:$PATH
+          if curl --fail -o /dev/nul -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
+            bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
+          else
+            bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
+          fi
 
           # cmdlet: xz
           cmdlets.sh install xz
