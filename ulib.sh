@@ -1,24 +1,20 @@
 #!/bin/bash
 # shellcheck shell=bash
 
+umask  0022
 export LANG=C
-
-set -eo pipefail
 
 # options
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
-export UPKG_CHECKS=${UPKG_CHECKS:=1}    # enable check/tests
+export UPKG_CHECKS=${UPKG_CHECKS:-1}    # enable check/tests
 export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top/packages}
 export UPKG_REPO=${UPKG_REPO:-http://pub.mtdcy.top/cmdlets/latest}
 
 export ULOGS=${ULOGS:-tty}          # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
 
-# internal envs
-export UPKG_ROOT="$(pwd -P)"
-
-# ccache
-export CCACHE_DIR="$UPKG_ROOT/.ccache"
+# clear envs => setup by _init
+unset ROOT PREFIX WORKDIR
 
 # conditionals
 is_darwin() { [[ "$OSTYPE" == "darwin"* ]];                         }
@@ -57,9 +53,9 @@ _ulog() {
     echo -e "$message"
 }
 
-ulogi() { _ulog info  "$@"; }
-ulogw() { _ulog warn  "$@"; }
-uloge() { _ulog error "$@"; return 1; }
+ulogi() { _ulog info  "$@";             }
+ulogw() { _ulog warn  "$@";             }
+uloge() { _ulog error "$@"; return 1;   }
 
 _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
@@ -131,54 +127,60 @@ _filter_targets() {
     echo "$tgts"
 }
 
-is_msys && BINEXT=".exe" || BINEXT=""
-
-_ENVS=(
-    CC:gcc
-    CXX:g++
-    AR:ar
-    AS:as
-    LD:ld
-    NM:nm
-    RANLIB:ranlib
-    STRIP:strip
-    NASM:nasm
-    YASM:yasm
-    MAKE:make
-    CMAKE:cmake
-    MESON:meson
-    NINJA:ninja
-    PKG_CONFIG:pkg-config
-    PATCH:patch
-    INSTALL:install
-)
-
-# setup
 # TODO: add support for toolchain define
-_setup() {
+_init() {
+    [ -z "$ROOT" ] || return 0
+
+    # internal envs
+    ROOT="$(pwd -P)"
+
     local arch
     case "$OSTYPE" in
         darwin*)    arch="$(uname -m)-apple-darwin" ;;
         *)          arch="$(uname -m)-$OSTYPE"      ;;
     esac
 
-    PREFIX="$(pwd -P)/prebuilts/$arch"
+    PREFIX="$ROOT/prebuilts/$arch"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
-    export PREFIX
 
-    WORKDIR="$(pwd -P)/out/$arch"
+    WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
-    export WORKDIR
 
+    # ccache
+    CCACHE_DIR="$ROOT/.ccache"
+
+    export ROOT PREFIX WORKDIR CCACHE_DIR
+
+    # setup program envs
     local which=which
     is_darwin && which="xcrun --find" || true
 
-    local k v p
-    for x in "${_ENVS[@]}"; do
+    local k v p E progs
+    progs=(
+        CC:gcc
+        CXX:g++
+        AR:ar
+        AS:as
+        LD:ld
+        NM:nm
+        RANLIB:ranlib
+        STRIP:strip
+        NASM:nasm
+        YASM:yasm
+        MAKE:make
+        CMAKE:cmake
+        MESON:meson
+        NINJA:ninja
+        PKG_CONFIG:pkg-config
+        PATCH:patch
+        INSTALL:install
+    )
+    is_msys && E=".exe"
+    for x in "${progs[@]}"; do
         IFS=':' read -r k v _ <<< "$x"
 
-        p="$($which "$v" 2>/dev/null)"
-        [ -n "$p" ] || p="$($which "$v$BINEXT" 2>/dev/null)"
+        p="$($which "$v" 2>/dev/null)" ||
+        p="$($which "$v$E" 2>/dev/null)"
 
         eval -- export "$k=$p"
     done
@@ -571,7 +573,7 @@ applet() {
         pushd "$APREFIX"
 
         # pollute revision file
-        echocmd curl --fail -s -o "$revision" \
+        echocmd curl --fail -sL -o "$revision" \
             "$UPKG_REPO/$(basename "$PREFIX")/app/$revision" ||
         touch "$revision"
 
@@ -686,7 +688,7 @@ _unzip() {
 _prepare() {
     # check upkg_zip
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
-    upkg_zip="$UPKG_ROOT/packages/${upkg_zip##*/}"
+    upkg_zip="$ROOT/packages/${upkg_zip##*/}"
 
     # check upkg_zip_strip, default: 1
     upkg_zip_strip=${upkg_zip_strip:-1}
@@ -694,7 +696,7 @@ _prepare() {
     # check upkg_patch_*
     if [ -n "$upkg_patch_url" ]; then
         [ -n "$upkg_patch_zip" ] || upkg_patch_zip="$(basename "$upkg_patch_url")"
-        upkg_patch_zip="$UPKG_ROOT/packages/${upkg_patch_zip##*/}"
+        upkg_patch_zip="$ROOT/packages/${upkg_patch_zip##*/}"
 
         upkg_patch_strip=${upkg_patch_strip:-0}
     fi
@@ -734,7 +736,8 @@ _prepare() {
 
 # _load library
 _load() {
-    unset upkg_name upkg_ver upkg_rev
+    unset upkg_name upkg_lic
+    unset upkg_ver upkg_rev
     unset upkg_url upkg_zip
     unset upkg_dep upkg_args
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
@@ -776,8 +779,7 @@ _deps_get() {
 # compile <lib list>
 #  => auto build deps
 compile() {
-    # prepare
-    _setup
+    _init
 
     touch "$PREFIX/packages.lst"
 
@@ -794,7 +796,7 @@ compile() {
             #3. x been installed (skip)
             #4. x not installed
             if [ "$UPKG_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$x" ]; then
-                if [ "$UPKG_ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
+                if [ "$ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
                     unmeets+=($x)
                 elif [ "ulib.sh" -nt "$WORKDIR/.$x" ]; then
                     unmeets+=($x)
@@ -876,21 +878,21 @@ compile() {
 }
 
 search() {
-    _setup
+    _init
 
     ulogi "Search $PREFIX"
     for x in "$@"; do
         # binaries ?
         ulogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # libraries?
         ulogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # headers?
         ulogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$UPKG_ROOT/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # pkg-config?
         ulogi "Search pkgconfig ..."
@@ -915,7 +917,7 @@ search() {
 
 # load libname
 load() {
-    _setup
+    _init
     _load "$1"
 }
 
@@ -925,10 +927,10 @@ fetch() {
 
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
-    _fetch "$upkg_url" "$upkg_sha" "$UPKG_ROOT/packages/$upkg_zip"
+    _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
 }
 
-if [ "$(basename "$0")" = "ulib.sh" ]; then
+if [[ "$0" =~ ulib.sh$ ]]; then
     "$@"
 fi
 
