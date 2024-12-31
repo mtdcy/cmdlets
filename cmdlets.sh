@@ -46,7 +46,7 @@ pull() {
     # accept ENV:CMDLETS_ARCH
     local arch="${CMDLETS_ARCH:-$ARCH}"
     local dest="$arch/app/$1"
-    if curl --fail -s -o "/tmp/$1-revision" "$REPO/$dest/$1-revision"; then
+    if curl --fail -sL -o "/tmp/$1-revision" "$REPO/$dest/$1-revision"; then
         info "Pull applet $1 => $dest\n"
 
         local sha pkgname
@@ -59,7 +59,7 @@ pull() {
         fi
 
         chmod a+x "$ROOT/$dest/$1"
-    elif curl --fail -s -o /dev/null -I "$REPO/$arch/bin/$1"; then
+    elif curl --fail -sIL -o /dev/null "$REPO/$arch/bin/$1"; then
         dest="$arch/bin/$1"
         info "Pull cmdlet $1 => $dest\n"
 
@@ -101,7 +101,7 @@ install() {
     fi
 
     if which cmdlets.sh &>/dev/null; then
-        dest="$(dirname "$(which cmdlets.sh)")"
+        dest="$(which cmdlets.sh | xargs dirname)"
     elif [[ "$PATH" =~ $HOME/.bin ]]; then
         dest="$HOME/.bin"
     else
@@ -119,16 +119,17 @@ install() {
     fi
 }
 
+# never resolve symbolic here
+ROOT="$(dirname "$0")/prebuilts"
 name="$(basename "$0")"
+
 if [ "$name" = "install" ] && [ $# -eq 0 ]; then
     install
-    exit
 elif [ "$name" = "fetch" ] && [ $# -eq 1 ]; then
     pull "$1"
-    exit
 elif [ "$name" = "cmdlets.sh" ]; then
     case "$1" in
-        install)
+        install) # fetch cmdlet
             if [ -n "$2" ]; then # install cmdlets
                 pull "$2"
                 ln -sfv "$name" "$(dirname "$0")/$2"
@@ -143,22 +144,18 @@ elif [ "$name" = "cmdlets.sh" ]; then
             usage
             ;;
     esac
-    exit
+else
+    # preapre cmdlet
+    cmdlet="$ROOT/$ARCH/app/$name/$name"
+    [ -x "$cmdlet" ] || cmdlet="$ROOT/$ARCH/bin/$name"
+    [ -x "$cmdlet" ] || pull "$name"
+
+    # exec cmdlet
+    cmdlet="$ROOT/$ARCH/app/$name/$name"
+    [ -x "$cmdlet" ] || cmdlet="$ROOT/$ARCH/bin/$name"
+    [ -x "$cmdlet" ] || error "no cmdlet $name found.\n"
+
+    exec "$cmdlet" "$@"
 fi
-
-# never resolve symbolic here
-ROOT="$(cd "$(dirname "$0")"; pwd)/prebuilts"
-
-# preapre cmdlet
-cmdlet="$ROOT/$ARCH/app/$name/$name"
-[ -x "$cmdlet" ] || cmdlet="$ROOT/$ARCH/bin/$name"
-[ -x "$cmdlet" ] || pull "$name"
-
-# exec cmdlet
-cmdlet="$ROOT/$ARCH/app/$name/$name"
-[ -x "$cmdlet" ] || cmdlet="$ROOT/$ARCH/bin/$name"
-[ -x "$cmdlet" ] || error "no cmdlet $name found.\n"
-
-exec "$cmdlet" "$@"
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
