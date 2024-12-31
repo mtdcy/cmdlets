@@ -15,10 +15,7 @@ export ULOGS=${ULOGS:-tty}          # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
 
 # internal envs
-export UPKG_ROOT="$(dirname "$0")"
-
-# absolute path
-export UPKG_ROOT="$(realpath "$UPKG_ROOT")"
+export UPKG_ROOT="$(pwd -P)"
 
 # ccache
 export CCACHE_DIR="$UPKG_ROOT/.ccache"
@@ -735,30 +732,42 @@ _prepare() {
     done
 }
 
-_deps_get() {
-    ( source "$UPKG_ROOT/libs/$1.u"; echo "${upkg_dep[@]}"; )
+# _load library
+_load() {
+    unset upkg_name upkg_ver upkg_rev
+    unset upkg_url upkg_zip
+    unset upkg_dep upkg_args
+    [ -f "$1" ] && source "$1" || source "libs/$1.u"
 }
 
-# _upkg_deps lib
-_upkg_deps() {
-    local leaf=()
-    local deps=($(_deps_get $1))
+__deps_get() {
+    ( _load "$1"; echo "${upkg_dep[@]}"; )
+}
+
+# _deps_get libname
+_deps_get() {
+    local leaf deps
+    IFS=' ' read -r -a deps <<< "$(__deps_get "$1")"
 
     while [ "${#deps[@]}" -ne 0 ]; do
-        local x=("$(_deps_get ${deps[0]})")
+        local _deps meet
+        IFS=' ' read -r -a _deps <<< "$(__deps_get "${deps[0]}")"
 
-        if [ ${#x[@]} -ne 0 ]; then
-            for y in "${x[@]}"; do
-                [[ "${leaf[*]}" =~ "$y" ]] || {
+        if [ ${#_deps[@]} -ne 0 ]; then
+            meet=1
+            for x in "${_deps[@]}"; do
+                [[ "${leaf[*]}" =~ $x ]] || {
                     # prepend to deps and continue the while loop
-                    deps=(${x[@]} ${deps[@]})
-                    continue
+                    deps=("${_deps[@]}" "${deps[@]}")
+                    meet=0
+                    break
                 }
             done
+            [ "$meet" -eq 1 ] || continue
         fi
 
         # leaf lib or all deps are meet.
-        leaf+=(${deps[0]})
+        [[ "${leaf[*]}" =~ ${deps[0]} ]] || leaf+=("${deps[0]}")
         deps=("${deps[@]:1}")
     done
     echo "${leaf[@]}"
@@ -775,7 +784,7 @@ compile() {
     # get full dep list before build
     local libs=()
     for lib in "$@"; do
-        local deps=($(_upkg_deps "$lib"))
+        local deps=($(_deps_get "$lib"))
 
         # find unmeets.
         local unmeets=()
@@ -819,7 +828,7 @@ compile() {
             ulogi ".Load" "$ulib.u"
 
             # shellcheck source=libs/zlib.u
-            source "libs/$ulib.u"
+            _load "$ulib"
 
             [ "$upkg_type" = "PHONY" ] && return
 
@@ -862,7 +871,7 @@ compile() {
                 tail -v "$(_logfile)"
                 return 127
             }
-        )
+        ) || return $?
     done # End for
 }
 
@@ -902,6 +911,21 @@ search() {
             # TODO: add a sanity check here
         fi
     done
+}
+
+# load libname
+load() {
+    _setup
+    _load "$1"
+}
+
+# fetch libname
+fetch() {
+    load "$1"
+
+    [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
+
+    _fetch "$upkg_url" "$upkg_sha" "$UPKG_ROOT/packages/$upkg_zip"
 }
 
 if [ "$(basename "$0")" = "ulib.sh" ]; then
