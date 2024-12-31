@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 upkg_lic="MIT"
-upkg_ver=8.3.0
+upkg_ver=8.3.1
 upkg_url=https://github.com/harfbuzz/harfbuzz/releases/download/$upkg_ver/harfbuzz-$upkg_ver.tar.xz
-upkg_sha=109501eaeb8bde3eadb25fab4164e993fbace29c3d775bcaa1c1e58e2f15f847
+upkg_sha=f73e1eacd7e2ffae687bc3f056bb0c705b7a05aee86337686e09da8fc1c2030c
 upkg_dep=(freetype)
 
 #upkg_args=(

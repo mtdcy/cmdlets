@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 upkg_lic="BSD-3-Clause"
-upkg_ver=2.3.0
+upkg_ver=2.3.1
 upkg_url=https://github.com/ultravideo/kvazaar/releases/download/v$upkg_ver/kvazaar-$upkg_ver.tar.gz
-upkg_sha=75fd2b50be3c57b898f0a0e3549be6017d39cf3dda11c80853ac9bf6aadb5958
+upkg_sha=2510b8ecc2bf384bbc7b8fc2756bbfa8a8c173b57634c8dfdd8bea6733e56c46
 
 upkg_args=(
     --disable-option-checking
