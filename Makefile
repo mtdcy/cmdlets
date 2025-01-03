@@ -175,14 +175,17 @@ DOCKER_ARGS += --pull=always -q
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
 
 # permissons
-DOCKER_ARGS += -u $(USER):$(GROUP)
+DOCKER_ARGS += --cap-add=SYS_ADMIN
+#DOCKER_ARGS += -u $(USER):$(GROUP)
+DOCKER_ARGS += -e PUID=$(USER)
+DOCKER_ARGS += -e PGID=$(GROUP)
 
 # WSL bridge network has performance issue
 DOCKER_ARGS += --network host
 
 # mount
-DOCKER_ARGS += -v /etc/passwd:/etc/passwd:ro
-DOCKER_ARGS += -v /etc/group:/etc/group:ro
+#DOCKER_ARGS += -v /etc/passwd:/etc/passwd:ro
+#DOCKER_ARGS += -v /etc/group:/etc/group:ro
 DOCKER_ARGS += -v /etc/localtime:/etc/localtime:ro
 
 # working dir
