@@ -17,9 +17,9 @@ export NJOBS=${NJOBS:-$(nproc)}
 unset ROOT PREFIX WORKDIR
 
 # conditionals
-is_darwin() { [[ "$OSTYPE" == "darwin"* ]];                         }
-is_msys()   { [ "$OSTYPE" = "msys" ];                               }
-is_linux()  { [[ "$OSTYPE" == "linux"* ]];                          }
+is_darwin() { [[ "$OSTYPE" =~ darwin ]];                            }
+is_msys()   { [[ "$OSTYPE" =~ msys ]];                              }
+is_linux()  { [[ "$OSTYPE" =~ linux ]];                             }
 is_glibc()  { ldd --version 2>&1 | grep -qFi "glibc";               }
 # 'ldd --version' in alpine always return 1
 is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
@@ -136,8 +136,9 @@ _init() {
 
     local arch
     case "$OSTYPE" in
-        darwin*)    arch="$(uname -m)-apple-darwin" ;;
-        *)          arch="$(uname -m)-$OSTYPE"      ;;
+        darwin*)    arch="$(uname -m)-apple-darwin"         ;;
+        msys*)      arch="$(uname -m)-$OSTYPE-${MSYSTEM,,}" ;;
+        *)          arch="$(uname -m)-$OSTYPE"              ;;
     esac
 
     PREFIX="$ROOT/prebuilts/$arch"
@@ -167,7 +168,6 @@ _init() {
         STRIP:strip
         NASM:nasm
         YASM:yasm
-        MAKE:make
         CMAKE:cmake
         MESON:meson
         NINJA:ninja
@@ -175,6 +175,7 @@ _init() {
         PATCH:patch
         INSTALL:install
     )
+    is_msys && progs+=( MAKE:mingw32-make ) || progs+=( MAKE:make )
     is_msys && E=".exe"
     for x in "${progs[@]}"; do
         IFS=':' read -r k v _ <<< "$x"
@@ -199,6 +200,8 @@ _init() {
     local FLAGS=(
         -g -O3              # debug with O3
         -fPIC -DPIC         # PIC
+    )
+    is_msys || FLAGS+=(
         -ffunction-sections #
     )
     # Notes:
@@ -212,7 +215,9 @@ _init() {
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
         FLAGS+=( --static ) # static linking => two '--' vs ldflags
-        if is_clang; then
+        if is_msys; then
+            LDFLAGS="-L$PREFIX/lib"
+        elif is_clang; then
             LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
         else
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
@@ -556,6 +561,8 @@ check() {
         } || true
     elif is_darwin; then
         echocmd otool -L "$bin" # | grep -v "libSystem.*"
+    elif is_msys; then
+        echocmd ntldd "$bin"
     else
         uloge "FIXME: $OSTYPE"
     fi
