@@ -1,12 +1,18 @@
+# Library for accessing the direct rendering manager
 
-#
 # shellcheck disable=SC2034
-upkg_lic=""
+upkg_lic="MIT"
 upkg_ver=2.4.122
+upkg_rev=1
 upkg_url=https://dri.freedesktop.org/libdrm/libdrm-$upkg_ver.tar.xz
 upkg_sha=d9f5079b777dffca9300ccc56b10a93588cdfbc9dde2fae111940dfb6292f251
 
 upkg_static() {
+    is_darwin && {
+        ulogw "*****" "**** Not supported on $OSTYPE! ****"
+        exit 0
+    }
+
     mkdir -pv build && cd build &&
     meson setup \
             -Dudev=false             \
