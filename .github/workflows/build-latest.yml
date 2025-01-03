@@ -37,15 +37,6 @@ jobs:
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory "$PWD"
 
-          mkdir -p ~/.ssh
-          cat > ~/.ssh/id_rsa <<< "${{ secrets.HOST_SSH_ID_RSA }}"
-          chmod 0600 ~/.ssh/id_rsa
-          workdir=cmdlets-$$
-          ssh -o StrictHostKeyChecking=no \
-            ${{ vars.REMOTE_HOST_MACOS }} \
-            mkdir -p "$workdir"
-          echo "workdir=$workdir" >> "$GITHUB_OUTPUT"
-
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in "${files[@]}"; do
             x=$(basename ${x%.u})
