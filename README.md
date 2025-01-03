@@ -20,33 +20,23 @@ cmdlets.sh install nvim
 ln -svf cmdlets.sh nvim
 ```
 
-## Binaries
+## Supported arch
 
-- x86_64-linux-gnu      - [bin](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-linux-gnu/bin/)
-- x86_64-linux-musl     - [bin](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-linux-musl/bin/)
-- x86_64-apple-darwin   - [bin](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-apple-darwin/bin/)
+- x86_64-linux-gnu
+- x86_64-linux-musl
+- x86_64-apple-darwin
 
-## Libraries
+## Artifacts
 
-- x86_64-linux-gnu      - [packages.lst](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-linux-gnu/packages.lst)
-- x86_64-linux-musl     - [packages.lst](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-linux-musl/packages.lst)
-- x86_64-apple-darwin   - [packages.lst](https://pub.mtdcy.top:8443/cmdlets/latest/x86_64-apple-darwin/packages.lst)
+[CN](https://pub.mtdcy.top/cmdlets/latest)
 
 ## Build Libraries & Binaries
-
-### Configure Your Host
-
-- Linux     - see the [Dockerfile](Dockerfile) for details.
-- macOS     - see [Makefile](Makefile) `make prepare-remote-homebrew`
-- MSYS2     - TODO
 
 ### Build on Host
 
 ```shell
-export UPKG_DLROOT=/path/to/package/cache # [optional]
-export UPKG_NJOBS=8 # [optional]
-./build.sh zlib
-# OR
+make prepare-host
+
 make zlib
 ```
 
@@ -54,18 +44,27 @@ make zlib
 
 ```shell
 export DOCKER_IMAGE=cmdlets
-make prepare    # run only once
+
 make zlib
 ```
 
 ### Build with remote machine
 
-prerequisite: clone this project and setup packages dir.
-
 ```shell
 export REMOTE_HOST=10.10.10.234
 make prepare-remote-homebrew    # run only once
+
 make zlib
+```
+
+### Build options
+
+```shell
+export UPKG_MIRROR=http://pub.mtdcy.top/packages
+
+export ULOGS=tty # options: tty,plain,silence
+
+export NJOBS=2   #
 ```
 
 ## LICENSES
