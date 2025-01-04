@@ -17,6 +17,9 @@ case "$OSTYPE" in
     darwin*)
         ARCH="$(uname -m)-apple-darwin"
         ;;
+    msys*)
+        ARCH="$(uname -m)-msys-ucrt64"
+        ;;
     linux*) # OSTYPE cann't be trusted
         if find /lib*/ld-musl-* &>/dev/null; then
             ARCH="$(uname -m)-linux-musl"
