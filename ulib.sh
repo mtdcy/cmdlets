@@ -230,6 +230,7 @@ _init() {
             LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
         else
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
+            is_glibc && LDFLAGS+=" -static-libgcc"
         fi
     fi
 
@@ -288,6 +289,7 @@ _init() {
 dynamicalize() {
     CFLAGS="${CFLAGS//--static/}"
     CXXFLAGS="${CXXFLAGS//--static/}"
+    LDFLAGS="${LDFLAGS//-static-libgcc/}"
     LDFLAGS="${LDFLAGS//-static/}"
 
     export CFLAGS CXXFLAGS LDFLAGS
