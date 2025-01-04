@@ -6,7 +6,7 @@ on:
       - Makefile
       - ulib.sh
       - libs/**.u
-      - .github/workflows/build-latest.yml
+      - .github/workflows/build-macos.yml
     branches:
       - main
 
