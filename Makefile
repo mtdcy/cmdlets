@@ -180,8 +180,10 @@ DOCKER_ARGS += --cap-add=SYS_ADMIN
 DOCKER_ARGS += -e PUID=$(USER)
 DOCKER_ARGS += -e PGID=$(GROUP)
 
-# WSL bridge network has performance issue
-DOCKER_ARGS += --network host
+#1. WSL bridge network has performance issue.
+#2. Wine in docker takes looong time to start with host network.
+DOCKER_NETWORK ?= host
+DOCKER_ARGS += --network=$(DOCKER_NETWORK)
 
 # mount
 #DOCKER_ARGS += -v /etc/passwd:/etc/passwd:ro

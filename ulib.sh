@@ -168,6 +168,7 @@ _init() {
         STRIP:strip
         NASM:nasm
         YASM:yasm
+        MAKE:make
         CMAKE:cmake
         MESON:meson
         NINJA:ninja
@@ -175,13 +176,21 @@ _init() {
         PATCH:patch
         INSTALL:install
     )
-    is_msys && progs+=( MAKE:mingw32-make ) || progs+=( MAKE:make )
+
+    # MSYS2
+    is_msys && progs+=(
+        # we are using MSYS shell, but still setup mingw32-make
+        MMAKE:mingw32-make.exe
+        RC:windres.exe
+    )
     is_msys && E=".exe"
     for x in "${progs[@]}"; do
         IFS=':' read -r k v _ <<< "$x"
 
         p="$($which "$v" 2>/dev/null)" ||
         p="$($which "$v$E" 2>/dev/null)"
+
+        [ -n "$p" ] || return 1
 
         eval -- export "$k=$p"
     done
@@ -786,7 +795,7 @@ _deps_get() {
 # compile <lib list>
 #  => auto build deps
 compile() {
-    _init
+    _init || return $?
 
     touch "$PREFIX/packages.lst"
 
@@ -885,7 +894,7 @@ compile() {
 }
 
 search() {
-    _init
+    _init || return $?
 
     ulogi "Search $PREFIX"
     for x in "$@"; do
@@ -924,7 +933,7 @@ search() {
 
 # load libname
 load() {
-    _init
+    _init || return $?
     _load "$1"
 }
 
