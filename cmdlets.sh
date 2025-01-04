@@ -107,8 +107,10 @@ install() {
         dest="$(which cmdlets.sh | xargs dirname)"
     elif [[ "$PATH" =~ $HOME/.bin ]]; then
         dest="$HOME/.bin"
-    else
+    elif [[ -d "/usr/local/bin" ]]; then
         dest="/usr/local/bin"
+    else
+        dest="/usr/bin"
     fi
 
     info "Install cmdlets => $dest\n"
