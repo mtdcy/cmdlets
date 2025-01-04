@@ -225,7 +225,7 @@ _init() {
     else
         FLAGS+=( --static ) # static linking => two '--' vs ldflags
         if is_msys; then
-            LDFLAGS="-L$PREFIX/lib"
+            LDFLAGS="-L$PREFIX/lib -static"
         elif is_clang; then
             LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
         else
