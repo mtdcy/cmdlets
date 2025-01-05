@@ -47,7 +47,6 @@ jobs:
           echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
 
       - name: Build (docker)
-        if: always()
         shell: su buildbot -c "bash -e {0}"
         run: |
           set -x
