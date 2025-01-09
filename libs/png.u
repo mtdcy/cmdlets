@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 upkg_lic="libpng-2.0"
-upkg_ver=1.6.44
+upkg_ver=1.6.45
 upkg_url=https://downloads.sourceforge.net/libpng/libpng16/libpng-$upkg_ver.tar.xz
-upkg_sha=60c4da1d5b7f0aa8d158da48e8f8afa9773c1c8baa5d21974df61f1886b8ce8e
+upkg_sha=926485350139ffb51ef69760db35f78846c805fef3d59bfdcb2fba704663f370
 upkg_dep=(zlib)
 
 upkg_args=(

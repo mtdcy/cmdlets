@@ -2,10 +2,10 @@
 
 # shellcheck disable=SC2034
 upkg_lic="MIT"
-upkg_ver=2.4.122
-upkg_rev=1
+upkg_ver=2.4.123
+upkg_rev=0
 upkg_url=https://dri.freedesktop.org/libdrm/libdrm-$upkg_ver.tar.xz
-upkg_sha=d9f5079b777dffca9300ccc56b10a93588cdfbc9dde2fae111940dfb6292f251
+upkg_sha=a2b98567a149a74b0f50e91e825f9c0315d86e7be9b74394dae8b298caadb79e
 
 upkg_static() {
     is_darwin && {
