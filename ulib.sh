@@ -380,7 +380,7 @@ cmake() {
     )
 
     # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && opts+=( -G"MSYS Makefiles" )
+    is_msys && opts+=( -G"'MSYS Makefiles'" )
 
     # cmake
     command $CMAKE "${opts[*]}" "${upkg_args[@]}" "$@"
