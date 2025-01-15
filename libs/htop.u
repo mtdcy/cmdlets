@@ -1,0 +1,26 @@
+# Improved top (interactive process viewer)
+
+# shellcheck disable=SC2034
+upkg_name=htop
+upkg_lic="GPL"
+upkg_ver=3.3.0
+upkg_rev=0
+upkg_url=https://github.com/htop-dev/htop/releases/download/$upkg_ver/htop-$upkg_ver.tar.xz
+upkg_sha=a69acf9b42ff592c4861010fce7d8006805f0d6ef0e8ee647a6ee6e59b743d5c
+upkg_dep=(ncurses) # enables mouse scroll
+
+upkg_static() {
+    ./autogen.sh &&
+
+    configure &&
+
+    make &&
+
+    make install &&
+
+    cmdlet htop &&
+
+    check htop
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
