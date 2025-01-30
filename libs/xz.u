@@ -3,11 +3,11 @@
 
 upkg_name=xz
 upkg_lic="BSD"
-upkg_ver=5.6.3
+upkg_ver=5.6.4
 upkg_rev=0
 upkg_url=https://github.com/tukaani-project/xz/releases/download/v$upkg_ver/xz-$upkg_ver.tar.gz
 #upkg_url=https://downloads.sourceforge.net/project/lzmautils/xz-$upkg_ver.tar.gz
-upkg_sha=b1d45295d3f71f25a4c9101bd7c8d16cb56348bbef3bbc738da0351e17c73317
+upkg_sha=269e3f2e512cbd3314849982014dc199a7b2148cf5c91cedc6db629acdf5e09b
 upkg_dep=()
 
 upkg_args=(
