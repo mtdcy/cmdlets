@@ -6,7 +6,7 @@ upkg_lic="BSD-3-Clause"
 upkg_ver=10.43
 upkg_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$upkg_ver/pcre2-$upkg_ver.tar.bz2
 upkg_sha=e2a53984ff0b07dfdb5ae4486bbb9b21cca8e7df2434096cc9bf1b728c350bcb
-upkg_dep=()
+upkg_dep=(zlib bzip2)
 
 upkg_args=(
     --disable-option-checking

@@ -1,0 +1,31 @@
+# Maintained ctags implementation
+
+# shellcheck disable=SC2034
+upkg_name=ctags
+upkg_lic="GPL-2.0-only"
+upkg_ver=p6.1.20250223.0
+upkg_rev=0
+upkg_url=https://github.com/universal-ctags/ctags/archive/refs/tags/$upkg_ver.tar.gz
+upkg_sha=0211b7380cc53eb05506205242b0e80357f7a9295ac7d489f43b15a14b7609dc
+upkg_dep=(pcre2 libyaml jansson libxml2)
+
+upkg_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --with-included-regex
+
+    --disable-iconv
+)
+
+upkg_static() {
+    [ -f configure ] || ./autogen.sh
+
+    configure &&
+    make && 
+    cmdlet ctags ctags etags &&
+    check ctags
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
