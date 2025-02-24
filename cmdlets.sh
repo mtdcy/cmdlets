@@ -134,7 +134,7 @@ elif [ "$name" = "fetch" ] && [ $# -eq 1 ]; then
     pull "$1"
 elif [ "$name" = "cmdlets.sh" ]; then
     case "$1" in
-        install) # fetch cmdlet
+        install)    # fetch cmdlet
             if [ -n "$2" ]; then # install cmdlets
                 pull "$2"
                 ln -sfv "$name" "$(dirname "$0")/$2"
@@ -142,7 +142,10 @@ elif [ "$name" = "cmdlets.sh" ]; then
                 install
             fi
             ;;
-        library) # fetch libs
+        fetch)      # fetch bin file
+            pull "$2"
+            ;;
+        library)    # fetch lib files
             pull-library "$2"
             ;;
         help|*)
