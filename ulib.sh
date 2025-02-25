@@ -177,6 +177,7 @@ _init() {
         PKG_CONFIG:pkg-config
         PATCH:patch
         INSTALL:install
+        CARGO:cargo
     )
 
     # MSYS2
@@ -192,7 +193,10 @@ _init() {
         p="$($which "$v" 2>/dev/null)" ||
         p="$($which "$v$E" 2>/dev/null)"
 
-        [ -n "$p" ] || return 1
+        [ -n "$p" ] || {
+            uloge "....." "missing host tools $v, abort"
+            return 1
+        }
 
         eval -- export "$k=$p"
     done
@@ -413,6 +417,30 @@ ninja() {
     command "$cmdline"
 }
 
+cargo() {
+    local cmdline="$CARGO $* ${upkg_args[*]}"
+
+    # cargo always download and rebuild targets
+    local mirrors=https://mirrors.mtdcy.top
+    if curl --fail -sIL "$mirrors" -o /dev/null; then
+        cat << EOF >> .cargo/config.toml
+[source.crates-io]
+replace-with = 'mirrors'
+
+[source.mirrors]
+registry = "sparse+$mirrors/crates.io-index/"
+
+[registries.mirrors]
+index = "sparse+$mirrors/crates.io-index/"
+EOF
+    fi
+
+    # remove spaces
+    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+
+    command "$cmdline"
+}
+
 install() {
     if [[ "$*" =~ \s- ]]; then
         echocmd "$*"
@@ -483,7 +511,7 @@ cmdlet() {
         fi
     fi 
 
-    _pack "$pkgname" "${installed[@]}" | _capture
+    _pack "$(basename "$pkgname")" "${installed[@]}" | _capture
 }
 
 # _fix_pc path/to/xxx.pc

@@ -117,7 +117,8 @@ BREW_PACKAGES 	= wget curl git                                    \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex                             \
-				  luajit perl
+				  luajit perl 									   \
+				  rust
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -125,6 +126,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex                             \
 				  luajit perl libhttp-daemon-perl                  \
+				  cargo
 
 prepare-host-homebrew:
 	brew update
