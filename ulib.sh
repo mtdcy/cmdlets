@@ -7,8 +7,10 @@ export LANG=C
 # options
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
 export UPKG_CHECKS=${UPKG_CHECKS:-1}    # enable check/tests
-export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top/packages}
-export UPKG_REPO=${UPKG_REPO:-http://pub.mtdcy.top/cmdlets/latest}
+
+
+export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top}
+export UPKG_REPO="$UPKG_MIRROR/cmdlets/latest"
 
 export ULOGS=${ULOGS:-tty}          # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
@@ -421,24 +423,78 @@ install() {
     fi
 }
 
-# cmdlet executable name [alias ...]
+_pkglist() {
+    echo "$PREFIX/packages.lst"
+}
+
+_pkginfo() {
+    echo "$PREFIX/$upkg_name/pkginfo"
+}
+
+# _pack pkgname <file list>
+_pack() {
+    pushd "$PREFIX"
+
+    # shellcheck disable=SC2001
+    local files=("$(sed -e "s:$PREFIX::g" <<< "${@:2}")")
+
+    local pkgname="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}.tar.gz"
+    local revision="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}"
+
+    mkdir -p "$(dirname "$pkgname")"
+    tar -czvf "$pkgname" "${@:2}"
+
+    mkdir -pv "$(dirname "$(_pkginfo)")"
+    touch "$(_pkginfo)"
+    sha256sum "$pkgname" >> "$(_pkginfo)"
+
+    # create a revision file
+    grep -Fw "$1" "$(_pkginfo)" > "$revision"
+
+    # create a symlink
+    ln -sfv "$revision" "$upkg_name/$1-revision"
+
+    popd 
+}
+
+# cmdlet executable [name] [alias ...]
 cmdlet() {
-    ulogi "..Bin" "install cmdlet $1 => $2 (alias ${*:3})"
+    ulogi ".Inst" "install cmdlet $1 => $2 (alias ${*:3})"
+
     # strip or not ?
     local args=(-v)
     file "$1" | grep -qFw 'not stripped' && args+=(-s)
 
+    local pkgname="$1"
+    local installed=()
     if [ $# -lt 2 ]; then
         "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/" || return 1
+        installed+=("bin/$1")
     else
+        local pkgname="$2"
         "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2" || return 1
+        installed+=("bin/$2")
+
         if [ $# -gt 2 ]; then
             for x in "${@:3}"; do
                 ln -sfv "$2" "$(_prefix)/bin/$x"
+                installed+=("bin/$x")
             done
         fi
-    fi | _capture
+    fi 
 
+    _pack "$pkgname" "${installed[@]}" | _capture
+}
+
+# _fix_pc path/to/xxx.pc
+_fix_pc() {
+    local prefix=$(_prefix)
+    if grep -qFw "$prefix" "$1"; then
+        # shellcheck disable=SC2016
+        sed -e 's!^prefix=.*$!prefix=\${PREFIX}!' \
+            -e "s!$prefix!\${prefix}!g" \
+            -i "$1"
+    fi
 }
 
 # _library file subdir [libname] [alias]
@@ -473,7 +529,7 @@ library() {
     IFS=':' read -r -a alias <<< "$alias"
     shift # skip libname and alias
 
-    ulogi "..Lib" "install library $libname => (alias ${alias[*]})"
+    ulogi ".Libx" "install library $libname => (alias ${alias[*]})"
     while [ $# -ne 0 ]; do
         case "$1" in
             *.h)
@@ -486,6 +542,7 @@ library() {
                 ;;
             *.pc)
                 [[ "$subdir" =~ ^lib\/pkgconfig ]] || subdir="lib/pkgconfig"
+                _fix_pc "$1"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
                 ;;
             include*|lib*|bin*)
@@ -500,49 +557,7 @@ library() {
         shift
     done
 
-    {
-        local revision="$libname-revision"
-
-        pushd "$PREFIX"
-
-        # pollute revision file
-        echocmd curl --fail -sL -o "$revision" \
-            "$UPKG_REPO/$(basename "$PREFIX")/$libname-revision" ||
-        touch "$revision"
-
-        # append version and revision
-        libname+="-$upkg_ver"
-        [ -z "$upkg_rev" ] || libname+="-$upkg_rev"
-        libname+=".tar.gz"
-
-        echocmd tar -cvzf "$libname" "${installed[@]}"
-
-        sed -i "/$libname/d" "$revision"
-
-        sha256sum "$libname" >> "$revision"
-
-        cat "$revision"
-
-        popd
-    } | _capture
-}
-
-# _fix_pc path/to/xxx.pc
-_fix_pc() {
-    local prefix=$(_prefix)
-    if grep -qFw "$prefix" "$1"; then
-        sed -e 's!^prefix=.*$!prefix=\${PREFIX}!' \
-            -e "s!$prefix!\${prefix}!g" \
-            -i "$1"
-    fi
-}
-
-# perform quick check with cmdlet version
-# version /path/to/cmdlet [--version]
-# version cmdlet [--version]
-version() {
-    # deprecated
-    true
+    _pack "$libname" "${installed[@]}" | _capture
 }
 
 # perform visual check on cmdlet
@@ -579,38 +594,15 @@ check() {
 
 # applet <name>
 applet() {
-    local pkgname revision
+    ulogi ".Appx" "$* => $APREFIX"
+
     # install the entrypoint
     $INSTALL -v -m755 "$@" "$APREFIX" || return 1
 
-    {
-        revision="$upkg_name-revision"
+    local installed
+    read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )" 
 
-        pushd "$APREFIX"
-
-        # pollute revision file
-        echocmd curl --fail -sL -o "$revision" \
-            "$UPKG_REPO/$(basename "$PREFIX")/app/$revision" ||
-        touch "$revision"
-
-        # pkgname
-        pkgname="$upkg_name-$upkg_ver"
-        [ -z "$upkg_rev" ] || pkgname+="-$upkg_rev"
-        pkgname+=".tar.gz"
-
-        # make a package
-        touch "$pkgname"
-        tar -czf "$pkgname" --exclude="$pkgname" --exclude="$revision" .
-
-        sed -i "/$pkgname/d" "$revision"
-
-        # record package
-        sha256sum "$pkgname" >> "$revision"
-
-        cat "$revision"
-
-        popd
-    } | _capture
+    _pack "$1" "${installed[@]}" | _capture
 }
 
 # env: UPKG_MIRROR
@@ -639,7 +631,7 @@ _fetch() {
     mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
-    curl "${args[@]}" "$UPKG_MIRROR/$(basename "$zip")" 2>/dev/null ||
+    curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null ||
     #3. try original
     curl "${args[@]}" "$url" || {
         uloge "Error" "get $url failed."
@@ -660,10 +652,10 @@ _unzip() {
 
     # skip leading directories, default 1
     local skip=${2:-1}
-    local arg0=(--strip-components=$skip)
+    local arg0=("--strip-components=$skip")
 
     if tar --version | grep -qFw "bsdtar"; then
-        arg0=(--strip-components $skip)
+        arg0=(--strip-components "$skip")
     fi
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
@@ -691,7 +683,7 @@ _unzip() {
             # universal skip method, faults:
             #  #1. have to clear dir before extraction.
             #  #2. will fail with bad upkg_zip_strip.
-            while [ $skip -gt 0 ]; do
+            while [ "$skip" -gt 0 ]; do
                 mv -f */* . || true
                 skip=$((skip - 1))
             done &&
@@ -754,14 +746,15 @@ _prepare() {
 _load() {
     unset upkg_name upkg_lic
     unset upkg_ver upkg_rev
-    unset upkg_url upkg_zip
-    unset upkg_dep upkg_args
+    unset upkg_url upkg_sha 
+    unset upkg_zip upkg_zip_strip
+    unset upkg_dep upkg_args upkg_type
+    unset upkg_patch_url upkg_patch_zip upkg_patch_sha upkg_patch_strip
+
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
 }
 
-__deps_get() {
-    ( _load "$1"; echo "${upkg_dep[@]}"; )
-}
+__deps_get() {( _load "$1"; echo "${upkg_dep[@]}"; )}
 
 # _deps_get libname
 _deps_get() {
@@ -792,105 +785,107 @@ _deps_get() {
     echo "${leaf[@]}"
 }
 
-# compile <lib list>
-#  => auto build deps
-compile() {
+# compile target
+compile() {(
+    # start subshell before source
+    set -eo pipefail
+
+    _init
+
+
+    ulogi ".Load" "$1"
+    _load "$1"
+
+    [ "$upkg_type" = "PHONY" ] && return
+
+    # check upkg_name
+    [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
+
+    # sanity check
+    [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
+    [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
+
+    # set PREFIX for app
+    [ "$upkg_type" = "app" ] && {
+        APREFIX="$PREFIX/app/$upkg_name"
+        mkdir -p "$APREFIX"
+    }
+
+    # clear
+    echo '' > "$(_pkginfo)" 2>/dev/null || true
+
+    sed -i "/^$upkg_name.*$/d" "$(_pkglist)" 2>/dev/null || touch "$(_pkglist)"
+
+    # prepare work dir
+    mkdir -p "$PREFIX"
+    mkdir -p "$(dirname "$(_logfile)")"
+
+    local workdir="$WORKDIR/$upkg_name-$upkg_ver"
+
+    # strict mode: clean before compile
+    [ "$UPKG_STRICT" -eq 0 ] || rm -rf "$workdir"
+
+    mkdir -p "$workdir" && cd "$workdir"
+
+    echo -e "**** start build $upkg_name ****\n$(date)\n" > "$(_logfile)"
+
+    ulogi ".Path" "$PWD"
+
+    # build library
+    _prepare && upkg_static || {
+        tail -v "$(_logfile)"
+        return 1
+    }
+
+    # append lib to packages.lst
+    echo "$upkg_name $upkg_ver $upkg_lic" >> "$(_pkglist)"
+
+    # record @ work dir
+    touch "$WORKDIR/.$upkg_name"
+
+    ulogi "<<<<<" "$upkg_name@$upkg_ver\n"
+)}
+
+# build targets and its dependencies
+# build <lib list>
+build() {
     _init || return $?
 
-    touch "$PREFIX/packages.lst"
+    touch "$(_pkglist)"
 
     # get full dep list before build
-    local libs=()
-    for lib in "$@"; do
-        local deps=($(_deps_get "$lib"))
-
-        # find unmeets.
-        local unmeets=()
-        for x in "${deps[@]}"; do
-            #1. x.u been updated
-            #2. ulib.sh been updated (UPKG_STRICT)
-            #3. x been installed (skip)
-            #4. x not installed
-            if [ "$UPKG_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$x" ]; then
-                if [ "$ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
-                    unmeets+=($x)
-                elif [ "ulib.sh" -nt "$WORKDIR/.$x" ]; then
-                    unmeets+=($x)
-                fi
-            elif grep -w "^$x" $PREFIX/packages.lst &>/dev/null; then
-                continue
-            else
-                unmeets+=($x)
+    local deps=()
+    for dep in $(_deps_get "$1"); do
+        #1. dep.u been updated
+        #2. ulib.sh been updated (UPKG_STRICT)
+        #3. dep been installed (skip)
+        #4. dep not installed
+        local nonexists_or_outdated=0
+        if [ "$UPKG_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$dep" ]; then
+            if [ "$ROOT/libs/$dep.u" -nt "$WORKDIR/.$dep" ]; then
+                nonexists_or_outdated=1
+            elif [ "ulib.sh" -nt "$WORKDIR/.$dep" ]; then
+                nonexists_or_outdated=1
             fi
-        done
+        elif grep -w "^$dep" "$(_pkglist)" &>/dev/null; then
+            continue
+        else
+            nonexists_or_outdated=1
+        fi
 
-        # does x exists in list?
-        for x in "${unmeets[@]}"; do
-            grep -Fw "$x" <<<"${libs[@]}" &>/dev/null || libs+=($x)
-        done
-
-        # append the lib to list.
-        libs+=($lib)
+        [ "$nonexists_or_outdated" -eq 0 ] || deps+=("$dep")
     done
 
-    ulogi "Build" "$* (${libs[*]})"
+    ulogi "Build" "$1 (${deps[*]})"
+    deps+=("$1")
 
     local i=0
-    for ulib in "${libs[@]}"; do
+    for ulib in "${deps[@]}"; do
         i=$((i + 1))
+        ulogi ">>>>>" "#$i/${#deps[@]} $ulib"
 
-        (   # start subshell before source
-            set -eo pipefail
-            ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
-
-            ulogi ".Load" "$ulib.u"
-
-            # shellcheck source=libs/zlib.u
-            _load "$ulib"
-
-            [ "$upkg_type" = "PHONY" ] && return
-
-            # check upkg_name
-            [ -n "$upkg_name" ] || upkg_name="$ulib"
-
-            # sanity check
-            [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
-            [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
-
-            # set PREFIX for app
-            [ "$upkg_type" = "app" ] && APREFIX="$PREFIX/app/$upkg_name"
-
-            # prepare work dir
-            mkdir -p "$PREFIX"
-            mkdir -p "$(dirname "$(_logfile)")"
-
-            local workdir="$WORKDIR/$ulib-$upkg_ver"
-            [ "$UPKG_STRICT" -eq 0 ] || rm -rf "$workdir"
-            mkdir -p "$workdir" && cd "$workdir"
-
-            echo -e "**** start build $ulib ****\n$(date)\n" > "$(_logfile)"
-
-            ulogi ".Path" "$PWD"
-
-            # delete lib from packages.lst before build
-            sed -i "/^$ulib.*$/d" "$PREFIX/packages.lst"
-
-            # build library
-            _prepare && upkg_static &&
-
-            # append lib to packages.lst
-            echo "$ulib $upkg_ver $upkg_lic" >> "$PREFIX/packages.lst" &&
-
-            # record @ work dir
-            touch "$WORKDIR/.$ulib" &&
-
-            ulogi "<<<<<" "$ulib@$upkg_ver\n" || {
-                uloge "Error" "build $ulib failed.\n" || true
-                tail -v "$(_logfile)"
-                return 127
-            }
-        ) || return $?
-    done # End for
+        compile "$ulib" || return 127
+    done
 }
 
 search() {

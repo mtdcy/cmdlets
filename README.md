@@ -60,7 +60,7 @@ make zlib
 ### Build options
 
 ```shell
-export UPKG_MIRROR=http://pub.mtdcy.top/packages
+export UPKG_MIRROR=http://pub.mtdcy.top
 
 export ULOGS=tty # options: tty,plain,silence
 

@@ -57,7 +57,7 @@ jobs:
                   -e 's/upkg_rev=.*$/upkg_rev=0/' \
                   -i "libs/$ulib.u" &&
               fetch "$ulib" &&
-              compile "$ulib" && {
+              build "$ulib" && {
                 # update sha
                 IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$upkg_zip")"
                 sed -e "s/upkg_sha=.*$/upkg_sha=$sha/" \

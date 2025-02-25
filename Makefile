@@ -22,7 +22,7 @@ export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
 
 # pass through envs
 export UPKG_STRICT=0
-export UPKG_MIRROR=$${UPKG_MIRROR:-http://pub.mtdcy.top/packages}
+export UPKG_MIRROR=$${UPKG_MIRROR:-http://pub.mtdcy.top}
 
 # misc
 export ULOGS=tty
@@ -74,7 +74,7 @@ WORKDIR = $(shell pwd)
 vpath %.u libs
 
 %: %.u
-	@make runc CMD="bash ulib.sh compile $@"
+	@make runc CMD="bash ulib.sh build $@"
 
 clean:
 	@make runc CMD="rm -rf out/$(ARCH) logs/$(ARCH)"

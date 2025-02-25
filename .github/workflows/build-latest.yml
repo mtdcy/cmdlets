@@ -56,7 +56,7 @@ jobs:
           fails=()
           cmdlets=${{ steps.prepare.outputs.cmdlets }}
           for x in ${cmdlets//,/ }; do
-            bash ulib.sh compile "$x" || {
+            bash ulib.sh build "$x" || {
               ret=$?
               fails+=("$x")
             }
