@@ -2,6 +2,7 @@
 
 # shellcheck disable=SC2034
 upkg_ver=7.1
+upkg_rev=1
 upkg_url=https://ffmpeg.org/releases/ffmpeg-$upkg_ver.tar.xz
 upkg_sha=40973d44970dbc83ef302b0609f2e74982be2d85916dd2ee7472d30678a7abe6
 
@@ -11,21 +12,19 @@ FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 . libs/@ffmpeg.u
 
 upkg_static() {
-    configure &&
+	configure  &&
+		make &&
 
-    make &&
+		# install libs headers progs
+		make install &&
 
-    # install libs headers progs
-    make install &&
-
-#   # install all tools
-#   make alltools &&
-#
-#   for x in tools/*; do
-#       [ -x "$x" ] && cmdlet "$x" "$(basename "$x")" || true
-#   done &&
-
-    check ffmpeg --version
+		#   # install all tools
+		#   make alltools &&
+		#
+		#   for x in tools/*; do
+		#       [ -x "$x" ] && cmdlet "$x" "$(basename "$x")" || true
+		#   done &&
+		check ffmpeg --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
