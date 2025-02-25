@@ -174,22 +174,26 @@ elif [ "$name" = "$(basename "$BASE")" ]; then
         update)
             update
             ;;
-        install)    # fetch cmdlet
-            if [ -n "$2" ]; then # install cmdlets
-                cmdlet "$2"
-                ln -sfv "$name" "$(dirname "$0")/$2"
-            else
-                update
-            fi
+        install)    # fetch cmdlets
+            for x in "${@:2}"; do
+                cmdlet "$x"
+                ln -sfv "$name" "$(dirname "$0")/$x"
+            done
             ;;
         fetch)      # fetch bin file
-            cmdlet "$2"
+            for x in "${@:2}"; do
+                cmdlet "$x"
+            done
             ;;
         library)    # fetch lib files
-            library "$2"
+            for x in "${@:2}"; do
+                library "$x"
+            done
             ;;
         package)    # fetch package files
-            package "$2"
+            for x in "${@:2}"; do
+                package "$x"
+            done
             ;;
         help|*)
             usage
