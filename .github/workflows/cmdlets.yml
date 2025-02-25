@@ -29,8 +29,8 @@ jobs:
 
           # library: libz.a
           cmdlets.sh library libz
-          ls -lh lib/libz.a
-          ls -lh include/zlib.h
+          find . -name "prebuilts/*/lib/libz.a"
+          find . -name "prebuilts/*/include/zlib.h"
 
           # applet: neovim
           cmdlets.sh install nvim
