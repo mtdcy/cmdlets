@@ -3,9 +3,10 @@
 # shellcheck disable=SC2034
 upkg_des="Perl compatible regular expressions library with a new API"
 upkg_lic="BSD-3-Clause"
-upkg_ver=10.43
+upkg_ver=10.45
+upkg_rev=0
 upkg_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$upkg_ver/pcre2-$upkg_ver.tar.bz2
-upkg_sha=e2a53984ff0b07dfdb5ae4486bbb9b21cca8e7df2434096cc9bf1b728c350bcb
+upkg_sha=21547f3516120c75597e5b30a992e27a592a31950b5140e7b8bfde3f192033c4
 upkg_dep=(zlib bzip2)
 
 upkg_args=(
@@ -24,12 +25,17 @@ upkg_args=(
 )
 
 upkg_static() {
-
-    cleanup || true
-
     configure  &&
+
     make &&
-    make install
+
+    library libpcre2        \
+            include         src/pcre2.h src/pcre2posix.h \
+            lib             .libs/libpcre2-8.{a,la}  \
+                            .libs/libpcre2-16.{a,la}  \
+                            .libs/libpcre2-32.{a,la} \
+                            .libs/libpcre2-posix.{a,la} \
+            lib/pkgconfig   libpcre2-8.pc libpcre2-16.pc libpcre2-32.pc libpcre2-posix.pc
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
