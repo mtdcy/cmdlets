@@ -469,7 +469,7 @@ cmdlet() {
     local installed=()
     if [ $# -lt 2 ]; then
         "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/" || return 1
-        installed+=("bin/$1")
+        installed+=("bin/$(basename "$1")")
     else
         local pkgname="$2"
         "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2" || return 1
@@ -602,7 +602,7 @@ applet() {
     local installed
     read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )" 
 
-    _pack "$1" "${installed[@]}" | _capture
+    _pack "$(basename "$1")" "${installed[@]}" | _capture
 }
 
 # env: UPKG_MIRROR
