@@ -872,17 +872,22 @@ build() {
         else
             nonexists_or_outdated=1
         fi
-
         [ "$nonexists_or_outdated" -eq 0 ] || deps+=("$dep")
     done
 
-    ulogi "Build" "$1 (${deps[*]})"
-    deps+=("$1")
+    # pull dependencies 
+    local libs=()
+    for dep in "${deps[@]}"; do
+        ./cmdlets.sh package "$dep" || libs+=("$dep")
+    done
+
+    ulogi "Build" "$1 (${libs[*]})"
+    libs+=("$1")
 
     local i=0
-    for ulib in "${deps[@]}"; do
+    for ulib in "${libs[@]}"; do
         i=$((i + 1))
-        ulogi ">>>>>" "#$i/${#deps[@]} $ulib"
+        ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
 
         compile "$ulib" || return 127
     done
