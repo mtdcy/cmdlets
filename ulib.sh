@@ -452,7 +452,7 @@ _pack() {
     grep -Fw "$1" "$(_pkginfo)" > "$revision"
 
     # create a symlink
-    ln -sfv "$revision" "$upkg_name/$1-revision"
+    ln -sfv "$revision" "$1-revision"
 
     popd 
 }
@@ -812,7 +812,7 @@ compile() {(
     }
 
     # clear
-    echo '' > "$(_pkginfo)" 2>/dev/null || true
+    rm -f "$(_pkginfo)" 2>/dev/null
 
     sed -i "/^$upkg_name.*$/d" "$(_pkglist)" 2>/dev/null || touch "$(_pkglist)"
 
