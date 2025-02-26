@@ -1,0 +1,23 @@
+# Simple terminal UI for git commands
+
+# shellcheck disable=SC2034
+upkg_name=lazygit
+upkg_lic="MIT"
+upkg_ver=0.47.2
+upkg_rev=0
+upkg_url=https://github.com/jesseduffield/lazygit/archive/refs/tags/v$upkg_ver.tar.gz
+upkg_sha=f8c28ff7389f0480d223c685496336f1fc8a48aca4748a9d7718dabdd09cb869
+
+# configure args
+upkg_args=(
+)
+
+upkg_static() {
+    go build &&
+
+    cmdlet lazygit &&
+
+    check lazygit
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
