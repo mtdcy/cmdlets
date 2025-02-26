@@ -178,6 +178,7 @@ _init() {
         PATCH:patch
         INSTALL:install
         CARGO:cargo
+        GO:go
     )
 
     # MSYS2
@@ -289,6 +290,10 @@ _init() {
 
     # remove spaces
     export UPKG_ARG0="${_UPKG_ARG0[*]}"
+
+    # setup go envs
+    export GOPATH="$ROOT/.go"
+    export GOBIN="$PREFIX/bin"
 }
 
 dynamicalize() {
