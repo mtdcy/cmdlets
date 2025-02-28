@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 upkg_lic="Zlib"
-upkg_ver=2.30.11
+upkg_ver=2.30.12
 upkg_url=https://github.com/libsdl-org/SDL/releases/download/release-$upkg_ver/SDL2-$upkg_ver.tar.gz
-upkg_sha=8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f
+upkg_sha=ac356ea55e8b9dd0b2d1fa27da40ef7e238267ccf9324704850d5d47375b48ea
 
 upkg_static() {
     rm CMakeLists.txt
