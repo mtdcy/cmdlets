@@ -21,7 +21,7 @@ jobs:
           - ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:alpine-latest
     steps:
       - name: Checkout (main)
-        uses: https://git.mtdcy.top/actions/checkout@v3
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.sha }}
           fetch-depth: 2
@@ -67,7 +67,7 @@ jobs:
 
       - name: Deploy (artifacts)
         if: always()
-        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        uses: actions/rsync@7.0.1
         with:
           switches: -avc --exclude='packages.lst'
           path: prebuilts/
@@ -79,7 +79,7 @@ jobs:
 
       - name: Deploy (packages)
         if: always()
-        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        uses: actions/rsync@7.0.1
         with:
           switches: -avc
           path: packages/
@@ -91,7 +91,7 @@ jobs:
 
       - name: Deploy (logs)
         if: failure()
-        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        uses: actions/rsync@7.0.1
         with:
           switches: -avc
           path: logs/
