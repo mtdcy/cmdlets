@@ -1,0 +1,25 @@
+#!/bin/bash
+# Autoformat shell script source code
+
+# shellcheck disable=SC2034
+upkg_name=shfmt
+upkg_lic="BSD-3-Clause"
+upkg_ver=3.10.0
+upkg_rev=0
+upkg_url=https://github.com/mvdan/sh/archive/refs/tags/v$upkg_ver.tar.gz
+upkg_sha=4cad722b7a569a05c86ec489b1d5980843ae60ca8db15aa71174c7810378a8ec
+upkg_dep=()
+
+# configure args
+upkg_args=()
+upkg_static() {
+    go clean || true
+
+    go build ./cmd/shfmt &&
+
+    cmdlet shfmt &&
+
+    check shfmt
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
