@@ -292,7 +292,7 @@ _init() {
     export UPKG_ARG0="${_UPKG_ARG0[*]}"
 
     # setup go envs
-    export GOPATH="$ROOT/.go"
+    export GOPATH="$HOME/packages/go"
     export GOBIN="$PREFIX/bin"
 }
 
