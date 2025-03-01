@@ -446,6 +446,28 @@ EOF
     command "$cmdline"
 }
 
+go() {
+    local cmdline=("$GO")
+
+    export CGO_ENABLED=0 # necessary for build static
+    case "$1" in
+        build)
+            cmdline+=(build -x)
+
+            #1. static without dwarf and stripped
+            #2. add version info
+            cmdline+=(-ldflags="'-w -s -extldflags=-static -X main.version=$upkg_ver-${upkg_rev:-0}'")
+
+            cmdline+=("${@:2}")
+            ;;
+        *)
+            cmdline+=("$@")
+            ;;
+    esac
+
+    command "${cmdline[@]}"
+}
+
 install() {
     if [[ "$*" =~ \s- ]]; then
         echocmd "$*"
