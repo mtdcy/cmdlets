@@ -8,6 +8,8 @@ on:
     branches:
       - main
 
+  workflows_dispatch:
+
 jobs:
   check-cmdlist.sh:
     runs-on: ubuntu-latest

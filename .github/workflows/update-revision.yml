@@ -10,6 +10,11 @@ on:
     branches:
       - main
 
+  workflows_dispatch:
+
+env:
+  artifacts: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+
 jobs:
   build-with-docker:
     runs-on: ubuntu-latest
@@ -18,10 +23,7 @@ jobs:
       - name: Checkout (main)
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.ref_name }}
           token: ${{ secrets.COMMIT_TOKEN }}
-          fetch-depth: 1
-          show-progress: false
 
       - name: Update (revision)
         shell: bash
@@ -83,7 +85,7 @@ jobs:
           git push
 
       - name: Deploy (artifacts)
-        if: always()
+        if: ${{ env.artifacts != '' }}
         uses: actions/rsync@7.0.1
         with:
           switches: -avc --exclude='packages.lst'
@@ -95,7 +97,7 @@ jobs:
           remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
 
       - name: Deploy (packages)
-        if: always()
+        if: ${{ env.artifacts != '' }}
         uses: actions/rsync@7.0.1
         with:
           switches: -avc
@@ -107,7 +109,7 @@ jobs:
           remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
 
       - name: Deploy (logs)
-        if: failure()
+        if: ${{ env.artifacts != '' }}
         uses: actions/rsync@7.0.1
         with:
           switches: -avc
