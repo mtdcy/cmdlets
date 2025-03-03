@@ -7,6 +7,7 @@ upkg_lic="BSD-3-Clause"
 upkg_ver=3.10.0
 upkg_rev=0
 upkg_url=https://github.com/mvdan/sh/archive/refs/tags/v$upkg_ver.tar.gz
+upkg_zip=$upkg_name-$upkg_ver.tar.gz
 upkg_sha=4cad722b7a569a05c86ec489b1d5980843ae60ca8db15aa71174c7810378a8ec
 upkg_dep=()
 
