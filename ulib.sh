@@ -671,13 +671,14 @@ _fetch() {
     # to current dir
     [ -n "$zip" ] || zip="$(basename "$url")"
 
-    ulogi ".Getx" "$url"
-
     #1. try local file first
     if [ -e "$zip" ]; then
         local x
         IFS=' ' read -r x _ <<<"$(sha256sum "$zip")"
-        [ "$x" = "$sha" ] && ulogi "..Got" "$zip" && return 0
+        if [ "$x" = "$sha" ]; then
+            ulogi ".Gotx" "$zip" 
+            return 0
+        fi
 
         ulogw "Warn." "expected $sha, actual $x, broken?"
         rm "$zip"
@@ -687,12 +688,15 @@ _fetch() {
     mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
-    curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null ||
+    if curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null; then
+        ulogi ".Getx" "$UPKG_MIRROR/packages/$(basename "$zip")"
     #3. try original
-    curl "${args[@]}" "$url" || {
+    elif curl "${args[@]}" "$url"; then
+        ulogi ".Getx" "$url"
+    else
         uloge "Error" "get $url failed."
         return 1
-    }
+    fi
     ulogi "..Got" "$(sha256sum "$zip" | cut -d' ' -f1)"
 }
 
@@ -1001,9 +1005,6 @@ fetch() {
 
     _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
 }
-
-
-env
 
 if [[ "$0" =~ ulib.sh$ ]]; then
     "$@"
