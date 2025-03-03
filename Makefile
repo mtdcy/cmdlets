@@ -22,7 +22,7 @@ export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
 
 # pass through envs
 export UPKG_STRICT=0
-export UPKG_MIRROR=$${UPKG_MIRROR:-http://pub.mtdcy.top}
+export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 
 # misc
 export ULOGS=tty

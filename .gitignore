@@ -6,3 +6,4 @@ cmdlets.env
 .ccache
 *.swp
 .DS_Store
+.go

@@ -9,8 +9,8 @@ export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
 export UPKG_CHECKS=${UPKG_CHECKS:-1}    # enable check/tests
 
 
-export UPKG_MIRROR=${UPKG_MIRROR:-http://pub.mtdcy.top}
-export UPKG_REPO="$UPKG_MIRROR/cmdlets/latest"
+export UPKG_MIRROR=${UPKG_MIRROR:-http://mirrors.mtdcy.top}
+export GOPROXY="$UPKG_MIRROR/gomods"
 
 export ULOGS=${ULOGS:-tty}          # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
@@ -291,9 +291,10 @@ _init() {
     # remove spaces
     export UPKG_ARG0="${_UPKG_ARG0[*]}"
 
-    # setup go envs
+    # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
-    export GOMODCACHE="$ROOT/packages/go-mod-cache"
+    export GOMODCACHE="$ROOT/.go/pkg/mod"
+    export GO111MODULE="auto"
 }
 
 dynamicalize() {
@@ -1000,6 +1001,9 @@ fetch() {
 
     _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
 }
+
+
+env
 
 if [[ "$0" =~ ulib.sh$ ]]; then
     "$@"
