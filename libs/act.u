@@ -1,0 +1,26 @@
+# Run your GitHub Actions locally 🚀
+
+# shellcheck disable=SC2034
+upkg_name=act
+upkg_lic="MIT"
+upkg_ver=0.2.75
+upkg_rev=0
+upkg_url=https://github.com/nektos/act/archive/refs/tags/v$upkg_ver.tar.gz
+upkg_sha=9fc070cebba1e670005500c3415cd5f1c75bf991e96074256b9cf957701aac61
+
+upkg_args=(
+)
+
+upkg_static() {
+    go clean || true
+
+    sed -i 's/go 1.23$/go 1.23.0/g' go.mod || true
+
+    go build . &&
+
+    cmdlet act &&
+
+    check act
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
