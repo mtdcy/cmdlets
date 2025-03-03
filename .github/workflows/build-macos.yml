@@ -86,6 +86,8 @@ jobs:
         shell: bash
         run: |
           set -x
+          # fix go mod clean failure
+          ssh ${{ vars.REMOTE_HOST_MACOS }} chmod -R 777 ${{ steps.prepare.outputs.workdir }}/packages/go-mod-cache || true
           ssh ${{ vars.REMOTE_HOST_MACOS }} rm -rf ${{ steps.prepare.outputs.workdir }}
 
       - name: Deploy (artifacts)
