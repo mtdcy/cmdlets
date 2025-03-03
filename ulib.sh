@@ -427,19 +427,16 @@ cargo() {
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
-    local mirrors=https://mirrors.mtdcy.top
-    if curl --fail -sIL "$mirrors" -o /dev/null; then
-        cat << EOF >> .cargo/config.toml
+    cat << EOF >> .cargo/config.toml
 [source.crates-io]
 replace-with = 'mirrors'
 
 [source.mirrors]
-registry = "sparse+$mirrors/crates.io-index/"
+registry = "sparse+$UPKG_MIRROR/crates.io-index/"
 
 [registries.mirrors]
-index = "sparse+$mirrors/crates.io-index/"
+index = "sparse+$UPKG_MIRROR/crates.io-index/"
 EOF
-    fi
 
     # remove spaces
     cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
