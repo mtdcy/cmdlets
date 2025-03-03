@@ -292,8 +292,8 @@ _init() {
     export UPKG_ARG0="${_UPKG_ARG0[*]}"
 
     # setup go envs
-    export GOPATH="$HOME/packages/go"
     export GOBIN="$PREFIX/bin"
+    export GOMODCACHE="$ROOT/packages/go-mod-cache"
 }
 
 dynamicalize() {
