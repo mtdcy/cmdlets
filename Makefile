@@ -116,17 +116,17 @@ endif
 BREW_PACKAGES 	= wget curl git                                    \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
-				  nasm yasm bison flex                             \
+				  nasm yasm bison flex gettext                     \
 				  luajit perl 									   \
-				  rust
+				  rust go
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
-				  build-essential                                  \
+				  build-essential gettext                          \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex                             \
 				  luajit perl libhttp-daemon-perl                  \
-				  cargo
+				  cargo golang
 
 prepare-host-homebrew:
 	brew update

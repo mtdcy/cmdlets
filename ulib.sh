@@ -1,19 +1,15 @@
-#!/bin/bash
+#!/bin/bash -e
 # shellcheck shell=bash
 
 umask  0022
 export LANG=C
 
 # options
-export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
-export UPKG_CHECKS=${UPKG_CHECKS:-1}    # enable check/tests
-
-
-export UPKG_MIRROR=${UPKG_MIRROR:-http://mirrors.mtdcy.top}
-export GOPROXY="$UPKG_MIRROR/gomods"
-
-export ULOGS=${ULOGS:-tty}          # tty,plain,silent
+export ULOGS=${ULOGS:-tty}              # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
+
+export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
+export UPKG_MIRROR=${UPKG_MIRROR-http://mirrors.mtdcy.top} # only apply default if not exists
 
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
@@ -87,9 +83,9 @@ _capture() {
     fi
 }
 
-# command <command>
-command() {
-    ulogi "..Run" "$@"
+# ulogcmd <command>
+ulogcmd() {
+    ulogi "..Run" "$(tr -s ' ' <<< "$@")"
     eval -- "$*" 2>&1 | _capture
 }
 
@@ -131,10 +127,7 @@ _filter_targets() {
 
 # TODO: add support for toolchain define
 _init() {
-    [ -z "$ROOT" ] || return 0
-
-    # internal envs
-    ROOT="$(pwd -P)"
+    [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
     local arch
     case "$OSTYPE" in
@@ -272,29 +265,11 @@ _init() {
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
 
-    # global common args for configure
-    local _UPKG_ARG0=(
-        --prefix="$PREFIX"
-        --disable-option-checking
-        --enable-silent-rules
-        --disable-dependency-tracking
-
-        # static
-        --disable-shared
-        --enable-static
-
-        # no nls & rpath for single static cmdlet.
-        --disable-nls
-        --disable-rpath
-    )
-
-    # remove spaces
-    export UPKG_ARG0="${_UPKG_ARG0[*]}"
-
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
     export GO111MODULE="auto"
+    [ -z "$UPKG_MIRROR" ] || export GOPROXY="$UPKG_MIRROR/gomods"
 }
 
 dynamicalize() {
@@ -318,9 +293,9 @@ cleanup() {
 configure() {
     [ -f configure ] || {
         if [ -f autogen.sh ]; then
-            command ./autogen.sh
+            ulogcmd ./autogen.sh
         elif [ -f configure.ac ]; then
-            command autoreconf -i -f
+            ulogcmd autoreconf -i -f
         fi
     }
 
@@ -337,10 +312,7 @@ configure() {
         -e 's/--disable-static //g'     \
         <<<"$cmdline")
 
-    # remove spaces
-    cmdline="$(tr -s ' ' <<< "$cmdline")"
-
-    command "$cmdline"
+    ulogcmd "$cmdline"
 }
 
 make() {
@@ -356,9 +328,6 @@ make() {
     # set default njobs
     [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$NJOBS"
 
-    # remove spaces
-    cmdline="$(tr -s ' ' <<< "$cmdline")"
-
     # expand targets, as '.NOTPARALLEL' may not set for targets
     for x in "${targets[@]}"; do
         case "$x" in
@@ -366,7 +335,7 @@ make() {
             install)    cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
             install/*)  cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
         esac
-        command "$cmdline" "$x"
+        ulogcmd "$cmdline" "$x"
     done
 }
 
@@ -403,7 +372,7 @@ cmake() {
     is_msys && opts+=( -G"'MSYS Makefiles'" )
 
     # cmake
-    command $CMAKE "${opts[*]}" "${upkg_args[@]}" "$@"
+    ulogcmd $CMAKE "${opts[*]}" "${upkg_args[@]}" "$@"
 
 }
 
@@ -413,10 +382,7 @@ meson() {
     # append user args
     cmdline+=" $(_filter_targets "$@") ${MESON_ARGS[*]} $(_filter_options "$@")"
 
-    # remove spaces
-    cmdline="$(tr -s ' ' <<< "$cmdline")"
-
-    command "$cmdline"
+    ulogcmd "$cmdline"
 }
 
 ninja() {
@@ -425,17 +391,15 @@ ninja() {
     # append user args
     cmdline+=" $*"
 
-    # remove spaces
-    cmdline="$(tr -s ' ' <<< "$cmdline")"
-
-    command "$cmdline"
+    ulogcmd "$cmdline"
 }
 
 cargo() {
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
-    cat << EOF >> .cargo/config.toml
+    if [ -n "$UPKG_MIRROR" ]; then
+        cat << EOF >> .cargo/config.toml
 [source.crates-io]
 replace-with = 'mirrors'
 
@@ -445,11 +409,9 @@ registry = "sparse+$UPKG_MIRROR/crates.io-index/"
 [registries.mirrors]
 index = "sparse+$UPKG_MIRROR/crates.io-index/"
 EOF
+    fi
 
-    # remove spaces
-    cmdline="$(tr -s ' ' <<<"$cmdline")"
-
-    command "$cmdline"
+    ulogcmd "$cmdline"
 }
 
 go() {
@@ -471,7 +433,7 @@ go() {
             ;;
     esac
 
-    command "${cmdline[@]}"
+    ulogcmd "${cmdline[@]}"
 }
 
 install() {
@@ -515,7 +477,7 @@ _pack() {
     # create a symlink
     ln -sfv "$revision" "$1-revision"
 
-    popd 
+    popd
 }
 
 # cmdlet executable [name] [alias ...]
@@ -542,7 +504,7 @@ cmdlet() {
                 installed+=("bin/$x")
             done
         fi
-    fi 
+    fi
 
     _pack "$(basename "$pkgname")" "${installed[@]}" | _capture
 }
@@ -661,12 +623,11 @@ applet() {
     $INSTALL -v -m755 "$@" "$APREFIX" || return 1
 
     local installed
-    read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )" 
+    read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )"
 
     _pack "$(basename "$1")" "${installed[@]}" | _capture
 }
 
-# env: UPKG_MIRROR
 # _fetch <url> <sha256> [local]
 _fetch() {
     local url=$1
@@ -681,7 +642,7 @@ _fetch() {
         local x
         IFS=' ' read -r x _ <<<"$(sha256sum "$zip")"
         if [ "$x" = "$sha" ]; then
-            ulogi ".Gotx" "$zip" 
+            ulogi ".Gotx" "$zip"
             return 0
         fi
 
@@ -689,11 +650,12 @@ _fetch() {
         rm "$zip"
     fi
 
-    local args=(--fail -L --progress-bar -o "$zip")
+    local args=(--fail -sL --progress-bar -o "$zip")
     mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
-    if curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null; then
+    if [ -n "$UPKG_MIRROR" ] &&
+        curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null; then
         ulogi ".Getx" "$UPKG_MIRROR/packages/$(basename "$zip")"
     #3. try original
     elif curl "${args[@]}" "$url"; then
@@ -803,7 +765,7 @@ _prepare() {
         fi
 
         # apply patch
-        command "patch -p1 < $x"
+        ulogcmd "patch -p1 < $x"
     done
 }
 
@@ -811,7 +773,7 @@ _prepare() {
 _load() {
     unset upkg_name upkg_lic
     unset upkg_ver upkg_rev
-    unset upkg_url upkg_sha 
+    unset upkg_url upkg_sha
     unset upkg_zip upkg_zip_strip
     unset upkg_dep upkg_args upkg_type
     unset upkg_patch_url upkg_patch_zip upkg_patch_sha upkg_patch_strip
@@ -940,7 +902,7 @@ build() {
         [ "$nonexists_or_outdated" -eq 0 ] || deps+=("$dep")
     done
 
-    # pull dependencies 
+    # pull dependencies
     local libs=()
     for dep in "${deps[@]}"; do
         ./cmdlets.sh package "$dep" || libs+=("$dep")
