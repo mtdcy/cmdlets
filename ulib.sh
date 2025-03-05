@@ -567,13 +567,12 @@ library() {
                 _fix_pc "$1"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
                 ;;
-            include*|lib*|bin*)
+            include*|lib*|bin*|share*)
                 subdir="$1"
                 mkdir -pv "$(_prefix)/$subdir"
                 ;;
             *)
-                uloge "Error" "unknown library options $1"
-                return 1
+                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
                 ;;
         esac
         shift
