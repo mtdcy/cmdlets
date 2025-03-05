@@ -18,9 +18,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    # clear installed files
-    cleanup || true
-
     configure &&
     make &&
     # test

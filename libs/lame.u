@@ -15,8 +15,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    cleanup || true
-
     # Fix undefined symbol error _lame_init_old
     # https://sourceforge.net/p/lame/mailman/message/36081038/
     sed -i '/lame_init_old/d' include/libmp3lame.sym

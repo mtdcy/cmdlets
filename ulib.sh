@@ -284,12 +284,6 @@ deparallelize() {
     export NJOBS=1
 }
 
-# cleanup arguments ...
-cleanup() {
-    # deprecated
-    true
-}
-
 configure() {
     [ -f configure ] || {
         if [ -f autogen.sh ]; then

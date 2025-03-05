@@ -33,8 +33,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    cleanup
-
     configure &&
     make &&
     # test

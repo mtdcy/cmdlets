@@ -26,9 +26,6 @@ upkg_args=(
 [[ ${upkg_dep[*]} =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
 
 upkg_static() {
-    # clear installed files
-    cleanup || true
-
     configure &&
     make &&
     # test
