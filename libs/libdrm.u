@@ -20,7 +20,20 @@ upkg_static() {
             -Dvalgrind=disabled      \
             .. &&
     ninja &&
-    ninja install
+
+    cd - &&
+
+    library libdrm \
+            include         libsync.h xf86drm.h xf86drmMode.h \
+            include/libdrm  include/drm/*.h radeon/*.h amdgpu/*.h \
+            include/libdrm/nouveau nouveau/*.h \
+            include/libdrm/nouveau/nvif nouveau/nvif/*.h \
+            lib             build/libdrm.a \
+                            build/nouveau/libdrm_nouveau.a \
+                            build/radeon/libdrm_radeon.a \
+                            build/amdgpu/libdrm_amdgpu.a \
+            lib/pkgconfig   build/meson-private/*.pc \
+            share/libdrm    data/amdgpu.ids
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
