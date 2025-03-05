@@ -253,21 +253,6 @@ _init() {
     # LD_LIBRARY_PATH or rpath?
     export LD_LIBRARY_PATH=$PREFIX/lib
 
-    # meson
-    # builti options: https://mesonbuild.com/Builtin-options.html
-    #  libdir: some package prefer install to lib/<machine>/
-    MESON_ARGS="                                    \
-        -Dprefix=$PREFIX                            \
-        -Dlibdir=lib                                \
-        -Dbuildtype=release                         \
-        -Ddefault_library=static                    \
-        -Dpkg_config_path=$PKG_CONFIG_PATH          \
-    "
-        #-Dprefer_static=true                        \
-
-    # remove spaces
-    export MESON="$(tr -s ' ' <<< "$MESON")"
-
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
 
@@ -372,24 +357,38 @@ cmake() {
     is_msys && opts+=( -G"'MSYS Makefiles'" )
 
     # cmake
-    ulogcmd $CMAKE "${opts[*]}" "${upkg_args[@]}" "$@"
+    ulogcmd "$CMAKE" "${opts[*]}" "${upkg_args[@]}" "$@"
 
 }
 
 meson() {
-    local cmdline="$MESON"
+    local cmdline
 
-    # append user args
-    cmdline+=" $(_filter_targets "$@") ${MESON_ARGS[*]} $(_filter_options "$@")"
+    cmdline="$MESON $(_filter_targets "$@")"
+
+    # meson
+    # builtin options: https://mesonbuild.com/Builtin-options.html
+    #  libdir: some package prefer install to lib/<machine>/
+    cmdline+="                              \
+        -Dprefix=$PREFIX                    \
+        -Dlibdir=lib                        \
+        -Dbuildtype=release                 \
+        -Ddefault_library=static            \
+        -Dpkg_config_path=$PKG_CONFIG_PATH  \
+        -Dprefer_static=true                \
+        "
+
+    # override default options
+    cmdline+=" $(_filter_options "$@")"
 
     ulogcmd "$cmdline"
 }
 
 ninja() {
-    local cmdline="$NINJA"
+    local cmdline
 
     # append user args
-    cmdline+=" $*"
+    cmdline="$NINJA -j $NJOBS -v $*"
 
     ulogcmd "$cmdline"
 }
