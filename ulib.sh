@@ -87,13 +87,13 @@ _capture() {
 
 # ulogcmd <command>
 ulogcmd() {
-    ulogi "..Run" "$(tr -s ' ' <<< "$@")"
-    eval -- "$*" 2>&1 | _capture
+    ulogi "..Run" "$(tr -s ' ' <<< "$*")"
+    eval -- "$@" 2>&1 | _capture
 }
 
 echocmd() {
     echo "$*"
-    eval -- "$*"
+    eval -- "$@"
 }
 
 _prefix() {
@@ -308,7 +308,7 @@ make() {
     IFS=' ' read -r -a targets <<< "$(_filter_targets "$@")"
 
     # default target
-    [ -z "${targets[*]}" ] && targets=(all)
+    [ -n "${targets[*]}" ] || targets=(all)
 
     # set default njobs
     [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$NJOBS"
@@ -357,7 +357,7 @@ cmake() {
     is_msys && opts+=( -G"'MSYS Makefiles'" )
 
     # cmake
-    ulogcmd "$CMAKE" "${opts[*]}" "${upkg_args[@]}" "$@"
+    ulogcmd "$CMAKE" "${opts[@]}" "${upkg_args[@]}" "$@"
 
 }
 
@@ -578,7 +578,7 @@ library() {
         shift
     done
 
-    _pack "$libname" "${installed[@]}" | _capture
+    echocmd _pack "$libname" "${installed[@]}" 2>&1 | _capture
 }
 
 # perform visual check on cmdlet
