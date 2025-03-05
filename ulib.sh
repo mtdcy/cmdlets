@@ -316,6 +316,14 @@ cleanup() {
 }
 
 configure() {
+    [ -f configure ] || {
+        if [ -f autogen.sh ]; then
+            command ./autogen.sh
+        elif [ -f configure.ac ]; then
+            command autoreconf -i -f
+        fi
+    }
+
     local cmdline
 
     cmdline="./configure --prefix=$(_prefix)"

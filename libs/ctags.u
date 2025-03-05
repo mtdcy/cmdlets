@@ -20,10 +20,8 @@ upkg_args=(
 )
 
 upkg_static() {
-    [ -f configure ] || ./autogen.sh
-
     configure &&
-    make && 
+    make &&
     cmdlet ctags ctags etags &&
     check ctags
 }

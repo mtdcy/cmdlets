@@ -17,8 +17,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    [ -f configure ] || autoreconf -i
-
     configure &&
     make &&
     library libjansson \
