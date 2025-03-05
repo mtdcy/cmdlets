@@ -28,6 +28,9 @@ export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 export ULOGS=tty
 export NJOBS=
 
+# ccache
+export USE_CCACHE=1
+
 # distcc
 export DISTCC_VERBOSE=0
 export DISTCC_HOSTS=""
@@ -56,6 +59,7 @@ ENVS := NJOBS          \
 		ULOGS          \
 		UPKG_STRICT    \
 		UPKG_MIRROR    \
+		USE_CCACHE 	   \
 		DISTCC_VERBOSE \
 		DISTCC_HOSTS   \
 		DISTCC_OPTS    \

@@ -9,7 +9,9 @@ export ULOGS=${ULOGS:-tty}              # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
 
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
-export UPKG_MIRROR=${UPKG_MIRROR-http://mirrors.mtdcy.top} # only apply default if not exists
+export UPKG_MIRROR=${UPKG_MIRROR:-}     # apply mirrors
+
+export USE_CCACHE=${USE_CCACHE:-0}      # enable ccache or not
 
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
@@ -142,10 +144,7 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
-    # ccache
-    CCACHE_DIR="$ROOT/.ccache"
-
-    export ROOT PREFIX WORKDIR CCACHE_DIR
+    export ROOT PREFIX WORKDIR
 
     # setup program envs
     local which=which
@@ -180,12 +179,10 @@ _init() {
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    is_msys && E=".exe"
     for x in "${progs[@]}"; do
         IFS=':' read -r k v _ <<< "$x"
 
-        p="$($which "$v" 2>/dev/null)" ||
-        p="$($which "$v$E" 2>/dev/null)"
+        p="$($which "$v" 2>/dev/null)"
 
         [ -n "$p" ] || {
             uloge "....." "missing host tools $v, abort"
@@ -194,6 +191,15 @@ _init() {
 
         eval -- export "$k=$p"
     done
+
+    # ccache
+    if [ "$USE_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+        CCACHE_DIR="$ROOT/.ccache"
+        CCACHE_TEMPDIR="$ROOT/.ccache"
+        CC="ccache $CC"
+        CXX="ccache $CXX"
+        export CC CXX CCACHE_DIR
+    fi
 
     if test -n "$DISTCC_HOSTS"; then
         if which distcc &>/dev/null; then
