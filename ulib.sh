@@ -267,7 +267,7 @@ _init() {
         #-Dprefer_static=true                        \
 
     # remove spaces
-    export MESON="$(sed -e 's/ \+/ /g' <<<"$MESON")"
+    export MESON="$(tr -s ' ' <<< "$MESON")"
 
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
@@ -330,7 +330,7 @@ configure() {
         <<<"$cmdline")
 
     # remove spaces
-    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+    cmdline="$(tr -s ' ' <<< "$cmdline")"
 
     command "$cmdline"
 }
@@ -349,7 +349,7 @@ make() {
     [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$NJOBS"
 
     # remove spaces
-    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+    cmdline="$(tr -s ' ' <<< "$cmdline")"
 
     # expand targets, as '.NOTPARALLEL' may not set for targets
     for x in "${targets[@]}"; do
@@ -406,7 +406,7 @@ meson() {
     cmdline+=" $(_filter_targets "$@") ${MESON_ARGS[*]} $(_filter_options "$@")"
 
     # remove spaces
-    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+    cmdline="$(tr -s ' ' <<< "$cmdline")"
 
     command "$cmdline"
 }
@@ -418,7 +418,7 @@ ninja() {
     cmdline+=" $*"
 
     # remove spaces
-    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+    cmdline="$(tr -s ' ' <<< "$cmdline")"
 
     command "$cmdline"
 }
@@ -439,7 +439,7 @@ index = "sparse+$UPKG_MIRROR/crates.io-index/"
 EOF
 
     # remove spaces
-    cmdline="$(sed -e 's/ \+/ /g' <<<"$cmdline")"
+    cmdline="$(tr -s ' ' <<<"$cmdline")"
 
     command "$cmdline"
 }
