@@ -551,6 +551,8 @@ library() {
     IFS=':' read -r -a alias <<< "$alias"
     shift # skip libname and alias
 
+    [[ "$libname" =~ ^lib ]] || libname="lib$libname"
+
     ulogi ".Libx" "install library $libname => (alias ${alias[*]})"
     while [ $# -ne 0 ]; do
         case "$1" in
