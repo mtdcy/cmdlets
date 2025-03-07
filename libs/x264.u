@@ -1,9 +1,9 @@
-# GPL
-#
-# shellcheck disable=SC2034
+# H.264/AVC encoder
 
-upkg_url=https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-20190624-2245-stable.tar.bz2
-upkg_sha=f29f6c3114bff735328c0091158ad03ea9f084e1bb943907fd45a8412105e324
+# shellcheck disable=SC2034
+upkg_ver=31e19f92
+upkg_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-$upkg_ver.tar.bz2
+upkg_sha=05726794ec9badf79f207ac5e50345f01a997d32bfa5ad95a2025620f552bd4d
 
 upkg_args=(
     --disable-avs
@@ -12,15 +12,28 @@ upkg_args=(
     --disable-ffms
     --disable-gpac
     --disable-lsmash
-    --extra-cflags=\"$CFLAGS\"
-    --extra-ldflags=\"$LDFLAGS\"
+    --extra-cflags="'$CFLAGS'"
+    --extra-ldflags="'$LDFLAGS'"
     --enable-pic
     --disable-shared
     --enable-static
     )
 
 upkg_static() {
-    AS=$NASM configure && make install && $PREFIX/bin/x264 -V
+    is_glibc && dynamicalize
+
+    AS="$NASM" configure &&
+
+    make &&
+
+    library libx264 \
+            include x264.h x264_config.h \
+            lib     libx264.a \
+            lib/pkgconfig x264.pc &&
+
+    cmdlet x264 &&
+
+    check x264 -V
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
