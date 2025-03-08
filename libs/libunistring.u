@@ -1,11 +1,21 @@
-# This library provides functions for manipulating Unicode strings and for manipulating C strings according to the Unicode standard.
+# C string library for manipulating Unicode strings
 #
 # shellcheck disable=SC2034
 upkg_lic='LGPL|GPL'
 upkg_ver=1.3
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/libunistring/libunistring-$upkg_ver.tar.gz
 upkg_sha=8ea8ccf86c09dd801c8cac19878e804e54f707cf69884371130d20bde68386b7
 upkg_dep=()
+
+# https://github.com/gnosis/libunistring/blob/master/DEPENDENCIES
+# GNU libiconv
+# + Not needed on systems with glibc, on macOS, and NetBSD.
+#   But highly recommended on all other systems.
+is_darwin && upkg_args+=(--without-libiconv) || {
+    upkg_dep+=(libiconv)
+    upkg_args+=( --with-libiconv )
+}
 
 upkg_args=(
     --disable-dependency-tracking
@@ -18,22 +28,15 @@ upkg_args=(
     --enable-static
 )
 
-# GNU libiconv
-# + Not needed on systems with glibc, on macOS, and NetBSD.
-#   But highly recommended on all other systems.
-is_darwin && upkg_args+=(--without-libiconv) || {
-    upkg_dep+=(libiconv)
-    upkg_args+=(
-        --with-libiconv
-    )
-}
-
 upkg_static() {
     configure &&
 
     make &&
 
-    make check install
+    library unistring \
+            include lib/{unitypes.h,unistr.h,uniconv.h,unistdio.h,uniname.h,unictype.h,uniwidth.h,unigbrk.h,uniwbrk.h,unilbrk.h,unimetadata.h,uninorm.h,unicase.h} \
+            include/unistring   lib/unistring/*.h \
+            lib                 lib/.libs/libunistring.a
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
