@@ -481,7 +481,7 @@ _pack() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    ulogi ".Inst" "install cmdlet $1 => $2 (alias ${*:3})"
+    ulogi ".Inst" "install cmdlet $1 => ${2:-"$(basename "$1")"} (alias ${*:3})"
 
     # strip or not ?
     local args=(-v)
@@ -556,11 +556,15 @@ library() {
     ulogi ".Libx" "install library $libname => (alias ${alias[*]})"
     while [ $# -ne 0 ]; do
         case "$1" in
+            *.la)
+                # no libtool archive files
+                # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
+                ;;
             *.h)
                 [[ "$subdir" =~ ^include ]] || subdir="include"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
                 ;;
-            *.a|*.la|*.so|*.so.*)
+            *.a|*.so|*.so.*)
                 [[ "$subdir" =~ ^lib ]] || subdir="lib"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
                 ;;
