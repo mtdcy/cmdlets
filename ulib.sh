@@ -194,11 +194,11 @@ _init() {
 
     # ccache
     if [ "$USE_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
-        CCACHE_DIR="$ROOT/.ccache"
-        CCACHE_TEMPDIR="$ROOT/.ccache"
+        CCACHE_DIR="${CCACHE_DIR:-$ROOT/.ccache}"
+        CCACHE_TEMPDIR="${CCACHE_TEMPDIR:-$CCACHE_DIR}"
         CC="ccache $CC"
         CXX="ccache $CXX"
-        export CC CXX CCACHE_DIR
+        export CC CXX CCACHE_DIR CCACHE_TEMPDIR
     fi
 
     if test -n "$DISTCC_HOSTS"; then

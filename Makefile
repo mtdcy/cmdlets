@@ -31,6 +31,7 @@ export NJOBS=$$(nproc)
 
 # ccache
 export USE_CCACHE=1
+export CCACHE_DIR=
 
 # distcc
 export DISTCC_VERBOSE=0
@@ -61,6 +62,7 @@ ENVS := NJOBS          \
 		UPKG_STRICT    \
 		UPKG_MIRROR    \
 		USE_CCACHE 	   \
+		CCACHE_DIR 	   \
 		DISTCC_VERBOSE \
 		DISTCC_HOSTS   \
 		DISTCC_OPTS    \

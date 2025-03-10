@@ -61,6 +61,8 @@ jobs:
           export UPKG_MIRROR=${{ vars.MIRRORS }}
           export REMOTE_HOST=${{ vars.REMOTE_HOST_MACOS }}
           export REMOTE_WORKDIR=${{ steps.prepare.outputs.workdir }}
+          export USE_CCACHE=1
+          export CCACHE_DIR="/tmp/cmdlets-ccache"
 
           ret=0
           fails=()
