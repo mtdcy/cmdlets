@@ -37,7 +37,7 @@ RUN <<-EOS
         echo "*** rsync logs to remote ***" &&
         rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
         echo "*** rsync packages to remote ***" &&
-        rsync "${opt[@]}" packages/ $remote/ || ret=$?
+        rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
     fi
 
     exit $ret
