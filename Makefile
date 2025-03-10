@@ -19,6 +19,7 @@ export REMOTE_WORKDIR=$${REMOTE_WORKDIR:-cmdlets}
 
 #2. build with docker [default]
 export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
+export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}}
 
 # pass through envs
 export UPKG_STRICT=0
@@ -26,7 +27,7 @@ export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 
 # misc
 export ULOGS=tty
-export NJOBS=
+export NJOBS=$$(nproc)
 
 # ccache
 export USE_CCACHE=1
@@ -174,8 +175,11 @@ prepare-docker-image-alpine:
 # alias
 prepare-docker: prepare-docker-image
 
+DOCKER_PLATFORM ?= linux/amd64
+DOCKER_ARGS += --platform $(DOCKER_PLATFORM)
+
 # pull always
-DOCKER_ARGS += --pull=always -q
+DOCKER_ARGS += --pull=always
 
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
@@ -204,14 +208,14 @@ DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
 # envs
 DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
 
-ifeq ($(shell test -t 1),$(shell true))
+ifeq ($(shell test -t 0 && echo tty),tty)
 DOCKER_RUNC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE)
 else
 DOCKER_RUNC = docker run --rm -i $(DOCKER_ARGS) $(DOCKER_IMAGE)
 endif
 
 runc-docker:
-	$(DOCKER_RUNC) 'cd $(WORKDIR); exec $(CMD)'
+	$(DOCKER_RUNC) 'cd $(WORKDIR); pwd; ls -lh; exec $(CMD)'
 
 # TODO
 runc-remote-docker:

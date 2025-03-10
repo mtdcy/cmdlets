@@ -1,3 +1,4 @@
+---
 name: Build cmdlets latest
 
 on:
@@ -7,20 +8,21 @@ on:
       - ulib.sh
       - libs/**.u
       - .github/workflows/build-latest.yml
+      - .github/dockerfiles/Dockerfile
     branches:
       - main
 
-  workflows_dispatch:
+  workflows_dispatch: null
 
 jobs:
   build-with-docker:
     runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
     strategy:
       matrix:
-        container:
-          - ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:ubuntu-latest
-          - ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:alpine-latest
+        distro:
+          - ubuntu-latest
+          - alpine-latest
+
     steps:
       - name: Checkout (main)
         uses: actions/checkout@v3
@@ -34,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          chown -R buildbot:buildbot .
+          # chown -R buildbot:buildbot .
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory "$PWD"
@@ -42,72 +44,71 @@ jobs:
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in "${files[@]}"; do
             x=$(basename ${x%.u})
-            [[ "$x" =~ ^\. ]] && continue ## ignored files
+            [[ "$x" =~ ^\. ]] && continue  ## ignored files
             cmdlets+=("$x")
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
           echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
 
-      - name: Build (docker)
-        shell: su buildbot -c "bash -e {0}"
-        run: |
-          set -x
-          export NJOBS=1
-          export UPKG_MIRROR=${{ vars.MIRRORS }}
+          # for rsync
+          cat << EOF > ssh_id_rsa
+          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          EOF
+          chmod 0600 ssh_id_rsa
 
-          ret=0
-          fails=()
-          cmdlets=${{ steps.prepare.outputs.cmdlets }}
-          for x in ${cmdlets//,/ }; do
-            bash ulib.sh build "$x" || {
-              ret=$?
-              fails+=("$x")
-            }
-          done
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-          [ "$ret" -eq 0 ] || echo "fails: ${fails[*]}" | tee -a logs/fails.log
-          exit $ret
+      - name: Setup buildx
+        if: ${{ vars.LOCAL_REGISTRY == '' }}
+        uses: docker/setup-buildx-action@v3
 
-      - name: Deploy (artifacts)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
+      - name: Setup buildx (local registry)
+        if: ${{ vars.LOCAL_REGISTRY }}
+        uses: docker/setup-buildx-action@v3
         with:
-          switches: -avc --exclude='packages.lst'
-          path: prebuilts/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/latest/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          buildkitd-config-inline: |
+            debug = true
+            [registry."${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."registry.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."ghcr.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."lscr.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."docker.io"]
+              mirrors = ["registry.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."ghcr.io"]
+              mirrors = ["ghcr.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
+            [registry."lscr.io"]
+              mirrors = ["lscr.${{ vars.LOCAL_REGISTRY }}"]
+              http = true
 
-      - name: Deploy (packages)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
+      - name: Build (QEMU + buildx)
+        uses: docker/build-push-action@v6
         with:
-          switches: -avc
-          path: packages/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-
-      - name: Deploy (logs)
-        if:  ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc
-          path: logs/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/logs/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          push: false
+          context: .
+          file: .github/dockerfiles/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-contexts: |
+            ubuntu:latest=docker-image://${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.distro }}
+          build-args: |
+            NJOBS=1
+            UPKG_MIRROR=${{ vars.MIRRORS }}
+            CMDLETS=${{ steps.prepare.outputs.cmdlets }}
+            ARTIFACTS_REMOTE_PATH=${{ vars.ARTIFACTS_REMOTE_PATH }}
+            ARTIFACTS_REMOTE_HOST=${{ vars.ARTIFACTS_REMOTE_HOST }}
+            ARTIFACTS_REMOTE_PORT=${{ vars.ARTIFACTS_REMOTE_PORT }}
+            ARTIFACTS_REMOTE_USER=${{ vars.ARTIFACTS_REMOTE_USER }}
 
       - name: Notify on failure
         if: failure()
         shell: bash
-        run: |
+        run: |-
           curl --version
           curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
               -H 'Content-Type: application/json' \

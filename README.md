@@ -26,6 +26,9 @@ ln -svf cmdlets.sh nvim
 - x86_64-linux-musl
 - x86_64-apple-darwin
 
+- aarch64-linux-gnu
+- aarch64-linux-musl
+
 ## Artifacts
 
 [CN](https://pub.mtdcy.top/cmdlets/latest)
@@ -44,6 +47,7 @@ make zlib
 
 ```shell
 export DOCKER_IMAGE=cmdlets
+export DOCKER_PLATFORM=linux/amd64  # supported: linux/amd64,linux/arm64
 
 make zlib
 ```
