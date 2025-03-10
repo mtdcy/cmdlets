@@ -920,7 +920,7 @@ build() {
         i=$((i + 1))
         ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
 
-        compile "$ulib" || return 127
+        time compile "$ulib" || return 127
     done
 }
 

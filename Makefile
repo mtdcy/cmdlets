@@ -217,7 +217,7 @@ DOCKER_RUNC = docker run --rm -i $(DOCKER_ARGS) $(DOCKER_IMAGE)
 endif
 
 runc-docker:
-	$(DOCKER_RUNC) 'cd $(WORKDIR); pwd; ls -lh; exec $(CMD)'
+	$(DOCKER_RUNC) 'cd $(WORKDIR); exec $(CMD)'
 
 # TODO
 runc-remote-docker:

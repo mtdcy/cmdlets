@@ -7,3 +7,4 @@ cmdlets.env
 *.swp
 .DS_Store
 .go
+ssh_id_rsa
