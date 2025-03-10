@@ -1,3 +1,4 @@
+---
 name: Build cmdlets macos
 
 on:
@@ -10,7 +11,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflows_dispatch: null
 
 jobs:
   build-on-remote:
@@ -45,7 +46,7 @@ jobs:
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in ${files[@]}; do
             x=$(basename ${x%.u})
-            [[ "$x" =~ ^\. ]] && continue ## ignored files
+            [[ "$x" =~ ^\. ]] && continue  ## ignored files
             cmdlets+=("$x")
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
@@ -57,6 +58,7 @@ jobs:
         run: |
           set -x
           export NJOBS=1
+          export UPKG_MIRROR=${{ vars.MIRRORS }}
           export REMOTE_HOST=${{ vars.REMOTE_HOST_MACOS }}
           export REMOTE_WORKDIR=${{ steps.prepare.outputs.workdir }}
 
@@ -64,11 +66,11 @@ jobs:
           fails=()
           cmdlets=${{ steps.prepare.outputs.cmdlets }}
           for x in ${cmdlets//,/ }; do
-            make -j1 "$x"
-            ret=$?
-            [ "$ret" -eq 0 ] || fails+=("$x")
+            make -j$NJOBS "$x" || {
+              ret=$?
+              fails+=("$x")
+            }
           done
-
 
           if [ "$ret" -ne 0 ]; then
             # always pull from remote
@@ -126,7 +128,7 @@ jobs:
       - name: Notify on failure
         if: failure()
         shell: bash
-        run: |
+        run: |-
           curl --version
           curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
               -H 'Content-Type: application/json' \
