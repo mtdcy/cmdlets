@@ -3,10 +3,10 @@
 # shellcheck disable=SC2034
 
 upkg_lic="BSD-3-Clause"
-upkg_ver=1.8.2
+upkg_ver=1.9.0
 upkg_url=https://github.com/webmproject/libvpx/archive/v$upkg_ver.tar.gz
 upkg_zip=libvpx-$upkg_ver.tar.gz
-upkg_sha=8735d9fcd1a781ae6917f28f239a8aa358ce4864ba113ea18af4bb2dc8b474ac
+upkg_sha=d279c10e4b9316bf11a570ba16c3d55791e1ad6faa4404c67422eb631782c80a
 
 upkg_args=(
     --enable-vp8

@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 
 upkg_lic='BSD-3-Clause'
-upkg_ver=3.16
+upkg_ver=3.17
 upkg_url=https://github.com/esnet/iperf/releases/download/3.16/iperf-3.16.tar.gz
 upkg_sha=cc740c6bbea104398cc3e466befc515a25896ec85e44a662d5f4a767b9cf713e
 upkg_dep=()

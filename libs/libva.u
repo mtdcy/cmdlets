@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 upkg_lic=""
-upkg_ver=2.20.0
+upkg_ver=2.21.0
 upkg_url=https://github.com/intel/libva/releases/download/$upkg_ver/libva-$upkg_ver.tar.bz2
-upkg_sha=f72bdb4f48dfe71ad01f1cbefe069672a2c949a6abd51cf3c4d4784210badc49
+upkg_sha=9dc1a84373b656434e6a8f3ac7522bc1c959cc3434aea89d2c02092986d87016
 upkg_dep=(libdrm)
 
 upkg_args+=(

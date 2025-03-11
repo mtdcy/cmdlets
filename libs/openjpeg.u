@@ -2,7 +2,7 @@
 #
 # shellcheck disable=SC2034
 
-upkg_ver=2.3.1
+upkg_ver=2.4.0
 upkg_url=https://github.com/uclouvain/openjpeg/archive/v$upkg_ver.tar.gz
 upkg_zip=openjpeg-$upkg_ver.tar.gz
 upkg_sha=8702ba68b442657f11aaeb2b338443ca8d5fb95b0d845757968a7be31ef7f16d
