@@ -5,7 +5,7 @@
 upkg_ver=2.3.1
 upkg_url=https://github.com/uclouvain/openjpeg/archive/v$upkg_ver.tar.gz
 upkg_zip=openjpeg-$upkg_ver.tar.gz
-upkg_sha=63f5a4713ecafc86de51bfad89cc07bb788e9bba24ebbf0c4ca637621aadb6a9
+upkg_sha=8702ba68b442657f11aaeb2b338443ca8d5fb95b0d845757968a7be31ef7f16d
 
 upkg_args=(
     -DBUILD_SHARED_LIBS=OFF

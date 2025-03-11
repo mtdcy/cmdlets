@@ -1,3 +1,4 @@
+---
 name: Update revision
 
 on:
@@ -10,7 +11,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflows_dispatch: null
 
 jobs:
   build-with-docker:
@@ -29,6 +30,10 @@ jobs:
 
           git config --global user.name "bot"
           git config --global user.email "bot@mtdcy.top"
+          git config --global --add safe.directory "$(pwd -P)"
+
+          export NJOBS=1
+          export UPKG_MIRROR=${{ vars.MIRRORS }}
 
           commits=/tmp/commits-$$.txt
           for ulib in libs/*; do
@@ -36,38 +41,52 @@ jobs:
 
             # ignores
             [[ "$ulib" =~ ^ALL ]] && continue
+            [[ "$ulib" =~ ^@   ]] && continue
             [[ "$ulib" =~ ^\.  ]] && continue
 
             # update revision
             (
-              pwd -P
+              . ulib.sh
+              load $ulib
 
-              . ulib.sh && load $ulib
+              [ -n "$upkg_ver" ] || exit
+
+              trap "git checkout 'libs/$ulib.u'" EXIT
 
               IFS='=.' read -r m n r _ <<< "$upkg_ver"
 
-              [ -n "$r" ] || exit 0
-
-              r=$((r + 1))
-
-              ulogi "try update $ulib:$upkg_ver => $m.$n.$r"
-
-              sed -e "s/$upkg_ver/$m.$n.$r/" \
-                  -e 's/upkg_rev=.*$/upkg_rev=0/' \
-                  -i "libs/$ulib.u" &&
-              fetch "$ulib" &&
-              build "$ulib" && {
-                # update sha
-                IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$upkg_zip")"
-                sed -e "s/upkg_sha=.*$/upkg_sha=$sha/" \
+              if test -n "$r"; then
+                newver="$m.$n.$((r+1))"
+                sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
+                    -e 's/upkg_rev=.*$/upkg_rev=0/' \
                     -i "libs/$ulib.u"
 
-                git add "libs/$ulib.u"
-                echo "$ulib => $m.$n.$r" >> "$commits"
-              } || {
-                echocmd git checkout "libs/$ulib.u" # reset
-                uloge "build $ulib:$m.$n.$r failed"
-              } || true
+                fetch "$ulib" || {
+                  newver="$m.$((n+1)).0"
+                  sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
+                      -e 's/upkg_rev=.*$/upkg_rev=0/' \
+                      -i "libs/$ulib.u"
+
+                  fetch "$ulib" || exit
+                }
+              elif test -n "$n"; then
+                newver="$m.$((n+1))"
+                sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
+                    -e 's/upkg_rev=.*$/upkg_rev=0/' \
+                    -i "libs/$ulib.u"
+
+                fetch "$ulib" || exit
+              else
+                exit
+              fi
+
+              ulogi "updated $ulib => $newver"
+              IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$upkg_zip")"
+              sed -e "s/upkg_sha=.*$/upkg_sha=$sha/" \
+                  -i "libs/$ulib.u"
+
+              git add "libs/$ulib.u"
+              echo "updated $ulib => $newver" >> "$commits"
             ) || true
           done
 
@@ -81,18 +100,7 @@ jobs:
 
           git push
 
-      - name: Deploy (artifacts)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc --exclude='packages.lst'
-          path: prebuilts/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/latest/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-
+      # sync only packages
       - name: Deploy (packages)
         if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
         uses: actions/rsync@7.0.1
@@ -104,31 +112,3 @@ jobs:
           remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
           remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
           remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-
-      - name: Deploy (logs)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc
-          path: logs/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/logs/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-
-      - name: Notify on failure
-        if: failure()
-        shell: bash
-        run: |
-          curl --version
-          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
-              -H 'Content-Type: application/json' \
-              --data @<(cat <<EOF
-              {
-                "token": "${{ secrets.NOTIFY_TOKEN }}",
-                "title": "${{ github.repository }} ${{ job.status }}",
-                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
-              }
-          EOF
-              )
