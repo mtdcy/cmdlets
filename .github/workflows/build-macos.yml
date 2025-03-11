@@ -14,9 +14,8 @@ on:
   workflows_dispatch: null
 
 jobs:
-  build-on-remote:
-    runs-on: ubuntu-latest
-    container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:alpine-latest
+  build-on-macos:
+    runs-on: macos-latest
     steps:
       - name: Checkout (main)
         uses: actions/checkout@v3
@@ -25,23 +24,11 @@ jobs:
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
-      - name: Prepare
-        id: prepare
+      - name: Build (macos)
         shell: bash
         run: |
-          set -x
-
-          # fix: detected dubious ownership in repository
-          git config --global --add safe.directory "$PWD"
-
-          mkdir -p ~/.ssh
-          cat > ~/.ssh/id_rsa <<< "${{ secrets.HOST_SSH_ID_RSA }}"
-          chmod 0600 ~/.ssh/id_rsa
-          workdir=cmdlets-$$
-          ssh -o StrictHostKeyChecking=no \
-            ${{ vars.REMOTE_HOST_MACOS }} \
-            mkdir -p "$workdir"
-          echo "workdir=$workdir" >> "$GITHUB_OUTPUT"
+          pwd -P
+          set -ex
 
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in ${files[@]}; do
@@ -50,82 +37,48 @@ jobs:
             cmdlets+=("$x")
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-          echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
 
-      - name: Build (remote)
-        if: always()
-        shell: bash
-        run: |
-          set -x
+          make prepare-host
+
           export NJOBS=1
+          export ULOGS=silent
           export UPKG_MIRROR=${{ vars.MIRRORS }}
-          export REMOTE_HOST=${{ vars.REMOTE_HOST_MACOS }}
-          export REMOTE_WORKDIR=${{ steps.prepare.outputs.workdir }}
           export USE_CCACHE=1
-          export CCACHE_DIR="/tmp/cmdlets-ccache"
+          export CCACHE_DIR="~/.cache/cmdlets/ccache"
 
           ret=0
-          fails=()
-          cmdlets=${{ steps.prepare.outputs.cmdlets }}
-          for x in ${cmdlets//,/ }; do
-            make -j$NJOBS "$x" || {
-              ret=$?
-              fails+=("$x")
-            }
+          for x in "${cmdlets[@]}"; do
+            make "$x" || ret=$?
           done
 
-          if [ "$ret" -ne 0 ]; then
-            # always pull from remote
-            make pull-remote || true
-
-            echo "fails: ${fails[*]}" | tee -a logs/fails.log
-          fi
           exit $ret
 
-      - name: Cleanup
-        if: always()
+      - name: Deploy
+        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
         shell: bash
         run: |
-          set -x
-          # fix go mod clean failure
-          ssh ${{ vars.REMOTE_HOST_MACOS }} chmod -R 777 ${{ steps.prepare.outputs.workdir }}/.go || true
-          ssh ${{ vars.REMOTE_HOST_MACOS }} rm -rf ${{ steps.prepare.outputs.workdir }}
+          set -e
 
-      - name: Deploy (artifacts)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc --exclude='packages.lst'
-          path: prebuilts/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/latest/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          cat << EOF > ssh_id_rsa
+          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          EOF
+          chmod 0600 ssh_id_rsa
 
-      - name: Deploy (packages)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc
-          path: packages/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+          opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
 
-      - name: Deploy (logs)
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        uses: actions/rsync@7.0.1
-        with:
-          switches: -avc
-          path: logs/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/cmdlets/logs/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          ret=0
+
+          echo "*** rsync artifacts to remote ***" &&
+          rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
+
+          echo "*** rsync logs to remote ***" &&
+          rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
+
+          echo "*** rsync packages to remote ***" &&
+          rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
+
+          exit $ret
 
       - name: Notify on failure
         if: failure()
