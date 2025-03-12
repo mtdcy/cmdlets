@@ -19,7 +19,7 @@ export REMOTE_WORKDIR=$${REMOTE_WORKDIR:-cmdlets}
 
 #2. build with docker [default]
 export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
-export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}}
+export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}
 
 # pass through envs
 export UPKG_STRICT=0
