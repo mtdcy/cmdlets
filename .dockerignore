@@ -1,0 +1,7 @@
+/out
+/prebuilts
+/logs
+/packages
+/.git
+/.ccache
+/.go
