@@ -1,5 +1,5 @@
 ---
-name: Build cmdlets macos
+name: Build cmdlets on host
 
 on:
   push:
@@ -7,24 +7,28 @@ on:
       - Makefile
       - ulib.sh
       - libs/**.u
-      - .github/workflows/build-macos.yml
+      - .github/workflows/build-host.yml
     branches:
       - main
 
   workflows_dispatch: null
 
 jobs:
-  build-on-macos:
-    runs-on: macos-latest
+  build-on-host:
+    runs-on: ${{ matrix.host }}
+    strategy:
+      matrix:
+        host:
+          - macos-latest
     steps:
-      - name: Checkout (main)
+      - name: Checkout
         uses: actions/checkout@v3
         with:
           # read only token
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
-      - name: Build (macos)
+      - name: Build
         shell: bash
         run: |
           pwd -P
@@ -69,13 +73,13 @@ jobs:
 
           ret=0
 
-          echo "*** rsync artifacts to remote ***" &&
+          echo -e "\n*** rsync artifacts to remote ***"
           rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
 
-          echo "*** rsync logs to remote ***" &&
+          echo -e "\n*** rsync logs to remote ***"
           rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
 
-          echo "*** rsync packages to remote ***" &&
+          echo -e "\n*** rsync packages to remote ***"
           rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
 
           exit $ret
