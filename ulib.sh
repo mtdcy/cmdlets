@@ -454,9 +454,9 @@ _pack() {
     # shellcheck disable=SC2001
     local files=("$(sed -e "s:$PREFIX::g" <<< "${@:2}")")
 
-    local pkginfo="$upkg_name/pkginfo-$upkg_ver-${upkg_rev:-0}"
-    local pkgname="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}.tar.gz"
-    local revision="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}"
+    local pkginfo="$upkg_name/pkginfo@$upkg_ver-${upkg_rev:-0}"
+    local pkgname="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}.tar.gz"
+    local revision="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}"
 
     mkdir -p "$(dirname "$pkgname")"
     tar -czvf "$pkgname" "${@:2}"
@@ -469,8 +469,8 @@ _pack() {
     grep -Fw "$1" "$pkginfo" > "$revision"
 
     # create a symlinks
-    ln -sfv "$(basename "$pkginfo")" "$upkg_name/pkginfo"
-    ln -sfv "$revision" "$1-revision"
+    ln -sfv "$(basename "$pkginfo")" "$upkg_name/pkginfo@latest"
+    ln -sfv "$revision" "$1@latest"
 
     popd
 }

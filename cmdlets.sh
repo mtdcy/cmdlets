@@ -68,10 +68,11 @@ _revision() {
     # zlib/minigzip@1.3.1-2
     IFS='/@-' read -r a b c d <<< "$1"
     if [ -n "$b" ]; then
-        echo "$REPO/$a/$b-$c-${d:-0}"
+        [ "$c" = "latest" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a/$b-$c-${d:-0}"
     else
         # latest version
-        echo "$REPO/$a-revision"
+        IFS='/' read -r a b <<< "$1"
+        [ -n "$b" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a@latest"
     fi
 }
 
@@ -79,10 +80,10 @@ _revision() {
 _pkginfo() {
     # zlib@1.3.1-2
     IFS='@-' read -r a b c <<< "$1"
-    if [ -n "$b" ]; then
-        echo "$REPO/$a/pkginfo-$b-$c"
+    if [ -n "$b" ] && [ "$b" != "latest" ]; then
+        echo "$REPO/$a/pkginfo@$b-${c:-0}"
     else
-        echo "$REPO/$a/pkginfo"
+        echo "$REPO/$a/pkginfo@latest"
     fi
 }
 
@@ -149,7 +150,7 @@ package() {
     local pkginfo="$(mktemp)"
     trap "rm -f $pkginfo" EXIT
 
-    if curl --fail -sL -o "$pkginfo" "$(_pkginfo "$1")"; then
+    if curl --fail -svL -o "$pkginfo" "$(_pkginfo "$1")"; then
         mkdir -p "$PREFIX"
 
         while read -r line; do
