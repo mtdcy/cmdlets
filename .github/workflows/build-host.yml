@@ -31,6 +31,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          echo $PATH
           pwd -P
           set -ex
 
