@@ -3,10 +3,10 @@
 # shellcheck disable=SC2034
 upkg_desc="Get a file from an HTTP, HTTPS or FTP server"
 upkg_lic="curl"
-upkg_ver=8.12.0
+upkg_ver=8.12.1
 upkg_rev=0
 upkg_url=https://curl.se/download/curl-$upkg_ver.tar.bz2
-upkg_sha=5a85adbe401ed3b998ee1128524e9b045feb39577f3c336f6997e7a4afaafcd7
+upkg_sha=18681d84e2791183e0e5e4650ccb2a080c1f3a4e57ed2fbc2457228579d68269
 upkg_dep=(brotli openssl zstd zlib libidn2 nghttp2)
 
 upkg_args=(

@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 
 upkg_lic=FTL
-upkg_ver=2.13.15
+upkg_ver=2.13.16
 upkg_url=https://downloads.sourceforge.net/project/freetype/freetype2/2.13.14/freetype-2.13.2.tar.xz
 upkg_sha=12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d
 upkg_dep=(zlib bzip2 brotli png)
