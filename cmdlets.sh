@@ -150,7 +150,7 @@ package() {
     local pkginfo="$(mktemp)"
     trap "rm -f $pkginfo" EXIT
 
-    if curl --fail -svL -o "$pkginfo" "$(_pkginfo "$1")"; then
+    if curl --fail -sL -o "$pkginfo" "$(_pkginfo "$1")"; then
         mkdir -p "$PREFIX"
 
         while read -r line; do

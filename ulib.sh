@@ -839,7 +839,7 @@ compile() {(
     }
 
     # clear
-    find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \;
+    find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
 
     sed -i "/^$upkg_name.*$/d" "$(_pkglist)" 2>/dev/null || touch "$(_pkglist)"
 
