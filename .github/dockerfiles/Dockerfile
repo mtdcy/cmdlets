@@ -24,7 +24,10 @@ RUN <<-EOS
     export FORCE_UNSAFE_CONFIGURE=1
 
     cmdlets=(${CMDLETS//,/ })
-    [ "${cmdlets[@]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true
+    if [[ "$CMDLETS" =~ ALL ]]; then
+        cmdlets=($(bash ulib.sh _deps_get ALL))
+        export NJOBS=$(nproc)
+    fi
 
     ret=0
     for x in "${cmdlets[@]}"; do
@@ -43,5 +46,7 @@ RUN <<-EOS
         rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
     fi
 
-    exit $ret
+    # always exit with success when build ALL
+    #   => continue build with other platforms
+    [[ "$CMDLETS" =~ ALL ]] && exit 0 || exit $ret
 EOS

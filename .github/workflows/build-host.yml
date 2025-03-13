@@ -43,11 +43,15 @@ jobs:
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
 
-          [ "${cmdlets[@]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true
-
           make prepare-host
 
-          export NJOBS=1
+          if [ "${cmdlets[@]}" = ALL ]; then
+            cmdlets=($(bash ulib.sh _deps_get ALL))
+            export NJOBS=$(nproc)
+          else
+            export NJOBS=1
+          fi
+
           export ULOGS=silent
           export UPKG_MIRROR=${{ vars.MIRRORS }}
           export USE_CCACHE=1
@@ -58,32 +62,25 @@ jobs:
             bash ulib.sh build "$x" || ret=$?
           done
 
-          exit $ret
-
-      - name: Deploy
-        if: ${{ vars.ARTIFACTS_REMOTE_HOST != '' }}
-        shell: bash
-        run: |
-          set -e
-
+          # Deploy
           cat << EOF > ssh_id_rsa
           ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
           EOF
           chmod 0600 ssh_id_rsa
 
-          remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-          opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
+          if test -n "${{ vars.ARTIFACTS_REMOTE_HOST }}"; then
+            remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+            opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
 
-          ret=0
+            echo -e "\n*** rsync artifacts to remote ***"
+            rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
 
-          echo -e "\n*** rsync artifacts to remote ***"
-          rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
+            echo -e "\n*** rsync logs to remote ***"
+            rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
 
-          echo -e "\n*** rsync logs to remote ***"
-          rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
-
-          echo -e "\n*** rsync packages to remote ***"
-          rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
+            echo -e "\n*** rsync packages to remote ***"
+            rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
+          fi
 
           exit $ret
 
