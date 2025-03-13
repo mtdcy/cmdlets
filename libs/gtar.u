@@ -4,7 +4,7 @@ upkg_desc="GNU version of the tar archiving utility"
 
 upkg_lic='GPL-3.0-or-later'
 upkg_ver=1.35
-upkg_rev=0
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/tar/tar-$upkg_ver.tar.xz
 upkg_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
 upkg_dep=(gzip bzip2 xz zstd lzip lzop libiconv)
@@ -32,6 +32,8 @@ upkg_args=(
 upkg_args+=(--with-rmt="/usr/sbin/rmt")
 
 upkg_static() {
+    is_glibc && dynamicalize || true
+
     # BUG: undefined reference to `libiconv_open'
     # iconv is detected during configure process but -liconv is missing
     # from LDFLAGS as of gnu-tar 1.35. Remove once iconv linking works
