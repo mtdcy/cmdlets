@@ -4,8 +4,9 @@
 
 upkg_lic='BSD-3-Clause'
 upkg_ver=3.18
-upkg_url=https://github.com/esnet/iperf/releases/download/3.16/iperf-3.16.tar.gz
-upkg_sha=cc740c6bbea104398cc3e466befc515a25896ec85e44a662d5f4a767b9cf713e
+upkg_rev=0
+upkg_url=https://github.com/esnet/iperf/releases/download/$upkg_ver/iperf-$upkg_ver.tar.gz
+upkg_sha=c0618175514331e766522500e20c94bfb293b4424eb27d7207fb427b88d20bab
 upkg_dep=()
 
 upkg_args=(
@@ -18,14 +19,19 @@ upkg_args=(
 )
 
 upkg_static() {
+    is_glibc && dynamicalize || true
+
     configure &&
+
     make &&
-    # test
-    ./src/iperf3 --version | grep -F "$upkg_ver" &&
-    # check & install
-    make check install-strip &&
+
+    # check
+    make check &&
+
+    cmdlet ./src/iperf3 &&
+
     # verify
-    check $PREFIX/bin/iperf3
+    check iperf3
 }
 
 
