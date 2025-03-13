@@ -3,34 +3,25 @@
 # shellcheck disable=SC2034
 upkg_type=PHONY
 
-upkg_ver=0.1.0
-upkg_rev=1
+upkg_ver="$(cat VERSION)"
+upkg_rev=0
 
+# only cmdlets here, no libraries
 upkg_dep=(
     # zip
     gtar unrar unzip
     # utils
-    coreutils gsed gawk gfind grep gmake
+    coreutils gsed gawk findutils grep gmake
     # shell
-    bash
+    bash ctags shfmt
     # editor
     neovim
     # net
     wget curl iperf3
     # multimedia
     ffmpeg
-    ffmpeg@6
-    ffmpeg@5
-    ffmpeg@4
-    mac
     # misc
-    neofetch
+    neofetch lazygit act
 )
-
-# versioned cmdlets with glibc only
-is_glibc && upkg_dep+=(
-    bash@3.2
-    bash@4.4
-) || true
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
