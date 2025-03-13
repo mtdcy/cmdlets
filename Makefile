@@ -136,8 +136,8 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  cargo golang
 
 prepare-host-homebrew:
-	brew update
-	brew install $(BREW_PACKAGES)
+	brew update 
+	brew install -q $(BREW_PACKAGES)
 
 prepare-host-debian:
 	sudo apt-get update -q
