@@ -447,10 +447,6 @@ _pkglist() {
     echo "$PREFIX/packages.lst"
 }
 
-_pkginfo() {
-    echo "$PREFIX/$upkg_name/pkginfo"
-}
-
 # _pack pkgname <file list>
 _pack() {
     pushd "$PREFIX"
@@ -458,20 +454,22 @@ _pack() {
     # shellcheck disable=SC2001
     local files=("$(sed -e "s:$PREFIX::g" <<< "${@:2}")")
 
+    local pkginfo="$upkg_name/pkginfo-$upkg_ver-${upkg_rev:-0}"
     local pkgname="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}.tar.gz"
     local revision="$upkg_name/$1-$upkg_ver-${upkg_rev:-0}"
 
     mkdir -p "$(dirname "$pkgname")"
     tar -czvf "$pkgname" "${@:2}"
 
-    mkdir -pv "$(dirname "$(_pkginfo)")"
-    touch "$(_pkginfo)"
-    sha256sum "$pkgname" >> "$(_pkginfo)"
+    mkdir -pv "$(dirname "$pkginfo")"
+    touch "$pkginfo"
+    sha256sum "$pkgname" >> "$pkginfo"
 
     # create a revision file
-    grep -Fw "$1" "$(_pkginfo)" > "$revision"
+    grep -Fw "$1" "$pkginfo" > "$revision"
 
-    # create a symlink
+    # create a symlinks
+    ln -sfv "$(basename "$pkginfo")" "$upkg_name/pkginfo"
     ln -sfv "$revision" "$1-revision"
 
     popd
@@ -503,7 +501,7 @@ cmdlet() {
         fi
     fi
 
-    _pack "$(basename "$pkgname")" "${installed[@]}" | _capture
+    echocmd _pack "$(basename "$pkgname")" "${installed[@]}" | _capture
 }
 
 # _fix_pc path/to/xxx.pc
@@ -627,7 +625,7 @@ applet() {
     local installed
     read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )"
 
-    _pack "$(basename "$1")" "${installed[@]}" | _capture
+    echocmd _pack "$(basename "$1")" "${installed[@]}" | _capture
 }
 
 # _fetch <url> <sha256> [local]
@@ -841,7 +839,7 @@ compile() {(
     }
 
     # clear
-    rm -f "$(_pkginfo)" 2>/dev/null
+    find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \;
 
     sed -i "/^$upkg_name.*$/d" "$(_pkglist)" 2>/dev/null || touch "$(_pkglist)"
 
