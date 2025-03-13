@@ -23,8 +23,11 @@ RUN <<-EOS
     export UPKG_MIRROR=$UPKG_MIRROR
     export FORCE_UNSAFE_CONFIGURE=1
 
+    cmdlets=(${CMDLETS//,/ })
+    [ "${cmdlets[@]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true
+
     ret=0
-    IFS=','; for x in $CMDLETS; do
+    for x in "${cmdlets[@]}"; do
         bash ulib.sh build "$x" || ret=$?
     done
 

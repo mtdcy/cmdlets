@@ -43,6 +43,8 @@ jobs:
           done
           [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
 
+          [ "${cmdlets[@]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true
+
           make prepare-host
 
           export NJOBS=1
@@ -53,7 +55,7 @@ jobs:
 
           ret=0
           for x in "${cmdlets[@]}"; do
-            make "$x" || ret=$?
+            bash ulib.sh build "$x" || ret=$?
           done
 
           exit $ret
