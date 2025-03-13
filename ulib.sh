@@ -276,13 +276,11 @@ deparallelize() {
 }
 
 configure() {
-    [ -f configure ] || {
-        if [ -f autogen.sh ]; then
-            ulogcmd ./autogen.sh
-        elif [ -f configure.ac ]; then
-            ulogcmd autoreconf -i -f
-        fi
-    }
+    if test -f configure.ac; then
+        ulogcmd autoreconf -fi 
+    elif test -f autogen.sh; then
+        ulogcmd ./autogen.sh
+    fi
 
     local cmdline
 
