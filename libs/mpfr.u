@@ -7,7 +7,7 @@ upkg_page="https://www.mpfr.org/"
 
 upkg_lic='GPL-3.0-or-later'
 upkg_ver=4.2.1
-upkg_rev=1
+upkg_rev=2
 upkg_url=https://ftp.gnu.org/gnu/mpfr/mpfr-$upkg_ver.tar.xz
 upkg_sha=277807353a6726978996945af13e52829e3abd7a9a5b7fb2793894e18f1fcbb2
 upkg_dep=(gmp)
@@ -16,6 +16,10 @@ upkg_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
+
+    --with-gmp="$PREFIX"
+
+    --disable-docs
 
     --disable-shared
     --enable-static
@@ -32,7 +36,7 @@ upkg_static() {
     #make install
     library libmpfr \
             include         src/{mpfr.h,mpf2mpfr.h} \
-            lib             src/.libs/libmpfr.{a,la} \
+            lib             src/.libs/libmpfr.a     \
             lib/pkgconfig   mpfr.pc
 }
 
