@@ -276,10 +276,14 @@ deparallelize() {
 }
 
 configure() {
-    if test -f autogen.sh; then
-        ulogcmd ./autogen.sh
-    elif test -f configure.ac; then
-        ulogcmd autoreconf -fi 
+    if ! test -f configure; then
+        if test -f autogen.sh; then
+            ulogcmd ./autogen.sh
+        elif test -f bootstrap; then
+            ulogcmd ./bootstrap
+        elif test -f configure.ac; then
+            ulogcmd autoreconf -fi 
+        fi
     fi
 
     local cmdline
@@ -870,7 +874,7 @@ compile() {(
     # record @ work dir
     touch "$WORKDIR/.$upkg_name"
 
-    ulogi "<<<<<" "$upkg_name@$upkg_ver\n"
+    ulogi "<<<<<" "$upkg_name@$upkg_ver"
 )}
 
 # build targets and its dependencies
@@ -905,7 +909,7 @@ build() {
     # pull dependencies
     local libs=()
     for dep in "${deps[@]}"; do
-        ./cmdlets.sh package "$dep" || libs+=("$dep")
+        ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=("$dep")
     done
 
     ulogi "Build" "$1 (${libs[*]})"
