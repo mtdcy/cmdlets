@@ -4,8 +4,6 @@ all: ALL
 
 .PHONY: all
 
-MAKEFLAGS += --always-make
-
 # read njobs from -j
 NJOBS ?= $(subst -j,,$(filter -j%,$(MAKEFLAGS)))
 
@@ -57,23 +55,15 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-ENVS := NJOBS          \
-		ULOGS          \
-		UPKG_STRICT    \
-		UPKG_MIRROR    \
-		USE_CCACHE 	   \
-		CCACHE_DIR 	   \
-		DISTCC_VERBOSE \
-		DISTCC_HOSTS   \
-		DISTCC_OPTS    \
-
-OPTS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),))
-
-# internal variables
-USER  	= $(shell id -u)
-GROUP 	= $(shell id -g)
-ARCH  	= $(shell gcc -dumpmachine | sed 's/[0-9\.]\+$$//;s/-alpine//')
-WORKDIR = $(shell pwd)
+UPKG_ENVS := 	NJOBS    		\
+				ULOGS          	\
+				UPKG_STRICT    	\
+				UPKG_MIRROR    	\
+				USE_CCACHE 	   	\
+				CCACHE_DIR 	   	\
+				DISTCC_VERBOSE 	\
+				DISTCC_HOSTS   	\
+				DISTCC_OPTS    	\
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -115,7 +105,7 @@ else
 prepare: prepare-host
 endif
 
-.PHONY: clean distclean shell prepare
+.PHONY: clean distclean shell prepare runc
 
 ##############################################################################
 # host
@@ -123,7 +113,7 @@ endif
 BREW_PACKAGES 	= wget curl git                                    \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
-				  nasm yasm bison flex gettext                     \
+				  nasm yasm bison flex gettext texinfo   		   \
 				  luajit perl 									   \
 				  rust go
 
@@ -131,7 +121,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
 				  build-essential gettext                          \
 				  automake autoconf libtool pkg-config cmake meson \
-				  nasm yasm bison flex                             \
+				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
 				  cargo golang
 
@@ -150,13 +140,20 @@ prepare-host: prepare-host-homebrew
 endif
 
 runc-host:
-	$(OPTS) $(CMD)
+	$(CMD)
 
 ##############################################################################
+ifneq ($(DOCKER_IMAGE),)
 # docker
 # sync time between host and docker
 #  => don't use /etc/timezone, as timedatectl won't update this file
 TIMEZONE = $(shell realpath --relative-to /usr/share/zoneinfo /etc/localtime)
+
+# internal variables
+USER  	= $(shell id -u)
+GROUP 	= $(shell id -g)
+ARCH  	= $(shell gcc -dumpmachine | sed 's/[0-9\.]\+$$//;s/-alpine//')
+WORKDIR = $(shell pwd)
 
 prepare-docker-image:
 	docker build                                  	\
@@ -208,7 +205,7 @@ DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
 #  => -w not always work, why?
 
 # envs
-DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
+DOCKER_ARGS += $(foreach v,$(UPKG_ENVS),$(if $($(v)),-e $(v)=$($(v))))
 
 ifeq ($(shell test -t 0 && echo tty),tty)
 DOCKER_RUNC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE)
@@ -221,10 +218,14 @@ runc-docker:
 
 # TODO
 runc-remote-docker:
+endif
 
 ##############################################################################
+ifneq ($(REMOTE_HOST),)
 # remote:
 REMOTE_WORKDIR ?= cmdlets
+
+SSH_ENVS := $(foreach v,$(UPKG_ENVS),$(if $($(v)),$(v)=$($(v)),))
 
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
@@ -270,9 +271,11 @@ pull-remote:
 # ToDo: enable AcceptEnv ?
 runc-remote: push-remote
 	@bash ulib.sh ulogi "SHELL" "$(CMD) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
-	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(OPTS) $(CMD)"'
+	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(CMD)"'
 	@make pull-remote
 	@bash ulib.sh ulogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+
+endif
 
 ##############################################################################
 # Install prebuilts @ Host
