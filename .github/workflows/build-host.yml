@@ -11,7 +11,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch: null
+  workflows_dispatch:
 
 jobs:
   build-on-host:
