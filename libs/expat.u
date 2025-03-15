@@ -4,10 +4,10 @@
 # shellcheck disable=SC2034
 upkg_name=expat
 upkg_lic="MIT"
-upkg_ver=2.6.4
+upkg_ver=2.7.0
 upkg_rev=0
 upkg_url=https://github.com/libexpat/libexpat/releases/download/R_${upkg_ver//./_}/expat-$upkg_ver.tar.gz
-upkg_sha=fd03b7172b3bd7427a3e7a812063f74754f24542429b634e0db6511b53fb2278
+upkg_sha=362e89ca6b8a0d46fc5740a917eb2a8b4d6356edbe016eee09f49c0781215844
 upkg_dep=()
 
 # configure args
