@@ -31,9 +31,18 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          echo $PATH
           pwd -P
           set -ex
+
+          if which brew; then
+            brewprefix="$(brew --prefix)"
+            export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
+            export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"
+            export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
+            export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
+            export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
+          fi
+          echo $PATH
 
           files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
           for x in ${files[@]}; do
