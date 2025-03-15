@@ -4,6 +4,7 @@
 
 upkg_lic="libpng-2.0"
 upkg_ver=1.6.47
+upkg_rev=1
 upkg_url=https://downloads.sourceforge.net/libpng/libpng16/libpng-$upkg_ver.tar.xz
 upkg_sha=b213cb381fbb1175327bd708a77aab708a05adde7b471bc267bd15ac99893631
 upkg_dep=(zlib)
@@ -37,9 +38,10 @@ upkg_static() {
             lib/pkgconfig                           \
                 libpng16.pc &&
 
-    cmdlet pngfix &&
-    cmdlet pngimage &&
-    cmdlet pngtest &&
+    cmdlet ./pngfix &&
+    cmdlet ./pngimage &&
+    cmdlet ./pngtest &&
+    cmdlet ./libpng16-config libpng16-config libpng-config &&
 
     check pngtest --version
 }
