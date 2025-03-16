@@ -9,7 +9,7 @@ upkg_dep=(
     # audio libs
     soxr lame ogg vorbis opus
     # image libs
-    png gif turbojpeg tiff webp openjpeg
+    png giflib turbojpeg tiff webp openjpeg
     # video libs
     zimg theora vpx
     openh264 kvazaar
