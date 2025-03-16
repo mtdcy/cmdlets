@@ -261,6 +261,11 @@ _init() {
     export GOMODCACHE="$ROOT/.go/pkg/mod"
     export GO111MODULE="auto"
     [ -z "$UPKG_MIRROR" ] || export GOPROXY="$UPKG_MIRROR/gomods"
+
+    # macos
+    if is_darwin; then
+        export MACOSX_DEPLOYMENT_TARGET=10.13
+    fi
 }
 
 dynamicalize() {
