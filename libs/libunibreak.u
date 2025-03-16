@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 
 upkg_lic=Zlib
-upkg_ver=6.3
+upkg_ver=6.4
 upkg_url=https://github.com/adah1972/libunibreak/releases/download/libunibreak_6_0/libunibreak-6.0.tar.gz
 upkg_sha=f189daa18ead6312c5db6ed3d0c76799135910ed6c06637c7eea20a7e5e7cc7f
 upkg_dep=()

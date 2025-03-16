@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 upkg_name=libyaml
 upkg_lic="MIT"
-upkg_ver=0.2.8
+upkg_ver=0.2.9
 upkg_rev=0
 upkg_url=https://github.com/yaml/libyaml/archive/refs/tags/0.2.5.tar.gz
 upkg_sha=fa240dbf262be053f3898006d502d514936c818e422afdcf33921c63bed9bf2e
