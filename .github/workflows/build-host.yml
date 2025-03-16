@@ -54,7 +54,7 @@ jobs:
 
           make prepare-host
 
-          if [ "${cmdlets[@]}" = ALL ]; then
+          if [ "${cmdlets[*]}" = ALL ]; then
             cmdlets=($(bash ulib.sh _deps_get ALL))
             export NJOBS=$(nproc)
           else
