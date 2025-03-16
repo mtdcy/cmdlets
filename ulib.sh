@@ -452,7 +452,7 @@ install() {
     fi
 }
 
-# _pack pkgname <file list>
+# _pack name <file list>
 _pack() {
     pushd "$PREFIX"
 
@@ -473,9 +473,12 @@ _pack() {
     # create a revision file
     grep -Fw "$1" "$pkginfo" > "$revision"
 
-    # create a symlinks
-    ln -sfv "$(basename "$pkginfo")" "$upkg_name/pkginfo@latest"
-    ln -sfv "$revision" "$1@latest"
+    # create symlinks
+    ln -sfv "$(basename "$pkginfo")"    "$upkg_name/pkginfo@$upkg_ver"
+    ln -sfv "pkginfo@$upkg_ver"         "$upkg_name/pkginfo@latest"
+    ln -sfv "$(basename "$revision")"   "$upkg_name/$1@$upkg_ver"
+    ln -sfv "$1@$upkg_ver"              "$upkg_name/$1@latest"
+    ln -sfv "$upkg_name@$1@latest"      "$1@latest"
 
     popd
 }
