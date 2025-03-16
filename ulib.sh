@@ -85,15 +85,15 @@ _capture() {
     fi
 }
 
+echocmd() {
+    echo "$*"
+    eval -- "$*"
+}
+
 # ulogcmd <command>
 ulogcmd() {
     ulogi "..Run" "$(tr -s ' ' <<< "$*")"
-    eval -- "$@" 2>&1 | _capture
-}
-
-echocmd() {
-    echo "$*"
-    eval -- "$@"
+    echocmd "$@" 2>&1 | _capture
 }
 
 _prefix() {
@@ -450,10 +450,6 @@ install() {
         # install lib libxxx.a ...
         "$INSTALL" -v -m644 "${@:2}" "$(_prefix)/$1"
     fi
-}
-
-_pkglist() {
-    echo "$PREFIX/packages.lst"
 }
 
 # _pack pkgname <file list>
@@ -819,6 +815,10 @@ _deps_get() {
         deps=("${deps[@]:1}")
     done
     echo "${leaf[@]}"
+}
+
+_pkglist() {
+    echo "$PREFIX/packages.lst"
 }
 
 # compile target
