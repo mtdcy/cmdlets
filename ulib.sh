@@ -925,7 +925,10 @@ build() {
         i=$((i + 1))
         ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
 
-        time compile "$ulib" || return 127
+        time compile "$ulib" || {
+            uloge "Error" "build $ulib failed"
+            return 127
+        }
     done
 }
 
