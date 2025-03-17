@@ -1,11 +1,11 @@
 # libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alpha/Substation Alpha) subtitle format.
-#
-# shellcheck disable=SC2034
 
+# shellcheck disable=SC2034
 upkg_lic=FTL
-upkg_ver=2.13.19
-upkg_url=https://downloads.sourceforge.net/project/freetype/freetype2/2.13.14/freetype-2.13.2.tar.xz
-upkg_sha=12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d
+upkg_ver=2.13.3
+upkg_rev=1
+upkg_url=https://downloads.sourceforge.net/project/freetype/freetype2/$upkg_ver/freetype-$upkg_ver.tar.xz
+upkg_sha=0550350666d427c74daeb85d5ac7bb353acba5f76956395995311a9c6f063289
 upkg_dep=(zlib bzip2 brotli png)
 
 upkg_args=(
@@ -19,16 +19,20 @@ upkg_args=(
 )
 
 upkg_static() {
-    # force use configure
-    rm CMakeLists.txt meson.build
-
     configure &&
 
     make &&
 
-    make install  &&
+    library freetype2 \
+            include/freetype2 include/*.h \
+            include/freetype2/freetype include/freetype/*.h \
+            include/freetype2/freetype/config include/freetype/config/*.h builds/unix/*.h \
+            lib             objs/.libs/*.a \
+            lib/pkgconfig   builds/unix/*.pc &&
 
-    install lib/pkgconfig builds/unix/freetype2.pc
+    cmdlet builds/unix/freetype-config &&
+
+    check freetype-config
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
