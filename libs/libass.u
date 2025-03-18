@@ -2,10 +2,10 @@
 
 # shellcheck disable=SC2034
 upkg_lic=ISC
-upkg_ver=0.17.1
-upkg_rev=1
+upkg_ver=0.17.2
+upkg_rev=0
 upkg_url=https://github.com/libass/libass/releases/download/$upkg_ver/libass-$upkg_ver.tar.xz
-upkg_sha=f0da0bbfba476c16ae3e1cfd862256d30915911f7abaa1b16ce62ee653192784
+upkg_sha=e8261b51d66ba933fe99248c6fdd8767ed96c5a7e5363c83992c735a2c2fbf74
 upkg_dep=(fribidi freetype harfbuzz libunibreak)
 
 upkg_args=(
