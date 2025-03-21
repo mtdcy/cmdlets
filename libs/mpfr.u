@@ -6,10 +6,10 @@ upkg_desc="C library for multiple-precision floating-point computations"
 upkg_page="https://www.mpfr.org/"
 
 upkg_lic='GPL-3.0-or-later'
-upkg_ver=4.2.1
-upkg_rev=2
+upkg_ver=4.2.2
+upkg_rev=0
 upkg_url=https://ftp.gnu.org/gnu/mpfr/mpfr-$upkg_ver.tar.xz
-upkg_sha=277807353a6726978996945af13e52829e3abd7a9a5b7fb2793894e18f1fcbb2
+upkg_sha=b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
 upkg_dep=(gmp)
 
 upkg_args=(
