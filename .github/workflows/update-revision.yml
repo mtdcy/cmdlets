@@ -11,7 +11,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflows_dispatch: null
 
 jobs:
   build-with-docker:
@@ -89,6 +89,8 @@ jobs:
               echo "updated $ulib => $newver" >> "$commits"
             ) || true
           done
+
+          test -f "$commits" || exit 0
 
           git status
 
