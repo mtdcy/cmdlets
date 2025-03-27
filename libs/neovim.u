@@ -7,7 +7,7 @@ upkg_name=nvim
 
 upkg_lic="Apache-2.0"
 upkg_ver=0.11.0
-upkg_rev=0
+upkg_rev=1
 upkg_url=https://github.com/neovim/neovim/archive/refs/tags/v$upkg_ver.tar.gz
 upkg_zip=$upkg_name-$upkg_ver.tar.gz
 upkg_sha=6826c4812e96995d29a98586d44fbee7c9b2045485d50d174becd6d5242b3319
