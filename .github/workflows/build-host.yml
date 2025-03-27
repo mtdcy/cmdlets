@@ -63,7 +63,7 @@ jobs:
 
           export ULOGS=silent
           export UPKG_MIRROR=${{ vars.MIRRORS }}
-          export USE_CCACHE=1
+          export USE_CCACHE=0
           export CCACHE_DIR="~/.cache/cmdlets/ccache"
 
           ret=0
