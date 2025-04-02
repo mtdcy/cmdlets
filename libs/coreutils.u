@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 upkg_lic="GPL-3.0-or-later"
 upkg_ver=9.6
-upkg_rev=0
+upkg_rev=1
 upkg_url=https://ftp.gnu.org/gnu/coreutils/coreutils-$upkg_ver.tar.xz
 upkg_sha=7a0124327b398fd9eb1a6abde583389821422c744ffa10734b24f557610d3283
 upkg_dep=(gmp libiconv)
