@@ -6,7 +6,7 @@
 # shellcheck disable=SC2034
 upkg_lic='Apache-2.0'
 upkg_ver=3.4.1
-upkg_rev=0
+upkg_rev=1
 upkg_url=https://www.openssl.org/source/openssl-$upkg_ver.tar.gz
 upkg_sha=002a2d6b30b58bf4bea46c43bdd96365aaf8daa6c428782aa4feee06da197df3
 upkg_dep=()
@@ -34,12 +34,12 @@ upkg_args=(
     "$LDFLAGS"
 )
 
-is_linux  && upkg_args+=(linux-x86_64)
+is_linux  && upkg_args+=("linux-$(uname -m)")
 
-is_darwin && upkg_args+=(darwin64-x86_64 enable-ec_nistp_64_gcc_128)
+is_darwin && upkg_args+=("darwin64-$(uname -m)" enable-ec_nistp_64_gcc_128)
 
 upkg_static() {
-    ./Configure ${upkg_args[@]} &&
+    ./Configure "${upkg_args[@]}" &&
 
     {
         # use host paths
