@@ -2,10 +2,10 @@
 
 # shellcheck disable=SC2034
 upkg_lic='GPL-3.0-or-later'
-upkg_ver=5.3.1
-upkg_rev=1
+upkg_ver=5.3.2
+upkg_rev=0
 upkg_url=https://ftp.gnu.org/gnu/gawk/gawk-$upkg_ver.tar.xz
-upkg_sha=694db764812a6236423d4ff40ceb7b6c4c441301b72ad502bb5c27e00cd56f78
+upkg_sha=f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc
 upkg_dep=(gmp mpfr readline)
 
 upkg_args=(
