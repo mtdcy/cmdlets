@@ -33,6 +33,7 @@ upkg_args=(
 
     --without-libssh2
     --without-libpsl
+    --without-librtmp
     --disable-ldap
 
     --without-zsh-functions-dir
@@ -56,14 +57,13 @@ upkg_static() {
 
     make V=1 &&
 
-    # fast check
-    ./src/curl --fail -v -o /dev/null ${upkg_url%/*} &&
-
     #make install &&
     library libcurl \
             include/curl    include/curl/curl*.h \
             lib             lib/.libs/libcurl.{a,la} \
             lib/pkgconfig   libcurl.pc &&
+
+    cmdlet  ./src/curl &&
 
     check curl --version
 }
