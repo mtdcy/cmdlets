@@ -1,0 +1,132 @@
+---
+name: Build cmdlets latest
+
+on:
+  push:
+    paths:
+      - Makefile
+      - ulib.sh
+      - libs/**.u
+      - .github/workflows/build-msys2.yml
+    branches:
+      - main
+
+  workflows_dispatch: null
+
+jobs:
+  build-with-docker:
+    runs-on: ubuntu-latest
+    container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.container }}
+    strategy:
+      matrix:
+        container:
+          - ucrt64-latest
+          - mingw64-latest
+
+    steps:
+      - name: Checkout (main)
+        uses: actions/checkout@v3
+        with:
+          # read only token
+          token: ${{ secrets.READ_TOKEN }}
+          fetch-depth: 2
+
+      - name: Prepare
+        id: prepare
+        shell: bash
+        run: |
+          set -x
+          pwd -P
+
+          rm -rf /msys64/var
+          ln -sfv /var /msys64/var
+
+          # mount workdir to msys2
+          mkdir -pv $(dirname /msys64/$PWD)
+          ln -sfv $PWD /msys64/$PWD
+
+          chown -R buildbot:buildbot .
+
+          # fix: detected dubious ownership in repository
+          git config --global --add safe.directory "$PWD"
+
+          files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
+          for x in "${files[@]}"; do
+            x=$(basename ${x%.u})
+            [[ "$x" =~ ^\. ]] && continue  ## ignored files
+            cmdlets+=("$x")
+          done
+          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
+          echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
+
+          # remember the workdir
+          echo "workdir=$(pwd -P)" | tee -a $GITHUB_OUTPUT
+
+          # for rsync
+          cat << EOF > ssh_id_rsa
+          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          EOF
+          chmod 0600 ssh_id_rsa
+
+      - name: Build
+        id: build
+        shell: su buildbot -c "xvfb-run -a wine bash.exe -li -e {0}"
+        run: |
+          pwd -P
+          set -ex
+
+          echo $PATH
+          echo "MSYSTEM: $MSYSTEM"
+
+          cd ${{ steps.prepare.outputs.workdir }}
+
+          cmdlets=(${{ steps.prepare.outputs.cmdlets }})
+          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
+
+          if [ "${cmdlets[*]}" = ALL ]; then
+            cmdlets=($(bash ulib.sh _deps_get ALL))
+            export NJOBS=$(nproc)
+          else
+            export NJOBS=1
+          fi
+
+          export ULOGS=silent
+          export UPKG_MIRROR=${{ vars.MIRRORS }}
+          export USE_CCACHE=0
+
+          ret=0
+          for x in "${cmdlets[@]}"; do
+            bash ulib.sh build "$x" || ret=$?
+          done
+
+          if test -n "${{ vars.ARTIFACTS_REMOTE_HOST }}"; then
+            remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+            opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
+
+            echo -e "\n*** rsync artifacts to remote ***"
+            rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
+
+            echo -e "\n*** rsync logs to remote ***"
+            rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
+
+            echo -e "\n*** rsync packages to remote ***"
+            rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
+          fi
+
+          exit $ret
+
+      - name: Notify on failure
+        if: failure()
+        shell: bash
+        run: |-
+          curl --version
+          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
+              -H 'Content-Type: application/json' \
+              --data @<(cat <<EOF
+              {
+                "token": "${{ secrets.NOTIFY_TOKEN }}",
+                "title": "${{ github.repository }} ${{ job.status }}",
+                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
+              }
+          EOF
+              )

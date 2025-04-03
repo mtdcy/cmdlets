@@ -18,7 +18,7 @@ unset ROOT PREFIX WORKDIR
 
 # conditionals
 is_darwin() { [[ "$OSTYPE" =~ darwin ]];                            }
-is_msys()   { [[ "$OSTYPE" =~ msys ]];                              }
+is_msys()   { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
 is_linux()  { [[ "$OSTYPE" =~ linux ]];                             }
 is_glibc()  { ldd --version 2>&1 | grep -qFi "glibc";               }
 # 'ldd --version' in alpine always return 1
@@ -133,9 +133,19 @@ _init() {
 
     local arch
     case "$OSTYPE" in
-        darwin*)    arch="$(uname -m)-apple-darwin"         ;;
-        msys*)      arch="$(uname -m)-$OSTYPE-${MSYSTEM,,}" ;;
-        *)          arch="$(uname -m)-$OSTYPE"              ;;
+        darwin*)
+            arch="$(uname -m)-apple-darwin"
+            ;;
+        msys*|cygwin*)
+            if test -n "$MSYSTEM"; then
+                arch="$(uname -m)-msys-${MSYSTEM,,}" 
+            else
+                arch="$(uname -m)-$OSTYPE"
+            fi
+            ;;
+        *)
+            arch="$(uname -m)-$OSTYPE"
+            ;;
     esac
 
     PREFIX="$ROOT/prebuilts/$arch"
@@ -265,6 +275,8 @@ _init() {
     # macos
     if is_darwin; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
+    #elif is_msys; then
+    #    export MSYS=winsymlinks:nativestrict
     fi
 }
 
@@ -452,6 +464,15 @@ install() {
     fi
 }
 
+link() {
+    echo "link: $1 => $2"
+    if is_msys; then
+        cp "$(dirname "$2")/$1" "$2"
+    else
+        ln -sfv "$1" "$2"
+    fi
+}
+
 # _pack name <file list>
 _pack() {
     pushd "$PREFIX"
@@ -468,17 +489,20 @@ _pack() {
 
     mkdir -pv "$(dirname "$pkginfo")"
     touch "$pkginfo"
-    sha256sum "$pkgname" >> "$pkginfo"
+    # there is a '*' when run sha256sum in msys
+    #sha256sum "$pkgname" >> "$pkginfo"
+    IFS=' *' read -r sha name <<< "$(sha256sum "$pkgname")"
+    echo "$sha $name" >> "$pkginfo"
 
     # create a revision file
     grep -Fw "$1" "$pkginfo" > "$revision"
 
     # create symlinks
-    ln -sfv "$(basename "$pkginfo")"    "$upkg_name/pkginfo@$upkg_ver"
-    ln -sfv "pkginfo@$upkg_ver"         "$upkg_name/pkginfo@latest"
-    ln -sfv "$(basename "$revision")"   "$upkg_name/$1@$upkg_ver"
-    ln -sfv "$1@$upkg_ver"              "$upkg_name/$1@latest"
-    ln -sfv "$upkg_name@$1@latest"      "$1@latest"
+    link "$(basename "$pkginfo")"    "$upkg_name/pkginfo@$upkg_ver"
+    link "pkginfo@$upkg_ver"         "$upkg_name/pkginfo@latest"
+    link "$(basename "$revision")"   "$upkg_name/$1@$upkg_ver"
+    link "$1@$upkg_ver"              "$upkg_name/$1@latest"
+    link "$upkg_name/$1@latest"      "$1@latest"
 
     popd
 }
@@ -503,7 +527,7 @@ cmdlet() {
 
         if [ $# -gt 2 ]; then
             for x in "${@:3}"; do
-                ln -sfv "$2" "$(_prefix)/bin/$x"
+                link "$2" "$(_prefix)/bin/$x"
                 installed+=("bin/$x")
             done
         fi
@@ -532,12 +556,12 @@ _install() {
     if [ -n "$4" ]; then # install with alias
         if [[ "$1" =~ $3.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                ln -sf "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
+                link "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
                 installed+=("$2/$alias.${1##*.}")
             done
         elif [[ "$1" =~ ${3#lib}.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                ln -sf "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
+                link "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
                 installed+=("$2/${alias#lib}.${1##*.}")
             done
         fi
