@@ -110,7 +110,7 @@ endif
 ##############################################################################
 # host
 
-BREW_PACKAGES 	= wget curl git                                    \
+BREW_PACKAGES 	= bash wget curl git                               \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo   		   \
