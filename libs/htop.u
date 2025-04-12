@@ -3,10 +3,10 @@
 # shellcheck disable=SC2034
 upkg_name=htop
 upkg_lic="GPL"
-upkg_ver=3.4.0
+upkg_ver=3.4.1
 upkg_rev=0
 upkg_url=https://github.com/htop-dev/htop/releases/download/$upkg_ver/htop-$upkg_ver.tar.xz
-upkg_sha=feaabd2d31ca27c09c367a3b1b547ea9f96105fc41f4dfa799e2f49daad5de29
+upkg_sha=904f7d4580fc11cffc7e0f06895a4789e0c1c054435752c151e812fead9f6220
 upkg_dep=(ncurses) # enables mouse scroll
 
 upkg_static() {
