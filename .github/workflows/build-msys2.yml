@@ -62,12 +62,6 @@ jobs:
           # remember the workdir
           echo "workdir=$(pwd -P)" | tee -a $GITHUB_OUTPUT
 
-          # for rsync
-          cat << EOF > ssh_id_rsa
-          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-          EOF
-          chmod 0600 ssh_id_rsa
-
       - name: Build
         id: build
         shell: su buildbot -c "xvfb-run -a wine bash.exe -li -e {0}"
@@ -98,6 +92,13 @@ jobs:
           for x in "${cmdlets[@]}"; do
             bash ulib.sh build "$x" || ret=$?
           done
+
+          # for rsync
+          cat << EOF > ssh_id_rsa
+          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          EOF
+          chmod 0600 ssh_id_rsa
+          echo -en '\n' >> ssh_id_rsa  # Fix missing LF
 
           if test -n "${{ vars.ARTIFACTS_REMOTE_HOST }}"; then
             remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
