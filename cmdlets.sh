@@ -66,9 +66,9 @@ REPO="$REPO/$ARCH"
 # get remote revision url
 _revision() {
     # zlib/minigzip@1.3.1-2
-    IFS='/@-' read -r a b c d <<< "$1"
+    IFS='/@-' read -r a b c _ <<< "$1"
     if [ -n "$b" ]; then
-        [ "$c" = "latest" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a/$b-$c-${d:-0}"
+        [ "$c" = "latest" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a/$b@$c"
     else
         # latest version
         IFS='/' read -r a b <<< "$1"
@@ -211,7 +211,7 @@ elif [ "$name" = "$(basename "$BASE")" ]; then
         install)    # fetch cmdlets
             for x in "${@:2}"; do
                 cmdlet "$x"
-                ln -sfv "$name" "$(dirname "$0")/$x"
+                ln -sfv "$name" "$(dirname "$0")/${x%%/*}"
             done
             ;;
         fetch)      # fetch bin file
