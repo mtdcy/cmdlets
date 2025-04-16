@@ -29,6 +29,12 @@ ln -svf cmdlets.sh nvim
 - aarch64-linux-gnu
 - aarch64-linux-musl
 
+### ARM on x86
+
+```shell
+sudo apt install binfmt-support qemu-user-static
+```
+
 ## Artifacts
 
 [CN](https://pub.mtdcy.top/cmdlets/latest)
