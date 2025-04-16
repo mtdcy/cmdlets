@@ -8,7 +8,7 @@ export LANG="${LANG:-en_US.UTF-8}"
 ARCH="${CMDLETS_ARCH:-}"
 VERSION=0.2
 
-REPO=https://pub.mtdcy.top/cmdlets/latest
+REPO=https://pub.mtdcy.top:8443/cmdlets/latest
 BASE=https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh
 
 usage() {
