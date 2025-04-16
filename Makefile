@@ -185,6 +185,8 @@ DOCKER_ARGS += --pull=always
 
 # permissons
 DOCKER_ARGS += --cap-add=SYS_ADMIN
+DOCKER_ARGS += --security-opt apparmor=unconfined
+
 #DOCKER_ARGS += -u $(USER):$(GROUP)
 DOCKER_ARGS += -e PUID=$(USER)
 DOCKER_ARGS += -e PGID=$(GROUP)
