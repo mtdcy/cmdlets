@@ -44,8 +44,12 @@ if [ -z "$ARCH" ]; then
         darwin*)
             ARCH="$(uname -m)-apple-darwin"
             ;;
-        msys*)
-            ARCH="$(uname -m)-msys-ucrt64"
+        msys*|cygwin*)
+            if test -n "$MSYSTEM"; then
+                ARCH="$(uname -m)-msys-${MSYSTEM,,}" 
+            else
+                ARCH="$(uname -m)-$OSTYPE"
+            fi
             ;;
         linux*) # OSTYPE cann't be trusted
             if find /lib*/ld-musl-* &>/dev/null; then

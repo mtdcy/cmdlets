@@ -143,6 +143,13 @@ _init() {
                 arch="$(uname -m)-$OSTYPE"
             fi
             ;;
+        linux*) # OSTYPE cann't be trusted
+            if find /lib*/ld-musl-* &>/dev/null; then
+                arch="$(uname -m)-linux-musl"
+            else
+                arch="$(uname -m)-linux-gnu"
+            fi
+            ;;
         *)
             arch="$(uname -m)-$OSTYPE"
             ;;
