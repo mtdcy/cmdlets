@@ -3,8 +3,9 @@
 # shellcheck disable=SC2034
 upkg_lic="MIT"
 upkg_ver=2.13.7
+upkg_rev=1
 upkg_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${upkg_ver}.tar.xz
-upkg_sha=05b92c6ea70f5e1d8251ee45ab940ab37dc04a07adc160bd2293b274c0e374d0
+upkg_sha=14796d24402108e99d8de4e974d539bed62e23af8c4233317274ce073ceff93b
 upkg_dep=(zlib libiconv readline)
 
 upkg_args=(
@@ -30,7 +31,9 @@ upkg_args=(
     )
 
 upkg_static() {
+
     configure &&
+
     make &&
 
     # 'Failed to open module' after update
@@ -38,7 +41,16 @@ upkg_static() {
 #       # fixme: test fails in MSYS2
 #       is_msys || make check V=1
 #   } &&
-    make install
+    #make install
+
+    library libxml2 \
+            include/libxml2/libxml include/libxml/*.h \
+            lib .libs/*.a \
+            lib/pkgconfig libxml-2.0.pc &&
+
+    cmdlet  xmllint &&
+
+    check xmllint --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
