@@ -464,12 +464,12 @@ install() {
     fi
 }
 
-link() {
+_link() {
     echo "link: $1 => $2"
     if is_msys; then
         cp "$(dirname "$2")/$1" "$2"
     else
-        ln -sfv "$1" "$2"
+        ln -sf "$1" "$2"
     fi
 }
 
@@ -498,11 +498,11 @@ _pack() {
     grep -Fw "$1" "$pkginfo" > "$revision"
 
     # create symlinks
-    link "$(basename "$pkginfo")"    "$upkg_name/pkginfo@$upkg_ver"
-    link "pkginfo@$upkg_ver"         "$upkg_name/pkginfo@latest"
-    link "$(basename "$revision")"   "$upkg_name/$1@$upkg_ver"
-    link "$1@$upkg_ver"              "$upkg_name/$1@latest"
-    link "$upkg_name/$1@latest"      "$1@latest"
+    _link "$(basename "$pkginfo")"      "$upkg_name/pkginfo@$upkg_ver"
+    _link "pkginfo@$upkg_ver"           "$upkg_name/pkginfo@latest"
+    _link "$(basename "$revision")"     "$upkg_name/$1@$upkg_ver"
+    _link "$1@$upkg_ver"                "$upkg_name/$1@latest"
+    _link "$upkg_name/$1@latest"        "$1@latest"
 
     popd
 }
@@ -527,7 +527,7 @@ cmdlet() {
 
         if [ $# -gt 2 ]; then
             for x in "${@:3}"; do
-                link "$2" "$(_prefix)/bin/$x"
+                _link "$2" "$(_prefix)/bin/$x"
                 installed+=("bin/$x")
             done
         fi
@@ -556,12 +556,12 @@ _install() {
     if [ -n "$4" ]; then # install with alias
         if [[ "$1" =~ $3.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                link "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
+                _link "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
                 installed+=("$2/$alias.${1##*.}")
             done
         elif [[ "$1" =~ ${3#lib}.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                link "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
+                _link "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
                 installed+=("$2/${alias#lib}.${1##*.}")
             done
         fi
