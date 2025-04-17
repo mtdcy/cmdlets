@@ -64,7 +64,7 @@ jobs:
 
       - name: Build
         id: build
-        shell: su buildbot -c "xvfb-run -a wine bash.exe -li -e {0}"
+        shell: su buildbot -c "msys2 -c {0}"
         run: |
           pwd -P
           set -ex
