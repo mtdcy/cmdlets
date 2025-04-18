@@ -61,14 +61,7 @@ jobs:
                     -e 's/upkg_rev=.*$/upkg_rev=0/' \
                     -i "libs/$ulib.u"
 
-                fetch "$ulib" || {
-                  newver="$m.$((n+1)).0"
-                  sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
-                      -e 's/upkg_rev=.*$/upkg_rev=0/' \
-                      -i "libs/$ulib.u"
-
-                  fetch "$ulib" || exit
-                }
+                fetch "$ulib" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
                 sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
