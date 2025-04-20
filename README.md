@@ -74,7 +74,7 @@ export UPKG_MIRROR=http://pub.mtdcy.top
 
 export CL_LOGGING=tty # options: tty,plain,silence
 
-export NJOBS=2   #
+export CL_NJOBS=2   #
 ```
 
 ## LICENSES

@@ -5,7 +5,7 @@ all: ALL
 .PHONY: all
 
 # read njobs from -j
-NJOBS ?= $(subst -j,,$(filter -j%,$(MAKEFLAGS)))
+CL_NJOBS ?= $(subst -j,,$(filter -j%,$(MAKEFLAGS)))
 
 ##############################################################################
 define TEMPLATE
@@ -25,7 +25,7 @@ export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 
 # misc
 export CL_LOGGING=tty
-export NJOBS=$$(nproc)
+export CL_NJOBS=$$(nproc)
 
 # ccache
 export USE_CCACHE=1
@@ -55,7 +55,7 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-UPKG_ENVS := 	NJOBS    		\
+UPKG_ENVS := 	CL_NJOBS    		\
 				CL_LOGGING          	\
 				UPKG_STRICT    	\
 				UPKG_MIRROR    	\

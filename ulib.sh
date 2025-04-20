@@ -6,7 +6,7 @@ export LANG=C
 
 # options
 export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
-export NJOBS=${NJOBS:-$(nproc)}
+export CL_NJOBS=${CL_NJOBS:-$(nproc)}
 
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
 export UPKG_MIRROR=${UPKG_MIRROR:-}     # apply mirrors
@@ -215,7 +215,7 @@ _init() {
             CC="distcc"
             #CXX="distcc" # => cause c++ build failed.
 
-            export NJOBS=$((NJOBS * $(wc -w <<< "$DISTCC_HOSTS")))
+            export CL_NJOBS=$((CL_NJOBS * $(wc -w <<< "$DISTCC_HOSTS")))
         fi
     fi
 
@@ -290,7 +290,7 @@ dynamicalize() {
 }
 
 deparallelize() {
-    export NJOBS=1
+    export CL_NJOBS=1
 }
 
 configure() {
@@ -331,7 +331,7 @@ make() {
     [ -n "${targets[*]}" ] || targets=(all)
 
     # set default njobs
-    [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$NJOBS"
+    [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$CL_NJOBS"
 
     # expand targets, as '.NOTPARALLEL' may not set for targets
     for x in "${targets[@]}"; do
@@ -398,7 +398,7 @@ ninja() {
     local cmdline
 
     # append user args
-    cmdline="$NINJA -j $NJOBS -v $*"
+    cmdline="$NINJA -j $CL_NJOBS -v $*"
 
     ulogcmd "$cmdline"
 }

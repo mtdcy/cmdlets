@@ -32,7 +32,7 @@ jobs:
           git config --global user.email "bot@mtdcy.top"
           git config --global --add safe.directory "$(pwd -P)"
 
-          export NJOBS=1
+          export CL_NJOBS=1
           export UPKG_MIRROR=${{ vars.MIRRORS }}
 
           commits=/tmp/commits-$$.txt

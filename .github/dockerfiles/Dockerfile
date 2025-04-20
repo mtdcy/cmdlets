@@ -2,7 +2,7 @@
 FROM ubuntu:latest
 
 ARG CMDLETS
-ARG NJOBS
+ARG CL_NJOBS
 ARG UPKG_MIRROR
 
 ARG ARTIFACTS_REMOTE_PATH
@@ -19,14 +19,14 @@ RUN <<-EOS
     set -ex
     id -u
 
-    export NJOBS=$NJOBS
+    export CL_NJOBS=$CL_NJOBS
     export UPKG_MIRROR=$UPKG_MIRROR
     export FORCE_UNSAFE_CONFIGURE=1
 
     cmdlets=(${CMDLETS//,/ })
     if [[ "$CMDLETS" =~ ALL ]]; then
         cmdlets=($(bash ulib.sh _deps_get ALL))
-        export NJOBS=$(nproc)
+        export CL_NJOBS=$(nproc)
     fi
 
     ret=0
