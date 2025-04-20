@@ -29,7 +29,7 @@ export CL_NJOBS=$$(nproc)
 
 # ccache
 export CL_CCACHE=1
-export CCACHE_DIR=
+export CL_CCACHE_DIR=
 
 # distcc
 export DISTCC_VERBOSE=0
@@ -55,12 +55,12 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-UPKG_ENVS := 	CL_NJOBS    		\
-				CL_LOGGING          	\
+UPKG_ENVS := 	CL_NJOBS    	\
+				CL_LOGGING     	\
 				CL_STRICT    	\
 				CL_MIRRORS    	\
 				CL_CCACHE 	   	\
-				CCACHE_DIR 	   	\
+				CL_CCACHE_DIR 	\
 				DISTCC_VERBOSE 	\
 				DISTCC_HOSTS   	\
 				DISTCC_OPTS    	\

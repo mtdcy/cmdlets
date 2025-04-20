@@ -265,6 +265,31 @@ _init() {
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
 
+    # extend CMAKE with compile tools
+    CMAKE=(
+        "$CMAKE"
+        -DCMAKE_C_COMPILER="$CC"
+        -DCMAKE_CXX_COMPILER="$CXX"
+        -DCMAKE_AR="$AR"
+        -DCMAKE_LINKER="$LD"
+        -DCMAKE_MAKE_PROGRAM="$MAKE"
+        -DCMAKE_ASM_NASM_COMPILER="$NASM"
+        -DCMAKE_ASM_YASM_COMPILER="$YASM"
+    )
+    export CMAKE="${CMAKE[*]}"
+
+    # ccache
+    if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+        CC="ccache $CC"
+        CXX="ccache $CXX"
+        CL_CCACHE_DIR="${CL_CCACHE_DIR:-$WORKDIR/.ccache}"
+        export CC CXX CL_CCACHE_DIR
+
+        # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
+        export CMAKE_C_COMPILER_LAUNCHER=ccache
+        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+    fi
+
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
