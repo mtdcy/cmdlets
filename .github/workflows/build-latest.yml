@@ -12,7 +12,11 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflow_dispatch:
+    inputs:
+      cmdlets:
+        type: string
+        description: Which cmdlets to build
 
 jobs:
   build-with-docker:
@@ -41,14 +45,18 @@ jobs:
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory "$PWD"
 
-          files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
-          for x in "${files[@]}"; do
-            x=$(basename ${x%.u})
-            [[ "$x" =~ ^\. ]] && continue  ## ignored files
-            cmdlets+=("$x")
-          done
-          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-          echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")" | tee -a $GITHUB_OUTPUT
+          if test -n "${{ github.event.inputs.cmdlets }}"; then
+            echo "cmdlets=${{ github.event.inputs.cmdlets }}"
+          else
+            files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
+            for x in "${files[@]}"; do
+              x=$(basename ${x%.u})
+              [[ "$x" =~ ^\. ]] && continue  ## ignored files
+              cmdlets+=("$x")
+            done
+            [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
+            echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")"
+          fi | tee -a $GITHUB_OUTPUT
 
           # for rsync
           cat << EOF > ssh_id_rsa

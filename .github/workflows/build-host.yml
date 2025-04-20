@@ -11,7 +11,11 @@ on:
     branches:
       - main
 
-  workflows_dispatch: null
+  workflow_dispatch:
+    inputs:
+      cmdlets:
+        type: string
+        description: Which cmdlets to build
 
 jobs:
   build-on-host:
@@ -42,17 +46,22 @@ jobs:
             export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
             export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
           fi
-          echo $PATH
-
-          files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
-          for x in ${files[@]}; do
-            x=$(basename ${x%.u})
-            [[ "$x" =~ ^\. ]] && continue  ## ignored files
-            cmdlets+=("$x")
-          done
-          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
 
           make prepare-host
+          echo $PATH
+
+          if test -n "${{ github.event.inputs.cmdlets }}"; then
+            cmdlets="${{ github.event.inputs.cmdlets }}"
+            cmdlets=(${cmdlets//,/ })
+          else
+            files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
+            for x in ${files[@]}; do
+              x=$(basename ${x%.u})
+              [[ "$x" =~ ^\. ]] && continue  ## ignored files
+              cmdlets+=("$x")
+            done
+          fi
+          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
 
           if [ "${cmdlets[*]}" = ALL ]; then
             cmdlets=($(bash ulib.sh _deps_get ALL))

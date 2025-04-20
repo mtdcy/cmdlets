@@ -1,3 +1,4 @@
+---
 name: Check cmdlets.sh
 
 on:
@@ -8,7 +9,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflow_dispatch: null
 
 jobs:
   check-cmdlist.sh:
@@ -41,7 +42,7 @@ jobs:
       - name: Notify on failure
         if: failure()
         shell: bash
-        run: |
+        run: |-
           curl --version
           curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
               -H 'Content-Type: application/json' \
