@@ -276,7 +276,7 @@ _init() {
     # macos
     if is_darwin; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
-    #elif is_msys; then
+    elif is_msys; then
         export MSYS=winsymlinks:lnk
     fi
 }
