@@ -21,7 +21,7 @@ export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}
 
 # pass through envs
 export CL_STRICT=0
-export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
+export CL_MIRRORS=$${CL_MIRRORS:-http://mirrors.mtdcy.top}
 
 # misc
 export CL_LOGGING=tty
@@ -58,7 +58,7 @@ cmdlets.env:
 UPKG_ENVS := 	CL_NJOBS    		\
 				CL_LOGGING          	\
 				CL_STRICT    	\
-				UPKG_MIRROR    	\
+				CL_MIRRORS    	\
 				USE_CCACHE 	   	\
 				CCACHE_DIR 	   	\
 				DISTCC_VERBOSE 	\

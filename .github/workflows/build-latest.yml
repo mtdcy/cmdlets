@@ -98,7 +98,7 @@ jobs:
             ubuntu:latest=docker-image://${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.distro }}
           build-args: |
             CL_NJOBS=1
-            UPKG_MIRROR=${{ vars.MIRRORS }}
+            CL_MIRRORS=${{ vars.MIRRORS }}
             CMDLETS=${{ steps.prepare.outputs.cmdlets }}
             ARTIFACTS_REMOTE_PATH=${{ vars.ARTIFACTS_REMOTE_PATH }}
             ARTIFACTS_REMOTE_HOST=${{ vars.ARTIFACTS_REMOTE_HOST }}

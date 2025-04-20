@@ -85,7 +85,7 @@ jobs:
           fi
 
           export CL_LOGGING=silent
-          export UPKG_MIRROR=${{ vars.MIRRORS }}
+          export CL_MIRRORS=${{ vars.MIRRORS }}
           export USE_CCACHE=0
 
           ret=0

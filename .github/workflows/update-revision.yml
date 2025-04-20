@@ -33,7 +33,7 @@ jobs:
           git config --global --add safe.directory "$(pwd -P)"
 
           export CL_NJOBS=1
-          export UPKG_MIRROR=${{ vars.MIRRORS }}
+          export CL_MIRRORS=${{ vars.MIRRORS }}
 
           commits=/tmp/commits-$$.txt
           for ulib in libs/*; do

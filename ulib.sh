@@ -8,7 +8,7 @@ export LANG=C
 export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
 export CL_NJOBS=${CL_NJOBS:-$(nproc)}
 export CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
-export UPKG_MIRROR=${UPKG_MIRROR:-}     # apply mirrors
+export CL_MIRRORS=${CL_MIRRORS:-}       # package mirrors, and go/cargo/etc
 
 export USE_CCACHE=${USE_CCACHE:-0}      # enable ccache or not
 
@@ -267,7 +267,7 @@ _init() {
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
     export GO111MODULE="auto"
-    [ -z "$UPKG_MIRROR" ] || export GOPROXY="$UPKG_MIRROR/gomods"
+    [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 
     # cargo/rust
     export CARGO_HOME="$ROOT"
@@ -406,16 +406,16 @@ cargo() {
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
-    if [ -n "$UPKG_MIRROR" ]; then
+    if [ -n "$CL_MIRRORS" ]; then
         cat << EOF >> .cargo/config.toml
 [source.crates-io]
 replace-with = 'mirrors'
 
 [source.mirrors]
-registry = "sparse+$UPKG_MIRROR/crates.io-index/"
+registry = "sparse+$CL_MIRRORS/crates.io-index/"
 
 [registries.mirrors]
-index = "sparse+$UPKG_MIRROR/crates.io-index/"
+index = "sparse+$CL_MIRRORS/crates.io-index/"
 EOF
     fi
 
@@ -676,9 +676,9 @@ _fetch() {
     mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
-    if [ -n "$UPKG_MIRROR" ] &&
-        curl "${args[@]}" "$UPKG_MIRROR/packages/$(basename "$zip")" 2>/dev/null; then
-        ulogi ".Getx" "$UPKG_MIRROR/packages/$(basename "$zip")"
+    if [ -n "$CL_MIRRORS" ] &&
+        curl "${args[@]}" "$CL_MIRRORS/packages/$(basename "$zip")" 2>/dev/null; then
+        ulogi ".Getx" "$CL_MIRRORS/packages/$(basename "$zip")"
     #3. try original
     elif curl "${args[@]}" "$url"; then
         ulogi ".Getx" "$url"
