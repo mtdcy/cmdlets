@@ -28,7 +28,7 @@ export CL_LOGGING=tty
 export CL_NJOBS=$$(nproc)
 
 # ccache
-export USE_CCACHE=1
+export CL_CCACHE=1
 export CCACHE_DIR=
 
 # distcc
@@ -59,7 +59,7 @@ UPKG_ENVS := 	CL_NJOBS    		\
 				CL_LOGGING          	\
 				CL_STRICT    	\
 				CL_MIRRORS    	\
-				USE_CCACHE 	   	\
+				CL_CCACHE 	   	\
 				CCACHE_DIR 	   	\
 				DISTCC_VERBOSE 	\
 				DISTCC_HOSTS   	\

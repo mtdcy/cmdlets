@@ -63,7 +63,7 @@ jobs:
 
           export CL_LOGGING=silent
           export CL_MIRRORS=${{ vars.MIRRORS }}
-          export USE_CCACHE=1
+          export CL_CCACHE=1
           export CCACHE_DIR="~/.cache/cmdlets/ccache"
 
           ret=0
