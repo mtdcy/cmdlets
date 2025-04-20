@@ -59,18 +59,21 @@ _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
 }
 
-# | _capture
+# 2>&1 | _capture
+# >= Bash 4.0: |& _capture
 _capture() {
     if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
-        local head endl i
-        head=$(tput hpa 0)
-        endl=$(tput el)
+        local HEAD ENDL DIM RESET i
+
+         HEAD=$(tput hpa 0)
+         ENDL=$(tput el)
+          DIM=$(tput dim)
+
         i=0
         tput rmam       # line break off
-        tput dim        # half bright mode => not always work
         tee -a "$(_logfile)" | while read -r line; do
-            printf '%s' "${head}#$i: ${line//$'\n'/}${endl}"
+            printf '%s' "$HEAD$DIM#$i: ${line//$'\n'/}$ENDL"
             i=$((i + 1))
         done
         tput hpa 0 el   # clear line
@@ -522,7 +525,7 @@ cmdlet() {
         fi
     fi
 
-    echocmd _pack "$(basename "$pkgname")" "${installed[@]}" | _capture
+    echocmd _pack "$(basename "$pkgname")" "${installed[@]}" |& _capture
 }
 
 # _fix_pc path/to/xxx.pc
@@ -646,7 +649,7 @@ applet() {
     local installed
     read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )"
 
-    echocmd _pack "$(basename "$1")" "${installed[@]}" | _capture
+    echocmd _pack "$(basename "$1")" "${installed[@]}" |& _capture
 }
 
 # _fetch <url> <sha256> [local]
