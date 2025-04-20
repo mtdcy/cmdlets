@@ -209,15 +209,6 @@ _init() {
         eval -- export "$k=$p"
     done
 
-    # ccache
-    if [ "$USE_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
-        CCACHE_DIR="${CCACHE_DIR:-$ROOT/.ccache}"
-        CCACHE_TEMPDIR="${CCACHE_TEMPDIR:-$CCACHE_DIR}"
-        CC="ccache $CC"
-        CXX="ccache $CXX"
-        export CC CXX CCACHE_DIR CCACHE_TEMPDIR
-    fi
-
     if test -n "$DISTCC_HOSTS"; then
         if which distcc &>/dev/null; then
             ulogi "....." "apply distcc settings"
@@ -273,17 +264,45 @@ _init() {
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
 
+    # extend CMAKE with compile tools
+    CMAKE=(
+        "$CMAKE"
+        -DCMAKE_C_COMPILER="$CC"
+        -DCMAKE_CXX_COMPILER="$CXX"
+        -DCMAKE_AR="$AR"
+        -DCMAKE_LINKER="$LD"
+        -DCMAKE_MAKE_PROGRAM="$MAKE"
+        -DCMAKE_ASM_NASM_COMPILER="$NASM"
+        -DCMAKE_ASM_YASM_COMPILER="$YASM"
+    )
+    export CMAKE="${CMAKE[*]}"
+
+    # ccache
+    if [ "$USE_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+        CC="ccache $CC"
+        CXX="ccache $CXX"
+        CCACHE_DIR="${CCACHE_DIR:-$WORKDIR/.ccache}"
+        export CC CXX CCACHE_DIR CCACHE_TEMPDIR
+
+        # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
+        export CMAKE_C_COMPILER_LAUNCHER=ccache
+        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+    fi
+
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
     export GO111MODULE="auto"
     [ -z "$UPKG_MIRROR" ] || export GOPROXY="$UPKG_MIRROR/gomods"
 
+    # cargo/rust
+    export CARGO_HOME="$ROOT"
+
     # macos
     if is_darwin; then
         export MACOSX_DEPLOYMENT_TARGET=10.13
     #elif is_msys; then
-    #    export MSYS=winsymlinks:nativestrict
+        export MSYS=winsymlinks:lnk
     fi
 }
 
@@ -353,29 +372,19 @@ make() {
 cmake() {
     local opts=()
 
-    # only apply '-static' to EXE_LINKER_FLAGS
-    CFLAGS="${CFLAGS//\ --static/}"
-    CXXFLAGS="${CXXFLAGS//\ --static/}"
-    LDFLAGS="${LDFLAGS//\ -static/}"
+    # only apply '-static' to EXE_LINKER_FLAGS only
+    export LDFLAGS="${LDFLAGS//\ -static/}"
 
     opts+=(
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_INSTALL_PREFIX="$(_prefix)"
         -DCMAKE_PREFIX_PATH="$PREFIX"
-        -DCMAKE_C_FLAGS="'$CFLAGS'"
-        -DCMAKE_CXX_FLAGS="'$CXXFLAGS'"
-        -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS'"
-        #-DCMAKE_C_COMPILER="$CC"
-        #-DCMAKE_CXX_COMPILER="$CXX"
-        #-DCMAKE_AR="$AR"
-        #-DCMAKE_LINKER="$LD"
-        #-DCMAKE_MAKE_PROGRAM="$MAKE"
-        -DCMAKE_ASM_NASM_COMPILER="$NASM"
-        -DCMAKE_ASM_YASM_COMPILER="$YASM"
+        -DCMAKE_C_FLAGS="'${CFLAGS//--static/}'"
+        -DCMAKE_CXX_FLAGS="'${CXXFLAGS//--static/}'"
     )
 
     # link static executable
-    is_darwin || [[ "${upkg_args[*]}" =~ CMAKE_EXE_LINKER_FLAGS ]] || opts+=(
+    is_darwin || opts+=(
         -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS -static'"
     )
 

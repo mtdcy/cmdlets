@@ -115,7 +115,7 @@ BREW_PACKAGES 	= bash wget curl git                               \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo   		   \
 				  luajit perl 									   \
-				  rust go
+				  ccache rust go
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -123,7 +123,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  cargo golang
+				  ccache cargo golang
 
 prepare-host-homebrew:
 	brew update 

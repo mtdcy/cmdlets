@@ -11,7 +11,7 @@ on:
     branches:
       - main
 
-  workflows_dispatch:
+  workflows_dispatch: null
 
 jobs:
   build-on-host:
@@ -63,7 +63,7 @@ jobs:
 
           export ULOGS=silent
           export UPKG_MIRROR=${{ vars.MIRRORS }}
-          export USE_CCACHE=0
+          export USE_CCACHE=1
           export CCACHE_DIR="~/.cache/cmdlets/ccache"
 
           ret=0
