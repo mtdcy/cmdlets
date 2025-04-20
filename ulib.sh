@@ -5,7 +5,7 @@ umask  0022
 export LANG=C
 
 # options
-export ULOGS=${ULOGS:-tty}              # tty,plain,silent
+export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
 export NJOBS=${NJOBS:-$(nproc)}
 
 export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
@@ -63,7 +63,7 @@ _logfile() {
 
 # | _capture
 _capture() {
-    if [ "$ULOGS" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
         local head endl i
         head=$(tput hpa 0)
@@ -78,7 +78,7 @@ _capture() {
         tput hpa 0 el   # clear line
         tput smam       # line break on
         tput sgr0       # reset
-    elif [ "$ULOGS" = "plain" ]; then
+    elif [ "$CL_LOGGING" = "plain" ]; then
         tee -a "$(_logfile)"
     else
         cat >> "$(_logfile)"
@@ -739,7 +739,7 @@ _unzip() {
             done &&
             find . -type d -empty -delete || true
             ;;
-    esac 2>&1 | ULOGS=silent _capture
+    esac 2>&1 | CL_LOGGING=silent _capture
 }
 
 # prepare package sources and patches

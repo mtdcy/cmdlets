@@ -24,7 +24,7 @@ export UPKG_STRICT=0
 export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 
 # misc
-export ULOGS=tty
+export CL_LOGGING=tty
 export NJOBS=$$(nproc)
 
 # ccache
@@ -56,7 +56,7 @@ cmdlets.env:
 ##############################################################################
 # host environment variables => docker/remote
 UPKG_ENVS := 	NJOBS    		\
-				ULOGS          	\
+				CL_LOGGING          	\
 				UPKG_STRICT    	\
 				UPKG_MIRROR    	\
 				USE_CCACHE 	   	\

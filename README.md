@@ -72,7 +72,7 @@ make zlib
 ```shell
 export UPKG_MIRROR=http://pub.mtdcy.top
 
-export ULOGS=tty # options: tty,plain,silence
+export CL_LOGGING=tty # options: tty,plain,silence
 
 export NJOBS=2   #
 ```

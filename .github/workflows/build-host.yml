@@ -61,7 +61,7 @@ jobs:
             export NJOBS=1
           fi
 
-          export ULOGS=silent
+          export CL_LOGGING=silent
           export UPKG_MIRROR=${{ vars.MIRRORS }}
           export USE_CCACHE=1
           export CCACHE_DIR="~/.cache/cmdlets/ccache"
