@@ -4,11 +4,11 @@ name: Build cmdlets latest
 on:
   push:
     paths:
-      - Makefile
       - ulib.sh
       - libs/**.u
       - .github/workflows/build-latest.yml
       - .github/dockerfiles/Dockerfile
+      - .github/scripts/**
     branches:
       - main
 
@@ -17,6 +17,9 @@ on:
       cmdlets:
         type: string
         description: Which cmdlets to build
+
+env:
+  platforms: linux/amd64,linux/arm64
 
 jobs:
   build-with-docker:
@@ -28,41 +31,21 @@ jobs:
           - alpine-latest
 
     steps:
-      - name: Checkout (main)
+      - name: Checkout
         uses: actions/checkout@v3
         with:
-          # read only token
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
       - name: Prepare
-        id: prepare
         shell: bash
         run: |
-          set -x
-          # chown -R buildbot:buildbot .
+          echo "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}" > cl_artifacts
+          echo "${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}" > cl_notify
+          echo "${{ secrets.ARTIFACTS_REMOTE_TOKEN }}" > cl_ssh_token
+          echo "${{ vars.MIRRORS }}" > cl_mirrors
 
-          # fix: detected dubious ownership in repository
-          git config --global --add safe.directory "$PWD"
-
-          if test -n "${{ github.event.inputs.cmdlets }}"; then
-            echo "cmdlets=${{ github.event.inputs.cmdlets }}"
-          else
-            files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
-            for x in "${files[@]}"; do
-              x=$(basename ${x%.u})
-              [[ "$x" =~ ^\. ]] && continue  ## ignored files
-              cmdlets+=("$x")
-            done
-            [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-            echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")"
-          fi | tee -a $GITHUB_OUTPUT
-
-          # for rsync
-          cat << EOF > ssh_id_rsa
-          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-          EOF
-          chmod 0600 ssh_id_rsa
+          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -101,30 +84,6 @@ jobs:
           push: false
           context: .
           file: .github/dockerfiles/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          build-contexts: |
+          platforms: ${{ env.platforms }}
+          build-contexts: |-
             ubuntu:latest=docker-image://${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.distro }}
-          build-args: |
-            CL_NJOBS=1
-            CL_MIRRORS=${{ vars.MIRRORS }}
-            CMDLETS=${{ steps.prepare.outputs.cmdlets }}
-            ARTIFACTS_REMOTE_PATH=${{ vars.ARTIFACTS_REMOTE_PATH }}
-            ARTIFACTS_REMOTE_HOST=${{ vars.ARTIFACTS_REMOTE_HOST }}
-            ARTIFACTS_REMOTE_PORT=${{ vars.ARTIFACTS_REMOTE_PORT }}
-            ARTIFACTS_REMOTE_USER=${{ vars.ARTIFACTS_REMOTE_USER }}
-
-      - name: Notify on failure
-        if: failure()
-        shell: bash
-        run: |-
-          curl --version
-          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
-              -H 'Content-Type: application/json' \
-              --data @<(cat <<EOF
-              {
-                "token": "${{ secrets.NOTIFY_TOKEN }}",
-                "title": "${{ github.repository }} ${{ job.status }}",
-                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
-              }
-          EOF
-              )

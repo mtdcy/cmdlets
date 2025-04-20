@@ -4,10 +4,10 @@ name: Build cmdlets on host
 on:
   push:
     paths:
-      - Makefile
       - ulib.sh
       - libs/**.u
       - .github/workflows/build-host.yml
+      - .github/scripts/**
     branches:
       - main
 
@@ -28,92 +28,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          # read only token
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
-      - name: Build
+      - name: Prepare
         shell: bash
         run: |
-          pwd -P
-          set -ex
+          echo "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}" > cl_artifacts
+          echo "${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}" > cl_notify
+          echo "${{ secrets.ARTIFACTS_REMOTE_TOKEN }}" > cl_ssh_token
+          echo "${{ vars.MIRRORS }}" > cl_mirrors
 
-          if which brew; then
-            brewprefix="$(brew --prefix)"
-            export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
-            export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"
-            export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
-            export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
-            export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
-          fi
+          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
-          make prepare-host
-          echo $PATH
-
-          if test -n "${{ github.event.inputs.cmdlets }}"; then
-            cmdlets="${{ github.event.inputs.cmdlets }}"
-            cmdlets=(${cmdlets//,/ })
-          else
-            files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
-            for x in ${files[@]}; do
-              x=$(basename ${x%.u})
-              [[ "$x" =~ ^\. ]] && continue  ## ignored files
-              cmdlets+=("$x")
-            done
-          fi
-          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-
-          if [ "${cmdlets[*]}" = ALL ]; then
-            cmdlets=($(bash ulib.sh _deps_get ALL))
-            export CL_NJOBS=$(nproc)
-          else
-            export CL_NJOBS=1
-          fi
-
-          export CL_LOGGING=silent
-          export CL_MIRRORS=${{ vars.MIRRORS }}
-          export CL_CCACHE=1
-          export CL_CCACHE_DIR="~/.cache/cmdlets/ccache"
-
-          ret=0
-          for x in "${cmdlets[@]}"; do
-            bash ulib.sh build "$x" || ret=$?
-          done
-
-          # Deploy
-          cat << EOF > ssh_id_rsa
-          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-          EOF
-          chmod 0600 ssh_id_rsa
-
-          if test -n "${{ vars.ARTIFACTS_REMOTE_HOST }}"; then
-            remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-            opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
-
-            echo -e "\n*** rsync artifacts to remote ***"
-            rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
-
-            echo -e "\n*** rsync logs to remote ***"
-            rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
-
-            echo -e "\n*** rsync packages to remote ***"
-            rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
-          fi
-
-          exit $ret
-
-      - name: Notify on failure
-        if: failure()
-        shell: bash
-        run: |-
-          curl --version
-          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
-              -H 'Content-Type: application/json' \
-              --data @<(cat <<EOF
-              {
-                "token": "${{ secrets.NOTIFY_TOKEN }}",
-                "title": "${{ github.repository }} ${{ job.status }}",
-                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
-              }
-          EOF
-              )
+      - name: Build
+        run: ./.github/scripts/build.sh

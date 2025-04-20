@@ -4,10 +4,10 @@ name: Build cmdlets latest
 on:
   push:
     paths:
-      - Makefile
       - ulib.sh
       - libs/**.u
       - .github/workflows/build-msys2.yml
+      - .github/scripts/**
     branches:
       - main
 
@@ -28,10 +28,9 @@ jobs:
           - mingw64-latest
 
     steps:
-      - name: Checkout (main)
+      - name: Checkout
         uses: actions/checkout@v3
         with:
-          # read only token
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
@@ -39,103 +38,29 @@ jobs:
         id: prepare
         shell: bash
         run: |
-          set -x
-          pwd -P
+          echo "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}" > cl_artifacts
+          echo "${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}" > cl_notify
+          echo "${{ secrets.ARTIFACTS_REMOTE_TOKEN }}" > cl_ssh_token
+          echo "${{ vars.MIRRORS }}" > cl_mirrors
 
-          rm -rf /msys64/var
-          ln -sfv /var /msys64/var
+          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
+
+          # mount workflow to msys2
+          ln -sfv /var/run /msys64/var/
 
           # mount workdir to msys2
-          mkdir -pv $(dirname /msys64/$PWD)
-          ln -sfv $PWD /msys64/$PWD
-
-          chown -R buildbot:buildbot .
-
-          # fix: detected dubious ownership in repository
-          git config --global --add safe.directory "$PWD"
-
-          if test -n "${{ github.event.inputs.cmdlets }}"; then
-            echo "cmdlets=${{ github.event.inputs.cmdlets }}"
-          else
-            files=($(git show --pretty="" --name-only ${{ github.sha }} | grep -w "^libs")) || true
-            for x in "${files[@]}"; do
-              x=$(basename ${x%.u})
-              [[ "$x" =~ ^\. ]] && continue  ## ignored files
-              cmdlets+=("$x")
-            done
-            [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-            echo "cmdlets=$(IFS=','; echo "${cmdlets[*]}")"
-          fi | tee -a $GITHUB_OUTPUT
+          workdir="$(pwd -P)"
+          mkdir -pv $(dirname /msys64/$workdir)
+          ln -sfv $workdir /msys64/$workdir
 
           # remember the workdir
-          echo "workdir=$(pwd -P)" | tee -a $GITHUB_OUTPUT
+          echo "workdir=$workdir" | tee -a $GITHUB_OUTPUT
 
       - name: Build
-        id: build
         shell: su buildbot -c "msys2 -c {0}"
-        run: |
-          pwd -P
+        run: |-
           set -ex
-
-          echo $PATH
-          echo "MSYSTEM: $MSYSTEM"
 
           cd ${{ steps.prepare.outputs.workdir }}
 
-          cmdlets=(${{ steps.prepare.outputs.cmdlets }})
-          [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
-
-          if [ "${cmdlets[*]}" = ALL ]; then
-            cmdlets=($(bash ulib.sh _deps_get ALL))
-            export CL_NJOBS=$(nproc)
-          else
-            export CL_NJOBS=1
-          fi
-
-          export CL_LOGGING=silent
-          export CL_MIRRORS=${{ vars.MIRRORS }}
-          export CL_CCACHE=0
-
-          ret=0
-          for x in "${cmdlets[@]}"; do
-            bash ulib.sh build "$x" || ret=$?
-          done
-
-          # for rsync
-          cat << EOF > ssh_id_rsa
-          ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-          EOF
-          chmod 0600 ssh_id_rsa
-          echo -en '\n' >> ssh_id_rsa  # Fix missing LF
-
-          if test -n "${{ vars.ARTIFACTS_REMOTE_HOST }}"; then
-            remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-            opt=(-e "ssh -p ${{ vars.ARTIFACTS_REMOTE_PORT }} -i ssh_id_rsa -o StrictHostKeyChecking=no" -avc)
-
-            echo -e "\n*** rsync artifacts to remote ***"
-            rsync "${opt[@]}" --exclude='packages.lst' prebuilts/ $remote/cmdlets/latest/ || ret=$?
-
-            echo -e "\n*** rsync logs to remote ***"
-            rsync "${opt[@]}" logs/ $remote/cmdlets/logs/ || ret=$?
-
-            echo -e "\n*** rsync packages to remote ***"
-            rsync "${opt[@]}" packages/ $remote/packages/ || ret=$?
-          fi
-
-          exit $ret
-
-      - name: Notify on failure
-        if: failure()
-        shell: bash
-        run: |-
-          curl --version
-          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
-              -H 'Content-Type: application/json' \
-              --data @<(cat <<EOF
-              {
-                "token": "${{ secrets.NOTIFY_TOKEN }}",
-                "title": "${{ github.repository }} ${{ job.status }}",
-                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
-              }
-          EOF
-              )
+          ./.github/scripts/build.sh
