@@ -563,14 +563,14 @@ _install() {
 #           lib             libxxx.a    \
 #           lib/pkgconfig   libxxx.pc
 library() {
-    local libname alias subdir installed
-    IFS=':' read -r libname alias <<< "$1"
-    IFS=':' read -r -a alias <<< "$alias"
-    shift # skip libname and alias
+    local libname libalias subdir installed
+    IFS=':' read -r libname libalias <<< "$1"
+    IFS=':' read -r -a libalias <<< "$libalias"
+    shift # skip libname and libalias
 
     [[ "$libname" =~ ^lib ]] || libname="lib$libname"
 
-    ulogi ".Libx" "install library $libname => (alias ${alias[*]})"
+    ulogi ".Libx" "install library $libname => (alias ${libalias[*]})"
     while [ $# -ne 0 ]; do
         case "$1" in
             *.la)
@@ -579,23 +579,23 @@ library() {
                 ;;
             *.h)
                 [[ "$subdir" =~ ^include ]] || subdir="include"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;
             *.a|*.so|*.so.*)
                 [[ "$subdir" =~ ^lib ]] || subdir="lib"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;
             *.pc)
                 [[ "$subdir" =~ ^lib\/pkgconfig ]] || subdir="lib/pkgconfig"
                 _fix_pc "$1"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;
             include*|lib*|bin*|share*)
                 subdir="$1"
                 mkdir -pv "$(_prefix)/$subdir"
                 ;;
             *)
-                installed+=("$(_install "$1" "$subdir" "$libname" "${alias[@]}")") || return 1
+                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;
         esac
         shift
