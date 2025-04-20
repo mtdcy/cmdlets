@@ -7,8 +7,7 @@ export LANG=C
 # options
 export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
 export CL_NJOBS=${CL_NJOBS:-$(nproc)}
-
-export UPKG_STRICT=${UPKG_STRICT:-1}    # check on file changes on ulib.sh
+export CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
 export UPKG_MIRROR=${UPKG_MIRROR:-}     # apply mirrors
 
 export USE_CCACHE=${USE_CCACHE:-0}      # enable ccache or not
@@ -877,7 +876,7 @@ compile() {(
     local workdir="$WORKDIR/$upkg_name-$upkg_ver"
 
     # strict mode: clean before compile
-    [ "$UPKG_STRICT" -eq 0 ] || rm -rf "$workdir"
+    [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
 
     mkdir -p "$workdir" && cd "$workdir"
 
@@ -911,11 +910,11 @@ build() {
     local deps=()
     for dep in $(_deps_get "$1"); do
         #1. dep.u been updated
-        #2. ulib.sh been updated (UPKG_STRICT)
+        #2. ulib.sh been updated (CL_STRICT)
         #3. dep been installed (skip)
         #4. dep not installed
         local nonexists_or_outdated=0
-        if [ "$UPKG_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$dep" ]; then
+        if [ "$CL_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$dep" ]; then
             if [ "$ROOT/libs/$dep.u" -nt "$WORKDIR/.$dep" ]; then
                 nonexists_or_outdated=1
             elif [ "ulib.sh" -nt "$WORKDIR/.$dep" ]; then

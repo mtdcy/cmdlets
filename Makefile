@@ -20,7 +20,7 @@ export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
 export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}
 
 # pass through envs
-export UPKG_STRICT=0
+export CL_STRICT=0
 export UPKG_MIRROR=$${UPKG_MIRROR:-http://mirrors.mtdcy.top}
 
 # misc
@@ -57,7 +57,7 @@ cmdlets.env:
 # host environment variables => docker/remote
 UPKG_ENVS := 	CL_NJOBS    		\
 				CL_LOGGING          	\
-				UPKG_STRICT    	\
+				CL_STRICT    	\
 				UPKG_MIRROR    	\
 				USE_CCACHE 	   	\
 				CCACHE_DIR 	   	\
