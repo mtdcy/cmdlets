@@ -45,11 +45,11 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-UPKG_ENVS := 	CL_NJOBS    	\
-				CL_LOGGING     	\
-				CL_STRICT    	\
-				CL_MIRRORS    	\
-				CL_CCACHE 	   	\
+CL_ENVS :=  CL_NJOBS  		\
+			CL_LOGGING     	\
+			CL_STRICT    	\
+			CL_MIRRORS    	\
+			CL_CCACHE 	   	\
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -193,7 +193,7 @@ DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
 #  => -w not always work, why?
 
 # envs
-DOCKER_ARGS += $(foreach v,$(UPKG_ENVS),$(if $($(v)),-e $(v)=$($(v))))
+DOCKER_ARGS += $(foreach v,$(CL_ENVS),$(if $($(v)),-e $(v)=$($(v))))
 
 ifeq ($(shell test -t 0 && echo tty),tty)
 DOCKER_RUNC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE)
@@ -213,7 +213,7 @@ ifneq ($(REMOTE_HOST),)
 # remote:
 REMOTE_WORKDIR ?= cmdlets
 
-SSH_ENVS := $(foreach v,$(UPKG_ENVS),$(if $($(v)),$(v)=$($(v)),))
+SSH_ENVS := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v)),))
 
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
