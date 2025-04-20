@@ -210,16 +210,6 @@ _init() {
         eval -- export "$k=$p"
     done
 
-    if test -n "$DISTCC_HOSTS"; then
-        if which distcc &>/dev/null; then
-            ulogi "....." "apply distcc settings"
-            CC="distcc"
-            #CXX="distcc" # => cause c++ build failed.
-
-            export CL_NJOBS=$((CL_NJOBS * $(wc -w <<< "$DISTCC_HOSTS")))
-        fi
-    fi
-
     # common flags for c/c++
     local FLAGS=(
         -g -O3              # debug with O3

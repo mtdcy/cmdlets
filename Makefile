@@ -30,15 +30,6 @@ export CL_NJOBS=$$(nproc)
 # ccache
 export CL_CCACHE=1
 export CL_CCACHE_DIR=
-
-# distcc
-export DISTCC_VERBOSE=0
-export DISTCC_HOSTS=""
-export DISTCC_OPTS=
-
-# install dest
-export HOST=
-export DEST=
 endef
 
 export TEMPLATE
@@ -61,9 +52,6 @@ UPKG_ENVS := 	CL_NJOBS    	\
 				CL_MIRRORS    	\
 				CL_CCACHE 	   	\
 				CL_CCACHE_DIR 	\
-				DISTCC_VERBOSE 	\
-				DISTCC_HOSTS   	\
-				DISTCC_OPTS    	\
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -232,7 +220,6 @@ SSH_ENVS := $(foreach v,$(UPKG_ENVS),$(if $($(v)),$(v)=$($(v)),))
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
 
-# no distcc settings pass through to remote
 REMOTE_RUNC := ssh $(REMOTE_HOST) $(SSH_OPTS) -tq TERM=xterm
 
 prepare-remote-ssh:
@@ -278,20 +265,5 @@ runc-remote: push-remote
 	@bash ulib.sh ulogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 
 endif
-
-##############################################################################
-# Install prebuilts @ Host
-PREBUILTS = $(wildcard prebuilts/*)
-
-# always update by checksum
-install: $(PREBUILTS)
-ifeq ($(HOST),)
-	rsync -avc prebuilts/ $(DEST)/prebuilts/
-else
-	rsync -avcz prebuilts/ $(HOST):$(DEST)/prebuilts/
-endif
-
-.PHONY: install
-.NOTPARALLEL: all
 
 # vim:ft=make:ff=unix:fenc=utf-8:noet:sw=4:sts=0
