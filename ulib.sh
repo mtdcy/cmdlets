@@ -272,8 +272,8 @@ _init() {
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
-        CL_CCACHE_DIR="${CL_CCACHE_DIR:-$WORKDIR/.ccache}"
-        export CC CXX CL_CCACHE_DIR
+        CCACHE_DIR="${PREFIX/prebuilts/.ccache}"
+        export CC CXX CCACHE_DIR
 
         # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
         export CMAKE_C_COMPILER_LAUNCHER=ccache

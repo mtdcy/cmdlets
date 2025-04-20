@@ -29,7 +29,6 @@ export CL_NJOBS=$$(nproc)
 
 # ccache
 export CL_CCACHE=1
-export CL_CCACHE_DIR=
 endef
 
 export TEMPLATE
@@ -51,7 +50,6 @@ UPKG_ENVS := 	CL_NJOBS    	\
 				CL_STRICT    	\
 				CL_MIRRORS    	\
 				CL_CCACHE 	   	\
-				CL_CCACHE_DIR 	\
 
 ##############################################################################
 # Build Binaries & Libraries
