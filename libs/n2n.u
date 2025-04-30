@@ -11,6 +11,8 @@ upkg_sha=3e3eb29ec3f6c8d79538776baea0eeb2d5f5f041b9c544091b7bee2a3afe44a8
 upkg_dep=()
 
 upkg_static() {
+    export CFLAGS="$CFLAGS -Wno-incompatible-function-pointer-types"
+
     configure &&
 
     make &&
