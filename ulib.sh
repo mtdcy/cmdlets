@@ -472,7 +472,7 @@ install() {
 }
 
 _link() {
-    echo "link: $1 => $2"
+    echo "link: $1 => $2" >&2
     if is_msys; then
         cp "$(dirname "$2")/$1" "$2"
     else
