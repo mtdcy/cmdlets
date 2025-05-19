@@ -1,9 +1,9 @@
 # Play, record, convert, and stream audio and video
 
 # shellcheck disable=SC2034
-upkg_ver=4.4.5
+upkg_ver=4.4.6
 upkg_url=https://ffmpeg.org/releases/ffmpeg-$upkg_ver.tar.xz
-upkg_sha=f9514e0d3515aee5a271283df71636e1d1ff7274b15853bcd84e144be416ab07
+upkg_sha=2290461f467c08ab801731ed412d8e724a5511d6c33173654bd9c1d2e25d0617
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 
