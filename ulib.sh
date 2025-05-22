@@ -266,6 +266,9 @@ _init() {
         -DCMAKE_ASM_NASM_COMPILER="$NASM"
         -DCMAKE_ASM_YASM_COMPILER="$YASM"
     )
+    if "$CMAKE" --version | grep -Fq 'version 4.'; then
+        CMAKE+=( -DCMAKE_POLICY_VERSION_MINIMUM=3.5 )
+    fi
     export CMAKE="${CMAKE[*]}"
 
     # ccache
