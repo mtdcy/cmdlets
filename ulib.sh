@@ -64,19 +64,18 @@ _logfile() {
 _capture() {
     if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
-        local HEAD ENDL DIM RESET i
+        local CL i
 
-         HEAD=$(tput hpa 0)
-         ENDL=$(tput el)
-          DIM=$(tput dim)
+        CL="$(tput hpa 0)$(tput el)"
 
         i=0
         tput rmam       # line break off
+        tput dim        # dim on
         tee -a "$(_logfile)" | while read -r line; do
-            printf '%s' "$HEAD$DIM#$i: ${line//$'\n'/}$ENDL"
+            printf '%s' "$CL#$i: $line"
             i=$((i + 1))
         done
-        tput hpa 0 el   # clear line
+        echo -en "$CL"  # clear line
         tput smam       # line break on
         tput sgr0       # reset
     elif [ "$CL_LOGGING" = "plain" ]; then
