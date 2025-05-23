@@ -8,3 +8,4 @@ cmdlets.env
 .DS_Store
 .go
 ssh_id_rsa
+.copilot
