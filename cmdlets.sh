@@ -12,14 +12,15 @@ REPO=https://pub.mtdcy.top:8443/cmdlets/latest
 BASE=https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh
 
 usage() {
+    name="$(basename "$0")"
     cat << EOF
-$(basename "$0") $VERSION
+$name $VERSION
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$(basename "$0") options [args ...]
+$name options [args ...]
 
 Options:
-    update                  - update $(basename "$0")
+    update                  - update $name
     fetch   <cmdlet>        - fetch cmdlet(s) from server
     install <cmdlet>        - fetch and install cmdlet(s)
     library <libname>       - fetch a library from server
@@ -27,11 +28,11 @@ Options:
     help                    - show this help message
 
 Examples:
-    $(basename "$0") install minigzip                   # install the latest version
-    $(basename "$0") install zlib/minigzip@1.3.1-2      # install the specific version
+    $name install minigzip                  # install the latest version
+    $name install zlib/minigzip@1.3.1-2     # install the specific version
 
-    $(basename "$0") package zlib                       # install the latest package
-    $(basename "$0") package zlib@1.3.1-2               # install the specific version
+    $name package zlib                      # install the latest package
+    $name package zlib@1.3.1-2              # install the specific version
 EOF
 }
 
@@ -69,14 +70,15 @@ REPO="$REPO/$ARCH"
 
 # get remote revision url
 _revision() {
-    # zlib/minigzip@1.3.1-2
-    IFS='/@-' read -r a b c _ <<< "$1"
-    if [ -n "$b" ]; then
-        [ "$c" = "latest" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a/$b@$c"
+    # zlib
+    # zlib@1.3.1
+    # zlib/minigzip@1.3.1
+    IFS='@' read -r pkg ver <<< "$1"
+    if [ -n "$ver" ]; then
+        IFS='/' read -r a b <<< "$pkg"
+        [ -n "$b" ] && echo "$REPO/$1" || echo "$REPO/$a/$a@$ver"
     else
-        # latest version
-        IFS='/' read -r a b <<< "$1"
-        [ -n "$b" ] && echo "$REPO/$a/$b@latest" || echo "$REPO/$a@latest"
+        echo "$REPO/$pkg@latest"
     fi
 }
 
@@ -93,52 +95,43 @@ _pkginfo() {
 
 # fetch cmdlet from server
 cmdlet() {
-    local revision="$(mktemp)"
+    local sha pkgname revision
+    
+    revision="$(mktemp)"
     trap "rm -f $revision" EXIT
 
-    # v2 cmdlet & applet 
+    mkdir -p "$PREFIX/bin"
+
+    # cmdlet v2
     if curl --fail -sL -o "$revision" "$(_revision "$1")"; then
-        info "Fetch $1 => $PREFIX\n"
-
-        local sha pkgname
         IFS=' ' read -r sha pkgname _ <<< "$(tail -n1 "$revision")"
+        info "Fetch $REPO/$pkgname => $PREFIX\n"
 
-        mkdir -p "$PREFIX"
         curl --fail -# "$REPO/$pkgname" | tar -C "$PREFIX" -xz
-    # v1 applet: deprecated
-    elif curl --fail -sL -o "$revision" "$REPO/app/$1/$1-revision"; then
-        info "Fetch applet $1 => $PREFIX\n"
-
-        local sha pkgname
-        IFS=' ' read -r sha pkgname _ <<< "$(tail -n1 "$revision")"
-
-        mkdir -p "$PREFIX/app/$1"
-        curl --fail -# "$REPO/app/$1/$pkgname" | tar -C "$PREFIX/app/$1" -xz
-        chmod a+x "$PREFIX/app/$1/$1"
-    # v1 cmdlet: deprecated
+    # cmdlet v1/raw mode
     elif curl --fail -sIL -o /dev/null "$REPO/bin/$1"; then
-        info "Fetch cmdlet $1 => $PREFIX\n"
+        info "Fetch $REPO/bin/$1 => $PREFIX\n"
 
-        mkdir -p "$PREFIX/bin"
         curl --fail -# -o "$PREFIX/bin/$1" "$REPO/bin/$1"
         chmod a+x "$PREFIX/bin/$1"
     else
-        error "Fetch $1 failed\n"
+        error "Fetch cmdlet $1 failed\n"
         return 1
     fi
 }
 
 # fetch library from server
 library() {
-    local revision="$(mktemp)"
+    local sha libname revision
+    revision="$(mktemp)"
     trap "rm -f $revision" EXIT
 
+    mkdir -p "$PREFIX"
+
     if curl --fail -s -o "$revision" "$(_revision "$1")"; then
-
-        local sha libname
         IFS=' ' read -r sha libname _ <<< "$(tail -n1 "$revision")"
+        info "Fetch $REPO/$libname => $PREFIX\n"
 
-        mkdir -p "$PREFIX"
         curl --fail -# "$REPO/$libname" | tar -C "$PREFIX" -xz
 
         # update pkgconfig .pc
@@ -151,19 +144,19 @@ library() {
 
 # fetch package from server
 package() {
-    local pkginfo="$(mktemp)"
+    local sha pkgfile pkginfo
+    pkginfo="$(mktemp)"
     trap "rm -f $pkginfo" EXIT
 
-    if curl --fail -sL -o "$pkginfo" "$(_pkginfo "$1")"; then
-        mkdir -p "$PREFIX"
+    mkdir -p "$PREFIX"
 
+    if curl --fail -sL -o "$pkginfo" "$(_pkginfo "$1")"; then
         while read -r line; do
             [ -n "$line" ] || continue
-            local sha filepath
-            IFS=' ' read -r _ filepath _ <<< "$line"
+            IFS=' ' read -r sha pkgfile _ <<< "$line"
+            info "Fetch $REPO/$pkgfile => $PREFIX\n"
 
-            info "Fetch $(basename "$filepath") => $PREFIX\n"
-            curl --fail -# "$REPO/$filepath" | tar -C "$PREFIX" -xz
+            curl --fail -# "$REPO/$pkgfile" | tar -C "$PREFIX" -xz
         done < "$pkginfo"
     else
         error "Fetch package $1 failed\n"
