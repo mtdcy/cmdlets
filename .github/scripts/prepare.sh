@@ -1,8 +1,7 @@
-#!/bin/bash
+#!/bin/bash -e
 # prepare.sh [cmdlet1,cmdlet2,...]
 
 pwd -P
-set -ex
 # chown -R buildbot:buildbot .
 
 # fix: detected dubious ownership in repository
@@ -26,7 +25,7 @@ if test -n "$1"; then
 else
     files=($(git show --pretty="" --name-only HEAD | grep -w "^libs")) || true
     for x in "${files[@]}"; do
-        x=$(basename ${x%.u})
+        x=$(basename "${x%.u}")
         [[ "$x" =~ ^\. ]] && continue  ## ignored files
         [[ "$x" =~ ^@  ]] && continue  ## ignored files
         [[ "$x" =~ ^_  ]] && continue  ## ignored files

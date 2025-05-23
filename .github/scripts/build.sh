@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 
 pwd -P
-set -ex
 
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
@@ -15,13 +14,14 @@ export CL_NJOBS=1
 ret=0
 
 IFS=', ' read -r -a cmdlets < .cmdlets
-for x in ${cmdlets[@]}; do
+for x in "${cmdlets[@]}"; do
     info "*** build $x ***"
     bash ulib.sh build "$x" || ret=$?
 done
 
-IFS='@:' read -r user host port dest < cl_artifacts
-if test -n "$dest"; then
+if [ -f cl_artifacts ]; then
+    IFS='@:' read -r user host port dest < cl_artifacts
+
     remote="$user@$host:$dest"
     ssh_opt=(-p "$port" -o StrictHostKeyChecking=no)
     if [ -f cl_ssh_token ]; then
@@ -39,7 +39,7 @@ if test -n "$dest"; then
     rsync -avc -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
 fi
 
-if [ "$ret" -ne 0 ]; then
+if [ -f cl_notify ] && [ "$ret" -ne 0 ]; then
     text="Build $(basename "$(git rev-parse --show-toplevel)") failed
     ---
     $(git show HEAD --stat)
