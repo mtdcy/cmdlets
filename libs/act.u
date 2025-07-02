@@ -3,11 +3,11 @@
 # shellcheck disable=SC2034
 upkg_name=act
 upkg_lic="MIT"
-upkg_ver=0.2.78
+upkg_ver=0.2.79
 upkg_rev=0
 upkg_url=https://github.com/nektos/act/archive/refs/tags/v$upkg_ver.tar.gz
 upkg_zip=$upkg_name-$upkg_ver.tar.gz
-upkg_sha=0376a119cd40a62deeb2f3a35f8d87a5fe054de0092d51448d147058c93ef69c
+upkg_sha=0a161cdaa1088b46691434042b2d7d1cec0df168c3601070d562bfc639c0b801
 
 upkg_args=(
 )
