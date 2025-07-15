@@ -4,10 +4,10 @@
 
 # shellcheck disable=SC2034
 upkg_lic='GPL-3.0-or-later'
-upkg_ver=8.2
-upkg_rev=1
+upkg_ver=8.3
+upkg_rev=0
 upkg_url=https://ftp.gnu.org/gnu/readline/readline-$upkg_ver.tar.gz
-upkg_sha=3feb7171f16a84ee82ca18a36d7b9be109a52c04f492a053331d7d1095007c35
+upkg_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
 upkg_dep=(ncurses)
 
 upkg_args=(
