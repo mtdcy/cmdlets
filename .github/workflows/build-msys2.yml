@@ -46,21 +46,9 @@ jobs:
           ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
           # mount workflow to msys2
-          ln -sfv /var/run /msys64/var/
-
-          # mount workdir to msys2
-          workdir="$(pwd -P)"
-          mkdir -pv $(dirname /msys64/$workdir)
-          ln -sfv $workdir /msys64/$workdir
-
-          # remember the workdir
-          echo "workdir=$workdir" | tee -a $GITHUB_OUTPUT
+          mkdir -pv /msys64/var
+          ln -sfv /var/run /msys64/var/run
 
       - name: Build
-        shell: su buildbot -c "msys2 -c {0}"
-        run: |-
-          set -ex
-
-          cd ${{ steps.prepare.outputs.workdir }}
-
-          ./.github/scripts/build.sh
+        shell: su buildbot -c "msys2 {0}"
+        run: ./.github/scripts/build.sh
