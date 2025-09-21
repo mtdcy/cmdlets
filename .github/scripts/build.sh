@@ -40,10 +40,10 @@ if [ -f cl_artifacts ]; then
 fi
 
 if [ -f cl_notify ] && [ "$ret" -ne 0 ]; then
-    text="Build $(basename "$(git rev-parse --show-toplevel)") failed
+    text="Build cmdlets (${cmdlets[*]}) failed
     ---
-    $(git show HEAD --stat)
-    " 
+$(git show HEAD --stat)
+" 
 
     curl --fail -sL --form-string "text=$text" "$(cat cl_notify)"
 fi
