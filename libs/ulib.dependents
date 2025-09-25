@@ -6,7 +6,7 @@ libyaml:ctags
 jansson:ctags
 libxml2:ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 brotli:curl freetype gnutls
-openssl:curl
+openssl:curl wget
 zstd:curl gtar tiff
 zlib:curl ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 freetype gnutls libxml2 pcre2 png tiff wget zstd
 libidn2:curl gnutls wget
