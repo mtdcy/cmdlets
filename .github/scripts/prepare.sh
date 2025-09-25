@@ -8,17 +8,18 @@ pwd -P
 git config --global --add safe.directory "$PWD"
           
 if which brew; then
+    make prepare-host
+
     brewprefix="$(brew --prefix)"
     export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
-    make prepare-host
 elif test -n "$MSYSTEM"; then
     chown -R buildbot:buildbot .
 fi
-echo "$PATH"
+echo "$PATH" | tee PATH
 
 if test -n "$1"; then
     IFS=', ' read -r -a cmdlets <<< "$@"
@@ -32,7 +33,7 @@ else
         [[ "$x" =~ ^_  ]] && continue  ## ignored files
         cmdlets+=("$x")
     done
-    [ -n "${cmdlets[*]}" ] || cmdlets=(zlib)
+    [ -n "${cmdlets[*]}" ] || cmdlets=(lz4)
 
     # always expand ALL
     [ "${cmdlets[*]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true

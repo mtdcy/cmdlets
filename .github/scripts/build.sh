@@ -5,6 +5,8 @@ pwd -P
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
 }
+
+[ -f PATH ] && export PATH="$(cat PATH)" || true
           
 export CL_LOGGING=silent
 export CL_MIRRORS="$(cat cl_mirrors)"
