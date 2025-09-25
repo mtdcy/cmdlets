@@ -1,9 +1,9 @@
 # H.264/AVC encoder
 
 # shellcheck disable=SC2034
-upkg_ver=31e19f92
+upkg_ver=0480cb05
 upkg_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-$upkg_ver.tar.bz2
-upkg_sha=05726794ec9badf79f207ac5e50345f01a997d32bfa5ad95a2025620f552bd4d
+upkg_sha=c28a4273ba87ddb5ceb3b6397554bd0c0e68e6484434e41467673ac80b7f7f19
 
 upkg_args=(
     --disable-avs
@@ -19,10 +19,11 @@ upkg_args=(
     --enable-static
     )
 
-upkg_static() {
-    is_glibc && dynamicalize
+# arm64: build fail with asm
+is_darwin && [ "$(uname -m)" = "arm64" ] && upkg_args+=( --disable-asm )
 
-    AS="$NASM" configure &&
+upkg_static() {
+    configure &&
 
     make &&
 
