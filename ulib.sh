@@ -161,7 +161,9 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
-    export ROOT PREFIX WORKDIR
+    DEPENDENTS="$ROOT/libs/ulib.dependents"
+
+    export ROOT PREFIX WORKDIR DEPENDENTS
 
     # setup program envs
     local which=which
@@ -857,6 +859,20 @@ _pkglist() {
     echo "$PREFIX/packages.lst"
 }
 
+# update ulib.dependents
+_depends() {
+    pkg=$1; shift 
+
+    for dep in "$@"; do
+        IFS=' ' read -r -a all <<< "$(grep "^$dep:" "$DEPENDENTS" | cut -d: -f2)"
+        if [ -z "${all[*]}" ]; then
+            echo "$dep:$pkg" >> "$DEPENDENTS"
+        elif [[ "${all[*]}" != *"$pkg"* ]]; then
+            sed -i "/^$dep:/s/$/ $pkg/" "$DEPENDENTS"
+        fi
+    done
+}
+
 # compile target
 compile() {(
     # start subshell before source
@@ -876,6 +892,10 @@ compile() {(
     # sanity check
     [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
     [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
+
+    [ -z "$upkg_dep" ] || _depends "$upkg_name" "${upkg_dep[@]}"
+
+    [ -z "$DEPENDENTS_ONLY" ] || return
 
     # set PREFIX for app
     [ "$upkg_type" = "app" ] && {
@@ -965,6 +985,20 @@ build() {
             uloge "Error" "build $ulib failed"
             return 127
         }
+    done
+}
+
+# build dependents of library
+dependent() {
+    _init || return $?
+
+    IFS=' ' read -r -a dependents <<< "$(grep "^$1:" "$DEPENDENTS" | cut -d: -f2)"
+
+    [ -n "${dependents[*]}" ] || exit 0
+
+    for ulib in "${dependents[@]}"; do
+        ulogi ".DEP." "$ulib"
+        build "$ulib"
     done
 }
 

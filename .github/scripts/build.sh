@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 pwd -P
 
@@ -17,6 +17,8 @@ IFS=', ' read -r -a cmdlets < .cmdlets
 for x in "${cmdlets[@]}"; do
     info "*** build $x ***"
     bash ulib.sh build "$x" || ret=$?
+
+    bash ulib.sh dependent "$x" || ret=$?
 done
 
 if [ -f cl_artifacts ]; then
