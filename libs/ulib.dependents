@@ -1,0 +1,6 @@
+zlib:pcre2
+bzip2:pcre2
+pcre2:ctags
+libyaml:ctags
+jansson:ctags
+libxml2:ctags
