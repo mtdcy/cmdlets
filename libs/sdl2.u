@@ -1,4 +1,3 @@
-
 #
 # shellcheck disable=SC2034
 upkg_lic="Zlib"
@@ -6,19 +5,29 @@ upkg_ver=2.30.12
 upkg_url=https://github.com/libsdl-org/SDL/releases/download/release-$upkg_ver/SDL2-$upkg_ver.tar.gz
 upkg_sha=ac356ea55e8b9dd0b2d1fa27da40ef7e238267ccf9324704850d5d47375b48ea
 
+upkg_args=(
+    --disable-option-checking
+    --disable-dependency-tracking
+    --without-x
+    --enable-libiconv
+    --disable-shared
+    --enable-static
+)
+
 upkg_static() {
     rm CMakeLists.txt
 
-    upkg_args=(
-        --disable-option-checking
-        --disable-dependency-tracking
-        --without-x
-        --enable-libiconv
-        --disable-shared
-        --enable-static
-        )
+    configure && 
 
-    configure && make && make install
+    make && 
+
+    library SDL2                        \
+        include/SDL2    include/SDL*.h  \
+        lib             build/.libs/*.a \
+        lib/pkgconfig   sdl2.pc         \
+        lib/cmake/SDL2  sdl2*.cmake &&
+
+    cmdlet sdl2-config
 }
 
 

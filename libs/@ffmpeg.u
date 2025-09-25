@@ -62,7 +62,7 @@ upkg_args=(
     # static linked
     --disable-shared
     --enable-static
-    --pkg-config-flags="--static"
+    --pkg-config=\"$PKG_CONFIG\"
 )
 
 is_linux && {
@@ -112,14 +112,18 @@ for v in ${FFMPEG_VARS//,/ }; do
     case "$v" in
         gpl)
             upkg_lic="GPL-2.0-and-later"
-            upkg_dep+=(amr x264 x265 xvidcore frei0r)
+            upkg_dep+=(amr x264 xvidcore frei0r)
             upkg_args+=(
                 --enable-gpl                # GPL 2.x
                 --enable-libx264            # h264 encoding
-                --enable-libx265            # hevc encoding
                 --enable-libxvid            # mpeg4 encoding, ffmpeg has native one
                 --enable-frei0r             # frei0r
             )
+            # have trouble with libx265 in macOS
+            is_darwin || {
+                upkg_dep+=( x265 )
+                upkg_args+=( --enable-libx265 )
+            }
             ;;
         lgpl)
             upkg_lic="LGPL-3.0-and-later"
@@ -140,8 +144,9 @@ for v in ${FFMPEG_VARS//,/ }; do
         hwaccels)
             # platform hw accel
             # https://trac.ffmpeg.org/wiki/HWAccelIntro
-            upkg_dep+=(libva OpenCL)
             upkg_args+=(--enable-hwaccels)
+
+            is_darwin || upkg_dep+=(libva OpenCL)
 
             is_linux && upkg_args+=(
                 #--enable-opencl

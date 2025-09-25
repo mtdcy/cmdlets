@@ -17,7 +17,14 @@ upkg_static() {
         sed -i '/^AR =/d' build/platform-mingw_nt.mk
     }
 
-    make install-static
+    make libopenh264.a openh264-static.pc &&
+
+    cp openh264-static.pc openh264.pc &&
+    
+    library openh264 \
+        include/wels codec/api/svc/*.h \
+        lib *.a \
+        lib/pkgconfig openh264.pc
 }
 
 

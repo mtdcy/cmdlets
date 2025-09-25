@@ -11,20 +11,12 @@ upkg_static() {
     cd build/generic
 
     configure --disable-shared --enable-static &&
+
     make all
 
-    # fix error: symbolic link exists
-    unlink $PREFIX/lib/libxvidcore.so 2> /dev/null
-    unlink $PREFIX/lib/libxvidcore.so.4 2> /dev/null
-
-    make install
-
-    # force removing shared lib
-    is_msys  && rm -rfv $PREFIX/lib/xvidcore.dll*
-    is_darwin && rm -rfv $PREFIX/lib/libxvidcore.*.dylib
-    is_linux && rm -rfv $PREFIX/lib/libxvidcore.so*
-
-    return 0
+    library xvidcore \
+        include ../../src/xvid.h \
+        lib =build/libxvidcore.a
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

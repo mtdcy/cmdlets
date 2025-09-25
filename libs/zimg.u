@@ -29,7 +29,11 @@ upkg_static() {
             sed -i 's/^Libs.private:.*$/& -lm/' zimg.pc
         fi
     } &&
-    make check install
+
+    library zimg \
+        include  src/zimg/api/zimg.h src/zimg/api/zimg++.hpp \
+        lib      .libs/libzimg.a \
+        lib/pkgconfig zimg.pc
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

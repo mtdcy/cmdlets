@@ -23,7 +23,12 @@ upkg_args=(
     #--disable-libyuv
 
 upkg_static() {
-    configure && make install
+    configure && make &&
+    
+    library vpx \
+        include/vpx vpx/vp*.h \
+        lib *.a \
+        lib/pkgconfig vpx.pc
 }
 
 #if [[ "$OSTYPE" == "darwin"* ]]; then

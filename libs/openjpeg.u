@@ -15,7 +15,15 @@ upkg_args=(
 )
 
 upkg_static() {
-    cmake . && make && make install
+    cmake . && 
+
+    make && 
+
+    library openjp2 \
+        include/openjpeg-${upkg_ver%.*} src/lib/openjp2/openjpeg.h src/lib/openjp2/opj_config.h \
+        lib bin/libopenjp2.a \
+        lib/pkgconfig libopenjp2.pc  \
+        lib/cmake/openjpeg-${upkg_ver%.*} *.cmake
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

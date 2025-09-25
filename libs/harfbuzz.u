@@ -57,7 +57,11 @@ upkg_static() {
 
     make V=1 &&
 
-    make install
+    library harfbuzz \
+       include/harfbuzz src/*.h \
+       lib src/.libs/*.a \
+       lib/pkgconfig  src/*.pc \
+       lib/cmake/harfbuzz src/*.cmake
 }
 
 

@@ -599,7 +599,7 @@ library() {
                 # no libtool archive files
                 # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
                 ;;
-            *.h)
+            *.h|*.hxx|*.hpp)
                 [[ "$subdir" =~ ^include ]] || subdir="include"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;

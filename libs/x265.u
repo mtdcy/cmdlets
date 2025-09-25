@@ -10,6 +10,9 @@ upkg_sha=a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
 upkg_static() {
+    # report AppleClang as Clang
+    sed -r '/cmake_policy.*(0025|0054)/d' -i source/CMakeLists.txt
+
     args=(
         -DEXTRA_LIB=\"x265_main12.a\;x265_main10.a\"
         -DEXTRA_LINK_FLAGS=-L.
@@ -18,6 +21,8 @@ upkg_static() {
         -DENABLE_SHARED=OFF
         # https://bitbucket.org/multicoreware/x265_git/issues/559
         -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
+        # hack for cmake 4.0+
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         )
 
     args_high=(
@@ -27,6 +32,8 @@ upkg_static() {
         -DENABLE_SHARED=OFF
         # https://bitbucket.org/multicoreware/x265_git/issues/559
         -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
+        # hack for cmake 4.0+
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         )
 
     # build high bits always as static

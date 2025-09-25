@@ -24,7 +24,24 @@ upkg_static() {
     # force configure
     rm CMakeLists.txt
 
-    configure && make install
+    configure && 
+
+    make &&
+    
+    library tiff \
+       include libtiff/tiff*.h \
+       lib libtiff/.libs/libtiff.a \
+       lib/pkgconfig libtiff-${upkg_ver%%.*}.pc &&
+    
+       library tiffxx \
+       include libtiff/tiffio.hxx \
+       lib libtiff/.libs/libtiffxx.a &&
+
+    cmdlet tools/tiffinfo &&
+    cmdlet tools/tiffcmp &&
+    cmdlet tools/raw2tiff &&
+
+    check tiffinfo
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
