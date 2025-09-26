@@ -16,12 +16,39 @@ export CL_NJOBS=1
 ret=0
 
 IFS=', ' read -r -a cmdlets < .cmdlets
-for x in "${cmdlets[@]}"; do
-    info "*** build $x ***"
-    bash ulib.sh build "$x" || ret=$?
+
+info "*** build cmdlets: ${cmdlets[*]} ***"
+
+bash ulib.sh build "${cmdlets[@]}" || ret=$?
+
+# find out dependents
+dependents=()
+for pkg in libs/*.u; do
+    pkg="$(basename "${pkg%.u}")"
+
+    [[ "$pkg" =~ ^@  ]] && continue
+    [[ "$pkg" == ALL ]] && continue
+
+    # already exists
+    [[ "${dependents[*]}" == *"$pkg"* ]] && continue
+
+    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$pkg")"
+
+    for x in "${deps[@]}"; do
+        if [[ "${cmdlets[*]}" == *"$x"* ]]; then
+            dependents+=( "$pkg" )
+            break
+        fi
+    done
 done
-    
-bash ulib.sh dependent "${cmdlets[@]}" || ret=$?
+
+if [ -n "${dependents[*]}" ]; then 
+    IFS=' ' read -r -a dependents <<< "$(bash ulib.sh _sort_by_depends "${dependents[@]}")"
+
+    info "*** build dependents: ${dependents[*]} ***"
+
+    bash ulib.sh build "${dependents[@]}" || ret=$?
+fi
 
 if [ -f cl_artifacts ]; then
     IFS='@:' read -r user host port dest < cl_artifacts

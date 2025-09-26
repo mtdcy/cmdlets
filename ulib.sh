@@ -161,9 +161,7 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
-    DEPENDENTS="$ROOT/libs/ulib.dependents"
-
-    export ROOT PREFIX WORKDIR DEPENDENTS
+    export ROOT PREFIX WORKDIR
 
     # setup program envs
     local which=which
@@ -989,52 +987,6 @@ _sort_by_depends() {
     fi
 
     echo "${head[@]}" "${tail[@]}"
-}
-
-_dependent_get() {
-    local list=()
-    
-    for ulib in "$@"; do
-        IFS=' ' read -r -a deps <<< "$(grep "^$ulib:" "$DEPENDENTS" | cut -d: -f2)"
-        
-        [ -n "${deps[*]}" ] || return 0
-
-        for x in "${deps[@]}"; do
-            # recursive dependency?
-            [[ "$*" == *"$x"* ]] && continue
-            # already exists?
-            [[ "${list[*]}" == *"$x"* ]] && continue 
-           
-            # append to list
-            list+=( "$x" )
-
-            # append dependent's dependents
-            IFS=' ' read -r -a _deps <<< "$(_dependent_get "$x")"
-
-            [ -z "${_deps[*]}" ] && continue
-
-            for y in "${_deps[@]}"; do
-                [[ "${list[*]}" == *"$y"* ]] || list+=( "$y" )
-            done
-        done
-    done
-
-    [ "${#list[@]}" -gt 1 ] && _sort_by_depends "${list[@]}" || echo "${list[@]}"
-}
-
-# build dependents of libraries
-dependent() {
-    _init || return $?
-
-    local cmdlets=()
-
-    IFS=' ' read -r -a cmdlets <<< "$(_dependent_get "$@")" 
-
-    [ -n "${cmdlets[*]}" ] || return 0
-
-    ulogi ".DEP." "(${cmdlets[*]}) @ ($*)"
-
-    build "${cmdlets[@]}"
 }
 
 search() {
