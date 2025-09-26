@@ -21,10 +21,12 @@ upkg_static() {
 
     make && 
 
-    library SDL2                        \
-        include/SDL2    include/SDL*.h  \
-        lib             build/.libs/*.a \
-        lib/pkgconfig   sdl2.pc         \
+    library SDL2                             \
+        include/SDL2    include/SDL*.h       \
+                        include/begin_code.h \
+                        include/close_code.h \
+        lib             build/.libs/*.a      \
+        lib/pkgconfig   sdl2.pc              \
         lib/cmake/SDL2  sdl2*.cmake &&
 
     cmdlet sdl2-config
