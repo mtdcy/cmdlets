@@ -29,7 +29,7 @@ upkg_static() {
     # check & install
     make check &&
 
-    make install
+    library liblzo2 include/lzo include/lzo/*.h src/.libs/liblzo2.a lzo2.pc
 }
 
 

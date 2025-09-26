@@ -23,8 +23,9 @@ upkg_static() {
 
     make &&
 
-    # check & install
-    make check install &&
+    make check &&
+
+    cmdlet lzip &&
 
     # verify
     check lzip --version

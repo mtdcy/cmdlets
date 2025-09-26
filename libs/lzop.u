@@ -24,8 +24,9 @@ upkg_static() {
 
     make V=1 &&
 
-    # check & install
-    make check install-exec &&
+    make check &&
+
+    cmdlet src/lzop &&
 
     # visual verify
     check lzop --version
