@@ -53,11 +53,12 @@ if [ -z "$ARCH" ]; then
             fi
             ;;
         linux*) # OSTYPE cann't be trusted
-            if find /lib*/ld-musl-* &>/dev/null; then
-                ARCH="$(uname -m)-linux-musl"
-            else
-                ARCH="$(uname -m)-linux-gnu"
-            fi
+            ARCH="$(uname -m)-linux-musl"
+            #if find /lib*/ld-musl-* &>/dev/null; then
+            #    ARCH="$(uname -m)-linux-musl"
+            #else
+            #    ARCH="$(uname -m)-linux-gnu"
+            #fi
             ;;
         *)
             ARCH="$(uname -m)-$OSTYPE"

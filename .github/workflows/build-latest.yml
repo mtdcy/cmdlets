@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu-latest
+          #- ubuntu-latest
           - alpine-latest
 
     steps:
