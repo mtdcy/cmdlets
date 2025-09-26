@@ -824,35 +824,27 @@ _load() {
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
 }
 
-__deps_get() {( _load "$1"; echo "${upkg_dep[@]}"; )}
+_load_deps() {( _load "$1"; echo "${upkg_dep[@]}"; )}
 
 # _deps_get libname
 _deps_get() {
-    local leaf deps
-    IFS=' ' read -r -a deps <<< "$(__deps_get "$1")"
+    local list=()
 
-    while [ "${#deps[@]}" -ne 0 ]; do
-        local _deps meet
-        IFS=' ' read -r -a _deps <<< "$(__deps_get "${deps[0]}")"
+    IFS=' ' read -r -a deps <<< "$(_load_deps "$1")"
 
-        if [ ${#_deps[@]} -ne 0 ]; then
-            meet=1
-            for x in "${_deps[@]}"; do
-                [[ "${leaf[*]}" =~ $x ]] || {
-                    # prepend to deps and continue the while loop
-                    deps=("${_deps[@]}" "${deps[@]}")
-                    meet=0
-                    break
-                }
-            done
-            [ "$meet" -eq 1 ] || continue
-        fi
+    for dep in "${deps[@]}"; do
+        # already exists?
+        [[ "${list[*]}" == *"$dep"* ]] && continue
 
-        # leaf lib or all deps are meet.
-        [[ "${leaf[*]}" =~ ${deps[0]} ]] || leaf+=("${deps[0]}")
-        deps=("${deps[@]:1}")
+        IFS=' ' read -r -a _deps <<< "$(_deps_get "$dep")"
+
+        for x in "${_deps[@]}"; do
+            [[ "${list[*]}" == *"$x"* ]] || list+=( "$x" )
+        done
+        
+        list+=( "$dep" )
     done
-    echo "${leaf[@]}"
+    echo "${list[@]}"
 }
 
 _pkglist() {
@@ -865,7 +857,6 @@ compile() {(
     set -eo pipefail
 
     _init
-
 
     ulogi ".Load" "$1"
     _load "$1"
@@ -920,43 +911,50 @@ compile() {(
     ulogi "<<<<<" "$upkg_name@$upkg_ver"
 )}
 
+# check dependencies for libraries
+_check_deps() {
+    local deps=()
+
+    for ulib in "$@"; do
+        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
+
+        for x in "${_deps[@]}"; do
+            # already exists?
+            [[ "${deps[*]}" == *"$x"* ]] && continue
+
+            #1. dep not installed
+            #2. dep.u been updated
+            #3. ulib.sh been updated (CL_STRICT)
+            if [ ! -e "$WORKDIR/.$x" ] || [ "$ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
+                deps+=( "$x" )
+            elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$WORKDIR/.$x" ]; then
+                deps+=( "$x" )
+            fi
+        done
+    done
+
+    [ "${#deps[@]}" -gt 1 ] && _sort_by_depends "${deps[@]}" || echo "${deps[@]}"
+}
+
 # build targets and its dependencies
 # build <lib list>
 build() {
     _init || return $?
 
     touch "$(_pkglist)"
+    
+    IFS=' ' read -r -a deps <<< "$(_check_deps "$@")"
 
-    # get full dep list before build
-    local deps=()
-    for dep in $(_deps_get "$1"); do
-        #1. dep.u been updated
-        #2. ulib.sh been updated (CL_STRICT)
-        #3. dep been installed (skip)
-        #4. dep not installed
-        local nonexists_or_outdated=0
-        if [ "$CL_STRICT" -ne 0 ] && [ -e "$WORKDIR/.$dep" ]; then
-            if [ "$ROOT/libs/$dep.u" -nt "$WORKDIR/.$dep" ]; then
-                nonexists_or_outdated=1
-            elif [ "ulib.sh" -nt "$WORKDIR/.$dep" ]; then
-                nonexists_or_outdated=1
-            fi
-        elif grep -w "^$dep" "$(_pkglist)" &>/dev/null; then
-            continue
-        else
-            nonexists_or_outdated=1
-        fi
-        [ "$nonexists_or_outdated" -eq 0 ] || deps+=("$dep")
-    done
+    ulogi "Build" "$* (${deps[*]})"
 
     # pull dependencies
     local libs=()
     for dep in "${deps[@]}"; do
-        ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=("$dep")
+        $SHELL cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
     done
 
-    ulogi "Build" "$1 (${libs[*]})"
-    libs+=("$1")
+    # append targets
+    libs+=( "$@" )
 
     local i=0
     for ulib in "${libs[@]}"; do
@@ -1024,7 +1022,7 @@ _dependent_get() {
         done
     done
 
-    [ -z "${list[*]}" ] || _sort_by_depends "${list[@]}"
+    [ "${#list[@]}" -gt 1 ] && _sort_by_depends "${list[@]}" || echo "${list[@]}"
 }
 
 # build dependents of libraries
@@ -1039,10 +1037,7 @@ dependent() {
 
     ulogi ".DEP." "(${cmdlets[*]}) @ ($*)"
 
-    for ulib in "${cmdlets[@]}"; do
-        ulogi ".DEP." "build dependent $ulib"
-        build "$ulib" || return $?
-    done
+    build "${cmdlets[@]}"
 }
 
 search() {
