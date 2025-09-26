@@ -33,16 +33,12 @@ upkg_args=(
 )
 
 upkg_static() {
-    configure &&
-    make &&
-    # test
-    ./sed/sed --version | grep -F "$upkg_ver" &&
-    # check & install
-    make check install-exec &&
-    # provide default 'sed'
-    ln -sfv gsed "$PREFIX/bin/sed" &&
-    # verify
-    check "$PREFIX/bin/gsed"
+    configure && make &&
+
+    # install as gsed and symlink to sed
+    cmdlet sed/sed gsed sed &&
+
+    check sed --version
 }
 
 

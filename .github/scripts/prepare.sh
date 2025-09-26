@@ -33,7 +33,7 @@ else
         [[ "$x" =~ ^_  ]] && continue  ## ignored files
         cmdlets+=("$x")
     done
-    [ -n "${cmdlets[*]}" ] || cmdlets=(lz4)
+    [ -n "${cmdlets[*]}" ] || cmdlets=(gsed)
 
     # always expand ALL
     [ "${cmdlets[*]}" = ALL ] && cmdlets=($(bash ulib.sh _deps_get ALL)) || true
