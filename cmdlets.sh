@@ -85,11 +85,12 @@ _revision() {
 # get remote pkginfo url
 _pkginfo() {
     # zlib@1.3.1-2
-    IFS='@-' read -r a b c <<< "$1"
-    if [ -n "$b" ] && [ "$b" != "latest" ]; then
-        echo "$REPO/$a/pkginfo@$b-${c:-0}"
+    IFS='@' read -r pkg ver <<< "$1"
+    IFS='-' read -r ver fix <<< "$ver"
+    if [ -n "$ver" ] && [ "$ver" != "latest" ]; then
+        echo "$REPO/$pkg/pkginfo@$ver-${fix:-0}"
     else
-        echo "$REPO/$a/pkginfo@latest"
+        echo "$REPO/$pkg/pkginfo@latest"
     fi
 }
 
