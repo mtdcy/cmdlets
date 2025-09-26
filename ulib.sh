@@ -996,25 +996,46 @@ _sort_by_depends() {
     echo "${head[@]}" "${tail[@]}"
 }
 
+_dependent_get() {
+    local list=()
+    
+    for ulib in "$@"; do
+        IFS=' ' read -r -a deps <<< "$(grep "^$ulib:" "$DEPENDENTS" | cut -d: -f2)"
+        
+        [ -n "${deps[*]}" ] || return 0
+
+        for x in "${deps[@]}"; do
+            # recursive dependency?
+            [[ "$*" == *"$x"* ]] && continue
+            # already exists?
+            [[ "${list[*]}" == *"$x"* ]] && continue 
+           
+            # append to list
+            list+=( "$x" )
+
+            # append dependent's dependents
+            IFS=' ' read -r -a _deps <<< "$(_dependent_get "$x")"
+
+            [ -z "${_deps[*]}" ] && continue
+
+            for y in "${_deps[@]}"; do
+                [[ "${list[*]}" == *"$y"* ]] || list+=( "$y" )
+            done
+        done
+    done
+
+    [ -z "${list[*]}" ] || _sort_by_depends "${list[@]}"
+}
+
 # build dependents of libraries
 dependent() {
     _init || return $?
 
     local cmdlets=()
-    for ulib in "$@"; do
-        IFS=' ' read -r -a dependents <<< "$(grep "^$ulib:" "$DEPENDENTS" | cut -d: -f2)"
 
-        for x in "${dependents[@]}"; do
-            # recursive dependency?
-            [[ "$*" == *"$x"* ]] && continue
-            # already exists?
-            [[ "${cmdlets[*]}" == *"$x"* ]] || cmdlets+=( "$x" )
-        done
-    done
+    IFS=' ' read -r -a cmdlets <<< "$(_dependent_get "$@")" 
 
-    [ -n "${cmdlets[*]}" ] || exit 0
-
-    IFS=' ' read -r -a cmdlets <<< "$(_sort_by_depends "${cmdlets[@]}")"
+    [ -n "${cmdlets[*]}" ] || return 0
 
     ulogi ".DEP." "(${cmdlets[*]}) @ ($*)"
 
