@@ -16,7 +16,7 @@ export REMOTE_HOST=
 export REMOTE_WORKDIR=$${REMOTE_WORKDIR:-cmdlets}
 
 #2. build with docker [default]
-export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:alpine-latest}
+export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-latest}
 export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-linux/amd64}
 
 # pass through envs
