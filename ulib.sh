@@ -988,17 +988,46 @@ build() {
     done
 }
 
-# build dependents of library
+# build dependents of libraries
 dependent() {
     _init || return $?
 
-    IFS=' ' read -r -a dependents <<< "$(grep "^$1:" "$DEPENDENTS" | cut -d: -f2)"
+    local cmdlets=()
+    for ulib in "$@"; do
+        IFS=' ' read -r -a dependents <<< "$(grep "^$ulib:" "$DEPENDENTS" | cut -d: -f2)"
 
-    [ -n "${dependents[*]}" ] || exit 0
+        for x in "${dependents[@]}"; do
+            # recursive dependency?
+            [[ "$*" == *"$x"* ]] && continue
+            # already exists?
+            [[ "${cmdlets[*]}" == *"$x"* ]] || cmdlets+=( "$x" )
+        done
+    done
 
-    for ulib in "${dependents[@]}"; do
-        ulogi ".DEP." "$ulib"
-        build "$ulib"
+    [ -n "${cmdlets[*]}" ] || exit 0
+
+    # reorder based on dependencies == not perfect
+    local queue=()
+    for ulib in "${cmdlets[@]}"; do
+        IFS=' ' read -r -a deps <<< "$(_deps_get "$ulib")"
+
+        for x in "${deps[@]}"; do
+            # have deps => queue at end
+            if [[ "${cmdlets[*]}" == *"$x"* ]]; then
+                queue+=( "$ulib" )
+                break
+            fi
+        done
+
+        # OR queue at front
+        [[ "${queue[*]}" == *"$ulib"* ]] || queue=( "$ulib" "${queue[@]}" )
+    done
+
+    ulogi ".DEP." "(${queue[*]}) @ ($*)"
+
+    for ulib in "${queue[@]}"; do
+        ulogi ">>>>>" "build dependent $ulib"
+        compile "$ulib" || return $?
     done
 }
 

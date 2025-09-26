@@ -19,9 +19,9 @@ IFS=', ' read -r -a cmdlets < .cmdlets
 for x in "${cmdlets[@]}"; do
     info "*** build $x ***"
     bash ulib.sh build "$x" || ret=$?
-
-    bash ulib.sh dependent "$x" || ret=$?
 done
+    
+bash ulib.sh dependent "${cmdlets[@]}" || ret=$?
 
 if [ -f cl_artifacts ]; then
     IFS='@:' read -r user host port dest < cl_artifacts
