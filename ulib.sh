@@ -465,22 +465,13 @@ go() {
     ulogcmd "${cmdline[@]}"
 }
 
-install() {
-    if [[ "$*" =~ \s- ]]; then
-        echocmd "$*"
-    else
-        # install include xxx.h ...
-        # install lib libxxx.a ...
-        "$INSTALL" -v -m644 "${@:2}" "$(_prefix)/$1"
-    fi
-}
-
+# link source target 
 _link() {
-    echo "link: $1 => $2" >&2
+    #echo "link: $1 => $2" >&2
     if is_msys; then
-        cp "$(dirname "$2")/$1" "$2"
+        cp "$1" "$2"
     else
-        ln -sf "$1" "$2"
+        ln -srf "$1" "$2"
     fi
 }
 
@@ -488,18 +479,22 @@ _link() {
 _pack() {
     pushd "$PREFIX"
 
-    # shellcheck disable=SC2001
-    local files=("$(sed -e "s:$PREFIX::g" <<< "${@:2}")")
+    mkdir -pv "$upkg_name"
 
-    local pkginfo="$upkg_name/pkginfo@$upkg_ver-${upkg_rev:-0}"
     local pkgname="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}.tar.gz"
+    local pkginfo="$upkg_name/pkginfo@$upkg_ver-${upkg_rev:-0}"
     local revision="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}"
 
-    mkdir -p "$(dirname "$pkgname")"
-    tar -czvf "$pkgname" "${@:2}"
+    local files
 
-    mkdir -pv "$(dirname "$pkginfo")"
-    touch "$pkginfo"
+    # shellcheck disable=SC2001
+    IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
+
+    tar -czvf "$pkgname" "${files[@]}"
+
+    # pkginfo is shared by library() and cmdlet()
+    touch "$pkginfo" 
+
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgname" >> "$pkginfo"
     IFS=' *' read -r sha name <<< "$(sha256sum "$pkgname")"
@@ -509,51 +504,45 @@ _pack() {
     grep -Fw "$1" "$pkginfo" > "$revision"
 
     # create symlinks
-    _link "$(basename "$pkginfo")"      "$upkg_name/pkginfo@$upkg_ver"
-    _link "pkginfo@$upkg_ver"           "$upkg_name/pkginfo@latest"
-    _link "$(basename "$revision")"     "$upkg_name/$1@$upkg_ver"
-    _link "$1@$upkg_ver"                "$upkg_name/$1@latest"
-    _link "$upkg_name/$1@latest"        "$1@latest"
+    _link "$pkginfo"                        "$upkg_name/pkginfo@$upkg_ver"
+    _link "$upkg_name/pkginfo@$upkg_ver"    "$upkg_name/pkginfo@latest"
+    _link "$revision"                       "$upkg_name/$1@$upkg_ver"
+    _link "$upkg_name/$1@$upkg_ver"         "$upkg_name/$1@latest"
+    _link "$upkg_name/$1@latest"            "$1@latest"
 
     popd
 }
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    ulogi ".Inst" "install cmdlet $1 => ${2:-"$(basename "$1")"} (alias ${*:3})"
+    ulogi ".Inst" "install cmdlet $1 => ${2:-$1} (alias ${*:3})"
 
     # strip or not ?
     local args=(-v)
     file "$1" | grep -qFw 'not stripped' && args+=(-s)
 
-    local pkgname="$1"
-    local installed=()
-    if [ $# -lt 2 ]; then
-        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/" || return 1
-        installed+=("bin/$(basename "$1")")
-    else
-        local pkgname="$2"
-        "$INSTALL" "${args[@]}" -m755 "$1" "$(_prefix)/bin/$2" || return 1
-        installed+=("bin/$2")
+    local target
 
-        if [ $# -gt 2 ]; then
-            for x in "${@:3}"; do
-                _link "$2" "$(_prefix)/bin/$x"
-                installed+=("bin/$x")
-            done
-        fi
-    fi
+    target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    echocmd _pack "$(basename "$pkgname")" "${installed[@]}" |& _capture
+    # shellcheck disable=SC2154
+    "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
+
+    local links=()
+    for x in "${@:3}"; do
+        _link "$target" "$PREFIX/bin/$x"
+        links+=( "$PREFIX/bin/$x" )
+    done
+
+    echocmd _pack "$(basename "$target")" "$target" "${links[@]}" |& _capture
 }
 
 # _fix_pc path/to/xxx.pc
 _fix_pc() {
-    local prefix=$(_prefix)
-    if grep -qFw "$prefix" "$1"; then
+    if grep -qFw "$PREFIX" "$1"; then
         # shellcheck disable=SC2016
-        sed -e 's!^prefix=.*$!prefix=\${PREFIX}!' \
-            -e "s!$prefix!\${prefix}!g" \
+        sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
+            -e "s%$PREFIX%\${prefix}%g" \
             -i "$1"
     fi
 }
@@ -561,19 +550,27 @@ _fix_pc() {
 # _library file subdir [libname] [alias]
 #  => return installed files and links if alias exists
 _install() {
-    $INSTALL -m644 "$1" "$(_prefix)/$2" || return 1
+    local target syml
 
-    local installed=("$2/$(basename "$1")")
-    if [ -n "$4" ]; then # install with alias
+    target="$(_prefix)/$2/$(basename "$1")"
+
+    $INSTALL -m644 "$1" "$target" || return 1
+
+    local installed=( "$target" )
+        
+    # install with alias
+    if [ $# -ge 4 ]; then
         if [[ "$1" =~ $3.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                _link "$(basename "$1")" "$(_prefix)/$2/$alias.${1##*.}"
-                installed+=("$2/$alias.${1##*.}")
+                syml="$(dirname "$target")/$alias.${1##*.}"
+                _link "$target" "$syml"
+                installed+=( "$syml" )
             done
         elif [[ "$1" =~ ${3#lib}.${1##*.}$ ]]; then
             for alias in "${@:4}"; do
-                _link "$(basename "$1")" "$(_prefix)/$2/${alias#lib}.${1##*.}"
-                installed+=("$2/${alias#lib}.${1##*.}")
+                syml="$(dirname "$target")/${alias#lib}.${1##*.}"
+                _link "$target" "$syml"
+                installed+=( "$syml" )
             done
         fi
     fi
