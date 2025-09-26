@@ -970,6 +970,32 @@ build() {
     done
 }
 
+_sort_by_depends() {
+    local head=()
+    local tail=()
+    for ulib in "$@"; do
+        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
+
+        for x in "${_deps[@]}"; do
+            # have dependencies => append
+            if [[ "$*" == *"$x"* ]]; then
+                tail+=( "$ulib" )
+                break
+            fi
+        done
+
+        # OR prepend
+        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
+    done
+
+    # sort tail again: be careful with circular dependencies
+    if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
+        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
+    fi
+
+    echo "${head[@]}" "${tail[@]}"
+}
+
 # build dependents of libraries
 dependent() {
     _init || return $?
@@ -988,26 +1014,11 @@ dependent() {
 
     [ -n "${cmdlets[*]}" ] || exit 0
 
-    # reorder based on dependencies == not perfect
-    local queue=()
+    IFS=' ' read -r -a cmdlets <<< "$(_sort_by_depends "${cmdlets[@]}")"
+
+    ulogi ".DEP." "(${cmdlets[*]}) @ ($*)"
+
     for ulib in "${cmdlets[@]}"; do
-        IFS=' ' read -r -a deps <<< "$(_deps_get "$ulib")"
-
-        for x in "${deps[@]}"; do
-            # have deps => queue at end
-            if [[ "${cmdlets[*]}" == *"$x"* ]]; then
-                queue+=( "$ulib" )
-                break
-            fi
-        done
-
-        # OR queue at front
-        [[ "${queue[*]}" == *"$ulib"* ]] || queue=( "$ulib" "${queue[@]}" )
-    done
-
-    ulogi ".DEP." "(${queue[*]}) @ ($*)"
-
-    for ulib in "${queue[@]}"; do
         ulogi ">>>>>" "build dependent $ulib"
         compile "$ulib" || return $?
     done

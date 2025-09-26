@@ -4,26 +4,6 @@ DEPENDENTS="libs/ulib.dependents"
 
 touch "$DEPENDENTS"
 
-olist() {
-    local head=()
-    local tail=()
-    for x in "$@"; do
-        IFS=' ' read -r -a _deps <<< "$(bash ulib.sh _deps_get "$x")"
-
-        for y in "${_deps[@]}"; do
-            # have dependencies => append
-            if [[ "$*" == *"$y"* ]]; then
-                tail+=( "$x" )
-                break
-            fi
-        done
-
-        # OR prepend
-        [[ "${tail[*]}" == *"$x"* ]] || head+=( "$x" )
-    done
-    echo "${head[@]}" "${tail[@]}"
-}
-
 for pkg in libs/*.u; do
     [[ "$pkg" =~ /@ ]] && continue 
 
@@ -42,7 +22,7 @@ for pkg in libs/*.u; do
         [[ "${list[*]}" == *"$pkg"* ]] || list+=( "$pkg" )
 
         # reorder dependents
-        list=( "$(olist "${list[@]}")" )
+        IFS=' ' read -r -a list <<< "$(bash ulib.sh _sort_by_depends "${list[@]}")"
        
         sed -i "/^$dep:/d" "$DEPENDENTS"
 

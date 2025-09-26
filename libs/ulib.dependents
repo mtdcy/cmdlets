@@ -27,8 +27,8 @@ gzip:gtar
 lzip:gtar
 lzop:gtar
 fribidi:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-brotli:curl freetype gnutls ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
-freetype:harfbuzz ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 libass
+brotli:curl freetype gnutls harfbuzz libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+freetype:harfbuzz libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 harfbuzz:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 libunibreak:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 libdrm:libva
@@ -37,17 +37,17 @@ lzo:gtar lzop
 gmp:coreutils mpfr nettle gnutls gawk
 ncurses:bash bash32 bash44 htop readline gawk libxml2 ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 vorbis:theora ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-bzip2:freetype gtar pcre2 unzip ctags grep ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
+bzip2:freetype gtar pcre2 unzip ctags grep harfbuzz libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 ogg:vorbis theora ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-png:freetype webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
+png:freetype webp harfbuzz libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 giflib:webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-turbojpeg:tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
-zstd:curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
+turbojpeg:tiff webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+zstd:curl gtar tiff webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 tiff:webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 libiconv:bash bash32 bash44 coreutils gmake grep gsed gtar libidn2 libxml2 neovim unzip ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 curl gnutls wget
 libunistring:libidn2 curl gnutls wget
 libidn2:curl gnutls wget
 openssl:curl wget
-zlib:gnutls libxml2 pcre2 png wget zstd curl gtar tiff freetype grep ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass webp
-xz:wget zstd curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
-lz4:zstd curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
+zlib:gnutls libxml2 pcre2 png wget zstd curl gtar tiff freetype grep ctags harfbuzz webp libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+xz:wget zstd curl gtar tiff webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+lz4:zstd curl gtar tiff webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
