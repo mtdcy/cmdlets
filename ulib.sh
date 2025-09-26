@@ -859,20 +859,6 @@ _pkglist() {
     echo "$PREFIX/packages.lst"
 }
 
-# update ulib.dependents
-_depends() {
-    pkg=$1; shift 
-
-    for dep in "$@"; do
-        IFS=' ' read -r -a all <<< "$(grep "^$dep:" "$DEPENDENTS" | cut -d: -f2)"
-        if [ -z "${all[*]}" ]; then
-            echo "$dep:$pkg" >> "$DEPENDENTS"
-        elif [[ "${all[*]}" != *"$pkg"* ]]; then
-            sed -i "/^$dep:/s/$/ $pkg/" "$DEPENDENTS"
-        fi
-    done
-}
-
 # compile target
 compile() {(
     # start subshell before source
@@ -892,10 +878,6 @@ compile() {(
     # sanity check
     [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
     [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
-
-    [ -z "$upkg_dep" ] || _depends "$upkg_name" "${upkg_dep[@]}"
-
-    [ -z "$DEPENDENTS_ONLY" ] || return
 
     # set PREFIX for app
     [ "$upkg_type" = "app" ] && {

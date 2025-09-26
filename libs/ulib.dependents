@@ -1,27 +1,10 @@
-ncurses:bash bash32 bash44 htop readline
-libiconv:bash bash32 bash44 coreutils ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 gmake grep gsed gtar libidn2 libxml2 nvim unzip
-gmp:coreutils gawk gnutls mpfr nettle
-pcre2:ctags grep
 libyaml:ctags
 jansson:ctags
-libxml2:ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-brotli:curl freetype gnutls
-openssl:curl wget
-zstd:curl gtar tiff
-zlib:curl ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 freetype gnutls libxml2 pcre2 png tiff wget zstd
-libidn2:curl gnutls wget
 nghttp2:curl
-bzip2:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 freetype gtar pcre2 unzip
-xz:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 gtar tiff wget zstd
+sdl2:ffmpeg
 soxr:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 lame:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-ogg:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 theora vorbis
-vorbis:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 theora
 opus:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-png:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 freetype webp
-giflib:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
-turbojpeg:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 tiff webp
-tiff:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
 webp:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 openjpeg:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 zimg:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
@@ -29,28 +12,42 @@ theora:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 vpx:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 openh264:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 kvazaar:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-fribidi:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 libass
 libass:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-freetype:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
-harfbuzz:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 libass
+libxml2:ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 amr:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 x264:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-x265:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 xvidcore:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 frei0r:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 fdk-aac:ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
-libva:ffmpeg
-OpenCL:ffmpeg
-sdl2:ffmpeg
 mpfr:gawk
-readline:gawk libxml2
 libtasn1:gnutls
 nettle:gnutls
-libunistring:gnutls libidn2
+pcre2:ctags grep
 gzip:gtar
 lzip:gtar
 lzop:gtar
-libunibreak:libass
+fribidi:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+brotli:curl freetype gnutls ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
+freetype:harfbuzz ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 libass
+harfbuzz:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+libunibreak:libass ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
 libdrm:libva
-lzo:lzop
-lz4:zstd
+readline:gawk libxml2 ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+lzo:gtar lzop
+gmp:coreutils mpfr nettle gnutls gawk
+ncurses:bash bash32 bash44 htop readline gawk libxml2 ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+vorbis:theora ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+bzip2:freetype gtar pcre2 unzip ctags grep ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
+ogg:vorbis theora ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+png:freetype webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass
+giflib:webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+turbojpeg:tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
+zstd:curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
+tiff:webp ffmpeg ffmpeg4 ffmpeg5 ffmpeg6
+libiconv:bash bash32 bash44 coreutils gmake grep gsed gtar libidn2 libxml2 neovim unzip ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 curl gnutls wget
+libunistring:libidn2 curl gnutls wget
+libidn2:curl gnutls wget
+openssl:curl wget
+zlib:gnutls libxml2 pcre2 png wget zstd curl gtar tiff freetype grep ctags ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 harfbuzz libass webp
+xz:wget zstd curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
+lz4:zstd curl gtar tiff ffmpeg ffmpeg4 ffmpeg5 ffmpeg6 webp
