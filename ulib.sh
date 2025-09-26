@@ -1019,8 +1019,8 @@ dependent() {
     ulogi ".DEP." "(${cmdlets[*]}) @ ($*)"
 
     for ulib in "${cmdlets[@]}"; do
-        ulogi ">>>>>" "build dependent $ulib"
-        compile "$ulib" || return $?
+        ulogi ".DEP." "build dependent $ulib"
+        build "$ulib" || return $?
     done
 }
 
