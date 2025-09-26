@@ -14,7 +14,18 @@ upkg_args=(
 )
 
 upkg_static() {
-    configure && make install
+    configure && make &&
+
+    make install &&
+
+    library tasn1 \
+        include         lib/includes/libtasn1.h \
+        lib             lib/.libs/libtasn1.a \
+        lib/pkgconfig   lib/libtasn1.pc &&
+
+    cmdlet src/asn1Coding &&
+    cmdlet src/asn1Decoding &&
+    cmdlet src/asn1Parser
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

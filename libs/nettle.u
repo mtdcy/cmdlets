@@ -1,5 +1,4 @@
-
-#
+# Nettle is a cryptographic library that is designed to fit easily in more or less any context: In crypto toolkits for object-oriented languages.
 # shellcheck disable=SC2034
 upkg_lic='LGPL|GPL'
 upkg_ver=3.9.1
@@ -15,7 +14,21 @@ upkg_args=(
 )
 
 upkg_static() {
-    configure && make install
+    configure && make &&
+
+    #make install
+    make config.h &&
+
+    library nettle                               \
+        include/nettle  *.h                      \
+        lib             libnettle.a libhogweed.a \
+        lib/pkgconfig   nettle.pc hogweed.pc &&
+
+    cmdlet tools/pkcs1-conv           &&
+    cmdlet tools/sexp-conv            &&
+    cmdlet tools/nettle-hash          &&
+    cmdlet tools/nettle-pbkdf2        &&
+    cmdlet tools/nettle-lfib-stream
 }
 
 

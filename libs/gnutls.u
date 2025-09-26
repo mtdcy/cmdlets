@@ -5,7 +5,7 @@ upkg_lic='LGPL|GPL'
 upkg_ver=3.8.10
 upkg_url=https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-${upkg_ver}.tar.xz
 upkg_sha=db7fab7cce791e7727ebbef2334301c821d79a550ec55c9ef096b610b03eb6b7
-upkg_dep=(zlib brotli gmp libidn2 libtasn1 nettle libunistring)
+upkg_dep=(zlib zstd brotli gmp libidn2 libtasn1 nettle libunistring)
 
 upkg_args=(
     --disable-dependency-tracking
@@ -32,8 +32,15 @@ upkg_static() {
     #export PKG_CONFIG="$PKG_CONFIG --static" ==> moved to ulib.sh
 
     configure &&
+
     make &&
-    make check install
+
+    make check &&
+
+    library gnutls                                    \
+        include/gnutls  lib/includes/gnutls/gnutls*.h \
+        lib             lib/.libs/libgnutls*.a        \
+        lib/pkgconfig   lib/gnutls.pc
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
