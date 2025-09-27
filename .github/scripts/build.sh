@@ -13,6 +13,9 @@ export CL_MIRRORS="$(cat cl_mirrors)"
 export CL_CCACHE=0
 export CL_NJOBS=1
 
+# need to run configure as root
+export FORCE_UNSAFE_CONFIGURE=1
+
 ret=0
 
 IFS=', ' read -r -a cmdlets < .cmdlets
