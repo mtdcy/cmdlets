@@ -923,7 +923,7 @@ build() {
     # pull dependencies
     local libs=()
     for dep in "${deps[@]}"; do
-        $SHELL cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
+        ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
     done
 
     # append targets
