@@ -52,4 +52,5 @@ jobs:
           ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
       - name: Build
+        shell: bash
         run: ./.github/scripts/build.sh
