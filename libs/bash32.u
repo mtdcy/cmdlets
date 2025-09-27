@@ -32,7 +32,7 @@ upkg_static() {
         return 0
     }
 
-    CFLAGS+=" -std=c89 -Wno-error=implicit-function-declaration"
+    CFLAGS+=" -Wno-error=implicit-function-declaration"
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
