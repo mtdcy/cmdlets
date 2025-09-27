@@ -33,8 +33,7 @@ upkg_static() {
         is_linux && make check || true
     } &&
 
-    install include gzip.h lzw.h &&
-    install lib lib/libgzip.a &&
+    library gzip.h lzw.h lib/libgzip.a &&
 
     cmdlet gzip &&
     cmdlet gunzip &&
