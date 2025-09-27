@@ -14,8 +14,6 @@ upkg_dep=(
     coreutils gsed gawk findutils grep gmake
     # shell
     bash ctags shfmt
-    # editor
-    neovim
     # net
     wget curl iperf3
     # multimedia
