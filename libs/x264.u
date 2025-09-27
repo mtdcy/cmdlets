@@ -20,17 +20,14 @@ upkg_args=(
     )
 
 # arm64: build fail with asm
-is_darwin && [ "$(uname -m)" = "arm64" ] && upkg_args+=( --disable-asm )
+is_arm64 && upkg_args+=( --disable-asm )
 
 upkg_static() {
     configure &&
 
     make &&
 
-    library libx264 \
-            include x264.h x264_config.h \
-            lib     libx264.a \
-            lib/pkgconfig x264.pc &&
+    library libx264 x264.h x264_config.h libx264.a x264.pc &&
 
     cmdlet x264 &&
 
