@@ -1,12 +1,12 @@
 ---
-name: Build cmdlets on host
+name: Build cmdlets with containers
 
 on:
   push:
     paths:
       - ulib.sh
       - libs/**.u
-      - .github/workflows/build-host.yml
+      - .github/workflows/build-multi-arch.yml
       - .github/scripts/**
     branches:
       - main
@@ -18,12 +18,22 @@ on:
         description: Which cmdlets to build
 
 jobs:
-  build-on-host:
-    runs-on: ${{ matrix.host }}
+  build:
+    runs-on: ${{ matrix.runner }}
+    container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.builder }}
     strategy:
       matrix:
-        host:
-          - macos-latest
+        runner:
+          # for x86_64
+          - ubuntu-latest
+          # for aarch64
+          - macos-arm64
+        builder:
+          # for *-linux-gnu
+          - ubuntu-22.04
+          # for *-linux-musl
+          - alpine-3
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3

@@ -1,5 +1,5 @@
 ---
-name: Build cmdlets latest
+name: Build cmdlets
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
       - ulib.sh
       - libs/**.u
       - .github/workflows/build-latest.yml
-      - .github/dockerfiles/Dockerfile
       - .github/scripts/**
     branches:
       - main
@@ -18,17 +17,14 @@ on:
         type: string
         description: Which cmdlets to build
 
-env:
-  platforms: linux/amd64,linux/arm64
-
 jobs:
-  build-with-docker:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        distro:
-          - ubuntu-22.04
-          - alpine-3
+        runner:
+          # for arm64-apple-darwin or x86_64-apple-darwin
+          - macos-latest
 
     steps:
       - name: Checkout
@@ -47,43 +43,5 @@ jobs:
 
           ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Setup buildx
-        if: ${{ vars.LOCAL_REGISTRY == '' }}
-        uses: docker/setup-buildx-action@v3
-
-      - name: Setup buildx (local registry)
-        if: ${{ vars.LOCAL_REGISTRY }}
-        uses: docker/setup-buildx-action@v3
-        with:
-          buildkitd-config-inline: |
-            debug = true
-            [registry."${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."registry.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."ghcr.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."lscr.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."docker.io"]
-              mirrors = ["registry.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."ghcr.io"]
-              mirrors = ["ghcr.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-            [registry."lscr.io"]
-              mirrors = ["lscr.${{ vars.LOCAL_REGISTRY }}"]
-              http = true
-
-      - name: Build (QEMU + buildx)
-        uses: docker/build-push-action@v6
-        with:
-          push: false
-          context: .
-          file: .github/dockerfiles/Dockerfile
-          platforms: ${{ env.platforms }}
-          build-contexts: |-
-            ubuntu:latest=docker-image://${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.distro }}
+      - name: Build
+        run: ./.github/scripts/build.sh
