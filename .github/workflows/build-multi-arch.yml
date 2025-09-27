@@ -27,7 +27,8 @@ jobs:
           # for x86_64
           - ubuntu-latest
           # for aarch64
-          - macos-arm64
+          #- macos-arm64
+          - ubuntu-latest-arm
         builder:
           # for *-linux-gnu
           - ubuntu-22.04
