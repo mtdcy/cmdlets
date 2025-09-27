@@ -27,8 +27,8 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu-latest
-          - alpine-latest
+          - ubuntu-22.04
+          - alpine-3
 
     steps:
       - name: Checkout
