@@ -97,10 +97,6 @@ ulogcmd() {
     echocmd "$@" 2>&1 | _capture
 }
 
-_prefix() {
-    [ "$upkg_type" = "app" ] && echo "$APREFIX" || echo "$PREFIX"
-}
-
 _filter_options() {
     local opts;
     while [ $# -gt 0 ]; do
@@ -325,7 +321,7 @@ configure() {
 
     local cmdline
 
-    cmdline="./configure --prefix=$(_prefix)"
+    cmdline="./configure --prefix=$PREFIX"
 
     # append user args
     cmdline+=" ${upkg_args[*]} $*"
@@ -371,7 +367,7 @@ cmake() {
 
     opts+=(
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_INSTALL_PREFIX="$(_prefix)"
+        -DCMAKE_INSTALL_PREFIX="$PREFIX"
         -DCMAKE_PREFIX_PATH="$PREFIX"
         -DCMAKE_C_FLAGS="'${CFLAGS//--static/}'"
         -DCMAKE_CXX_FLAGS="'${CXXFLAGS//--static/}'"
@@ -551,7 +547,7 @@ _fix_pc() {
 _install() {
     local target syml
 
-    target="$(_prefix)/$2/$(basename "$1")"
+    target="$PREFIX/$2/$(basename "$1")"
 
     $INSTALL -m644 "$1" "$target" || return 1
 
@@ -610,7 +606,7 @@ library() {
                 ;;
             include*|lib*|bin*|share*)
                 subdir="$1"
-                mkdir -pv "$(_prefix)/$subdir"
+                mkdir -pv "$PREFIX/$subdir"
                 ;;
             *)
                 installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
@@ -627,8 +623,8 @@ check() {
     ulogi "..Run" "check $*"
 
     local bin="$1"
-    if [ -e "$(_prefix)/bin/$1" ]; then
-        bin="$(_prefix)/bin/$1"
+    if [ -e "$PREFIX/bin/$1" ]; then
+        bin="$PREFIX/bin/$1"
     fi
 
     # print to tty instead of capture it
@@ -652,19 +648,6 @@ check() {
     else
         uloge "FIXME: $OSTYPE"
     fi
-}
-
-# applet <name>
-applet() {
-    ulogi ".Appx" "$* => $APREFIX"
-
-    # install the entrypoint
-    $INSTALL -v -m755 "$@" "$APREFIX" || return 1
-
-    local installed
-    read -r -a installed <<< "$( find "$APREFIX" -type f | sed -e "s:^$PREFIX::" -e 's:^/::' | xargs )"
-
-    echocmd _pack "$(basename "$1")" "${installed[@]}" |& _capture
 }
 
 # _fetch <url> <sha256> [local]
@@ -865,12 +848,6 @@ compile() {(
     # sanity check
     [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
     [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
-
-    # set PREFIX for app
-    [ "$upkg_type" = "app" ] && {
-        APREFIX="$PREFIX/app/$upkg_name"
-        mkdir -p "$APREFIX"
-    }
 
     # clear
     find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
