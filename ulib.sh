@@ -249,7 +249,7 @@ _init() {
     export LD_LIBRARY_PATH=$PREFIX/lib
 
     # export again after cmake and others
-    export PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$PREFIX --static"
+    export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
 
     # extend CMAKE with compile tools
     CMAKE=(
