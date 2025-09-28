@@ -5,6 +5,7 @@ umask  0022
 export LANG=C
 
 # options
+export CL_FORCE=${CL_FORCE:-0}          # force rebuild all dependencies
 export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
 export CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
 export CL_MIRRORS=${CL_MIRRORS:-}       # package mirrors, and go/cargo/etc
@@ -922,9 +923,13 @@ build() {
 
     # pull dependencies
     local libs=()
-    for dep in "${deps[@]}"; do
-        ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
-    done
+    if [ "$CL_FORCE" -ne 0 ]; then
+        libs=( "${deps[@]}" )
+    else
+        for dep in "${deps[@]}"; do
+            ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
+        done
+    fi
 
     # append targets
     libs+=( "$@" )

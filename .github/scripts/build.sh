@@ -22,7 +22,12 @@ IFS=', ' read -r -a cmdlets < .cmdlets
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
-bash ulib.sh build "${cmdlets[@]}" || ret=$?
+for cmdlet in "${cmdlets[@]}"; do
+    IFS='=' read -r cmdlet force <<< "$cmdlet"
+    [ -z "$force" ] || export CL_FORCE=1
+    bash ulib.sh build "$cmdlet" || ret=$?
+    unset CL_FORCE
+done
 
 # find out dependents
 dependents=()
