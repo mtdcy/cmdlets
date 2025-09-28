@@ -42,7 +42,7 @@ else
         cmdlets+=( "$ulib" )
     done < <(git show --pretty="" --name-only HEAD | grep "^libs/.*\.u")
 
-    [ -n "${cmdlets[*]}" ] || cmdlets=(ripgrep)
+    [ -n "${cmdlets[*]}" ] || cmdlets=(unzip)
 fi
 
 # always expand ALL
