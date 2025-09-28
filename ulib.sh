@@ -159,7 +159,9 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
-    export ROOT PREFIX WORKDIR
+    PATH="$PREFIX/bin:$PATH"
+
+    export ROOT PREFIX WORKDIR PATH
 
     # setup program envs
     local which=which
@@ -623,10 +625,11 @@ library() {
 check() {
     ulogi "..Run" "check $*"
 
-    local bin="$1"
-    if [ -e "$PREFIX/bin/$1" ]; then
-        bin="$PREFIX/bin/$1"
-    fi
+    local bin="$(which "$1")"
+    [[ "$bin" =~ ^"$PREFIX" ]] || {
+        uloge "....." "cann't find $1"
+        exit 1
+    }
 
     # print to tty instead of capture it
     file "$bin"
