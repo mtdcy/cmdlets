@@ -707,95 +707,72 @@ _unzip() {
         return 1
     }
 
-    # skip leading directories, default 1
-    local skip=${2:-1}
-    local arg0=("--strip-components=$skip")
-
-    if tar --version | grep -qFw "bsdtar"; then
-        arg0=(--strip-components "$skip")
-    fi
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
+    
+    case "$1" in
+        *.tar|*.tar.*)          cmd=( tar -xv )     ;;
+        *.tgz)                  cmd=( tar -xv )     ;;
+        *.tbz2)                 cmd=( tar -xv )     ;;
+        *.rar)                  cmd=( unrar x )     ;;
+        *.zip)                  cmd=( unzip -o )    ;;
+        *.7z)                   cmd=( 7z x )        ;;
+        *.gz)                   cmd=( gunzip )      ;;
+        *.bz2)                  cmd=( bunzip )      ;;
+        *.Z)                    cmd=( uncompress )  ;;
+        *)                      false               ;;
+    esac
 
     case "$1" in
-        *.tar.lz)   tar "${arg0[@]}" --lzip -xvf "$1"   ;;
-        *.tar.bz2)  tar "${arg0[@]}" -xvjf "$1"         ;;
-        *.tar.gz)   tar "${arg0[@]}" -xvzf "$1"         ;;
-        *.tar.xz)   tar "${arg0[@]}" -xvJf "$1"         ;;
-        *.tar)      tar "${arg0[@]}" -xvf "$1"          ;;
-        *.tbz2)     tar "${arg0[@]}" -xvjf "$1"         ;;
-        *.tgz)      tar "${arg0[@]}" -xvzf "$1"         ;;
-        *)
-            rm -rf * &>/dev/null  # see notes below
-            case "$1" in
-                *.rar)  unrar x "$1"                    ;;
-                *.zip)  unzip -o "$1"                   ;;
-                *.7z)   7z x "$1"                       ;;
-                *.bz2)  bunzip2 "$1"                    ;;
-                *.gz)   gunzip "$1"                     ;;
-                *.Z)    uncompress "$1"                 ;;
-                *)      false                           ;;
-            esac &&
+        *.tar.bz2|*.tbz2)       cmd+=( -j )         ;;
+        *.tar.gz|*.tgz)         cmd+=( -z )         ;;
+        *.tar.xz)               cmd+=( -J )         ;;
+        *.tar.lz)               cmd+=( --lzip )     ;;
+        *.tar.zst)              cmd+=( --zstd )     ;;
+    esac
 
-            # universal skip method, faults:
-            #  #1. have to clear dir before extraction.
-            #  #2. will fail with bad upkg_zip_strip.
-            while [ "$skip" -gt 0 ]; do
-                mv -f */* . || true
-                skip=$((skip - 1))
-            done &&
-            find . -type d -empty -delete || true
+    case "${cmd[0]}" in
+        tar)
+            # strip leading pathes
+            local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
+    
+            if tar --version | grep -qFw "bsdtar"; then
+                cmd+=( --strip-components "$skip" )
+            else
+                cmd+=( --strip-components="$skip" )
+            fi
+            
+            cmd+=( -f )
             ;;
-    esac 2>&1 | CL_LOGGING=silent _capture
+    esac
+
+    echocmd "${cmd[@]}" "$1" 2>&1 | CL_LOGGING=silent _capture
 }
 
 # prepare package sources and patches
 _prepare() {
-    # check upkg_zip
-    [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
-    upkg_zip="$ROOT/packages/${upkg_zip##*/}"
+    for i in "${!upkg_url[@]}"; do
+        local zip="${upkg_zip[i]:-$ROOT/packages/$(basename "${upkg_url[i]}")}"
 
-    # check upkg_zip_strip, default: 1
-    upkg_zip_strip=${upkg_zip_strip:-1}
+        # download files
+        _fetch "${upkg_url[i]}" "${upkg_sha[i]}" "$zip" || return $?
+    
+        # unzip to current fold
+        _unzip "$zip" "${upkg_zip_strip[i]}" || return $?
+    done
 
-    # check upkg_patch_*
-    if [ -n "$upkg_patch_url" ]; then
-        [ -n "$upkg_patch_zip" ] || upkg_patch_zip="$(basename "$upkg_patch_url")"
-        upkg_patch_zip="$ROOT/packages/${upkg_patch_zip##*/}"
-
-        upkg_patch_strip=${upkg_patch_strip:-0}
-    fi
-
-    # download files
-    _fetch "$upkg_url" "$upkg_sha" "$upkg_zip" || return $?
-
-    # unzip to current fold
-    _unzip "$upkg_zip" "$upkg_zip_strip" || return $?
-
-    # patches
-    if [ -n "$upkg_patch_url" ]; then
-        # download patches
-        _fetch "$upkg_patch_url" "$upkg_patch_sha" "$upkg_patch_zip"
-
-        # unzip patches into current dir
-        _unzip "$upkg_patch_zip" "$upkg_patch_strip"
-    fi
+    pwd -P
 
     # apply patches
-    mkdir -p patches
-    for x in "${upkg_patches[@]}"; do
-        # url(sha)
-        if [[ "$x" =~ ^http* ]]; then
-            IFS='()' read -r a b _ <<< "$x"
-
-            # download to patches/
-            "$a" "$b" "patches/$(basename "$a")"
-
-            x="patches/$a"
-        fi
-
-        # apply patch
-        ulogcmd "patch -p1 < $x"
+    for patch in "${upkg_patches[@]}"; do
+        case "$patch" in
+            http://|https://)
+                curl -sL "$patch" | patch -p1 -N
+                ;;
+            *)
+                ulogcmd "patch -p1 -N < $patch"
+                ;;
+        esac
     done
 }
 
@@ -803,10 +780,9 @@ _prepare() {
 _load() {
     unset upkg_name upkg_lic
     unset upkg_ver upkg_rev
-    unset upkg_url upkg_sha
-    unset upkg_zip upkg_zip_strip
+    unset upkg_url upkg_sha upkg_zip upkg_zip_strip
     unset upkg_dep upkg_args upkg_type
-    unset upkg_patch_url upkg_patch_zip upkg_patch_sha upkg_patch_strip
+    unset upkg_patches
 
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
 }
