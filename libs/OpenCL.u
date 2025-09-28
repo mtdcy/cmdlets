@@ -8,8 +8,6 @@ upkg_zip=OpenCL-Headers-$upkg_ver.zip
 upkg_sha=cc55c351b1b71346469c7ecdec3d62ad6661b2e3c41b9df165ee8b1ab75563d3
 
 upkg_static() {
-    cd OpenCL-Headers-*/ || true
-
     cmake . && make && make install
 }
 
