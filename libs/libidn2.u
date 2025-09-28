@@ -28,6 +28,9 @@ upkg_args=(
 )
 
 upkg_static() {
+    # < C99
+    export CFLAGS+=" -Wno-error=implicit-function-declaration"
+
     # https://github.com/spack/spack/issues/23964
     export GTKDOCIZE=echo
 

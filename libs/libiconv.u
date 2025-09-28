@@ -26,6 +26,8 @@ upkg_args=(
 )
 
 upkg_static() {
+    export CFLAGS+=" -Wno-error=implicit-function-declaration"
+
     configure &&
 
     # deparallels
