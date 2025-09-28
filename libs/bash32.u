@@ -9,14 +9,11 @@ upkg_url=https://ftp.gnu.org/gnu/bash/bash-$upkg_ver.tar.gz
 upkg_sha=3fa9daf85ebf35068f090ce51283ddeeb3c75eb5bc70b1a4a7cb05868bfe06a4
 upkg_dep=(ncurses libiconv)
 
+# this formula is used to compatible check, don't enable any extra features
 upkg_args=(
-    # this formula is used to compatible check, don't enable any extra features
-
     --enable-readline
     --without-installed-readline
-
-
-    --with-curses
+    --with-included-gettext
 
     --disable-nls
     --disable-rpath
@@ -25,18 +22,30 @@ upkg_args=(
     --without-bash-malloc
 )
 
-upkg_static() {
-    # fail with implicit function declarations
-    is_glibc || {
-        ulogw "*****" "**** Not supported on $OSTYPE! ****"
-        return 0
-    }
+# old bash written in c < C99
+# suppressed warnings
+warnings=(
+    -Wno-error=implicit-function-declaration
+    -Wno-error=implicit-int 
+    -Wno-error=incompatible-pointer-types
+)
 
-    CFLAGS+=" -Wno-error=implicit-function-declaration"
+is_clang && warnings+=(
+    -Wno-error=deprecated-non-prototype 
+)
+
+upkg_static() {
+    # < C99
+    CFLAGS+=" ${warnings[*]}"
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
     CFLAGS+=" -DSSH_SOURCE_BASHRC"
+
+    # some version needs this
+    CPPFLAGS="$CFLAGS"
+
+    export CFLAGS CPPFLAGS
 
     configure &&
 
@@ -45,7 +54,7 @@ upkg_static() {
     # install versioned bash
     cmdlet bash bash@$upkg_ver bash@${upkg_ver%.*} &&
 
-    check bash --version
+    check bash@$upkg_ver --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

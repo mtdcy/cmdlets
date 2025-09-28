@@ -46,10 +46,8 @@ upkg_args=(
     #--enalbe-prompt-string-decoding -> unrecognized
 
     --enable-readline
-    #--with-installed-readline
-    # => embbed readline always included
-
-    --with-curses
+    --without-installed-readline
+    --with-included-gettext
 
     --disable-nls
     --disable-rpath
@@ -58,30 +56,41 @@ upkg_args=(
     --without-bash-malloc
 )
 
-# static link with libc won't work on macOS
-#is_darwin || upkg_args+=(--enable-static-link)
+# old bash written in c < C99
+# suppressed warnings
+warnings=(
+    -Wno-error=implicit-function-declaration
+    -Wno-error=implicit-int 
+    -Wno-error=incompatible-pointer-types
+)
+
+is_clang && warnings+=(
+    -Wno-error=deprecated-non-prototype 
+)
 
 upkg_static() {
-    is_glibc && dynamicalize
+    # < C99
+    CFLAGS+=" ${warnings[*]}"
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
-    export CFLAGS+=" -DSSH_SOURCE_BASHRC"
+    CFLAGS+=" -DSSH_SOURCE_BASHRC"
+
+    # some version needs this
+    CPPFLAGS="$CFLAGS"
 
     # musl has strtoimax
     if is_musl; then
         # https://github.com/robxu9/bash-static/blob/master/custom/bash-musl-strtoimax-debian-1023053.patch
         sed -i 's/bash_cv_func_strtoimax =.*;/bash_cv_func_strtoimax = no;/' m4/strtoimax.m4
         autoconf -f
-    fi &&
+    fi
 
-    # config & make
     configure &&
 
-    make V=1 &&
+    make &&
 
     # install
-    #make install &&
     cmdlet bash &&
 
     # visual check
