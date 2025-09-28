@@ -59,34 +59,34 @@ for cmdlet in "${cmdlets[@]}"; do
     unset CL_FORCE
 done
 
-# find out dependents
-dependents=()
-for pkg in libs/*.u; do
-    IFS='/.' read -r _ ulib _ <<< "$pkg"
-
-    [[ "$ulib" =~ ^@  ]] && continue
-    [[ "$ulib" == ALL ]] && continue
-
-    # already exists
-    [[ "${dependents[*]}" == *"$ulib"* ]] && continue
-
-    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$ulib")"
-
-    for x in "${deps[@]}"; do
-        if [[ "${cmdlets[*]}" == *"$x"* ]]; then
-            dependents+=( "$ulib" )
-            break
-        fi
-    done
-done
-
-if [ -n "${dependents[*]}" ]; then 
-    IFS=' ' read -r -a dependents <<< "$(bash ulib.sh _sort_by_depends "${dependents[@]}")"
-
-    info "*** build dependents: ${dependents[*]} ***"
-
-    bash ulib.sh build "${dependents[@]}" || ret=$?
-fi
+## find out dependents
+#dependents=()
+#for pkg in libs/*.u; do
+#    IFS='/.' read -r _ ulib _ <<< "$pkg"
+#
+#    [[ "$ulib" =~ ^@  ]] && continue
+#    [[ "$ulib" == ALL ]] && continue
+#
+#    # already exists
+#    [[ "${dependents[*]}" == *"$ulib"* ]] && continue
+#
+#    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$ulib")"
+#
+#    for x in "${deps[@]}"; do
+#        if [[ "${cmdlets[*]}" == *"$x"* ]]; then
+#            dependents+=( "$ulib" )
+#            break
+#        fi
+#    done
+#done
+#
+#if [ -n "${dependents[*]}" ]; then 
+#    IFS=' ' read -r -a dependents <<< "$(bash ulib.sh _sort_by_depends "${dependents[@]}")"
+#
+#    info "*** build dependents: ${dependents[*]} ***"
+#
+#    bash ulib.sh build "${dependents[@]}" || ret=$?
+#fi
 
 if [ -n "$CL_ARTIFACTS" ]; then
     if [ -n "$CL_SSH_TOKEN" ]; then
