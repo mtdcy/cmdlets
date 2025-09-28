@@ -221,6 +221,10 @@ _init() {
     #   1. some libs may fail with '-fdata-sections'
     #   2. some test may fail with '-DNDEBUG'
 
+    is_clang && FLAGS+=( 
+        -Wno-error=deprecated-non-prototype 
+    ) || true
+
     #export LDFLAGS="-L$PREFIX/lib -Wl,-rpath,$PREFIX/lib -Wl,-gc-sections"
 
     # macOS does not support statically linked binaries
