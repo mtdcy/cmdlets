@@ -706,26 +706,22 @@ _unzip() {
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
-   
+  
+    # match extensions
     case "$1" in
-        *.tar|*.tar.*)          cmd=( tar -xv )     ;;
-        *.tgz)                  cmd=( tar -xv )     ;;
-        *.tbz2)                 cmd=( tar -xv )     ;;
-        *.rar)                  cmd=( unrar x )     ;;
-        *.zip)                  cmd=( unzip -o )    ;;
-        *.7z)                   cmd=( 7z x )        ;;
-        *.gz)                   cmd=( gunzip )      ;;
-        *.bz2)                  cmd=( bunzip )      ;;
-        *.Z)                    cmd=( uncompress )  ;;
-        *)                      false               ;;
-    esac
-
-    case "$1" in
-        *.tar.bz2|*.tbz2)       cmd+=( -j )         ;;
-        *.tar.gz|*.tgz)         cmd+=( -z )         ;;
-        *.tar.xz)               cmd+=( -J )         ;;
-        *.tar.lz)               cmd+=( --lzip )     ;;
-        *.tar.zst)              cmd+=( --zstd )     ;;
+        *.tar)                  cmd=( tar -xv )             ;;
+        *.tar.gz|*.tgz)         cmd=( tar -xv -z )          ;;
+        *.tar.bz2|*.tbz2)       cmd=( tar -xv -j )          ;;
+        *.tar.xz)               cmd=( tar -xv -J )          ;;
+        *.tar.lz)               cmd=( tar -xv --lzip )      ;;
+        *.tar.zst)              cmd=( tar -xv --zstd)       ;;
+        *.rar)                  cmd=( unrar x )             ;;
+        *.zip)                  cmd=( unzip -o )            ;;
+        *.7z)                   cmd=( 7z x )                ;;
+        *.gz)                   cmd=( gunzip )              ;;
+        *.bz2)                  cmd=( bunzip )              ;;
+        *.Z)                    cmd=( uncompress )          ;;
+        *)                      false                       ;;
     esac
 
     case "${cmd[0]}" in
