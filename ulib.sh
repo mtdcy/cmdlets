@@ -706,7 +706,7 @@ _unzip() {
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
-    
+   
     case "$1" in
         *.tar|*.tar.*)          cmd=( tar -xv )     ;;
         *.tgz)                  cmd=( tar -xv )     ;;
@@ -732,6 +732,12 @@ _unzip() {
         tar)
             # strip leading pathes
             local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
+
+            # counting leading directories
+            if [ "$skip" -eq 0 ]; then
+                skip="$(tar -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)"
+                [ "$skip" -eq 1 ] || skip=0
+            fi
     
             if tar --version | grep -qFw "bsdtar"; then
                 cmd+=( --strip-components "$skip" )
