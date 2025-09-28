@@ -731,13 +731,10 @@ _unzip() {
     case "${cmd[0]}" in
         tar)
             # strip leading pathes
-            local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
-
             # counting leading directories
-            if [ "$skip" -eq 0 ]; then
-                skip="$(tar -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)"
-                [ "$skip" -eq 1 ] || skip=0
-            fi
+            #local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
+            local skip="${2:-$(tar -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)}"
+            [ "$skip" -eq 1 ] || skip=0
     
             if tar --version | grep -qFw "bsdtar"; then
                 cmd+=( --strip-components "$skip" )
@@ -750,6 +747,19 @@ _unzip() {
     esac
 
     echocmd "${cmd[@]}" "$1" 2>&1 | CL_LOGGING=silent _capture
+
+    # post strip
+    case "${cmd[0]}" in
+        unzip)
+            # if only one leading dir
+            local leadings="${2:-$(unzip -l "$1" | awk '/\/$/ { print $NF }' | grep -o '^[^/]*' | sort -u)}"
+            if [ "$(echo "$leadings" | wc -l)" -eq 1 ]; then
+                # 'Directory not empty' reports if using mv
+                cp -fr "$leadings"/* ./
+                rm -fr "$leadings"/*
+            fi
+            ;;
+    esac
 }
 
 # prepare package sources and patches
