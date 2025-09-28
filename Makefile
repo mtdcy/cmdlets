@@ -165,14 +165,18 @@ DOCKER_PLATFORM ?= linux/amd64
 DOCKER_ARGS += --platform $(DOCKER_PLATFORM)
 
 # pull always
-DOCKER_ARGS += --pull=always
+DOCKER_ARGS += --pull=always --quiet
+
+# custom entrypoint
+#DOCKER_ARGS += --entrypoint=''
+#DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/entrypoint.sh
 
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
 
 # permissons
-DOCKER_ARGS += --cap-add=SYS_ADMIN
-DOCKER_ARGS += --security-opt apparmor=unconfined
+#DOCKER_ARGS += --cap-add=SYS_ADMIN
+#DOCKER_ARGS += --security-opt apparmor=unconfined
 
 #DOCKER_ARGS += -u $(USER):$(GROUP)
 DOCKER_ARGS += -e PUID=$(USER)
@@ -188,10 +192,9 @@ DOCKER_ARGS += --network=$(DOCKER_NETWORK)
 #DOCKER_ARGS += -v /etc/group:/etc/group:ro
 DOCKER_ARGS += -v /etc/localtime:/etc/localtime:ro
 
-# working dir
+# working dir, su inside container with login shell will clear workdir
 DOCKER_ARGS += -w $(WORKDIR)
 DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
-#  => -w not always work, why?
 
 # envs
 DOCKER_ARGS += $(foreach v,$(CL_ENVS),$(if $($(v)),-e $(v)=$($(v))))
@@ -203,7 +206,7 @@ DOCKER_RUNC = docker run --rm -i $(DOCKER_ARGS) $(DOCKER_IMAGE)
 endif
 
 runc-docker:
-	$(DOCKER_RUNC) 'cd $(WORKDIR); exec $(CMD)'
+	$(DOCKER_RUNC) $(CMD)
 
 # TODO
 runc-remote-docker:
