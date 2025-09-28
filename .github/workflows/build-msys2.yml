@@ -34,6 +34,11 @@ jobs:
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
+      - name: prepare
+        run: |-
+          ln -sfv /var/run /msys64/var/run
+          chown -R buildbot:buildbot .
+
       - name: Build
         shell: su buildbot -c "msys2 {0}"
         run: |-

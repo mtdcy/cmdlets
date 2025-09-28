@@ -27,8 +27,6 @@ if which brew; then
     export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
-elif test -n "$MSYSTEM"; then
-    chown -R buildbot:buildbot .
 fi
 
 if test -n "$1"; then
