@@ -34,21 +34,12 @@ jobs:
           token: ${{ secrets.READ_TOKEN }}
           fetch-depth: 2
 
-      - name: Prepare
-        id: prepare
-        shell: bash
-        run: |
-          echo "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}" > cl_artifacts
-          echo "${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}" > cl_notify
-          echo "${{ secrets.ARTIFACTS_REMOTE_TOKEN }}" > cl_ssh_token
-          echo "${{ vars.MIRRORS }}" > cl_mirrors
-
-          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
-
-          # mount workflow to msys2
-          mkdir -pv /msys64/var
-          ln -sfv /var/run /msys64/var/run
-
       - name: Build
         shell: su buildbot -c "msys2 {0}"
-        run: ./.github/scripts/build.sh
+        run: |-
+          export CL_ARTIFACTS="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
+          export CL_SSH_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
+          export CL_MIRRORS="${{ vars.MIRRORS }}"
+
+          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"

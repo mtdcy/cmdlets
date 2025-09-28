@@ -1,24 +1,56 @@
 #!/bin/bash -e
 
-pwd -P
-
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
 }
 
-[ -f PATH ] && export PATH="$(cat PATH)" || true
+info "build $*"
+
+pwd -P
           
 export CL_LOGGING=silent
-export CL_MIRRORS="$(cat cl_mirrors)"
 export CL_CCACHE=0
 export CL_NJOBS=1
 
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
-ret=0
+# fix: detected dubious ownership in repository
+git config --global --add safe.directory "$PWD"
+          
+if which brew; then
+    make prepare-host
 
-IFS=', ' read -r -a cmdlets < .cmdlets
+    brewprefix="$(brew --prefix)"
+    export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
+    export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"
+    export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
+    export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
+    export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
+elif test -n "$MSYSTEM"; then
+    chown -R buildbot:buildbot .
+fi
+
+if test -n "$1"; then
+    IFS=', ' read -r -a cmdlets <<< "$@"
+else
+    while read -r line; do
+        IFS='/.' read -r _ ulib _ <<< "$line"
+        [[ "$ulib" =~ ^\. ]] && continue  ## ignored files
+        [[ "$ulib" =~ ^@  ]] && continue  ## ignored files
+        [[ "$ulib" =~ ^_  ]] && continue  ## ignored files
+        cmdlets+=( "$ulib" )
+    done < <(git show --pretty="" --name-only HEAD | grep "^libs/.*\.u")
+
+    [ -n "${cmdlets[*]}" ] || cmdlets=(ripgrep)
+fi
+
+# always expand ALL
+if [ "${cmdlets[*]}" = ALL ]; then
+    IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _deps_get ALL)"
+fi
+
+ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
@@ -32,19 +64,19 @@ done
 # find out dependents
 dependents=()
 for pkg in libs/*.u; do
-    pkg="$(basename "${pkg%.u}")"
+    IFS='/.' read -r _ ulib _ <<< "$pkg"
 
-    [[ "$pkg" =~ ^@  ]] && continue
-    [[ "$pkg" == ALL ]] && continue
+    [[ "$ulib" =~ ^@  ]] && continue
+    [[ "$ulib" == ALL ]] && continue
 
     # already exists
-    [[ "${dependents[*]}" == *"$pkg"* ]] && continue
+    [[ "${dependents[*]}" == *"$ulib"* ]] && continue
 
-    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$pkg")"
+    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$ulib")"
 
     for x in "${deps[@]}"; do
         if [[ "${cmdlets[*]}" == *"$x"* ]]; then
-            dependents+=( "$pkg" )
+            dependents+=( "$ulib" )
             break
         fi
     done
@@ -58,15 +90,17 @@ if [ -n "${dependents[*]}" ]; then
     bash ulib.sh build "${dependents[@]}" || ret=$?
 fi
 
-if [ -f cl_artifacts ]; then
-    IFS='@:' read -r user host port dest < cl_artifacts
+if [ -n "$CL_ARTIFACTS" ]; then
+    if [ -n "$CL_SSH_TOKEN" ]; then
+        echo "$CL_SSH_TOKEN" > .ssh_token
+        chmod 0600 .ssh_token
+    fi
+
+    IFS='@:' read -r user host port dest <<< "$CL_ARTIFACTS"
 
     remote="$user@$host:$dest"
-    ssh_opt=(-p "$port" -o StrictHostKeyChecking=no)
-    if [ -f cl_ssh_token ]; then
-        chmod 0600 cl_ssh_token
-        ssh_opt+=(-i cl_ssh_token)
-    fi
+    ssh_opt=( -p "$port" -o StrictHostKeyChecking=no )
+    [ -f .ssh_token ] && ssh_opt+=( -i .ssh_token ) || true
 
     info "*** rsync artifacts to remote ***"
     rsync -avc -e "ssh ${ssh_opt[*]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
@@ -78,13 +112,13 @@ if [ -f cl_artifacts ]; then
     rsync -avc -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
 fi
 
-if [ -f cl_notify ] && [ "$ret" -ne 0 ]; then
+if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---
 $(git show HEAD --stat)
 " 
 
-    curl --fail -sL --form-string "text=$text" "$(cat cl_notify)"
+    curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
 fi
 
 exit "$ret"
