@@ -658,14 +658,11 @@ check() {
     fi
 }
 
-# _fetch <url> <sha256> [local]
+# _fetch <url> <sha256> <zip>
 _fetch() {
     local url=$1
     local sha=$2
     local zip=$3
-
-    # to current dir
-    [ -n "$zip" ] || zip="$(basename "$url")"
 
     #1. try local file first
     if [ -e "$zip" ]; then
@@ -752,7 +749,10 @@ _unzip() {
 # prepare package sources and patches
 _prepare() {
     for i in "${!upkg_url[@]}"; do
-        local zip="${upkg_zip[i]:-$ROOT/packages/$(basename "${upkg_url[i]}")}"
+        local zip="${upkg_zip[i]:-$(basename "${upkg_url[i]}")}"
+
+        # to packages
+        zip="$ROOT/packages/$zip"
 
         # download files
         _fetch "${upkg_url[i]}" "${upkg_sha[i]}" "$zip" || return $?
