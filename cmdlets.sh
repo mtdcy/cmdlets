@@ -33,7 +33,7 @@ if [ -z "$ARCH" ]; then
         ARCH="$(uname -m)-apple-darwin"
     elif test -n "$MSYSTEM"; then
         ARCH="$(uname -m)-msys-${MSYSTEM,,}"
-    elif ldd --version | grep -qFw musl; then
+    elif ldd --version 2>/dev/null | grep -qFw musl; then
         ARCH="$(uname -m)-linux-musl"
     else
         ARCH="$(uname -m)-$OSTYPE"
