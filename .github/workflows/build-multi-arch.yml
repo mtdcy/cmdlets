@@ -43,6 +43,7 @@ jobs:
           fetch-depth: 2
 
       - name: Build
+        id: build
         shell: bash
         run: |-
           export CL_ARTIFACTS="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
@@ -50,4 +51,20 @@ jobs:
           export CL_SSH_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
           export CL_MIRRORS="${{ vars.MIRRORS }}"
 
-          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
+          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}" || ret=$?
+
+          echo "arch=$(bash ulib.sh arch)" | tee -a "$GITHUB_OUTPUT"
+          echo "date=$(date '+%Y-%m-%d')" | tee -a "$GITHUB_OUTPUT"
+
+          exit $ret
+
+      - name: Release
+        uses: actions/gitea-release-action@v1
+        if: always()
+        with:
+          tag_name: ${{ steps.build.outputs.arch }}
+          name: ${{ steps.build.outputs.date }}
+          make_latest: true
+          files: |-
+            prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
+            prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
