@@ -15,10 +15,11 @@ MANIFEST="$PREBUILTS/cmdlets.manifest"
 unset CMDLETS_ARCH CMDLETS_PREBUILTS
 
 REPO=(
-    # v3/git
-    "${CMDLETS_MAIN_REPO:-https://git.mtdcy.top/mtdcy/cmdlets/releases/download}"
     # v3 & v2 & v1
-    https://pub.mtdcy.top/cmdlets/latest
+    "${CMDLETS_MAIN_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
+    # v3/git
+    https://github.com/mtdcy/cmdlets/releases/download
+    # cmdlets is mainly for private use, so put the public repo at last.
 )
 
 BASE=(
@@ -26,7 +27,7 @@ BASE=(
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
 )
 
-CURL_OPTS=( -L --fail --connect-timeout 3 --progress-bar --no-progress-meter )
+CURL_OPTS=( -L --fail --connect-timeout 1 --progress-bar --no-progress-meter )
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
