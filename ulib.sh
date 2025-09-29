@@ -25,6 +25,16 @@ is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
 is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
 
+CURL_OPTS=( -L --fail --connect-timeout 3 --progress-bar --no-progress-meter )
+
+_curl() {
+    local source="$1"
+    local dest="${2:-/dev/null}"
+
+    curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || return 1
+    curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest"
+}
+
 # ulog [error|info|warn] "leading" "message"
 _ulog() {
     local lvl date message
@@ -668,35 +678,35 @@ _fetch() {
     local url=$1
     local sha=$2
     local zip=$3
+    local _sha mirror
 
     #1. try local file first
     if [ -e "$zip" ]; then
-        local x
-        IFS=' ' read -r x _ <<<"$(sha256sum "$zip")"
-        if [ "$x" = "$sha" ]; then
-            ulogi ".Gotx" "$zip"
+        IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
+        if [ "$_sha" = "$sha" ]; then
+            ulogi ".FILE" "$zip"
             return 0
         fi
 
-        ulogw "Warn." "expected $sha, actual $x, broken?"
+        ulogw ".Warn" "expected $sha but got $_sha"
         rm "$zip"
     fi
 
-    local args=(--fail -sL --progress-bar -o "$zip")
     mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
-    if [ -n "$CL_MIRRORS" ] &&
-        curl "${args[@]}" "$CL_MIRRORS/packages/$(basename "$zip")" 2>/dev/null; then
-        ulogi ".Getx" "$CL_MIRRORS/packages/$(basename "$zip")"
-    #3. try original
-    elif curl "${args[@]}" "$url"; then
-        ulogi ".Getx" "$url"
-    else
-        uloge "Error" "get $url failed."
-        return 1
+    if test -n "$CL_MIRRORS"; then
+        mirror="$CL_MIRRORS/packages/$(basename "$zip")"
+        ulogi ".CURL" "$mirror"
+        _curl "$mirror" "$zip" && return 0
     fi
-    ulogi "..Got" "$(sha256sum "$zip" | cut -d' ' -f1)"
+
+    #3. try original
+    ulogi ".CURL" "$url"
+    _curl "$url" "$zip" && return 0
+
+    uloge ".CURL" "Failed curl $url."
+    return 1
 }
 
 # _unzip <file> [strip]
