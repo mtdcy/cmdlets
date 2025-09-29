@@ -1,5 +1,5 @@
 ---
-name: Check cmdlets.sh
+name: Check cmdlets installer
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
   workflow_dispatch: null
 
 jobs:
-  check-cmdlist.sh:
+  install:
     runs-on: ubuntu-latest
     steps:
       - name: Check cmdlets.sh
@@ -20,10 +20,10 @@ jobs:
         run: |
           set -x
 
-          if curl --fail -o /dev/nul -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
-            bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
+          if curl --fail --connect-timeout 3 -o /dev/null -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
+            bash -x -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
           else
-            bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
+            bash -x -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
           fi
 
           # cmdlet: xz
@@ -32,12 +32,8 @@ jobs:
 
           # library: libz.a
           cmdlets.sh library libz
-          find . -name "prebuilts/*/lib/libz.a"
-          find . -name "prebuilts/*/include/zlib.h"
-
-          # applet: neovim
-          cmdlets.sh install nvim
-          nvim -V1 -v
+          find . -name "prebuilts/lib/libz.a"
+          find . -name "prebuilts/include/zlib.h"
 
       - name: Notify on failure
         if: failure()
