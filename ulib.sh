@@ -10,7 +10,7 @@ export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
 export CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
 export CL_MIRRORS=${CL_MIRRORS:-}       # package mirrors, and go/cargo/etc
 export CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
-export CL_NJOBS=${CL_NJOBS:-$(nproc)}
+export CL_NJOBS=${CL_NJOBS:-1}          # noparallel by default
 
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
