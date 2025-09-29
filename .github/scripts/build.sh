@@ -18,9 +18,9 @@ export FORCE_UNSAFE_CONFIGURE=1
 # fix: detected dubious ownership in repository
 git config --global --add safe.directory "$PWD"
           
-if which brew; then
-    make prepare-host
+make prepare-host
 
+if which brew; then
     brewprefix="$(brew --prefix)"
     export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
     export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"

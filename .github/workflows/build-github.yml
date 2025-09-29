@@ -1,0 +1,64 @@
+---
+name: Build cmdlets with Github
+
+on:
+  push:
+    paths:
+      - ulib.sh
+      - libs/**.u
+      - .github/workflows/build-github.yml
+      - .github/scripts/**
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      cmdlets:
+        type: string
+        description: Which cmdlets to build
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner:
+          # for x86_64-linux-gnu
+          - ubuntu-22.04
+          # for aarch64-linux-gnu
+          - ubuntu-22.04-arm
+          # for arm64-apple-darwin
+          - macos-14
+          # for x86_64-apple-darwin
+          - macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Build
+        id: build
+        shell: bash
+        run: |-
+          export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
+
+          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}" || ret=$?
+
+          echo "arch=$(bash ulib.sh arch)" | tee -a "$GITHUB_OUTPUT"
+          echo "date=$(date '+%Y-%m-%d')" | tee -a "$GITHUB_OUTPUT"
+
+          exit $ret
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: always()
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          tag_name: ${{ steps.build.outputs.arch }}
+          name: ${{ steps.build.outputs.date }}
+          make_latest: true
+          files: |-
+            prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
+            prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
