@@ -4,7 +4,7 @@
 
 upkg_lic='GPL-3.0-or-later'
 upkg_ver=3.12
-upkg_url=https://ftp.gnu.org/gnu/grep/grep-$upkg_ver.tar.xz
+upkg_url=https://ftpmirror.gnu.org/gnu/grep/grep-$upkg_ver.tar.xz
 upkg_sha=2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9
 upkg_dep=(libiconv pcre2)
 

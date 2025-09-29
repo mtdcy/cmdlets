@@ -7,7 +7,7 @@ upkg_page="https://www.gnu.org/software/libiconv/"
 upkg_lic="GPL-3.0-or-later|LGPL-2.0-or-later"
 upkg_ver=1.18
 upkg_rev=1
-upkg_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$upkg_ver.tar.gz
+upkg_url=https://ftpmirror.gnu.org/pub/gnu/libiconv/libiconv-$upkg_ver.tar.gz
 upkg_sha=3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8
 
 upkg_args=(

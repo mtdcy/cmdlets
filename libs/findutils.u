@@ -5,7 +5,7 @@ upkg_desc="Collection of GNU find, xargs, and locate"
 
 upkg_lic='GPL-3.0-or-later'
 upkg_ver=4.10.0
-upkg_url=https://ftp.gnu.org/gnu/findutils/findutils-$upkg_ver.tar.xz
+upkg_url=https://ftpmirror.gnu.org/gnu/findutils/findutils-$upkg_ver.tar.xz
 upkg_sha=1387e0b67ff247d2abde998f90dfbf70c1491391a59ddfecb8ae698789f0a4f5
 upkg_dep=()
 
