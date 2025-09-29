@@ -922,7 +922,7 @@ build() {
         libs=( "${deps[@]}" )
     else
         for dep in "${deps[@]}"; do
-            ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
+            CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
         done
     fi
 

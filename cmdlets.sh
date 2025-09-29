@@ -1,26 +1,39 @@
-#!/bin/bash 
+#!/bin/bash -e
 #
 # shellcheck disable=SC2155
 
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-ARCH="${CMDLETS_ARCH:-}"
-VERSION=0.2
+VERSION=0.3
 
-REPO=https://pub.mtdcy.top:8443/cmdlets/latest
-BASE=https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh
+WORKDIR="$(dirname "$0")"
+ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
+PREBUILTS="${CMDLETS_PREBUILTS:-$WORKDIR/prebuilts}"
+
+REPO=(
+    "${CMDLETS_MAIN_REPO:-https://pub.mtdcy.top:8443/cmdlets/latest}"
+)
+
+BASE=(
+    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
+    "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
+)
+
+CURL_OPTS=( -L --fail --connect-timeout 3 --progress-bar --no-progress-meter )
+
+# never resolve symbolic of "$0"
+_name="$(basename "$0")"
 
 usage() {
-    name="$(basename "$0")"
     cat << EOF
-$name $VERSION
+$_name $VERSION
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$name options [args ...]
+$_name options [args ...]
 
 Options:
-    update                  - update $name
+    update                  - update $_name
     fetch   <cmdlet>        - fetch cmdlet(s) from server
     install <cmdlet>        - fetch and install cmdlet(s)
     library <libname>       - fetch a library from server
@@ -28,11 +41,11 @@ Options:
     help                    - show this help message
 
 Examples:
-    $name install minigzip                  # install the latest version
-    $name install zlib/minigzip@1.3.1-2     # install the specific version
+    $_name install minigzip                 # install the latest version
+    $_name install zlib/minigzip@1.3.1-2    # install the specific version
 
-    $name package zlib                      # install the latest package
-    $name package zlib@1.3.1-2              # install the specific version
+    $_name package zlib                     # install the latest package
+    $_name package zlib@1.3.1-2             # install the specific version
 EOF
 }
 
@@ -40,33 +53,37 @@ error() { echo -ne "\\033[31m$*\\033[39m"; }
 info()  { echo -ne "\\033[32m$*\\033[39m"; }
 warn()  { echo -ne "\\033[33m$*\\033[39m"; }
 
-if [ -z "$ARCH" ]; then
-    case "$OSTYPE" in
-        darwin*)
-            ARCH="$(uname -m)-apple-darwin"
-            ;;
-        msys*|cygwin*)
-            if test -n "$MSYSTEM"; then
-                ARCH="$(uname -m)-msys-${MSYSTEM,,}" 
-            else
-                ARCH="$(uname -m)-$OSTYPE"
-            fi
-            ;;
-        linux*) # OSTYPE cann't be trusted
-            if find /lib*/ld-musl-* &>/dev/null; then
-                ARCH="$(uname -m)-linux-musl"
-            else
-                ARCH="$(uname -m)-linux-gnu"
-            fi
-            ;;
-        *)
-            ARCH="$(uname -m)-$OSTYPE"
-            ;;
-    esac
-fi
+# is file existing in repo
+_exists() (
+    local source
+    for repo in "${REPO[@]}"; do
+        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
+        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null && return 0 || true
+    done
+    return 1
+)
 
-PREFIX="$(dirname "$0")/prebuilts/$ARCH"
-REPO="$REPO/$ARCH"
+# curl file to destination
+_curl() (
+    local source
+    mkdir -p "$(dirname "$2")"
+    for repo in "${REPO[@]}"; do
+        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
+        curl -S "${CURL_OPTS[@]}" "$source" -o "$2" && return 0 || true
+    done
+    return 1
+)
+
+# save package to PREBUILTS
+_save() (
+    local source
+    mkdir -p "$PREBUILTS"
+    for repo in "${REPO[@]}"; do
+        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
+        curl -S "${CURL_OPTS[@]}" "$source" | tar -C "$PREBUILTS" -xz && return 0 || true
+    done
+    return 1
+)
 
 # get remote revision url
 _revision() {
@@ -76,9 +93,9 @@ _revision() {
     IFS='@' read -r pkg ver <<< "$1"
     if [ -n "$ver" ]; then
         IFS='/' read -r a b <<< "$pkg"
-        [ -n "$b" ] && echo "$REPO/$1" || echo "$REPO/$a/$a@$ver"
+        [ -n "$b" ] && echo "$1" || echo "$a/$a@$ver"
     else
-        echo "$REPO/$pkg@latest"
+        echo "$pkg@latest"
     fi
 }
 
@@ -88,120 +105,134 @@ _pkginfo() {
     IFS='@' read -r pkg ver <<< "$1"
     IFS='-' read -r ver fix <<< "$ver"
     if [ -n "$ver" ] && [ "$ver" != "latest" ]; then
-        echo "$REPO/$pkg/pkginfo@$ver-${fix:-0}"
+        echo "$pkg/pkginfo@$ver-${fix:-0}"
     else
-        echo "$REPO/$pkg/pkginfo@latest"
+        echo "$pkg/pkginfo@latest"
     fi
 }
 
 # fetch cmdlet from server
 cmdlet() {
-    local sha pkgname revision
+    local pkgname revision
     
-    revision="$(mktemp)"
-    trap "rm -f $revision" EXIT
-
-    mkdir -p "$PREFIX/bin"
+    # shellcheck disable=SC2064
+    revision="$(mktemp)" && trap "rm -f $revision" EXIT
 
     # cmdlet v2
-    if curl --fail -sL -o "$revision" "$(_revision "$1")"; then
-        IFS=' ' read -r sha pkgname _ <<< "$(tail -n1 "$revision")"
-        info "Fetch $REPO/$pkgname => $PREFIX\n"
-
-        curl --fail -# "$REPO/$pkgname" | tar -C "$PREFIX" -xz
+    if _curl "$(_revision "$1")" "$revision"; then
+        IFS=' ' read -r _ pkgname _ <<< "$(tail -n1 "$revision")"
+        info "Fetch $pkgname => $PREBUILTS "
+        _save "$pkgname" || return 1
+        echo -ne "\n"
     # cmdlet v1/raw mode
-    elif curl --fail -sIL -o /dev/null "$REPO/bin/$1"; then
-        info "Fetch $REPO/bin/$1 => $PREFIX\n"
-
-        curl --fail -# -o "$PREFIX/bin/$1" "$REPO/bin/$1"
-        chmod a+x "$PREFIX/bin/$1"
+    elif _exists "bin/$1"; then
+        info "Fetch $1 => $PREBUILTS/bin "
+        _curl "bin/$1" "$PREBUILTS/bin/$1" || return 1
+        echo -ne "\n"
+        chmod a+x "$PREBUILTS/bin/$1"
+    # fallback to linux-musl
+    elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
+        warn "Try fetch $1 ($(uname -m)-linux-musl) for $ARCH\n"
+        ARCH="$(uname -m)-linux-musl" cmdlet "$@"
     else
-        error "Fetch cmdlet $1 failed\n"
+        error "Fetch cmdlet $1 ($ARCH) failed\n"
         return 1
     fi
 }
 
 # fetch library from server
 library() {
-    local sha libname revision
-    revision="$(mktemp)"
-    trap "rm -f $revision" EXIT
+    local libname revision
 
-    mkdir -p "$PREFIX"
+    # shellcheck disable=SC2064
+    revision="$(mktemp)" && trap "rm -f $revision" EXIT
 
-    if curl --fail -s -o "$revision" "$(_revision "$1")"; then
-        IFS=' ' read -r sha libname _ <<< "$(tail -n1 "$revision")"
-        info "Fetch $REPO/$libname => $PREFIX\n"
-
-        curl --fail -# "$REPO/$libname" | tar -C "$PREFIX" -xz
-
+    if _curl "$(_revision "$1")" "$revision"; then
+        IFS=' ' read -r _ libname _ <<< "$(tail -n1 "$revision")"
+        info "Fetch $libname => $PREBUILTS "
+        _save "$libname" || return 1
+        echo -ne "\n"
         # update pkgconfig .pc
-        find "$PREFIX/lib" -name "*.pc" -exec sed -e "s:^prefix=.*$:prefix=$PREFIX:p" -i {} \;
+        find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec sed -e "s%^prefix=.*$%prefix=$PREBUILTS%p" -i {} \;
     else
-        error "Fetch library $1 failed\n"
+        error "Fetch library $1 ($ARCH) failed\n"
         return 1
     fi
 }
 
 # fetch package from server
 package() {
-    local sha pkgfile pkginfo
-    pkginfo="$(mktemp)"
-    trap "rm -f $pkginfo" EXIT
+    local pkgfile pkginfo
+    
+    # shellcheck disable=SC2064
+    pkginfo="$(mktemp)" && trap "rm -f $pkginfo" EXIT
 
-    mkdir -p "$PREFIX"
-
-    if curl --fail -sL -o "$pkginfo" "$(_pkginfo "$1")"; then
-        while read -r line; do
-            [ -n "$line" ] || continue
-            IFS=' ' read -r sha pkgfile _ <<< "$line"
-            info "Fetch $REPO/$pkgfile => $PREFIX\n"
-
-            curl --fail -# "$REPO/$pkgfile" | tar -C "$PREFIX" -xz
+    if _curl "$(_pkginfo "$1")" "$pkginfo"; then
+        while read -r record; do
+            [ -n "$record" ] || continue
+            IFS=' ' read -r _ pkgfile _ <<< "$record"
+            info "Fetch $pkgfile => $PREBUILTS "
+            _save "$pkgfile" || return 1
+            echo -ne "\n"
         done < "$pkginfo"
+        # update pkgconfig .pc
+        find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec sed -e "s%^prefix=.*$%prefix=$PREBUILTS%p" -i {} \;
     else
-        error "Fetch package $1 failed\n"
+        error "Fetch package $1 ($ARCH) failed\n"
         return 1
     fi
 }
 
 update() {
-    if curl --fail -sIL -o /dev/null https://git.mtdcy.top/mtdcy/cmdlets/; then
-        BASE=https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh
-    fi
-
-    local dest 
+    local dest tempfile
     if [ -f "$0" ]; then
         dest="$0"
     elif [[ "$PATH" =~ $HOME/.bin ]]; then
-        dest="$HOME/.bin/$(basename "$BASE")"
+        dest="$HOME/.bin/$(basename "${BASE[0]}")"
     else 
-        dest="/usr/local/bin/$(basename "$BASE")"
+        dest="/usr/local/bin/$(basename "${BASE[0]}")"
     fi
 
-    info "Install cmdlets => $dest\n"
-
-    local tempfile="$(mktemp)"
-    trap "rm -f $tempfile" EXIT
-
-    curl --fail -# -o "$tempfile" "$BASE"
-
-    chmod a+x "$tempfile"
-    if [ -w "$(dirname "$dest")" ]; then
-        mv -f "$tempfile" "$dest"
-    else
-        sudo mv -f "$tempfile" "$dest"
+    if ! test -w "$(dirname "$dest")"; then
+        error "Permission Denied"
+        return 1
     fi
+
+    info "Install cmdlets > $dest\n"
+
+    # shellcheck disable=SC2064
+    tempfile="$(mktemp)" && trap "rm -f $tempfile" EXIT
+
+    for base in "${BASE[@]}"; do
+        info "Try update $_name < $base\n"
+        if _curl "$base" "$tempfile"; then
+            cp "$tempfile" "$dest"
+            chmod a+x "$dest"
+            # invoke the new file
+            exec "$dest" help
+        fi
+    done
+
+    error "Update $(basename "$0") failed\n"
+    return 1
 }
 
-# never resolve symbolic here
-name="$(basename "$0")"
+if [ -z "$ARCH" ]; then
+    if [ "$(uname -s)" = Darwin ]; then
+        ARCH="$(uname -m)-apple-darwin"
+    elif test -n "$MSYSTEM"; then
+        ARCH="$(uname -m)-msys-${MSYSTEM,,}"
+    elif ldd --version | grep -qFw musl; then
+        ARCH="$(uname -m)-linux-musl"
+    else
+        ARCH="$(uname -m)-$OSTYPE"
+    fi
+fi
 
-if [ "$name" = "install" ] && [ $# -eq 0 ]; then
+# for quick install
+if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
     update
-elif [ "$name" = "fetch" ] && [ $# -eq 1 ]; then
-    cmdlet "$1"
-elif [ "$name" = "$(basename "$BASE")" ]; then
+elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
     case "$1" in
         update)
             update
@@ -209,10 +240,11 @@ elif [ "$name" = "$(basename "$BASE")" ]; then
         install)    # fetch cmdlets
             for x in "${@:2}"; do
                 cmdlet "$x"
-                ln -sfv "$name" "$(dirname "$0")/${x%%/*}"
+                info "Link $x => $0\n"
+                ln -sf "$_name" "$WORKDIR/$x"
             done
             ;;
-        fetch)      # fetch bin file
+        fetch)      # fetch cmdlets
             for x in "${@:2}"; do
                 cmdlet "$x"
             done
@@ -233,14 +265,14 @@ elif [ "$name" = "$(basename "$BASE")" ]; then
     esac
 else
     # preapre cmdlet
-    cmdlet="$PREFIX/app/$name/$name"
-    [ -x "$cmdlet" ] || cmdlet="$PREFIX/bin/$name"
-    [ -x "$cmdlet" ] || cmdlet "$name"
+    cmdlet="$PREBUILTS/$_name"
+    [ -x "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
+    [ -x "$cmdlet" ] || cmdlet "$_name"
 
     # exec cmdlet
-    cmdlet="$PREFIX/app/$name/$name"
-    [ -x "$cmdlet" ] || cmdlet="$PREFIX/bin/$name"
-    [ -x "$cmdlet" ] || error "no cmdlet $name found.\n"
+    cmdlet="$PREBUILTS/$_name"
+    [ -x "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
+    [ -x "$cmdlet" ] || error "no cmdlet $_name found.\n"
 
     exec "$cmdlet" "$@"
 fi
