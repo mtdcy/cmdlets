@@ -16,9 +16,9 @@ unset CMDLETS_ARCH CMDLETS_PREBUILTS
 
 REPO=(
     # v3/git
-    "${CMDLETS_MAIN_REPO:-https://git.mtdcy.top:8443/mtdcy/cmdlets/releases/download}"
+    "${CMDLETS_MAIN_REPO:-https://git.mtdcy.top/mtdcy/cmdlets/releases/download}"
     # v3 & v2 & v1
-    https://pub.mtdcy.top:8443/cmdlets/latest
+    https://pub.mtdcy.top/cmdlets/latest
 )
 
 BASE=(
