@@ -827,10 +827,6 @@ _deps_get() {
     echo "${list[@]}"
 }
 
-_pkglist() {
-    echo "$PREFIX/packages.lst"
-}
-
 # compile target
 compile() {(
     # start subshell before source
@@ -853,8 +849,6 @@ compile() {(
     # clear
     find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
 
-    sed -i "/^$upkg_name.*$/d" "$(_pkglist)" 2>/dev/null || touch "$(_pkglist)"
-
     # prepare work dir
     mkdir -p "$PREFIX"
     mkdir -p "$(dirname "$(_logfile)")"
@@ -875,9 +869,6 @@ compile() {(
         tail -v "$(_logfile)"
         return 1
     }
-
-    # append lib to packages.lst
-    echo "$upkg_name $upkg_ver $upkg_lic" >> "$(_pkglist)"
 
     # record @ work dir
     touch "$WORKDIR/.$upkg_name"
@@ -914,8 +905,6 @@ _check_deps() {
 # build <lib list>
 build() {
     _init || return $?
-
-    touch "$(_pkglist)"
     
     IFS=' ' read -r -a deps <<< "$(_check_deps "$@")"
 
