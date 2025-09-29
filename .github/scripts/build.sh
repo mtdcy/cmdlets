@@ -18,7 +18,7 @@ export FORCE_UNSAFE_CONFIGURE=1
 # fix: detected dubious ownership in repository
 git config --global --add safe.directory "$PWD"
           
-make prepare-host
+make prepare-host || true # FIXME: prepare for alpine
 
 if which brew; then
     brewprefix="$(brew --prefix)"
