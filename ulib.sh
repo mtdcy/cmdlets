@@ -159,6 +159,9 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
+    RELEASES="$ROOT/releases/$arch"
+    mkdir -p "$RELEASES"
+
     PATH="$PREFIX/bin:$PATH"
 
     export ROOT PREFIX WORKDIR PATH
@@ -479,7 +482,7 @@ _link() {
 
 # _pack name <file list>
 _pack() {
-    pushd "$PREFIX"
+    pushd "$RELEASES"
 
     mkdir -pv "$upkg_name"
 
@@ -1018,6 +1021,11 @@ fetch() {
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
     _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
+}
+
+arch() {
+    _init >/dev/null 2>&1
+    basename "$PREFIX"
 }
 
 if [[ "$0" =~ ulib.sh$ ]]; then
