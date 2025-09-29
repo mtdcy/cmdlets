@@ -10,9 +10,15 @@ VERSION=0.3
 WORKDIR="$(dirname "$0")"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-$WORKDIR/prebuilts}"
+MANIFEST="$PREBUILTS/cmdlets.manifest"
+
+unset CMDLETS_ARCH CMDLETS_PREBUILTS
 
 REPO=(
-    "${CMDLETS_MAIN_REPO:-https://pub.mtdcy.top:8443/cmdlets/latest}"
+    # v3/git
+    "${CMDLETS_MAIN_REPO:-https://git.mtdcy.top:8443/mtdcy/cmdlets/releases/download}"
+    # v3 & v2 & v1
+    https://pub.mtdcy.top:8443/cmdlets/latest
 )
 
 BASE=(
@@ -21,6 +27,18 @@ BASE=(
 )
 
 CURL_OPTS=( -L --fail --connect-timeout 3 --progress-bar --no-progress-meter )
+
+if [ -z "$ARCH" ]; then
+    if [ "$(uname -s)" = Darwin ]; then
+        ARCH="$(uname -m)-apple-darwin"
+    elif test -n "$MSYSTEM"; then
+        ARCH="$(uname -m)-msys-${MSYSTEM,,}"
+    elif ldd --version | grep -qFw musl; then
+        ARCH="$(uname -m)-linux-musl"
+    else
+        ARCH="$(uname -m)-$OSTYPE"
+    fi
+fi
 
 # never resolve symbolic of "$0"
 _name="$(basename "$0")"
@@ -52,6 +70,9 @@ EOF
 error() { echo -ne "\\033[31m$*\\033[39m"; }
 info()  { echo -ne "\\033[32m$*\\033[39m"; }
 warn()  { echo -ne "\\033[33m$*\\033[39m"; }
+info1() { echo -ne "\\033[35m$*\\033[39m"; }
+info2() { echo -ne "\\033[34m$*\\033[39m"; }
+info3() { echo -ne "\\033[36m$*\\033[39m"; }
 
 # is file existing in repo
 _exists() (
@@ -65,11 +86,13 @@ _exists() (
 
 # curl file to destination
 _curl() (
-    local source
-    mkdir -p "$(dirname "$2")"
+    local source dest
+    dest="${2:-$1}"
+    mkdir -p "$(dirname "$dest")"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        curl -S "${CURL_OPTS[@]}" "$source" -o "$2" && return 0 || true
+        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
+        curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
     done
     return 1
 )
@@ -80,7 +103,8 @@ _save() (
     mkdir -p "$PREBUILTS"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        curl -S "${CURL_OPTS[@]}" "$source" | tar -C "$PREBUILTS" -xz && return 0 || true
+        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
+        curl -S  "${CURL_OPTS[@]}" "$source" | tar -C "$PREBUILTS" -xz && return 0 || true
     done
     return 1
 )
@@ -111,76 +135,118 @@ _pkginfo() {
     fi
 }
 
-# fetch cmdlet from server
-cmdlet() {
-    local pkgname revision
+# cmdlet v1: cmdlet
+_v1() {
+    _exists "bin/$1" || return 1
+
+    info1 "Fetch $1 => $PREBUILTS/bin "
+    _curl "bin/$1" "$PREBUILTS/bin/$1" || { echo failed; return 1; }
+    echo -ne "\n"
+    chmod a+x "$PREBUILTS/bin/$1"
+}
+
+# cmdlet v2: cmdlet
+_v2() {
+    local pkgfile revision
     
     # shellcheck disable=SC2064
     revision="$(mktemp)" && trap "rm -f $revision" EXIT
 
-    # cmdlet v2
-    if _curl "$(_revision "$1")" "$revision"; then
-        IFS=' ' read -r _ pkgname _ <<< "$(tail -n1 "$revision")"
-        info "Fetch $pkgname => $PREBUILTS "
-        _save "$pkgname" || return 1
-        echo -ne "\n"
-    # cmdlet v1/raw mode
-    elif _exists "bin/$1"; then
-        info "Fetch $1 => $PREBUILTS/bin "
-        _curl "bin/$1" "$PREBUILTS/bin/$1" || return 1
-        echo -ne "\n"
-        chmod a+x "$PREBUILTS/bin/$1"
+    _curl "$(_revision "$1")" "$revision" || return 1
+
+    # v2: sha pkgfile
+    IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$revision")"
+
+    info2 "Fetch $pkgfile => $PREBUILTS "
+    _save "$pkgfile" || { echo failed; return 1; }
+    echo -ne "\n"
+}
+
+# cmdlet v3/manifest: cmdlet [pkgname]
+_v3() {
+    local pkgfile
+
+    # v3: cmdlet pkgname/pkgfile.tar.gz sha
+    if [ -z "$2" ]; then
+        IFS=' ' read -r _ pkgfile _ <<< "$(grep "^$1 "    "$MANIFEST" | tail -n1)"
+    else
+        IFS=' ' read -r _ pkgfile _ <<< "$(grep "^$1 $2/" "$MANIFEST" | tail -n1)"
+    fi
+
+    [ -n "$pkgfile" ] || return 1
+
+    info3 "Fetch $pkgfile => $PREBUILTS "
+
+    # v3 git repo do not have file hierarchy
+    _save "$(basename "$pkgfile")" || _save "$pkgfile" || { echo failed; return 1; }
+    echo -en "\n"
+}
+
+# fetch cmdlet
+cmdlet() {
+    if _v3 "$1" || _v2 "$1" || _v1 "$1"; then
+        true
     # fallback to linux-musl
     elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
-        warn "Try fetch $1 ($(uname -m)-linux-musl) for $ARCH\n"
+        warn "Try fetch $1/$(uname -m)-linux-musl for $ARCH\n"
         ARCH="$(uname -m)-linux-musl" cmdlet "$@"
     else
-        error "Fetch cmdlet $1 ($ARCH) failed\n"
+        error "Fetch cmdlet $1/$ARCH failed\n"
         return 1
     fi
 }
+
+_fix_pc() {
+    find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
+        sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
+} 2>/dev/null
 
 # fetch library from server
 library() {
-    local libname revision
-
-    # shellcheck disable=SC2064
-    revision="$(mktemp)" && trap "rm -f $revision" EXIT
-
-    if _curl "$(_revision "$1")" "$revision"; then
-        IFS=' ' read -r _ libname _ <<< "$(tail -n1 "$revision")"
-        info "Fetch $libname => $PREBUILTS "
-        _save "$libname" || return 1
-        echo -ne "\n"
-        # update pkgconfig .pc
-        find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec sed -e "s%^prefix=.*$%prefix=$PREBUILTS%p" -i {} \;
+    # cmdlet v3/manifest
+    if _v3 "$1" || _v2 "$1"; then
+        _fix_pc
     else
-        error "Fetch library $1 ($ARCH) failed\n"
+        error "Fetch library $1/$ARCH failed\n"
         return 1
     fi
 }
 
-# fetch package from server
+# fetch package
 package() {
-    local pkgfile pkginfo
-    
+    local pkgfile pkginfo parts
+
     # shellcheck disable=SC2064
     pkginfo="$(mktemp)" && trap "rm -f $pkginfo" EXIT
 
-    if _curl "$(_pkginfo "$1")" "$pkginfo"; then
-        while read -r record; do
-            [ -n "$record" ] || continue
-            IFS=' ' read -r _ pkgfile _ <<< "$record"
-            info "Fetch $pkgfile => $PREBUILTS "
-            _save "$pkgfile" || return 1
-            echo -ne "\n"
+    # cmdlet v3/manifest
+    IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
+
+    if test -n "${parts[*]}"; then
+        info3 "Fetch package $1 (${parts[*]})\n"
+        for part in "${parts[@]}"; do 
+            _v3 "$part" "$1" || {
+                error "Fetch $part/$ARCH failed\n"
+                return 1
+            }
+        done
+    elif _curl "$(_pkginfo "$1")" "$pkginfo"; then
+        while read -r pkgfile; do
+            [ -n "$pkgfile" ] || continue
+            IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
+            info2 "Fetch $pkgfile => $PREBUILTS "
+            _save "$pkgfile" || {
+                error "Fetch $pkgfile/$ARCH failed\n"
+                return 1
+            }
+            echo -en "\n"
         done < "$pkginfo"
-        # update pkgconfig .pc
-        find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec sed -e "s%^prefix=.*$%prefix=$PREBUILTS%p" -i {} \;
     else
-        error "Fetch package $1 ($ARCH) failed\n"
+        error "Fetch package $1/$ARCH failed\n"
         return 1
     fi
+
+    _fix_pc
 }
 
 update() {
@@ -198,14 +264,13 @@ update() {
         return 1
     fi
 
-    info "Install cmdlets > $dest\n"
-
     # shellcheck disable=SC2064
     tempfile="$(mktemp)" && trap "rm -f $tempfile" EXIT
 
     for base in "${BASE[@]}"; do
         info "Try update $_name < $base\n"
         if _curl "$base" "$tempfile"; then
+            info "Install cmdlets > $dest\n"
             cp "$tempfile" "$dest"
             chmod a+x "$dest"
             # invoke the new file
@@ -217,27 +282,24 @@ update() {
     return 1
 }
 
-if [ -z "$ARCH" ]; then
-    if [ "$(uname -s)" = Darwin ]; then
-        ARCH="$(uname -m)-apple-darwin"
-    elif test -n "$MSYSTEM"; then
-        ARCH="$(uname -m)-msys-${MSYSTEM,,}"
-    elif ldd --version | grep -qFw musl; then
-        ARCH="$(uname -m)-linux-musl"
-    else
-        ARCH="$(uname -m)-$OSTYPE"
-    fi
-fi
-
 # for quick install
 if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
     update
 elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
+    # pull manifest first
+    _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
+        warn "Pull manifest failed\n"
+        touch "$MANIFEST"
+    }
+
     case "$1" in
+        manifest)
+            cat "$MANIFEST"
+            ;;
         update)
             update
             ;;
-        install)    # fetch cmdlets
+        install)    # install cmdlets
             for x in "${@:2}"; do
                 cmdlet "$x"
                 info "Link $x => $0\n"

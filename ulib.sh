@@ -505,12 +505,17 @@ _pack() {
     # create a revision file
     grep -Fw "$1" "$pkginfo" > "$revision"
 
-    # create symlinks
+    # v2/pkginfo
     _link "$pkginfo"                        "$upkg_name/pkginfo@$upkg_ver"
     _link "$upkg_name/pkginfo@$upkg_ver"    "$upkg_name/pkginfo@latest"
     _link "$revision"                       "$upkg_name/$1@$upkg_ver"
     _link "$upkg_name/$1@$upkg_ver"         "$upkg_name/$1@latest"
     _link "$upkg_name/$1@latest"            "$1@latest"
+
+    # v3/manifest: name pkgname sha
+    touch cmdlets.manifest
+    sed "\#^$1#d" -i cmdlets.manifest
+    echo "$1 $pkgname $sha" >> cmdlets.manifest
 
     popd
 }
@@ -916,6 +921,8 @@ build() {
 
     ulogi "Build" "$* (${deps[*]})"
 
+    CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh menifest &>/dev/null || true
+
     # pull dependencies
     local libs=()
     if [ "$CL_FORCE" -ne 0 ]; then
@@ -1018,6 +1025,11 @@ fetch() {
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
     _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
+}
+
+arch() {
+    _init >/dev/null 2>&1
+    basename "$PREFIX"
 }
 
 if [[ "$0" =~ ulib.sh$ ]]; then
