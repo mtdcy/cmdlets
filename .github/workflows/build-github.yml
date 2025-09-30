@@ -29,9 +29,9 @@ jobs:
           # for aarch64-linux-gnu
           - ubuntu-22.04-arm
           # for arm64-apple-darwin
-          - macos-14
+          - macos-15
           # for x86_64-apple-darwin
-          - macos-13
+          - macos-15-intel
 
     steps:
       - name: Checkout
