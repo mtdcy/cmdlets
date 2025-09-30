@@ -321,7 +321,7 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
         install)    # install cmdlets
             for x in "${@:2}"; do
                 cmdlet "$x"
-                info "Link $x => $0"
+                info "Link $x => $0\n"
                 ln -sf "$_name" "$WORKDIR/$x"
             done
             ;;
@@ -353,7 +353,7 @@ else
     # exec cmdlet
     cmdlet="$PREBUILTS/$_name"
     [ -x "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
-    [ -x "$cmdlet" ] || error "no cmdlet $_name found."
+    [ -x "$cmdlet" ] || error "no cmdlet $_name found.\n"
 
     exec "$cmdlet" "$@"
 fi
