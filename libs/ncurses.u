@@ -56,37 +56,43 @@ upkg_static() {
     cp include/curses*.h include/ncursesw.h &&
 
     # install libraries
-    library libncursesw:libncurses:libcurses \
-            include         include/ncurses*.h \
-                            include/curses*.h \
-                            include/term.h \
-                            include/unctrl.h \
-            lib             lib/libncursesw.a \
-            lib/pkgconfig   misc/ncursesw.pc \
+    library libncursesw:libncurses:libcurses     \
+            include         include/ncurses*.h   \
+                            include/curses*.h    \
+                            include/term.h       \
+                            include/termcap.h    \
+                            include/eti.h        \
+                            include/unctrl.h     \
+                            include/term_entry.h \
+            lib             lib/libncursesw.a    \
+            lib/pkgconfig   misc/ncursesw.pc     \
             &&
 
-    library libncurses++w \
-            include         c++/curses*.h \
-            lib             lib/libncurses++w.a \
-            lib/pkgconfig   misc/ncurses++w.pc \
+    library libncurses++w                        \
+            include         c++/curses*.h        \
+                            c++/etip.h           \
+                            c++/cursslk.h        \
+            lib             lib/libncurses++w.a  \
+            lib/pkgconfig   misc/ncurses++w.pc   \
             &&
 
-    library libformw:libform \
-            include         include/form.h \
-            lib             lib/libform*.a \
-            lib/pkgconfig   misc/form*.pc \
+    library libformw:libform                     \
+            include         include/form.h       \
+            lib             lib/libform*.a       \
+            lib/pkgconfig   misc/form*.pc        \
             &&
 
-    library libpanelw:libpanel \
-            include         include/panel.h \
-            lib             lib/libpanel*.a \
-            lib/pkgconfig   misc/panel*.pc \
+    library libpanelw:libpanel                   \
+            include         include/panel.h      \
+            lib             lib/libpanel*.a      \
+            lib/pkgconfig   misc/panel*.pc       \
             &&
 
-    library libmenuw:libmenu \
-            include         include/menu.h \
-            lib             lib/libmenu*.a \
-            lib/pkgconfig   misc/menu*.pc \
+    library libmenuw:libmenu                     \
+            include         include/menu.h       \
+                            menu/eti.h           \
+            lib             lib/libmenu*.a       \
+            lib/pkgconfig   misc/menu*.pc        \
             &&
 
     cmdlet  progs/clear &&
@@ -95,6 +101,8 @@ upkg_static() {
     cmdlet  progs/tset &&
     cmdlet  progs/tic &&
     cmdlet  progs/toe &&
+
+    make install
 
     # verify
     check tput
