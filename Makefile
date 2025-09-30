@@ -111,13 +111,14 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  ccache cargo golang
+				  ccache cargo golang-go
 
 prepare-host-homebrew:
 	brew update 
 	brew install -q $(BREW_PACKAGES)
 
 prepare-host-debian:
+	sudo add-apt-repository -y ppa:longsleep/golang-backports
 	sudo apt-get update -q
 	sudo apt-get install -q -y $(DEB_PACKAGES)
 
