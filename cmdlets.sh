@@ -324,7 +324,7 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
         install)    # install cmdlets
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
-                cmdlet "$bin"
+                cmdlet "$bin" || ret=$?
 
                 bin="$(basename "$bin")"
                 info "-- Link $bin => $_name\n"
@@ -344,23 +344,24 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
-                cmdlet "$x"
+                cmdlet "$x" || ret=$?
             done
             ;;
         library)    # fetch lib files
             for x in "${@:2}"; do
-                library "$x"
+                library "$x" || ret=$?
             done
             ;;
         package)    # fetch package files
             for x in "${@:2}"; do
-                package "$x"
+                package "$x" || ret=$?
             done
             ;;
         help|*)
             usage
             ;;
     esac
+    exit $ret
 else
     # preapre cmdlet
     cmdlet="$PREBUILTS/$_name"
