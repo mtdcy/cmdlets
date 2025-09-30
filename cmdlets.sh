@@ -224,7 +224,7 @@ package() {
     pkginfo="$(mktemp)" && trap "rm -f $pkginfo" EXIT
 
     # cmdlet v3/manifest
-    IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
+    IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
 
     if test -n "${parts[*]}"; then
         info3 "Fetch package $1 (${parts[*]})\n"
