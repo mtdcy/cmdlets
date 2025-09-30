@@ -29,7 +29,7 @@ if which brew; then
     export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
 fi
 
-if test -n "$1"; then
+if test -n "$*"; then
     IFS=', ' read -r -a cmdlets <<< "$@"
 else
     while read -r line; do
@@ -52,16 +52,21 @@ ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
-if [ "${#cmdlets[@]}" -gt 1 ]; then
-    IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _sort_by_depends "${cmdlets[@]}")"
+if [[ "${cmdlets[*]}" =~ =force ]]; then
+    # force rebuild
+    for cmdlet in "${cmdlets[@]}"; do
+        IFS='=' read -r cmdlet force <<< "$cmdlet"
+        [ -z "$force" ] || export CL_FORCE=1
+        bash ulib.sh build "$cmdlet" || ret=$?
+        unset CL_FORCE
+    done
+else
+    # normal build
+    if [ "${#cmdlets[@]}" -gt 1 ]; then
+        IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _sort_by_depends "${cmdlets[@]}")"
+    fi
+    bash ulib.sh build "${cmdlets[@]}" || ret=$?
 fi
-
-for cmdlet in "${cmdlets[@]}"; do
-    IFS='=' read -r cmdlet force <<< "$cmdlet"
-    [ -z "$force" ] || export CL_FORCE=1
-    bash ulib.sh build "$cmdlet" || ret=$?
-    unset CL_FORCE
-done
 
 ## find out dependents
 #dependents=()
@@ -103,13 +108,13 @@ if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then
     [ -f .ssh_token ] && ssh_opt+=( -i .ssh_token ) || true
 
     info "*** rsync artifacts to $CL_ARTIFACTS ***"
-    rsync -avc -e "ssh ${ssh_opt[*]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
+    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
 
     info "*** rsync logs to $CL_ARTIFACTS ***"
-    rsync -avc -e "ssh ${ssh_opt[*]}" logs/ "$remote/cmdlets/logs/" || ret=$?
+    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" logs/ "$remote/cmdlets/logs/" || ret=$?
 
     info "*** rsync packages to $CL_ARTIFACTS ***"
-    rsync -avc -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
+    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
 fi
 
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
