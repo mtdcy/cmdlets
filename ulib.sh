@@ -501,9 +501,13 @@ _pack() {
 
     mkdir -pv "$upkg_name"
 
-    local pkgname="$upkg_name/$1@$upkg_ver.tar.gz"
+    # name contains version code?
+    local name version
+    IFS='@' read -r name version <<< "$1"
+
+    local pkgname="$upkg_name/$name@$upkg_ver.tar.gz"
+    local pkgvern="$upkg_name/$name@$upkg_ver"
     local pkginfo="$upkg_name/pkginfo@$upkg_ver"
-    local revision="$upkg_name/$1@$upkg_ver"
 
     local files
 
@@ -512,23 +516,26 @@ _pack() {
 
     tar -czvf "$pkgname" "${files[@]}"
 
-    # pkginfo is shared by library() and cmdlet()
+    # pkginfo is shared by library() and cmdlet(), full versioned
     touch "$pkginfo" 
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgname" >> "$pkginfo"
-    IFS=' *' read -r sha name <<< "$(sha256sum "$pkgname")"
-    echo "$sha $name" >> "$pkginfo"
+    IFS=' *' read -r sha _ <<< "$(sha256sum "$pkgname")"
+    echo "$sha $pkgname" >> "$pkginfo"
 
-    # create a revision file
-    grep -Fw "$1" "$pkginfo" > "$revision"
+    # create a version file
+    grep -Fw "$pkgname" "$pkginfo" > "$pkgvern"
 
     # v2/pkginfo
-    _link "$pkginfo"                        "$upkg_name/pkginfo@$upkg_ver"
-    _link "$upkg_name/pkginfo@$upkg_ver"    "$upkg_name/pkginfo@latest"
-    _link "$revision"                       "$upkg_name/$1@$upkg_ver"
-    _link "$upkg_name/$1@$upkg_ver"         "$upkg_name/$1@latest"
-    _link "$upkg_name/$1@latest"            "$1@latest"
+    _link "$pkginfo" "$upkg_name/pkginfo@latest"
+    _link "$pkgvern" "$upkg_name/$name@latest"
+
+    if test -n "$version"; then
+        _link "$upkg_name/$name@latest" "$name@$version"
+    else
+        _link "$upkg_name/$name@latest" "$name@latest"
+    fi
 
     # v3/manifest: name pkgname sha
     touch cmdlets.manifest
@@ -880,6 +887,9 @@ compile() {(
     echo -e "**** start build $upkg_name ****\n$(date)\n" > "$(_logfile)"
 
     ulogi ".Path" "$PWD"
+
+    # clear manifest
+    sed "\#\ $upkg_name/#d" -i "$PREFIX/cmdlets.manifest"
 
     # build library
     _prepare && upkg_static || {

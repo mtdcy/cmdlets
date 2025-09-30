@@ -44,6 +44,7 @@ upkg_args=(
     --enable-select
     #--enalbe-prompt-string-decoding -> unrecognized
 
+    --with-curses
     --enable-readline
     --without-installed-readline
     --with-included-gettext
@@ -54,6 +55,9 @@ upkg_args=(
     # https://github.com/robxu9/bash-static/blob/master/build.sh
     --without-bash-malloc
 )
+
+# fix 'error: cannot guess build type'
+is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 # old bash written in c < C99
 # suppressed warnings

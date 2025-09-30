@@ -11,6 +11,7 @@ upkg_dep=(ncurses libiconv)
 
 # this formula is used to compatible check, don't enable any extra features
 upkg_args=(
+    --with-curses
     --enable-readline
     --without-installed-readline
     --with-included-gettext
@@ -21,6 +22,9 @@ upkg_args=(
     # https://github.com/robxu9/bash-static/blob/master/build.sh
     --without-bash-malloc
 )
+
+# fix 'error: cannot guess build type'
+is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 # old bash written in c < C99
 # suppressed warnings
@@ -52,9 +56,9 @@ upkg_static() {
     make &&
 
     # install versioned bash
-    cmdlet bash bash@$upkg_ver bash@${upkg_ver%.*} &&
+    cmdlet bash bash@${upkg_ver%.*} bash@${upkg_ver%%.*} &&
 
-    check bash@$upkg_ver --version
+    check bash@3.2 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
