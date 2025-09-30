@@ -213,6 +213,7 @@ _fix_pc() {
 library() {
     # cmdlet v3/manifest
     if _v3 "$1" || _v2 "$1"; then
+        touch "$PREBUILTS/.$1.d" # mark as ready
         _fix_pc
     else
         error "<< Fetch $1/$ARCH failed\n"
@@ -235,6 +236,9 @@ package() {
                 return 1
             }
         done
+
+        _fix_pc
+        touch "$PREBUILTS/.$1.d" # mark as ready
         return 0
     fi
 
@@ -254,6 +258,7 @@ package() {
                 return 1
             }
         done < "$PREBUILTS/$pkginfo"
+        touch "$PREBUILTS/.$1.d" # mark as ready
     else
         error "<< Fetch package $1/$ARCH failed\n"
         return 1

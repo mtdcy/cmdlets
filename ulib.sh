@@ -888,8 +888,8 @@ compile() {(
         return 1
     }
 
-    # record @ work dir
-    touch "$WORKDIR/.$upkg_name"
+    # update tracking file
+    touch "$PREFIX/.$upkg_name.d"
 
     ulogi "<<<<<" "$upkg_name@$upkg_ver"
 )}
@@ -908,9 +908,9 @@ _check_deps() {
             #1. dep not installed
             #2. dep.u been updated
             #3. ulib.sh been updated (CL_STRICT)
-            if [ ! -e "$WORKDIR/.$x" ] || [ "$ROOT/libs/$x.u" -nt "$WORKDIR/.$x" ]; then
+            if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.u" -nt "$PREFIX/.$x.d" ]; then
                 deps+=( "$x" )
-            elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$WORKDIR/.$x" ]; then
+            elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$PREFIX/.$x.d" ]; then
                 deps+=( "$x" )
             fi
         done
@@ -935,8 +935,9 @@ build() {
     if [ "$CL_FORCE" -ne 0 ]; then
         libs=( "${deps[@]}" )
     else
+        CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
         for dep in "${deps[@]}"; do
-            CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "$dep" && touch "$WORKDIR/.$dep" || libs+=( "$dep" )
+            [ -e "$PREFIX/.$dep.d" ] || libs+=( "$dep" )
         done
     fi
 
