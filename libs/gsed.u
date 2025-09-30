@@ -38,7 +38,7 @@ upkg_static() {
     # install as gsed and symlink to sed
     cmdlet sed/sed gsed sed &&
 
-    check sed --version
+    check gsed --version
 }
 
 
