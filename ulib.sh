@@ -321,6 +321,16 @@ dynamicalize() {
     export CFLAGS CXXFLAGS LDFLAGS
 }
 
+dynamically_if_glibc() {
+    is_glibc || return 0
+
+    CFLAGS="${CFLAGS//--static/}"
+    CXXFLAGS="${CXXFLAGS//--static/}"
+    LDFLAGS="${LDFLAGS//-static/}"
+
+    export CFLAGS CXXFLAGS LDFLAGS
+}
+
 deparallelize() {
     export CL_NJOBS=1
 }

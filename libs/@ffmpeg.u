@@ -21,6 +21,8 @@ upkg_dep=(
     freetype fribidi harfbuzz    # for drawtext, TODO: fontconfig
 )
 
+dynamically_if_glibc
+
 upkg_args=(
     --enable-pic
     --enable-pthreads
