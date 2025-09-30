@@ -7,7 +7,7 @@ export LANG="${LANG:-en_US.UTF-8}"
 
 VERSION=0.3
 
-WORKDIR="$(dirname "$0")"
+WORKDIR="$(dirname "$0" | xargs realpath)"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-$WORKDIR/prebuilts}"
 MANIFEST="$PREBUILTS/cmdlets.manifest"
@@ -97,7 +97,7 @@ _curl() (
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
         info "== $source\n"
         curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo "=> $(realpath "$dest")"
+        echo "=> $dest"
         curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
     done
     return 1
@@ -109,7 +109,7 @@ _flat() (
     
     tar -C "$PREBUILTS" -xvf "$PREBUILTS/$1" |
     while read -r line; do
-        echo -en "=> $(realpath "$PREBUILTS")/$line\n"
+        echo -en "=> $PREBUILTS/$line\n"
     done
 )
 
@@ -141,11 +141,13 @@ _pkginfo() {
 
 # cmdlet v1: cmdlet
 _v1() {
-    _exists "bin/$1" || return 1
+    local binfile="bin/$1"
 
-    info1 "bin/$1\n"
+    _exists "$binfile" || return 1
 
-    _curl "bin/$1" "$PREBUILTS/bin/$1" || return 1
+    info1 ">> Fetch $binfile\n"
+
+    _curl "$binfile" || return 1
     chmod a+x "$PREBUILTS/bin/$1"
 }
 
@@ -320,9 +322,19 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
-                cmdlet "$x"
-                info "Link $x => $0\n"
-                ln -sf "$_name" "$WORKDIR/$x"
+                IFS=':' read -r bin alias <<< "$x"
+                cmdlet "$bin"
+                info "-- Link $bin => $_name\n"
+                ln -sf "$_name" "$WORKDIR/$bin"
+
+                # create alias links
+                if [ -n "$alias" ]; then
+                    IFS=':' read -r -a alias <<< "$alias"
+                    for a in "${alias[@]}"; do
+                        info "-- Link $a => $bin\n"
+                        ln -sf "$bin" "$WORKDIR/$a"
+                    done
+                fi
             done
             ;;
         fetch)      # fetch cmdlets
