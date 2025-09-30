@@ -22,6 +22,9 @@ REPO=(
     # cmdlets is mainly for private use, so put the public repo at last.
 )
 
+# remove duplicated repo url
+IFS=' ' read -r -a REPO <<< "$(printf "%s\n" "${REPO[@]}" | sort -u | xargs)"
+
 BASE=(
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
