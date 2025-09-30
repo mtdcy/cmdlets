@@ -109,7 +109,7 @@ _flat() (
     
     tar -C "$PREBUILTS" -xvf "$PREBUILTS/$1" |
     while read -r line; do
-        echo -en "=> $(realpath "$PREBUILTS/$line")\n"
+        echo -en "=> $(realpath "$PREBUILTS")/$line\n"
     done
 )
 
@@ -347,13 +347,16 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
 else
     # preapre cmdlet
     cmdlet="$PREBUILTS/$_name"
-    [ -x "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
-    [ -x "$cmdlet" ] || cmdlet "$_name"
+    [ -f "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
+    [ -f "$cmdlet" ] || cmdlet "$_name"
 
     # exec cmdlet
     cmdlet="$PREBUILTS/$_name"
-    [ -x "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
-    [ -x "$cmdlet" ] || error "no cmdlet $_name found.\n"
+    [ -f "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
+    [ -f "$cmdlet" ] || error "no cmdlet $_name found.\n"
+
+    # fix permission
+    [ -x "$cmdlet" ] || chmod a+x "$cmdlet"
 
     exec "$cmdlet" "$@"
 fi
