@@ -92,11 +92,9 @@ done
 #    bash ulib.sh build "${dependents[@]}" || ret=$?
 #fi
 
-if [ -n "$CL_ARTIFACTS" ]; then
-    if [ -n "$CL_SSH_TOKEN" ]; then
-        echo "$CL_SSH_TOKEN" > .ssh_token
-        chmod 0600 .ssh_token
-    fi
+if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then
+    echo "$CL_ARTIFACTS_TOKEN" > .ssh_token
+    chmod 0600 .ssh_token
 
     IFS='@:' read -r user host port dest <<< "$CL_ARTIFACTS"
 
