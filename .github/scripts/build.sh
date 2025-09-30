@@ -52,6 +52,10 @@ ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
+if [ "${#cmdlets[@]}" -gt 1 ]; then
+    IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _sort_by_depends "${cmdlets[@]}")"
+fi
+
 for cmdlet in "${cmdlets[@]}"; do
     IFS='=' read -r cmdlet force <<< "$cmdlet"
     [ -z "$force" ] || export CL_FORCE=1
