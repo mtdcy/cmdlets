@@ -71,8 +71,6 @@ _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
 }
 
-# 2>&1 | _capture
-# >= Bash 4.0: |& _capture
 _capture() {
     if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
@@ -559,7 +557,7 @@ cmdlet() {
         links+=( "$PREFIX/bin/$x" )
     done
 
-    echocmd _pack "$(basename "$target")" "$target" "${links[@]}" |& _capture
+    echocmd _pack "$(basename "$target")" "$target" "${links[@]}" 2>&1 | _capture
 }
 
 # _fix_pc path/to/xxx.pc
