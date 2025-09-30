@@ -25,7 +25,7 @@ is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
 is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
 
-CURL_OPTS=( -L --fail --connect-timeout 3 --progress-bar --no-progress-meter )
+CURL_OPTS=( -L --fail --progress-bar --no-progress-meter )
 
 _curl() {
     local source="$1"
