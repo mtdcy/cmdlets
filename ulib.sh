@@ -299,7 +299,12 @@ _init() {
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
-    export GO111MODULE="auto"
+    export GO111MODULE=on # go modules on
+    export CGO_CFLAGS="$CFLAGS"
+    export CGO_CXXFLAGS="$CXXFLAGS"
+    export CGO_CPPFLAGS="$CPPFLAGS"
+    export CGO_LDFLAGS="$LDFLAGS"
+    unset CGO_ENABLED # => go()
     [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 
     # cargo/rust
@@ -471,7 +476,6 @@ EOF
 go() {
     local cmdline=("$GO")
 
-    export CGO_ENABLED=0 # necessary for build static
     case "$1" in
         build)
             # fix 'invalid go version'
@@ -497,7 +501,8 @@ go() {
             ;;
     esac
 
-    ulogcmd "${cmdline[@]}"
+    # CGO_ENABLED=0 is necessary for build static binaries
+    ulogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}"
 }
 
 # link source target 
