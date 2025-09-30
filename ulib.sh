@@ -463,8 +463,10 @@ go() {
             if [ -f go.mod ]; then
                 local m n
                 IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
-                "$GO" mod edit -go="$m.$n"
-                "$GO" mod tidy
+                sed "s/^go [0-9.]\+$/go $m.$n/" -i go.mod
+                # go mod edit won't work here
+                #ulogcmd "$GO" mod edit -go="$m.$n"
+                ulogcmd "$GO" mod tidy
             fi
 
             cmdline+=(build -x)
