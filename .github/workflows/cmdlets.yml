@@ -18,22 +18,31 @@ jobs:
       - name: Check cmdlets.sh
         shell: bash
         run: |
-          set -x
+          set -ex
 
           if curl --fail --connect-timeout 3 -o /dev/null -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
-            bash -x -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
+            bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
           else
-            bash -x -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
+            bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
           fi
-
-          # cmdlet: xz
-          cmdlets.sh install xz
-          xz --version
 
           # library: libz.a
           cmdlets.sh library libz
           find . -name "prebuilts/lib/libz.a"
           find . -name "prebuilts/include/zlib.h"
+
+          # cmdlet: xz
+          cmdlets.sh install xz
+          xz --version
+
+          # v3:
+          pushd $(which cmdlets.sh | xargs dirname)
+
+          for cmdlet in bash@3.2 bash@3 bash32/bash@3.2 bash32/bash@3; do
+            cmdlets.sh install "$cmdlet:bash"
+            ./bash --version | grep -w "3.2"
+            rm -rf bash* prebuilts/
+          done
 
       - name: Notify on failure
         if: failure()

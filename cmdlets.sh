@@ -176,11 +176,12 @@ _v3() {
     local pkgfile
 
     # v3: cmdlet pkgname/pkgfile.tar.gz sha
-    if [ -z "$2" ]; then
-        IFS=' ' read -r _ pkgfile _ <<< "$(grep "^$1 "    "$MANIFEST" | tail -n1)"
-    else
-        IFS=' ' read -r _ pkgfile _ <<< "$(grep "^$1 $2/" "$MANIFEST" | tail -n1)"
-    fi
+    IFS=' ' read -r _ pkgfile _ < <({
+        [ -n "$2" ] &&
+        grep "^$1 $2/"  "$MANIFEST" ||
+        grep "^$1 "     "$MANIFEST" ||
+        grep " $1\|/$1" "$MANIFEST"
+    } | tail -n 1)
 
     [ -n "$pkgfile" ] || return 1
 
@@ -194,7 +195,7 @@ _v3() {
 
 # fetch cmdlet
 cmdlet() {
-    if _v3 "$1" || _v2 "$1" || _v1 "$1"; then
+    if _v3 "$@" || _v2 "$@" || _v1 "$@"; then
         true
     # fallback to linux-musl
     elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
@@ -214,7 +215,7 @@ _fix_pc() {
 # fetch library from server
 library() {
     # cmdlet v3/manifest
-    if _v3 "$1" || _v2 "$1"; then
+    if _v3 "$@" || _v2 "$@"; then
         touch "$PREBUILTS/.$1.d" # mark as ready
         _fix_pc
     else
@@ -324,6 +325,8 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 cmdlet "$bin"
+
+                bin="$(basename "$bin")"
                 info "-- Link $bin => $_name\n"
                 ln -sf "$_name" "$WORKDIR/$bin"
 
@@ -332,6 +335,8 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
                     IFS=':' read -r -a alias <<< "$alias"
                     for a in "${alias[@]}"; do
                         info "-- Link $a => $bin\n"
+                        # double links
+                        ln -sf "$bin" "$PREBUILTS/bin/$a"
                         ln -sf "$bin" "$WORKDIR/$a"
                     done
                 fi
