@@ -461,6 +461,14 @@ go() {
     export CGO_ENABLED=0 # necessary for build static
     case "$1" in
         build)
+            # fix 'invalid go version'
+            if [ -f go.mod ]; then
+                local m n
+                IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
+                "$GO" mod edit -go="$m.$n"
+                "$GO" mod tidy
+            fi
+
             cmdline+=(build -x)
 
             #1. static without dwarf and stripped
