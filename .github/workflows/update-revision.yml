@@ -14,7 +14,7 @@ on:
   workflow_dispatch: null
 
 jobs:
-  build-with-docker:
+  updater:
     runs-on: ubuntu-latest
     container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:ubuntu-latest
     steps:
@@ -33,7 +33,6 @@ jobs:
           git config --global --add safe.directory "$(pwd -P)"
 
           export CL_NJOBS=1
-          export CL_MIRRORS=${{ vars.MIRRORS }}
 
           commits=/tmp/commits-$$.txt
           for ulib in libs/*; do
