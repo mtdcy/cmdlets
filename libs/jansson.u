@@ -4,7 +4,6 @@
 upkg_name=jansson
 upkg_lic="MIT"
 upkg_ver=2.14
-upkg_rev=0
 upkg_url=https://github.com/akheron/jansson/releases/download/v$upkg_ver/jansson-$upkg_ver.tar.gz
 upkg_sha=c739578bf6b764aa0752db9a2fdadcfe921c78f1228c7ec0bb47fa804c55d17b
 

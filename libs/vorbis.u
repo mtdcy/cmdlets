@@ -4,7 +4,6 @@
 
 upkg_lic="BSD"
 upkg_ver=1.3.7
-upkg_rev=1
 upkg_url=https://downloads.xiph.org/releases/vorbis/libvorbis-$upkg_ver.tar.xz
 upkg_sha=b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b
 upkg_dep=(ogg)

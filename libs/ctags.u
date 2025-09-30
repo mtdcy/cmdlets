@@ -4,7 +4,6 @@
 upkg_name=ctags
 upkg_lic="GPL-2.0-only"
 upkg_ver=p6.1.20250413.0
-upkg_rev=0
 upkg_url=https://github.com/universal-ctags/ctags/archive/refs/tags/$upkg_ver.tar.gz
 upkg_sha=973652e4dce7f6cd6afa207e9d378e408499b9a1a7a8286c660d1750fd1046ee
 upkg_dep=(pcre2 libyaml jansson libxml2)

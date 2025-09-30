@@ -3,7 +3,6 @@
 # shellcheck disable=SC2034
 upkg_lic="MIT"
 upkg_ver=2.13.9
-upkg_rev=0
 upkg_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${upkg_ver}.tar.xz
 upkg_sha=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
 upkg_dep=(zlib libiconv readline)

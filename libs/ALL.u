@@ -4,7 +4,6 @@
 upkg_type=PHONY
 
 upkg_ver="$(cat VERSION)"
-upkg_rev=0
 
 # only cmdlets here, no libraries
 upkg_dep=(

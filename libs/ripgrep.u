@@ -4,7 +4,6 @@
 upkg_name=ripgrep
 upkg_lic="Unlicensed"
 upkg_ver=14.1.1
-upkg_rev=1
 upkg_url=https://github.com/BurntSushi/ripgrep/archive/refs/tags/$upkg_ver.tar.gz
 upkg_zip=$upkg_name-$(basename "$upkg_url")
 upkg_sha=4dad02a2f9c8c3c8d89434e47337aa654cb0e2aa50e806589132f186bf5c2b66

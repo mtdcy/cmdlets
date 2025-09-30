@@ -5,7 +5,6 @@
 upkg_name=ncurses
 upkg_lic='MIT'
 upkg_ver=6.5
-upkg_rev=3
 upkg_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$upkg_ver.tar.gz
 #https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$upkg_ver.tar.gz
 upkg_sha=136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6

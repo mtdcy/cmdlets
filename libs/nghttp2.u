@@ -3,7 +3,6 @@
 upkg_desc="HTTP/2 C Library"
 upkg_lic="MIT"
 upkg_ver=1.65.0
-upkg_rev=0
 upkg_url=https://github.com/nghttp2/nghttp2/releases/download/v$upkg_ver/nghttp2-$upkg_ver.tar.gz
 upkg_sha=8ca4f2a77ba7aac20aca3e3517a2c96cfcf7c6b064ab7d4a0809e7e4e9eb9914
 upkg_dep=()

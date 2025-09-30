@@ -5,7 +5,6 @@ upkg_desc="Extraction utility for .zip compressed archives"
 
 upkg_lic='Info-ZIP'
 upkg_ver=6.0
-upkg_rev=1
 upkg_url=(
     https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%20$upkg_ver/unzip${upkg_ver//\./}.tar.gz
     # patches from ubuntu: https://packages.ubuntu.com/kinetic/unzip

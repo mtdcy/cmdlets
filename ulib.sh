@@ -473,7 +473,7 @@ go() {
 
             #1. static without dwarf and stripped
             #2. add version info
-            cmdline+=(-ldflags="'-w -s -extldflags=-static -X main.version=$upkg_ver-${upkg_rev:-0}'")
+            cmdline+=(-ldflags="'-w -s -extldflags=-static -X main.version=$upkg_ver'")
 
             cmdline+=("${@:2}")
             ;;
@@ -501,9 +501,9 @@ _pack() {
 
     mkdir -pv "$upkg_name"
 
-    local pkgname="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}.tar.gz"
-    local pkginfo="$upkg_name/pkginfo@$upkg_ver-${upkg_rev:-0}"
-    local revision="$upkg_name/$1@$upkg_ver-${upkg_rev:-0}"
+    local pkgname="$upkg_name/$1@$upkg_ver.tar.gz"
+    local pkginfo="$upkg_name/pkginfo@$upkg_ver"
+    local revision="$upkg_name/$1@$upkg_ver"
 
     local files
 
@@ -813,8 +813,7 @@ _prepare() {
 
 # _load library
 _load() {
-    unset upkg_name upkg_lic
-    unset upkg_ver upkg_rev
+    unset upkg_name upkg_lic upkg_ver 
     unset upkg_url upkg_sha upkg_zip upkg_zip_strip
     unset upkg_dep upkg_args upkg_type
     unset upkg_patches
