@@ -18,6 +18,9 @@ upkg_args=(
     --enable-static
     )
 
+# fix 'error: cannot guess build type'
+is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+
 upkg_static() {
     configure && 
 

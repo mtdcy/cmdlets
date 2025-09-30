@@ -23,7 +23,8 @@ upkg_args=(
 is_arm64 && upkg_args+=( --disable-asm )
 
 upkg_static() {
-    configure &&
+    # old versions use yasm, but newer version use nasm
+    AS="$NASM" configure &&
 
     make &&
 

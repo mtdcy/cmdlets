@@ -292,6 +292,8 @@ _init() {
         # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
         export CMAKE_C_COMPILER_LAUNCHER=ccache
         export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+    else
+        export CCACHE_DISABLE=1
     fi
 
     # setup go envs: don't modify GOPATH here
@@ -415,8 +417,11 @@ meson() {
         -Dbuildtype=release                 \
         -Ddefault_library=static            \
         -Dpkg_config_path=$PKG_CONFIG_PATH  \
-        -Dprefer_static=true                \
         "
+
+    ## meson >= 0.37.0
+    #IFS='.' read -r _ ver _ < <($MESON --version)
+    #[ "$ver" -lt 37 ] || cmdline+=" -Dprefer_static=true "
 
     # override default options
     cmdline+=" $(_filter_options "$@")"

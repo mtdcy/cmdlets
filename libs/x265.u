@@ -8,6 +8,14 @@ upkg_sha=a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29
 
 HIGH_BIT_DEPTH=0
 
+is_darwin || arm64_args=(
+    -DENABLE_NEON=ON 
+    -DENABLE_NEON_DOTPROD=OFF
+    -DENABLE_NEON_I8MM=OFF
+    -DENABLE_SVE=OFF
+    -DENABLE_SVE2=OFF
+)
+
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
 upkg_static() {
@@ -20,6 +28,8 @@ upkg_static() {
         # https://bitbucket.org/multicoreware/x265_git/issues/559
         -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
     )
+
+    is_arm64 && main_args+=( "${arm64_args[@]}" )
 
     # build high bits always as static
     mkdir -pv {8bit,10bit,12bit}
@@ -39,6 +49,8 @@ upkg_static() {
             # https://bitbucket.org/multicoreware/x265_git/issues/559
             -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
         )
+    
+        is_arm64 && high_args+=( "${arm64_args[@]}" )
 
         # 12 bit
         (
