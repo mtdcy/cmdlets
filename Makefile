@@ -4,8 +4,16 @@ all: shell
 
 .PHONY: all
 
+# DEFAULT ENVs
+
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
-CL_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
+#CL_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
+CL_NJOBS 	?= $(shell nproc)
+CL_MIRRORS 	?= https://mirrors.mtdcy.top
+CL_LOGGING 	?= tty
+CL_CCACHE 	?= 1
+
+MAKEFLAGS 	+= --always-make
 
 ##############################################################################
 define TEMPLATE
@@ -19,16 +27,8 @@ export REMOTE_WORKDIR=$${REMOTE_WORKDIR:-cmdlets}
 export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-22.04}
 export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-$$(uname -m | grep -q "arm64\|aarch64" && echo "linux/arm64" || echo "linux/amd64")}
 
-# pass through envs
-export CL_STRICT=0
-export CL_MIRRORS=$${CL_MIRRORS:-http://mirrors.mtdcy.top}
-
 # misc
-export CL_LOGGING=tty
-export CL_NJOBS=$${CL_NJOBS:-}
-
-# ccache
-export CL_CCACHE=1
+export CL_MIRRORS=$${CL_MIRRORS:-https://mirrors.mtdcy.top}
 endef
 
 export TEMPLATE
@@ -128,8 +128,10 @@ else ifneq (,$(shell which brew))
 prepare-host: prepare-host-homebrew
 endif
 
+HOST_ENV := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v))))
+
 runc-host:
-	$(CMD)
+	$(HOST_ENV) $(CMD)
 
 ##############################################################################
 ifneq ($(DOCKER_IMAGE),)
