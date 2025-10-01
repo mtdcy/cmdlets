@@ -9,3 +9,4 @@ cmdlets.env
 .go
 ssh_id_rsa
 .copilot
+.ERR_MSG

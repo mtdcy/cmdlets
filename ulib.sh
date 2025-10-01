@@ -25,17 +25,6 @@ is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
 is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
 
-CURL_OPTS=( -sL --fail --progress-bar --no-progress-meter )
-
-# _curl source destination [options]
-_curl() {
-    local source="$1"
-    local dest="${2:-/dev/null}"
-
-    curl "${CURL_OPTS[@]}" "$source" -o /dev/null -I "${@:3}" || return 1
-    curl "${CURL_OPTS[@]}" "$source" -o "$dest" "${@:3}"
-}
-
 # ulog [error|info|warn] "leading" "message"
 _ulog() {
     local lvl date message
@@ -72,6 +61,21 @@ _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
 }
 
+# for subshell
+# write error message to .ERR_MSG on failure
+_on_failure() {
+    echo "$*" >> "$PREFIX/.ERR_MSG"
+    exit 1 # exit subshell
+}
+
+# for main shell
+_exit_on_failure() {
+    if test -s "$PREFIX/.ERR_MSG"; then
+        uloge "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
+        exit 1 # exit the program
+    fi
+}
+
 _capture() {
     if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
@@ -97,14 +101,33 @@ _capture() {
 }
 
 echocmd() {
-    echo "$*"
-    eval -- "$*"
-}
+    {
+        echo "$*"
+        eval -- "$*"
+    } >> "$(_logfile)" 2>&1
+} 
 
 # ulogcmd <command>
 ulogcmd() {
     ulogi "..Run" "$(tr -s ' ' <<< "$*")"
-    echocmd "$@" 2>&1 | _capture
+    echocmd "$@"
+}
+
+CURL="$(which curl)"
+CURL_OPTS=( -sL --fail --progress-bar --no-progress-meter )
+
+# _curl source destination [options]
+_curl() {
+    local source="$1"
+    local dest="${2:-/dev/null}"
+
+    echocmd "$CURL" "${CURL_OPTS[@]}" "$source" -o /dev/null -I "${@:3}" &&
+    echocmd "$CURL" "${CURL_OPTS[@]}" "$source" -o "$dest" -S "${@:3}"
+}
+
+# _curl_to_stdout source [options]
+_curl_stdout() {
+    "$CURL" "${CURL_OPTS[@]}" "$1" -S "${@:2}"
 }
 
 _filter_options() {
@@ -168,6 +191,8 @@ _init() {
     WORKDIR="$ROOT/out/$arch"
     mkdir -p "$WORKDIR"
 
+    true > "$PREFIX/.ERR_MSG" # create a zero sized file
+
     PATH="$PREFIX/bin:$PATH"
 
     export ROOT PREFIX WORKDIR PATH
@@ -211,8 +236,7 @@ _init() {
         p="$($which "$v" 2>/dev/null)"
 
         [ -n "$p" ] || {
-            uloge "....." "missing host tools $v, abort"
-            return 1
+            ulogw "....." "missing host tools $v, abort" >2
         }
 
         eval -- export "$k=$p"
@@ -508,6 +532,12 @@ go() {
     ulogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}"
 }
 
+# easy command for go project
+go_build() {
+    go clean || true
+    go build . 
+}
+
 # link source target 
 _link() {
     #echo "link: $1 => $2" >&2
@@ -517,6 +547,8 @@ _link() {
         ln -srf "$1" "$2"
     fi
 }
+
+TAR="$(which gtar 2>/dev/null || which tar)"
 
 # _pack name <file list>
 _pack() {
@@ -537,7 +569,7 @@ _pack() {
     # shellcheck disable=SC2001
     IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
 
-    tar -czvf "$pkgname" "${files[@]}"
+    "$TAR" -czvf "$pkgname" "${files[@]}"
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     touch "$pkginfo" 
@@ -602,7 +634,7 @@ cmdlet() {
         links+=( "$PREFIX/bin/$x" )
     done
 
-    echocmd _pack "$(basename "$target")" "$target" "${links[@]}" 2>&1 | _capture
+    echocmd _pack "$(basename "$target")" "$target" "${links[@]}"
 }
 
 # _fix_pc path/to/xxx.pc
@@ -688,7 +720,7 @@ library() {
         shift
     done
 
-    echocmd _pack "$libname" "${installed[@]}" 2>&1 | _capture
+    echocmd _pack "$libname" "${installed[@]}"
 }
 
 # perform visual check on cmdlet
@@ -749,12 +781,12 @@ _fetch() {
     if test -n "$CL_MIRRORS"; then
         mirror="$CL_MIRRORS/packages/$(basename "$zip")"
         ulogi ".CURL" "$mirror"
-        _curl "$mirror" "$zip" && return 0
+        echocmd _curl "$mirror" "$zip" && return 0
     fi
 
     #3. try original
     ulogi ".CURL" "$url"
-    _curl "$url" "$zip" && return 0
+    echocmd _curl "$url" "$zip" && return 0
 
     uloge ".CURL" "Failed curl $url."
     return 1
@@ -775,12 +807,12 @@ _unzip() {
   
     # match extensions
     case "$1" in
-        *.tar)                  cmd=( tar -xv )             ;;
-        *.tar.gz|*.tgz)         cmd=( tar -xv -z )          ;;
-        *.tar.bz2|*.tbz2)       cmd=( tar -xv -j )          ;;
-        *.tar.xz)               cmd=( tar -xv -J )          ;;
-        *.tar.lz)               cmd=( tar -xv --lzip )      ;;
-        *.tar.zst)              cmd=( tar -xv --zstd)       ;;
+        *.tar)                  cmd=( "$TAR" -xv )          ;;
+        *.tar.gz|*.tgz)         cmd=( "$TAR" -xv -z )       ;;
+        *.tar.bz2|*.tbz2)       cmd=( "$TAR" -xv -j )       ;;
+        *.tar.xz)               cmd=( "$TAR" -xv -J )       ;;
+        *.tar.lz)               cmd=( "$TAR" -xv --lzip )   ;;
+        *.tar.zst)              cmd=( "$TAR" -xv --zstd)    ;;
         *.rar)                  cmd=( unrar x )             ;;
         *.zip)                  cmd=( unzip -o )            ;;
         *.7z)                   cmd=( 7z x )                ;;
@@ -791,14 +823,14 @@ _unzip() {
     esac
 
     case "${cmd[0]}" in
-        tar)
+        "$TAR")
             # strip leading pathes
             # counting leading directories
             #local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
-            local skip="${2:-$(tar -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)}"
+            local skip="${2:-$("$TAR" -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)}"
             [ "$skip" -eq 1 ] || skip=0
     
-            if tar --version | grep -qFw "bsdtar"; then
+            if "$TAR" --version | grep -qFw "bsdtar"; then
                 cmd+=( --strip-components "$skip" )
             else
                 cmd+=( --strip-components="$skip" )
@@ -808,7 +840,7 @@ _unzip() {
             ;;
     esac
 
-    echocmd "${cmd[@]}" "$1" 2>&1 | CL_LOGGING=silent _capture
+    echocmd "${cmd[@]}" "$1" || return 1
 
     # post strip
     case "${cmd[0]}" in
@@ -845,7 +877,8 @@ _prepare() {
     for patch in "${upkg_patches[@]}"; do
         case "$patch" in
             http://|https://)
-                curl -sL "$patch" | patch -p1 -N
+                ulogi "..Run" "patch -p1 -N < $patch"
+                _curl_stdout "$patch" | patch -p1 -N
                 ;;
             *)
                 ulogcmd "patch -p1 -N < $patch"
@@ -862,6 +895,16 @@ _load() {
     unset upkg_patches
 
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
+
+    # default values:
+    [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
+    [ -z "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
+
+    [ "$upkg_type" = ".PHONY" ] && exit 0
+
+    # sanity checks: always exit program|subshell here
+    [ -n "$upkg_url" ] || exit 127
+    [ -n "$upkg_sha" ] || exit 127
 }
 
 _load_deps() {( _load "$1"; echo "${upkg_dep[@]}"; )}
@@ -871,6 +914,10 @@ _deps_get() {
     local list=()
 
     IFS=' ' read -r -a deps <<< "$(_load_deps "$1")"
+
+    [[ "${deps[*]}" == *"$1"* ]] && {
+        _on_failure "bad self-depends: $1 @ ${deps[*]}"
+    }
 
     for dep in "${deps[@]}"; do
         # already exists?
@@ -892,19 +939,8 @@ compile() {(
     # start subshell before source
     set -eo pipefail
 
-    _init
-
     ulogi ".Load" "$1"
-    _load "$1"
-
-    [ "$upkg_type" = "PHONY" ] && return
-
-    # check upkg_name
-    [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
-
-    # sanity check
-    [ -n "$upkg_url" ] || uloge "Error" "missing upkg_url" || return 1
-    [ -n "$upkg_sha" ] || uloge "Error" "missing upkg_sha" || return 2
+    _load "$1" || exit 1
 
     # clear
     find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
@@ -927,7 +963,7 @@ compile() {(
     # build library
     _prepare && upkg_static || {
         tail -v "$(_logfile)"
-        return 1
+        exit 127
     }
 
     # update tracking file
@@ -964,35 +1000,45 @@ _check_deps() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    _init || return $?
-    
+    ulogi "$*"
+
     IFS=' ' read -r -a deps <<< "$(_check_deps "$@")"
 
-    ulogi "Build" "$* (${deps[*]})"
+    _exit_on_failure
+
+    ulogi "dependencies: ${deps[*]}"
 
     CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh menifest &>/dev/null || true
 
     # pull dependencies
-    local libs=()
+    local targets=()
     if [ "$CL_FORCE" -ne 0 ]; then
-        libs=( "${deps[@]}" )
+        ulogi "-----" "Force rebuild dependencies"
+        targets=( "${deps[@]}" )
     else
         CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
+
         for dep in "${deps[@]}"; do
-            [ -e "$PREFIX/.$dep.d" ] || libs+=( "$dep" )
+            [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
         done
     fi
 
     # append targets
-    libs+=( "$@" )
+    targets+=( "$@" )
 
-    local i=0
-    for ulib in "${libs[@]}"; do
-        i=$((i + 1))
-        ulogi ">>>>>" "#$i/${#libs[@]} $ulib"
+    if [ "${#targets[@]}" -gt 1 ]; then
+        IFS=' ' read -r -a targets <<< "$(_sort_by_depends "${targets[@]}")"
+    fi
 
-        time compile "$ulib" || {
-            uloge "Error" "build $ulib failed"
+    _exit_on_failure
+
+    ulogi "Build" "${targets[*]}"
+
+    for i in "${!targets[@]}"; do
+        ulogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
+
+        time compile "${targets[i]}" || {
+            uloge "Error" "build ${targets[i]} failed"
             return 127
         }
     done
@@ -1025,8 +1071,6 @@ _sort_by_depends() {
 }
 
 search() {
-    _init || return $?
-
     ulogi "Search $PREFIX"
     for x in "$@"; do
         # binaries ?
@@ -1064,13 +1108,12 @@ search() {
 
 # load libname
 load() {
-    _init || return $?
     _load "$1"
 }
 
 # fetch libname
 fetch() {
-    load "$1"
+    _load "$1"
 
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
@@ -1078,9 +1121,15 @@ fetch() {
 }
 
 arch() {
-    _init >/dev/null 2>&1
     basename "$PREFIX"
 }
+
+# save log files to root/logs.tar.gz
+zip_logfiles() {
+    "$TAR" -C "${PREFIX/prebuilts/logs}" -cf logs.tar.gz .
+}
+
+_init || exit 110
 
 if [[ "$0" =~ ulib.sh$ ]]; then
     "$@"
