@@ -5,9 +5,9 @@
 
 # shellcheck disable=SC2034
 upkg_lic='Apache-2.0'
-upkg_ver=3.5.3
+upkg_ver=3.5.4
 upkg_url=https://www.openssl.org/source/openssl-$upkg_ver.tar.gz
-upkg_sha=c9489d2abcf943cdc8329a57092331c598a402938054dc3a22218aea8a8ec3bf
+upkg_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
 upkg_dep=()
 
 upkg_args=(
