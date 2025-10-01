@@ -80,7 +80,10 @@ else
 prepare: prepare-host
 endif
 
-.PHONY: clean distclean shell prepare runc
+mrproper:
+	rm -rf out prebuilts logs packages registry
+
+.PHONY: clean distclean shell prepare runc test mrproper
 
 ##############################################################################
 # host
