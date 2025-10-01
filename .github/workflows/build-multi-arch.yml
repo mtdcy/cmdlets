@@ -20,7 +20,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
-    container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:${{ matrix.builder }}
+    container: ghcr.io/${{ vars.REGISTRY_USER }}/builder:${{ matrix.builder }}
     strategy:
       matrix:
         runner:
