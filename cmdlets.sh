@@ -145,7 +145,7 @@ _v1() {
 
     _exists "$binfile" || return 1
 
-    info1 ">> Fetch $binfile\n"
+    info1 ">1 Fetch $binfile\n"
 
     _curl "$binfile" || return 1
     chmod a+x "$PREBUILTS/bin/$1"
@@ -157,7 +157,7 @@ _v2() {
 
     pkginfo=$(_revision "$1")
 
-    info2 ">> Fetch $1 > pkginfo\n"
+    info2 ">2 Fetch $1 > pkginfo\n"
 
     _curl "$pkginfo" || return 1
 
@@ -166,7 +166,7 @@ _v2() {
     # v2: sha pkgfile
     IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$PREBUILTS/$pkginfo")"
 
-    info2 ">> Fetch $1 > $pkgfile\n"
+    info2 ">2 Fetch $1 > $pkgfile\n"
 
     _flat "$pkgfile" || return 1
 }
@@ -185,7 +185,7 @@ _v3() {
 
     [ -n "$pkgfile" ] || return 1
 
-    info3 ">> Fetch $1 > $pkgfile\n"
+    info3 ">3 Fetch $1 > $pkgfile\n"
 
     # v3 git repo do not have file hierarchy
     _flat "$pkgfile" || 
@@ -232,7 +232,7 @@ package() {
     IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
 
     if test -n "${parts[*]}"; then
-        info3 "\n## package $1 > ${parts[*]}\n"
+        info3 "\n#3 package $1 > ${parts[*]}\n"
         for part in "${parts[@]}"; do 
             _v3 "$part" "$1" || {
                 error "<< fetch $part/$ARCH failed\n"
@@ -245,7 +245,7 @@ package() {
         return 0
     fi
 
-    info2 "\n## package $1\n"
+    info2 "\n#2 package $1\n"
 
     pkginfo="$(_pkginfo "$1")"
 
@@ -255,7 +255,7 @@ package() {
         while read -r pkgfile; do
             [ -n "$pkgfile" ] || continue
             IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
-            info2 ">> Fetch $1 > $pkgfile\n"
+            info2 ">2 Fetch $1 > $pkgfile\n"
             _flat "$pkgfile" || {
                 error "<< fetch $pkgfile/$ARCH failed\n"
                 return 1
@@ -307,6 +307,11 @@ update() {
 if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
     update
 elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
+    case "$1" in
+        update) update; exit 0 ;;
+        help)   usage;  exit 0 ;;
+    esac
+
     # pull manifest first
     info3 ">> Fetch manifest\n"
     _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
@@ -317,9 +322,6 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
     case "$1" in
         manifest)
             cat "$MANIFEST"
-            ;;
-        update)
-            update
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
@@ -357,7 +359,7 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
                 package "$x" || ret=$?
             done
             ;;
-        help|*)
+        *)
             usage
             ;;
     esac
