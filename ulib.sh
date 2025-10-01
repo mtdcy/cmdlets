@@ -316,6 +316,9 @@ _init() {
     elif is_msys; then
         export MSYS=winsymlinks:lnk
     fi
+
+    # cmdlets
+    [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
 dynamicalize() {
