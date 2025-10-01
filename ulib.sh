@@ -25,14 +25,15 @@ is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
 is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
 
-CURL_OPTS=( -L --fail --progress-bar --no-progress-meter )
+CURL_OPTS=( -sL --fail --progress-bar --no-progress-meter )
 
+# _curl source destination [options]
 _curl() {
     local source="$1"
     local dest="${2:-/dev/null}"
 
-    curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || return 1
-    curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest"
+    curl "${CURL_OPTS[@]}" "$source" -o /dev/null -I "${@:3}" || return 1
+    curl "${CURL_OPTS[@]}" "$source" -o "$dest" "${@:3}"
 }
 
 # ulog [error|info|warn] "leading" "message"
@@ -567,6 +568,17 @@ _pack() {
     popd
 }
 
+# find out which files are installed by `make install'
+inspect_install() {
+    find "$PREFIX" > "$upkg_name.pack.pre"
+
+    ulogcmd "$@"
+    
+    find "$PREFIX" > "$upkg_name.pack.post"
+
+    diff "$upkg_name.pack.post" "$upkg_name.pack.pre" > "$upkg_name.pack"
+}
+
 # cmdlet executable [name] [alias ...]
 cmdlet() {
     ulogi ".Inst" "install cmdlet $1 => ${2:-$1} (alias ${*:3})"
@@ -941,8 +953,8 @@ _check_deps() {
             #3. ulib.sh been updated (CL_STRICT)
             if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.u" -nt "$PREFIX/.$x.d" ]; then
                 deps+=( "$x" )
-            elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$PREFIX/.$x.d" ]; then
-                deps+=( "$x" )
+            #elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$PREFIX/.$x.d" ]; then
+            #    deps+=( "$x" )
             fi
         done
     done
