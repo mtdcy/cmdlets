@@ -562,7 +562,9 @@ _pack() {
 
     # v3/manifest: name pkgname sha
     touch cmdlets.manifest
-    sed "\#^$1#d" -i cmdlets.manifest
+    # only clear records of the corresponding version 
+    sed "\#^$name.*$upkg_ver#d" -i cmdlets.manifest
+    # new records
     echo "$1 $pkgname $sha" >> cmdlets.manifest
 
     popd
@@ -921,9 +923,6 @@ compile() {(
     echo -e "**** start build $upkg_name ****\n$(date)\n" > "$(_logfile)"
 
     ulogi ".Path" "$PWD"
-
-    # clear manifest
-    sed "\#\ $upkg_name/#d" -i "$PREFIX/cmdlets.manifest"
 
     # build library
     _prepare && upkg_static || {
