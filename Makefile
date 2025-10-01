@@ -16,24 +16,9 @@ CL_CCACHE 	?= 1
 MAKEFLAGS 	+= --always-make
 
 ##############################################################################
-define TEMPLATE
-# shellcheck disable=SC2034
+.ONESHELL:
 
-#1. build with remote host
-export REMOTE_HOST=
-export REMOTE_WORKDIR=$${REMOTE_WORKDIR:-cmdlets}
-
-#2. build with docker [default]
-export DOCKER_IMAGE=$${DOCKER_IMAGE:-lcr.io/mtdcy/builder:ubuntu-22.04}
-export DOCKER_PLATFORM=$${DOCKER_PLATFORM:-$$(uname -m | grep -q "arm64\|aarch64" && echo "linux/arm64" || echo "linux/amd64")}
-
-# misc
-export CL_MIRRORS=$${CL_MIRRORS:-https://mirrors.mtdcy.top}
-endef
-
-export TEMPLATE
 cmdlets.env:
-	@echo "$$TEMPLATE" > $@
 	@echo "== Please edit $@ first, then"
 	@echo "    source $@"
 	@echo "    make prepare-host"
@@ -42,6 +27,7 @@ cmdlets.env:
 	@echo "OR  make prepare-remote-debian"
 	@echo ""
 	@echo "    make zlib"
+	cp .env $@
 
 ##############################################################################
 # host environment variables => docker/remote
@@ -54,23 +40,25 @@ CL_ENVS :=  CL_FORCE 		\
 
 ##############################################################################
 # Build Binaries & Libraries
+#${warning $(MAKEOVERRIDES)}
+#${warning $(MAKEFLAGS)}
 
 vpath %.u libs
 
 %: %.u
-	@make runc CMD="bash ulib.sh build $@"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash ulib.sh build $@"
 
 clean:
-	@make runc CMD="rm -rf out/$(ARCH) logs/$(ARCH)"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="rm -rf out/$(ARCH) logs/$(ARCH)"
 
 distclean: clean
-	@make runc CMD="rm -rf prebuilts/$(ARCH)"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="rm -rf prebuilts/$(ARCH)"
 
 shell:
-	@make runc CMD="bash"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
 
 inspect:
-	@make runc CMD="env && pwd && ls"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="env && pwd && ls"
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
@@ -131,7 +119,7 @@ endif
 HOST_ENV := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v))))
 
 runc-host:
-	$(HOST_ENV) $(CMD)
+	$(HOST_ENV) $(OPCODE)
 
 ##############################################################################
 ifneq ($(DOCKER_IMAGE),)
@@ -210,7 +198,7 @@ DOCKER_RUNC = docker run --rm -i $(DOCKER_ARGS) $(DOCKER_IMAGE)
 endif
 
 runc-docker:
-	$(DOCKER_RUNC) $(CMD)
+	$(DOCKER_RUNC) $(OPCODE)
 
 # TODO
 runc-remote-docker:
@@ -265,8 +253,8 @@ pull-remote:
 
 # ToDo: enable AcceptEnv ?
 runc-remote: push-remote
-	@bash ulib.sh ulogi "SHELL" "$(CMD) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
-	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(CMD)"'
+	@bash ulib.sh ulogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(OPCODE)"'
 	@make pull-remote
 	@bash ulib.sh ulogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 

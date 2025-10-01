@@ -336,6 +336,20 @@ dynamically_if_glibc() {
     export CFLAGS CXXFLAGS LDFLAGS
 }
 
+apply_c89_flags() {
+    local flags=(
+        -Wno-error=implicit-function-declaration
+        -Wno-error=implicit-int 
+        -Wno-error=incompatible-pointer-types
+    )
+
+    is_clang && flags+=(
+        -Wno-error=deprecated-non-prototype 
+    )
+
+    export CFLAGS+=" ${flags[*]}"
+}
+
 deparallelize() {
     export CL_NJOBS=1
 }
@@ -347,7 +361,7 @@ configure() {
         elif test -f bootstrap; then
             ulogcmd ./bootstrap
         elif test -f configure.ac; then
-            ulogcmd autoreconf -fi 
+            ulogcmd autoreconf -fis
         fi
     fi
 
@@ -368,27 +382,12 @@ configure() {
 }
 
 make() {
-    local cmdline="$MAKE"
-    local targets=()
-
-    cmdline+=" $(_filter_options "$@")"
-    IFS=' ' read -r -a targets <<< "$(_filter_targets "$@")"
-
-    # default target
-    [ -n "${targets[*]}" ] || targets=(all)
+    local cmdline=( "$MAKE" "$@" )
 
     # set default njobs
-    [[ "$cmdline" =~ -j[0-9\ ]* ]] || cmdline+=" -j$CL_NJOBS"
+    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j "$CL_NJOBS" )
 
-    # expand targets, as '.NOTPARALLEL' may not set for targets
-    for x in "${targets[@]}"; do
-        case "$x" in
-            # deparallels for install target
-            install)    cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
-            install/*)  cmdline="${cmdline//-j[0-9]*/-j1}"  ;;
-        esac
-        ulogcmd "$cmdline" "$x"
-    done
+    ulogcmd "${cmdline[@]}"
 }
 
 cmake() {

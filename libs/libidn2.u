@@ -27,13 +27,14 @@ upkg_args=(
 )
 
 upkg_static() {
-    # < C99
-    export CFLAGS+=" -Wno-error=implicit-function-declaration"
+    apply_c89_flags || true
 
     # https://github.com/spack/spack/issues/23964
     export GTKDOCIZE=echo
 
     configure &&
+
+        find . -name config.status -exec touch {} \;
 
     make &&
 
@@ -41,14 +42,15 @@ upkg_static() {
     make check &&
 
     #make install
-    library libidn2 \
-            include         lib/idn2.h \
-            lib             lib/.libs/libidn2.{a,la} \
-            lib/pkgconfig   libidn2.pc &&
+    library libidn2                       \
+            include         lib/idn2.h    \
+            lib             lib/.libs/*.a \
+            lib/pkgconfig   libidn2.pc    \
+            &&
 
     cmdlet  src/idn2 &&
 
-    check idn2 --version
+    check   idn2 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
