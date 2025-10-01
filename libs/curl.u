@@ -6,7 +6,9 @@ upkg_lic="curl"
 upkg_ver=8.13.0
 upkg_url=https://curl.se/download/curl-$upkg_ver.tar.bz2
 upkg_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
-upkg_dep=(brotli openssl zstd zlib libidn2 nghttp2)
+upkg_dep=(brotli zlib zstd libidn2 nghttp2)
+
+is_darwin || upkg_dep+=( openssl )
 
 upkg_args=(
     --disable-option-checking
@@ -15,7 +17,7 @@ upkg_args=(
 
     # default paths
     --sysconfdir=/etc
-    #--with-ca-path=/etc/ssl
+    --with-ca-path=/etc/ssl
 
     --with-libidn2
     --with-zstd
@@ -23,12 +25,9 @@ upkg_args=(
     --with-brotli
     --with-nghttp2
 
-    --with-openssl
     --with-ca-fallback # built-in CA
     --without-ca-path
     --without-ca-bundle
-    --with-secure-transport
-    --with-default-ssl-backend=openssl
 
     --without-libssh2
     --without-libpsl
@@ -48,19 +47,29 @@ upkg_args=(
     --enable-static
 )
 
+is_darwin && upkg_args+=(
+    --with-secure-transport
+) || upkg_args+=(
+    --with-openssl
+    --with-default-ssl-backend=openssl
+)
+
 upkg_static() {
     # gethostbyname => dynamically linked
-    is_glibc && dynamicalize
+    dynamically_if_glibc || true
+
+    apply_c89_flags || true
 
     configure  &&
 
     make V=1 &&
 
     #make install &&
-    library libcurl \
+    library libcurl                              \
             include/curl    include/curl/curl*.h \
-            lib             lib/.libs/libcurl.{a,la} \
-            lib/pkgconfig   libcurl.pc &&
+            lib             lib/.libs/libcurl.a  \
+            lib/pkgconfig   libcurl.pc           \
+            &&
 
     cmdlet  ./src/curl &&
 

@@ -45,7 +45,9 @@ upkg_args=(
 
 upkg_static() {
     # gethostbyname => dynamically linked
-    is_glibc && dynamicalize
+    dynamically_if_glibc || true
+
+    apply_c89_flags || true
 
     configure &&
 
