@@ -27,15 +27,13 @@ jobs:
           - macos-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.READ_TOKEN }}
-          fetch-depth: 2
-
       - name: Build
         shell: bash
         run: |-
+          git clone --depth=1 https://git.mtdcy.top:8443/mtdcy/cmdlets.git cmdlets
+
+          pushd cmdlets
+
           export CL_ARTIFACTS="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
           export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
