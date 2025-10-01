@@ -27,13 +27,29 @@ is_darwin && upkg_args+=(--without-libiconv) || {
     upkg_args+=( --with-libiconv )
 }
 
+
+# install to include/
+common_headers=(
+    lib/unicase.h
+    lib/uniconv.h
+    lib/uniwidth.h
+    lib/unitypes.h
+    lib/uninorm.h
+    lib/unistr.h
+    lib/unistdio.h
+    lib/unigbrk.h
+    lib/unimetadata.h
+    lib/unilbrk.h
+    lib/uniname.h
+    lib/unictype.h
+)
+
 upkg_static() {
     configure &&
 
     make &&
 
-    library unistring                                    \
-            include             lib/uni*.h               \
+    library liunistring "${common_headers[@]}"           \
             include/unistring   lib/unistring/*.h        \
             lib                 lib/.libs/libunistring.a
 }

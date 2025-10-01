@@ -11,7 +11,7 @@ upkg_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
 upkg_dep=()
 
 upkg_args=(
-    --prefix=$PREFIX
+    --prefix="$PREFIX"
 
     --libdir=lib
 
@@ -33,14 +33,14 @@ upkg_args=(
     "$LDFLAGS"
 )
 
-is_linux  && upkg_args+=("linux-$(uname -m)")
+is_linux  && upkg_args+=( "linux-$(uname -m)" )
 
-is_darwin && upkg_args+=("darwin64-$(uname -m)" enable-ec_nistp_64_gcc_128)
+is_darwin && upkg_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
 upkg_static() {
-    ./Configure "${upkg_args[@]}" &&
+    ulogcmd ./Configure "${upkg_args[@]}" || return 1
 
-    {
+    is_darwin || {
         # use host paths
         engines=$(find /lib/ /usr/lib/ -type d -name "engines-3" | head -n1) || true
         if [ -n "$engines" ]; then
@@ -49,22 +49,24 @@ upkg_static() {
                 -e "s!^MODULESDIR=.*\$!MODULESDIR=${modules}!" \
                 -i Makefile
         fi
-    } &&
+    }
 
-    make &&
+    make clean || true
+
+    make V=1 || return 2
 
     # don't install engines and modules
     #make install_dev install_runtime &&
-    library libopenssl \
-        include/openssl $(ls include/openssl/*.h | xargs) \
-        lib             libssl.a \
+    library libopenssl                       \
+        include/openssl include/openssl/*.h  \
+        lib             libssl.a             \
         lib/pkgconfig   openssl.pc libssl.pc \
         &&
 
-    library libcrypto \
-        include/crypto  $(ls include/crypto/*.h | xargs) \
-        lib             libcrypto.a \
-        lib/pkgconfig   libcrypto.pc \
+    library libcrypto                        \
+        include/crypto  include/crypto/*.h   \
+        lib             libcrypto.a          \
+        lib/pkgconfig   libcrypto.pc         \
         &&
 
     cmdlet apps/openssl openssl &&
