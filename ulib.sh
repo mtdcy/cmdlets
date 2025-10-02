@@ -886,10 +886,7 @@ _prepare() {
 
 # _load library
 _load() {
-    unset upkg_name upkg_lic upkg_ver 
-    unset upkg_url upkg_sha upkg_zip upkg_zip_strip
-    unset upkg_dep upkg_args upkg_type
-    unset upkg_patches
+    unset "${!upkg_@}"
 
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
 
@@ -897,7 +894,7 @@ _load() {
     [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
     [ -z "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
 
-    [ "$upkg_type" = ".PHONY" ] && exit 0
+    [ "$upkg_type" = ".PHONY" ] && return 0
 
     # sanity checks: always exit program|subshell here
     [ -n "$upkg_url" ] || exit 127
@@ -937,7 +934,12 @@ compile() {(
     set -eo pipefail
 
     ulogi ".Load" "$1"
-    _load "$1" || exit 1
+    _load "$1"
+
+    [ -n "$upkg_url" ] || {
+        ulogw "<<<<<" "skip dummy target $upkg_name"
+        return 0
+    }
 
     # clear
     find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
