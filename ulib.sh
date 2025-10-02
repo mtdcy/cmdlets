@@ -77,7 +77,9 @@ _exit_on_failure() {
 }
 
 _capture() {
-    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$CL_LOGGING" = "silent" ]; then
+        cat >> "$(_logfile)"
+    elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         # tput: DON'T combine caps, not universal.
         local CL i
 
@@ -93,10 +95,8 @@ _capture() {
         echo -en "$CL"  # clear line
         tput smam       # line break on
         tput sgr0       # reset
-    elif [ "$CL_LOGGING" = "plain" ]; then
-        tee -a "$(_logfile)"
     else
-        cat >> "$(_logfile)"
+        tee -a "$(_logfile)"
     fi
 }
 
@@ -104,7 +104,7 @@ echocmd() {
     {
         echo "$*"
         eval -- "$*"
-    } >> "$(_logfile)" 2>&1
+    } 2>&1 | _capture
 } 
 
 # ulogcmd <command>
