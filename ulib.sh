@@ -107,20 +107,20 @@ ulogcmd() {
 }
 
 CURL="$(which curl)"
-CURL_OPTS=( -sL --fail --progress-bar --no-progress-meter )
+CURL_OPTS=( --fail -L --max-redirs -1 --progress-bar --no-progress-meter )
 
 # _curl source destination [options]
 _curl() {
     local source="$1"
     local dest="${2:-/dev/null}"
 
-    echocmd "$CURL" "${CURL_OPTS[@]}" "$source" -o /dev/null -I "${@:3}" &&
-    echocmd "$CURL" "${CURL_OPTS[@]}" "$source" -o "$dest" -S "${@:3}"
+    echocmd "$CURL" -sI "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
+    echocmd "$CURL" -vS "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
 }
 
 # _curl_to_stdout source [options]
 _curl_stdout() {
-    echocmd "$CURL" "${CURL_OPTS[@]}" "$1" -S "${@:2}"
+    echocmd "$CURL" -vS "${@:2}" "${CURL_OPTS[@]}" "$1"
 }
 
 _filter_options() {
@@ -770,12 +770,12 @@ _fetch() {
     if test -n "$CL_MIRRORS"; then
         mirror="$CL_MIRRORS/packages/$(basename "$zip")"
         ulogi ".CURL" "$mirror"
-        echocmd _curl "$mirror" "$zip" && return 0
+        _curl "$mirror" "$zip" && return 0
     fi
 
     #3. try original
     ulogi ".CURL" "$url"
-    echocmd _curl "$url" "$zip" && return 0
+    _curl "$url" "$zip" && return 0
 
     uloge ".CURL" "Failed curl $url."
 }
