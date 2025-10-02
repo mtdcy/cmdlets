@@ -162,46 +162,36 @@ _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
     local arch
-    case "$OSTYPE" in
-        darwin*)
-            arch="$(uname -m)-apple-darwin"
-            ;;
-        msys*|cygwin*)
-            if test -n "$MSYSTEM"; then
-                arch="$(uname -m)-msys-${MSYSTEM,,}" 
-            else
-                arch="$(uname -m)-$OSTYPE"
-            fi
-            ;;
-        linux*) # OSTYPE cann't be trusted
-            if find /lib*/ld-musl-* &>/dev/null; then
-                arch="$(uname -m)-linux-musl"
-            else
-                arch="$(uname -m)-linux-gnu"
-            fi
-            ;;
-        *)
-            arch="$(uname -m)-$OSTYPE"
-            ;;
-    esac
+    if [ "$(uname -s)" = Darwin ]; then
+        arch="$(uname -m)-apple-darwin"
+    elif test -n "$MSYSTEM"; then
+        arch="$(uname -m)-msys-${MSYSTEM,,}"
+    elif ldd --version 2>/dev/null | grep -qFw musl; then
+        arch="$(uname -m)-linux-musl"
+    else
+        arch="$(uname -m)-$OSTYPE"
+    fi
 
+    # prepare directories and files
     PREFIX="$ROOT/prebuilts/$arch"
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
-
     WORKDIR="$ROOT/out/$arch"
-    mkdir -p "$WORKDIR"
+
+    # prepend PREFIX/bin to PATH
+    PATH="$PREFIX/bin:$PATH"
+
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
-
-    PATH="$PREFIX/bin:$PATH"
 
     export ROOT PREFIX WORKDIR PATH
 
     # setup program envs
-    local which=which
-    is_darwin && which="xcrun --find" || true
+    local _find=which
+    is_darwin && _find="xcrun --find" || true
 
     local k v p E progs
+
+    # shellcheck disable=SC2054
     progs=(
         CC:gcc
         CXX:g++
@@ -211,9 +201,7 @@ _init() {
         NM:nm
         RANLIB:ranlib
         STRIP:strip
-        NASM:nasm
-        YASM:yasm
-        MAKE:make
+        MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
         NINJA:ninja
@@ -223,6 +211,10 @@ _init() {
         CARGO:cargo
         GO:go
     )
+    is_arm64 || progs+=(
+        NASM:nasm
+        YASM:yasm
+    )
 
     # MSYS2
     is_msys && progs+=(
@@ -231,15 +223,16 @@ _init() {
         RC:windres.exe
     )
     for x in "${progs[@]}"; do
-        IFS=':' read -r k v _ <<< "$x"
+        IFS=':' read -r k v <<< "$x"
+        IFS=',' read -r -a v <<< "$v"
 
-        p="$($which "$v" 2>/dev/null)"
+        for y in "${v[@]}"; do
+            p="$($_find "$y" 2>/dev/null)" && break
+        done
 
-        [ -n "$p" ] || {
-            ulogw "....." "missing host tools $v, abort" >2
-        }
+        [ -n "$p" ] || ulogw "....." "missing host tools ${v[*]}"
 
-        eval -- export "$k=$p"
+        eval export "$k=$p"
     done
 
     # common flags for c/c++
@@ -257,8 +250,6 @@ _init() {
     is_clang && FLAGS+=( 
         -Wno-error=deprecated-non-prototype 
     ) || true
-
-    #export LDFLAGS="-L$PREFIX/lib -Wl,-rpath,$PREFIX/lib -Wl,-gc-sections"
 
     # macOS does not support statically linked binaries
     if is_darwin; then
@@ -299,6 +290,8 @@ _init() {
         -DCMAKE_AR="$AR"
         -DCMAKE_LINKER="$LD"
         -DCMAKE_MAKE_PROGRAM="$MAKE"
+    )
+    is_arm64 || CMAKE+=(
         -DCMAKE_ASM_NASM_COMPILER="$NASM"
         -DCMAKE_ASM_YASM_COMPILER="$YASM"
     )
@@ -311,7 +304,7 @@ _init() {
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
-        CCACHE_DIR="${PREFIX/prebuilts/.ccache}"
+        CCACHE_DIR="$PREFIX/.ccache"
         export CC CXX CCACHE_DIR
 
         # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
@@ -344,6 +337,10 @@ _init() {
 
     # cmdlets
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
+}
+
+inspect_env() {
+    env
 }
 
 dynamicalize() {
