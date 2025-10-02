@@ -43,6 +43,10 @@ jobs:
         id: build
         shell: bash
         run: |-
+          set -ex
+
+          make prepare-host || true  # FIXME: prepare for alpine
+
           export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
 
           echo "arch=$(bash ulib.sh arch)" | tee -a "$GITHUB_OUTPUT"
@@ -55,8 +59,10 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           tag_name: ${{ steps.build.outputs.arch }}
-          body: ''  # empty messages
+          name: ${{ steps.build.outputs.arch }}
+          body: ''
           append_body: false
           files: |-
             prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
             prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
+            logs.tar.gz

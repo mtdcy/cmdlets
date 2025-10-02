@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
@@ -17,16 +17,14 @@ export FORCE_UNSAFE_CONFIGURE=1
 
 # fix: detected dubious ownership in repository
 git config --global --add safe.directory "$PWD"
-          
-make prepare-host || true # FIXME: prepare for alpine
 
 if which brew; then
-    brewprefix="$(brew --prefix)"
-    export PATH="$brewprefix/opt/coreutils/libexec/gnubin:$PATH"
-    export PATH="$brewprefix/opt/gnu-sed/libexec/gnubin:$PATH"
-    export PATH="$brewprefix/opt/grep/libexec/gnubin:$PATH"
-    export PATH="$brewprefix/opt/gnu-tar/libexec/gnubin:$PATH"
-    export PATH="$brewprefix/opt/findutils/libexec/gnubin:$PATH"
+    _brewprefix="$(brew --prefix)"
+    _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
+    for x in "${_gnubin[@]}"; do
+        [ -d "$_brewprefix/opt/$x/libexec" ] && export PATH="$_brewprefix/opt/$x/libexec/gnubin:$PATH"
+    done
+    unset _brewprefix _gnubin
 fi
 
 if test -n "$*"; then
@@ -39,34 +37,27 @@ else
         [[ "$ulib" =~ ^_  ]] && continue  ## ignored files
         cmdlets+=( "$ulib" )
     done < <(git show --pretty="" --name-only HEAD | grep "^libs/.*\.u")
-
-    [ -n "${cmdlets[*]}" ] || cmdlets=(unzip)
 fi
 
-# always expand ALL
-if [ "${cmdlets[*]}" = ALL ]; then
-    IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _deps_get ALL)"
-fi
+# default test target
+[ -n "${cmdlets[*]}" ] || cmdlets=(unzip)
 
 ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "${cmdlets[*]}" =~ =force ]]; then
-    # force rebuild
-    for cmdlet in "${cmdlets[@]}"; do
-        IFS='=' read -r cmdlet force <<< "$cmdlet"
-        [ -z "$force" ] || export CL_FORCE=1
-        bash ulib.sh build "$cmdlet" || ret=$?
-        unset CL_FORCE
-    done
-else
-    # normal build
-    if [ "${#cmdlets[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a cmdlets <<< "$(bash ulib.sh _sort_by_depends "${cmdlets[@]}")"
-    fi
-    bash ulib.sh build "${cmdlets[@]}" || ret=$?
+    export CL_FORCE=1
+
+    IFS=' ' read -r -a cmdlets <<< "${cmdlets[*]//=force/}"
 fi
+    
+bash ulib.sh build "${cmdlets[@]}" || ret=$?
+
+unset CL_FORCE
+
+# for release actions
+bash ulib.sh zip_logfiles || true
 
 ## find out dependents
 #dependents=()
