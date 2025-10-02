@@ -29,24 +29,18 @@ is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
 _ulog() {
     local lvl date message
 
-    [ $# -gt 1 ] && lvl="$(tr 'A-Z' 'a-z' <<< "$1")"
+    [ $# -gt 1 ] && lvl="$1" && shift 1
     date="$(date '+%m-%d %H:%M:%S')"
 
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
-    case "$lvl" in
-        "error")
-            shift 1
+    case "$(tr '[:upper:]' '[:lower:]' <<< "$lvl")" in
+        error)
             message="[$date] \\033[31m$1\\033[39m ${*:2}"
             ;;
-        "info")
-            shift 1
-            message="[$date] \\033[32m$1\\033[39m ${*:2}"
-            ;;
-        "warn")
-            shift 1
+        warn)
             message="[$date] \\033[33m$1\\033[39m ${*:2}"
             ;;
-        *)
+        info|*)
             message="[$date] \\033[32m$1\\033[39m ${*:2}"
             ;;
     esac
@@ -55,7 +49,7 @@ _ulog() {
 
 ulogi() { _ulog info  "$@";             }
 ulogw() { _ulog warn  "$@";             }
-uloge() { _ulog error "$@"; return 1;   }
+uloge() { _ulog error "$@"; exit 1;     } # exit shell
 
 _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
@@ -72,7 +66,6 @@ _on_failure() {
 _exit_on_failure() {
     if test -s "$PREFIX/.ERR_MSG"; then
         uloge "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
-        exit 1 # exit the program
     fi
 }
 
@@ -127,7 +120,7 @@ _curl() {
 
 # _curl_to_stdout source [options]
 _curl_stdout() {
-    "$CURL" "${CURL_OPTS[@]}" "$1" -S "${@:2}"
+    echocmd "$CURL" "${CURL_OPTS[@]}" "$1" -S "${@:2}"
 }
 
 _filter_options() {
@@ -566,7 +559,7 @@ _pack() {
     # shellcheck disable=SC2001
     IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
 
-    "$TAR" -czvf "$pkgname" "${files[@]}"
+    echocmd "$TAR" -czvf "$pkgname" "${files[@]}"
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     touch "$pkginfo" 
@@ -631,7 +624,7 @@ cmdlet() {
         links+=( "$PREFIX/bin/$x" )
     done
 
-    echocmd _pack "$(basename "$target")" "$target" "${links[@]}"
+    _pack "$(basename "$target")" "$target" "${links[@]}"
 }
 
 # _fix_pc path/to/xxx.pc
@@ -717,7 +710,7 @@ library() {
         shift
     done
 
-    echocmd _pack "$libname" "${installed[@]}"
+    _pack "$libname" "${installed[@]}"
 }
 
 # perform visual check on cmdlet
@@ -727,7 +720,6 @@ check() {
     local bin="$(which "$1")"
     [[ "$bin" =~ ^"$PREFIX" ]] || {
         uloge "....." "cann't find $1"
-        exit 1
     }
 
     # print to tty instead of capture it
@@ -786,7 +778,6 @@ _fetch() {
     echocmd _curl "$url" "$zip" && return 0
 
     uloge ".CURL" "Failed curl $url."
-    return 1
 }
 
 # _unzip <file> [strip]
@@ -796,7 +787,6 @@ _unzip() {
 
     [ -r "$1" ] || {
         uloge "Error" "open $1 failed."
-        return 1
     }
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
@@ -1038,7 +1028,6 @@ build() {
 
         time compile "${targets[i]}" || {
             uloge "Error" "build ${targets[i]} failed"
-            return 127
         }
     done
 }
