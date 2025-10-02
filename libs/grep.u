@@ -26,16 +26,17 @@ upkg_args=(
 [[ ${upkg_dep[*]} =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
 
 upkg_static() {
-    configure &&
-    make &&
-    # test
-    ./src/grep --version | ./src/grep -F "$upkg_ver" &&
-    # grep with pcre
-    echo FOO | ./src/grep -P '(?i)foo' &&
-    # check & install
-    make check install-exec &&
+    # note: egrep & fgrep are obsolescent;
+    configure && 
+    make -C lib &&
+    make -C src grep &&
+
+    # install grep
+    cmdlet ./src/grep &&
     # verify
-    check $PREFIX/bin/grep
+    check grep &&
+    # check: grep with pcre
+    echo FOO | grep -P '(?i)foo'
 }
 
 

@@ -12,15 +12,7 @@ upkg_args=(
 )
 
 upkg_static() {
-    go clean || true
-
-    sed -i 's/go 1.23$/go 1.23.0/g' go.mod || true
-
-    go build . &&
-
-    cmdlet act &&
-
-    check act
+    go_build && cmdlet act && check act
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -23,11 +23,11 @@ upkg_args=(
     --disable-man
 )
 
-[[ "${upkg_dep[*]}" =~ gmp ]] || upkg_args+=(--without-gmp) # make utils more generic
-[[ "${upkg_dep[*]}" =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
+[[ "${upkg_dep[*]}" =~ gmp ]]       || upkg_args+=(--without-gmp) # make utils more generic
+[[ "${upkg_dep[*]}" =~ libiconv ]]  || upkg_args+=(--without-libiconv-prefix)
 
 upkg_static() {
-    is_glibc && dynamicalize
+    dynamically_if_glibc || true
 
     configure &&
 

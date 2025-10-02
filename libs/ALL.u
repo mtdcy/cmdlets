@@ -1,7 +1,7 @@
 # all cmdlets
 
 # shellcheck disable=SC2034
-upkg_type=PHONY
+upkg_type=.PHONY
 
 upkg_ver="$(cat VERSION)"
 
@@ -12,13 +12,13 @@ upkg_dep=(
     # utils
     coreutils gsed gawk findutils grep gmake
     # shell
-    bash ctags shfmt
+    bash ctags shfmt ripgrep
     # net
     wget curl iperf3
     # multimedia
     ffmpeg
     # misc
-    neofetch lazygit act
+    lazygit act htop
 )
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

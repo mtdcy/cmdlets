@@ -15,18 +15,25 @@ upkg_args=(
 )
 
 upkg_static() {
-    # darwin case-insensitive
-    mv makefile Makefile || true
+    echocmd sed -i makefile           \
+        -e 's/^CXX=/CXX?=/'           \
+        -e 's/^AR=/AR?=/'             \
+        -e 's/^CXXFLAGS=/CXXFLAGS+=/' \
+        -e 's/^STRIP=/STRIP?=/'       \
+        -e 's/^LDFLAGS=/LDFLAGS+=/'   \
 
-    sed '/^CXX=.*$/d' -i Makefile &&
-    make &&
+    is_clang || sed 's/-Wno-logical-op-parentheses/-Wno-parentheses/g' -i Makefile
+
+    make -f makefile &&
+
     # quick check
     ./unrar | grep "${upkg_ver%.*}" &&
+
     # install
     cmdlet unrar &&
 
     # visual verify
-    check "$PREFIX/bin/unrar"
+    check unrar -version
 }
 
 
