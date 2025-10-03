@@ -4,10 +4,7 @@ name: Build cmdlets with containers
 on:
   push:
     paths:
-      - ulib.sh
       - libs/**.u
-      - .github/workflows/build-multi-arch.yml
-      - .github/scripts/**
     branches:
       - main
 
@@ -20,7 +17,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
-    container: ghcr.io/${{ vars.REGISTRY_USER }}/builder:${{ matrix.builder }}
+    container: lcr.mtdcy.top:8443/${{ vars.REGISTRY_USER }}/builder:${{ matrix.builder }}
     strategy:
       matrix:
         runner:

@@ -6,8 +6,7 @@ on:
     - cron: '0 0 * * *'  # daily
 
   push:
-    paths:
-      - .github/workflows/update-revision.yml
+    paths: null
     branches:
       - main
 
@@ -33,6 +32,7 @@ jobs:
           git config --global --add safe.directory "$(pwd -P)"
 
           export CL_NJOBS=1
+          export CL_LOGGING=silent
 
           commits=/tmp/commits-$$.txt
           for ulib in libs/*; do
