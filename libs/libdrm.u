@@ -6,6 +6,12 @@ upkg_ver=2.4.126
 upkg_url=https://dri.freedesktop.org/libdrm/libdrm-$upkg_ver.tar.xz
 upkg_sha=6cab16d4d259b6abc9f485233863454114a3c307eca806679aad3edbe967bf42
 
+upkg_args=(
+    -Dudev=false
+    -Dcairo-tests=disabled
+    -Dvalgrind=disabled
+)
+
 upkg_static() {
     is_darwin && {
         ulogw "*****" "**** Not supported on $OSTYPE! ****"
@@ -13,25 +19,21 @@ upkg_static() {
     }
 
     mkdir -pv build && cd build &&
-    meson setup \
-            -Dudev=false             \
-            -Dcairo-tests=disabled   \
-            -Dvalgrind=disabled      \
-            .. &&
+    meson setup .. &&
     ninja &&
 
     cd - &&
 
-    library libdrm \
-            include         libsync.h xf86drm.h xf86drmMode.h \
+    library libdrm                                                \
+            include         libsync.h xf86drm.h xf86drmMode.h     \
             include/libdrm  include/drm/*.h radeon/*.h amdgpu/*.h \
-            include/libdrm/nouveau nouveau/*.h \
-            include/libdrm/nouveau/nvif nouveau/nvif/*.h \
-            lib             build/libdrm.a \
-                            build/nouveau/libdrm_nouveau.a \
-                            build/radeon/libdrm_radeon.a \
-                            build/amdgpu/libdrm_amdgpu.a \
-            lib/pkgconfig   build/meson-private/*.pc \
+            include/libdrm/nouveau nouveau/*.h                    \
+            include/libdrm/nouveau/nvif nouveau/nvif/*.h          \
+            lib             build/libdrm.a                        \
+                            build/nouveau/libdrm_nouveau.a        \
+                            build/radeon/libdrm_radeon.a          \
+                            build/amdgpu/libdrm_amdgpu.a          \
+            lib/pkgconfig   build/meson-private/*.pc              \
             share/libdrm    data/amdgpu.ids
 }
 

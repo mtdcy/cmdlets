@@ -201,6 +201,7 @@ _init() {
         PKG_CONFIG:pkg-config
         PATCH:patch
         INSTALL:install
+        RUSTC:rustc
         CARGO:cargo
         GO:go
     )
@@ -319,7 +320,30 @@ _init() {
     [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 
     # cargo/rust
-    export CARGO_HOME="$ROOT"
+    CARGO_HOME="$ROOT/.cargo"
+    CARGO_BUILD_JOBS="$CL_NJOBS"
+
+    mkdir -p "$CARGO_HOME"
+
+    export CARGO_HOME CARGO_BUILD_JOBS
+
+    if [ -n "$CL_MIRRORS" ]; then
+        # cargo
+        local registry ver
+        IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
+        # cargo <= 1.68
+        [ "$ver" -le 68 ] && registry="$CL_MIRRORS" || registry="sparse+$CL_MIRRORS"
+        cat << EOF > "$CARGO_HOME/config.toml"
+[source.crates-io]
+replace-with = 'crates-io-mirrors'
+
+[source.crates-io-mirrors]
+registry = "$registry/crates.io-index/"
+EOF
+        # rust
+        export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
+        export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+    fi
 
     # macos
     if is_darwin; then
@@ -392,8 +416,8 @@ configure() {
 
     # suffix options, override user's
     cmdline=$(sed                       \
-        -e 's/--enable-shared //g'      \
-        -e 's/--disable-static //g'     \
+        -e 's/ --enable-shared//g'      \
+        -e 's/ --disable-static//g'     \
         <<<"$cmdline")
 
     ulogcmd "$cmdline"
@@ -403,18 +427,17 @@ make() {
     local cmdline=( "$MAKE" "$@" )
 
     # set default njobs
-    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j "$CL_NJOBS" )
+    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$CL_NJOBS" )
 
     ulogcmd "${cmdline[@]}"
 }
 
 cmake() {
-    local opts=()
-
     # only apply '-static' to EXE_LINKER_FLAGS only
     export LDFLAGS="${LDFLAGS//\ -static/}"
 
-    opts+=(
+    local cmdline=( 
+        "$CMAKE"
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_INSTALL_PREFIX="$PREFIX"
         -DCMAKE_PREFIX_PATH="$PREFIX"
@@ -423,42 +446,42 @@ cmake() {
     )
 
     # link static executable
-    is_darwin || opts+=(
+    is_darwin || cmdline+=(
         -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS -static'"
     )
 
     # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && opts+=( -G"'MSYS Makefiles'" )
+    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
+
+    # append user args
+    cmdline+=( "${upkg_args[@]}" "$@" )
 
     # cmake
-    ulogcmd "$CMAKE" "${opts[@]}" "${upkg_args[@]}" "$@"
-
+    ulogcmd "${cmdline[@]}"
 }
 
 meson() {
-    local cmdline
-
-    cmdline="$MESON $(_filter_targets "$@")"
+    local cmdline=( "$MESON" "$(_filter_targets "$@")" )
 
     # meson
     # builtin options: https://mesonbuild.com/Builtin-options.html
     #  libdir: some package prefer install to lib/<machine>/
-    cmdline+="                              \
-        -Dprefix=$PREFIX                    \
-        -Dlibdir=lib                        \
-        -Dbuildtype=release                 \
-        -Ddefault_library=static            \
-        -Dpkg_config_path=$PKG_CONFIG_PATH  \
-        "
+    cmdline+=(                              
+        -Dprefix="'$PREFIX'"
+        -Dlibdir=lib
+        -Dbuildtype=release
+        -Ddefault_library=static
+        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+    )
 
     ## meson >= 0.37.0
     #IFS='.' read -r _ ver _ < <($MESON --version)
-    #[ "$ver" -lt 37 ] || cmdline+=" -Dprefer_static=true "
+    #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
 
-    # override default options
-    cmdline+=" $(_filter_options "$@")"
+    # append user args
+    cmdline+=( "${upkg_args[@]}" "$(_filter_options "$@")" )
 
-    ulogcmd "$cmdline"
+    ulogcmd "${cmdline[@]}"
 }
 
 ninja() {
@@ -474,18 +497,6 @@ cargo() {
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
-    if [ -n "$CL_MIRRORS" ]; then
-        cat << EOF >> .cargo/config.toml
-[source.crates-io]
-replace-with = 'mirrors'
-
-[source.mirrors]
-registry = "sparse+$CL_MIRRORS/crates.io-index/"
-
-[registries.mirrors]
-index = "sparse+$CL_MIRRORS/crates.io-index/"
-EOF
-    fi
 
     ulogcmd "$cmdline"
 }
