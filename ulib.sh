@@ -47,10 +47,10 @@ _ulog() {
     echo -e "$message"
 }
 
-ulogi() { _ulog info  "$@";             }
-ulogw() { _ulog warn  "$@";             }
-uloge() { _ulog error "$@"; return 1;   }
-ulogf() { _ulog error "$@"; exit 1;     } # exit shell
+ulogi() { _ulog info  "$@" >&2;             }
+ulogw() { _ulog warn  "$@" >&2;             }
+uloge() { _ulog error "$@" >&2; return 1;   }
+ulogf() { _ulog error "$@" >&2; exit 1;     } # exit shell
 
 _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
@@ -151,6 +151,50 @@ _filter_targets() {
     echo "$tgts"
 }
 
+_init_rust() {
+    if which rustup &>/dev/null; then
+        CARGO="$(rustup which cargo)"
+        RUSTC="$(rustup which rustc)"
+    else
+        CARGO="$(which cargo)"
+        RUSTC="$(which rustc)"
+    fi
+
+    if test -z "$CARGO"; then
+        ulogw "....." "rustup/cargo not exists"
+        return 1
+    fi
+
+    export CARGO RUSTC
+
+    # cargo/rust
+    CARGO_HOME="$ROOT/.cargo"
+    CARGO_BUILD_JOBS="$CL_NJOBS"
+
+    mkdir -p "$CARGO_HOME"
+
+    export CARGO_HOME CARGO_BUILD_JOBS
+
+    if [ -n "$CL_MIRRORS" ]; then
+        # cargo
+        local registry ver
+        IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
+        # cargo <= 1.68
+        [ "$ver" -le 68 ] && registry="$CL_MIRRORS" || registry="sparse+$CL_MIRRORS"
+        cat << EOF > "$CARGO_HOME/config.toml"
+[source.crates-io]
+replace-with = 'crates-io-mirrors'
+
+[source.crates-io-mirrors]
+registry = "$registry/crates.io-index/"
+EOF
+        # rust
+        export RUSTFLAGS="-C target-feature=+crt-static"
+        #export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
+        #export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+    fi
+}
+
 # TODO: add support for toolchain define
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
@@ -202,8 +246,6 @@ _init() {
         PKG_CONFIG:pkg-config
         PATCH:patch
         INSTALL:install
-        RUSTC:rustc
-        CARGO:cargo
         GO:go
     )
     is_arm64 || progs+=(
@@ -258,6 +300,12 @@ _init() {
         else
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
         fi
+
+        # link needed static libraries
+        LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
+
+        # Security: FULL RELRO
+        LDFLAGS+="  -Wl,-z,relro,-z,now"
     fi
 
     CFLAGS="${FLAGS[*]}"
@@ -320,38 +368,14 @@ _init() {
     unset CGO_ENABLED # => go()
     [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 
-    # cargo/rust
-    CARGO_HOME="$ROOT/.cargo"
-    CARGO_BUILD_JOBS="$CL_NJOBS"
-
-    mkdir -p "$CARGO_HOME"
-
-    export CARGO_HOME CARGO_BUILD_JOBS
-
-    if [ -n "$CL_MIRRORS" ]; then
-        # cargo
-        local registry ver
-        IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
-        # cargo <= 1.68
-        [ "$ver" -le 68 ] && registry="$CL_MIRRORS" || registry="sparse+$CL_MIRRORS"
-        cat << EOF > "$CARGO_HOME/config.toml"
-[source.crates-io]
-replace-with = 'crates-io-mirrors'
-
-[source.crates-io-mirrors]
-registry = "$registry/crates.io-index/"
-EOF
-        # rust
-        export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
-        export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
-    fi
-
     # macos
     if is_darwin; then
         export MACOSX_DEPLOYMENT_TARGET=11.0
     elif is_msys; then
         export MSYS=winsymlinks:lnk
     fi
+
+    _init_rust || true
 
     # cmdlets
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
@@ -495,7 +519,7 @@ cargo() {
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
-
+    
     ulogcmd "$cmdline"
 }
 

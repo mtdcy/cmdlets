@@ -94,7 +94,7 @@ BREW_PACKAGES 	= coreutils grep gnu-sed findutils 				   \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo   		   \
 				  luajit perl 									   \
-				  ccache rust go
+				  ccache rustup golang
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -102,16 +102,22 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  ccache cargo golang-go
+				  ccache golang-go
 
 prepare-host-homebrew:
 	brew update 
 	brew install -q $(BREW_PACKAGES)
+	$(MAKE) prepare-rust
 
 prepare-host-debian:
 	sudo add-apt-repository -y ppa:longsleep/golang-backports
 	sudo apt-get update -q
 	sudo apt-get install -q -y $(DEB_PACKAGES)
+	$(MAKE) prepare-rust
+
+prepare-rust:
+	which cargo || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+	rustup default stable
 
 ifneq (,$(shell which apt-get))
 prepare-host: prepare-host-debian
@@ -160,7 +166,7 @@ DOCKER_PLATFORM ?= linux/amd64
 DOCKER_ARGS += --platform $(DOCKER_PLATFORM)
 
 # pull always
-DOCKER_ARGS += --pull=always --quiet
+DOCKER_ARGS += --pull=always #--quiet
 
 # custom entrypoint
 #DOCKER_ARGS += --entrypoint=''
