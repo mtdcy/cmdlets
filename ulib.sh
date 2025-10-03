@@ -94,21 +94,11 @@ _capture() {
     fi
 }
 
-_echolock=0
 echocmd() {
-    if [ "$_echolock" -ne 0 ]; then
+    {
         echo "$*"
-        eval -- "$*" 2>&1
-        echo ----
-    else 
-        _echolock=1;
-        {
-            echo "$*"
-            eval -- "$*" 2>&1
-            echo ----
-        } | _capture
-        _echolock=0
-    fi
+        eval -- "$*"
+    } 2>&1 | _capture
 } 
 
 # ulogcmd <command>
@@ -551,9 +541,9 @@ go_build() {
 _link() {
     #echo "link: $1 => $2" >&2
     if is_msys; then
-        echocmd cp "$1" "$2"
+        cp "$1" "$2"
     else
-        echocmd ln -srf "$1" "$2"
+        ln -srf "$1" "$2"
     fi
 }
 
@@ -624,8 +614,7 @@ inspect_install() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    local target="${2:-$(basename "$1")}"
-    ulogi ".Inst" "install cmdlet $1 => $target} (alias ${*:3})"
+    ulogi ".Inst" "install cmdlet $1 => ${2:-$1} (alias ${*:3})"
 
     # strip or not ?
     local args=(-v)
@@ -633,15 +622,15 @@ cmdlet() {
 
     local target
 
-    target="$PREFIX/bin/$target"
+    target="$PREFIX/bin/$(basename "${2:-$1}")"
 
     # shellcheck disable=SC2154
-    echocmd "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
+    "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
 
     local links=()
-    for alias in "${@:3}"; do
-        _link "$target" "$PREFIX/bin/$alias"
-        links+=( "$PREFIX/bin/$alias" )
+    for x in "${@:3}"; do
+        _link "$target" "$PREFIX/bin/$x"
+        links+=( "$PREFIX/bin/$x" )
     done
 
     _pack "$(basename "$target")" "$target" "${links[@]}"
