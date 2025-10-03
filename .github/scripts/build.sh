@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
@@ -40,7 +40,7 @@ else
 fi
 
 # default test target
-[ -n "${cmdlets[*]}" ] || cmdlets=(unzip)
+[ -n "${cmdlets[*]}" ] || cmdlets=(ALL)
 
 ret=0
 

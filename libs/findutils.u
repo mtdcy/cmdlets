@@ -34,16 +34,7 @@ upkg_args=(
 )
 
 upkg_static() {
-    # borrow from alpine
-    CFLAGS+=" -flto=auto"
-    CXXFLAGS+=" -flto=auto"
-
-    # no '-static' with glibc
-    is_glibc && {
-        CFLAGS="${CFLAGS//--static/}"
-        CXXFLAGS="${CXXFLAGS//--static/}"
-        LDFLAGS="${LDFLAGS//-static/}"
-    }
+    dynamically_if_glibc || true
 
     configure &&
 

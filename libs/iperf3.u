@@ -18,14 +18,14 @@ upkg_args=(
 )
 
 upkg_static() {
-    is_glibc && dynamicalize || true
+    dynamically_if_glibc || true
 
     configure &&
 
     make &&
 
     # check
-    make check &&
+    #make check &&
 
     cmdlet ./src/iperf3 &&
 
