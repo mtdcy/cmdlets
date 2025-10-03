@@ -39,9 +39,8 @@ jobs:
             ulib="$(basename "${ulib%.u}")"
 
             # ignores
-            [[ "$ulib" =~ ^ALL ]] && continue
-            [[ "$ulib" =~ ^@   ]] && continue
-            [[ "$ulib" =~ ^\.  ]] && continue
+            [[ "$ulib" =~ ^ALL    ]] && continue
+            [[ "$ulib" =~ ^[\.@_] ]] && continue
 
             # update revision
             (

@@ -32,9 +32,7 @@ if test -n "$*"; then
 else
     while read -r line; do
         IFS='/.' read -r _ ulib _ <<< "$line"
-        [[ "$ulib" =~ ^\. ]] && continue  ## ignored files
-        [[ "$ulib" =~ ^@  ]] && continue  ## ignored files
-        [[ "$ulib" =~ ^_  ]] && continue  ## ignored files
+        [[ "$ulib" =~ ^[\.@_] ]] && continue # ignored files
         cmdlets+=( "$ulib" )
     done < <(git show --pretty="" --name-only HEAD | grep "^libs/.*\.u")
 fi
