@@ -60,9 +60,10 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           tag_name: ${{ steps.build.outputs.arch }}
           name: ${{ steps.build.outputs.arch }}
-          body: ''
+          body: ${{ steps.build.outputs.arch }}
           append_body: false
+          draft: false
           files: |-
             prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
             prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
-            logs.tar.gz
+            logs/*.tar.gz

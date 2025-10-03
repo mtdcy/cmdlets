@@ -962,7 +962,9 @@ compile() {(
 
     # build library
     _prepare && upkg_static || {
-        tail -v "$(_logfile)"
+        local logfile="$(_logfile)"
+        tail -v "$logfile"
+        mv "$logfile" "$logfile.fail"
         exit 127
     }
 
@@ -1125,7 +1127,9 @@ arch() {
 
 # save log files to root/logs.tar.gz
 zip_logfiles() {
-    "$TAR" -C "${PREFIX/prebuilts/logs}" -cf logs.tar.gz .
+    # zip log directory if not empty
+    local target="${PREFIX/prebuilts/logs}"
+    test -z "$(ls -A "$target")" || "$TAR" -C "$target" -cvf "$target-logs.tar.gz" .
 }
 
 _init || exit 110
