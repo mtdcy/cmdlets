@@ -391,13 +391,10 @@ dynamically_if_glibc() {
 
 apply_c89_flags() {
     local flags=(
+        -std=gnu89
         -Wno-error=implicit-function-declaration
         -Wno-error=implicit-int 
         -Wno-error=incompatible-pointer-types
-    )
-
-    is_clang && flags+=(
-        -Wno-error=deprecated-non-prototype 
     )
 
     export CFLAGS+=" ${flags[*]}"
