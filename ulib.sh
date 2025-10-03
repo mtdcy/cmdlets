@@ -49,7 +49,8 @@ _ulog() {
 
 ulogi() { _ulog info  "$@";             }
 ulogw() { _ulog warn  "$@";             }
-uloge() { _ulog error "$@"; exit 1;     } # exit shell
+uloge() { _ulog error "$@"; return 1;   }
+ulogf() { _ulog error "$@"; exit 1;     } # exit shell
 
 _logfile() {
     echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
@@ -65,7 +66,7 @@ _on_failure() {
 # for main shell
 _exit_on_failure() {
     if test -s "$PREFIX/.ERR_MSG"; then
-        uloge "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
+        ulogf "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
     fi
 }
 
@@ -107,20 +108,20 @@ ulogcmd() {
 }
 
 CURL="$(which curl)"
-CURL_OPTS=( --fail -L --max-redirs -1 --progress-bar --no-progress-meter )
+CURL_OPTS=( --fail -vL )
 
 # _curl source destination [options]
 _curl() {
     local source="$1"
     local dest="${2:-/dev/null}"
 
-    echocmd "$CURL" -sI "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
-    echocmd "$CURL" -vS "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
+    echocmd "$CURL" -I "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
+    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
 }
 
 # _curl_to_stdout source [options]
 _curl_stdout() {
-    echocmd "$CURL" -vS "${@:2}" "${CURL_OPTS[@]}" "$1"
+    echocmd "$CURL" -S "${@:2}" "${CURL_OPTS[@]}" "$1"
 }
 
 _filter_options() {
@@ -730,7 +731,7 @@ check() {
 
     local bin="$(which "$1")"
     [[ "$bin" =~ ^"$PREFIX" ]] || {
-        uloge "....." "cann't find $1"
+        ulogf "....." "cann't find $1"
     }
 
     # print to tty instead of capture it
@@ -752,53 +753,63 @@ check() {
     elif is_msys; then
         echocmd ntldd "$bin"
     else
-        uloge "FIXME: $OSTYPE"
+        ulogw "FIXME: $OSTYPE"
     fi
 }
 
-# _fetch <url> <sha256> <zip>
+# fetch url to packages/ or return error
+# _fetch <url> <sha256> <zip>a
+# _fetch <zip <sha> <urls...>
 _fetch() {
-    local url=$1
+    local zip=$1
     local sha=$2
-    local zip=$3
+    local url=$3
     local _sha mirror
 
+    mkdir -p "$(dirname "$zip")"
+
     #1. try local file first
-    if [ -e "$zip" ]; then
+    if [ -f "$zip" ]; then
+        ulogi ".FILE" "$zip"
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
-            ulogi ".FILE" "$zip"
             return 0
+        else
+            ulogw "..SHA" "$_sha vs $sha (expected)"
+            rm -f "$zip"
         fi
-
-        ulogw ".Warn" "expected $sha but got $_sha"
-        rm "$zip"
     fi
-
-    mkdir -p "$(dirname "$zip")"
 
     #2. try mirror
     if test -n "$CL_MIRRORS"; then
         mirror="$CL_MIRRORS/packages/$(basename "$zip")"
         ulogi ".CURL" "$mirror"
-        _curl "$mirror" "$zip" && return 0
+        _curl "$mirror" "$zip"
     fi
 
-    #3. try original
-    ulogi ".CURL" "$url"
-    _curl "$url" "$zip" && return 0
+    #3. try originals
+    if ! test -f "$zip"; then
+        for url in "${@:3}"; do
+            ulogi ".CURL" "$url"
+            _curl "$url" "$zip" && break
+        done
+    fi
 
-    uloge ".CURL" "Failed curl $url."
+    if test -f "$zip"; then
+        ulogi ".FILE" "$(sha256sum "$zip")"
+        return 0
+    else
+        uloge ".CURL" "$* failed"
+        return 1
+    fi
 }
 
+# unzip file to current dir, or exit program
 # _unzip <file> [strip]
-#  => unzip to current dir
 _unzip() {
-    ulogi ".Zipx" "$1 >> $(pwd)"
+    ulogi ".Zipx" "$1 => $(pwd)"
 
-    [ -r "$1" ] || {
-        uloge "Error" "open $1 failed."
-    }
+    [ -r "$1" ] || ulogf ".Zipx" "$1 read failed, permission denied?"
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
@@ -838,7 +849,7 @@ _unzip() {
             ;;
     esac
 
-    echocmd "${cmd[@]}" "$1" || return 1
+    echocmd "${cmd[@]}" "$1" || ulogf ".Zipx" "$1 failed."
 
     # post strip
     case "${cmd[0]}" in
@@ -854,22 +865,28 @@ _unzip() {
     esac
 }
 
-# prepare package sources and patches
+# prepare source code or return error
+# shellcheck disable=SC2154
 _prepare() {
-    for i in "${!upkg_url[@]}"; do
-        local zip="${upkg_zip[i]:-$(basename "${upkg_url[i]}")}"
+    # use the first url to construct zip file name
+    local zip="$ROOT/packages/${upkg_zip:-$(basename "$upkg_url")}"
 
-        # to packages
-        zip="$ROOT/packages/$zip"
+    # download zip file
+    _fetch "$zip" "$upkg_sha" "${upkg_url[@]}" || return 1
+    # unzip to current fold
+    _unzip "$zip" "$upkg_zip_strip" || return 2
 
-        # download files
-        _fetch "${upkg_url[i]}" "${upkg_sha[i]}" "$zip" || return $?
-    
-        # unzip to current fold
-        _unzip "$zip" "${upkg_zip_strip[i]}" || return $?
-    done
+    # patch urls
+    if test -n "${upkg_patch_url[*]}"; then
+        for i in "${!upkg_patch_url[@]}"; do
+            local zip="$ROOT/packages/${upkg_patch_zip[i]:-$(basename "${upkg_patch_url[i]}")}"
 
-    pwd -P
+            # download files
+            _fetch "$zip" "${upkg_patch_sha[i]}" "${upkg_patch_url[i]}" || return 3
+            # unzip to current fold
+            _unzip "$zip" || return 4
+        done
+    fi
 
     # apply patches
     for patch in "${upkg_patches[@]}"; do
@@ -1040,7 +1057,7 @@ build() {
         ulogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
 
         time compile "${targets[i]}" || {
-            uloge "Error" "build ${targets[i]} failed"
+            ulogf "Error" "build ${targets[i]} failed"
         }
     done
 }
@@ -1118,7 +1135,7 @@ fetch() {
 
     [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
-    _fetch "$upkg_url" "$upkg_sha" "$ROOT/packages/$upkg_zip"
+    _fetch "$ROOT/packages/$upkg_zip" "$upkg_sha" "$upkg_url" 
 }
 
 arch() {

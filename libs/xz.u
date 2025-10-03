@@ -3,10 +3,14 @@
 
 upkg_name=xz
 upkg_lic="BSD"
-upkg_ver=5.6.4
-upkg_url=https://github.com/tukaani-project/xz/releases/download/v$upkg_ver/xz-$upkg_ver.tar.gz
-#upkg_url=https://downloads.sourceforge.net/project/lzmautils/xz-$upkg_ver.tar.gz
-upkg_sha=269e3f2e512cbd3314849982014dc199a7b2148cf5c91cedc6db629acdf5e09b
+upkg_ver=5.8.1
+upkg_url=(
+    https://github.com/tukaani-project/xz/releases/download/v$upkg_ver/xz-$upkg_ver.tar.xz
+    https://downloads.sourceforge.net/project/lzmautils/xz-$upkg_ver.tar.xz
+    https://mirrors.wikimedia.org/ubuntu/pool/main/x/xz-utils/xz-utils_$upkg_ver.orig.tar.xz
+)
+upkg_zip=$upkg_name-$upkg_ver.tar.xz
+upkg_sha=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
 upkg_dep=()
 
 upkg_args=(
