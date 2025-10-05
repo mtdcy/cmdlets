@@ -802,7 +802,6 @@ check() {
 }
 
 # fetch url to packages/ or return error
-# _fetch <url> <sha256> <zip>a
 # _fetch <zip <sha> <urls...>
 _fetch() {
     local zip=$1
@@ -913,7 +912,7 @@ _unzip() {
 # shellcheck disable=SC2154
 _prepare() {
     # use the first url to construct zip file name
-    local zip="$ROOT/packages/${upkg_zip:-$(basename "$upkg_url")}"
+    local zip="$ROOT/packages/$upkg_zip"
 
     # download zip file
     _fetch "$zip" "$upkg_sha" "${upkg_url[@]}" || return 1
@@ -954,7 +953,7 @@ _load() {
 
     # default values:
     [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
-    [ -z "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
+    [ -n "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
 
     [ "$upkg_type" = ".PHONY" ] && return 0
 
@@ -1176,8 +1175,6 @@ load() {
 # fetch libname
 fetch() {
     _load "$1"
-
-    [ -n "$upkg_zip" ] || upkg_zip="$(basename "$upkg_url")"
 
     _fetch "$ROOT/packages/$upkg_zip" "$upkg_sha" "$upkg_url" 
 }
