@@ -16,14 +16,15 @@ export CL_NJOBS=${CL_NJOBS:-1}          # noparallel by default
 unset ROOT PREFIX WORKDIR
 
 # conditionals
-is_darwin() { [[ "$OSTYPE" =~ darwin ]];                            }
-is_msys()   { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
-is_linux()  { [[ "$OSTYPE" =~ linux ]];                             }
-is_glibc()  { ldd --version 2>&1 | grep -qFi "glibc";               }
+is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
+is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
+is_linux()      { [[ "$OSTYPE" =~ linux ]];                             }
+is_glibc()      { ldd --version 2>&1 | grep -qFi "glibc";               }
 # 'ldd --version' in alpine always return 1
-is_musl()   { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
-is_clang()  { $CC --version 2>/dev/null | grep -qF "clang";         }
-is_arm64()  { uname -m | grep -q "arm64\|aarch64";                  }
+is_musl()       { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
+is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
+is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
+is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
 # ulog [error|info|warn] "leading" "message"
 _ulog() {
@@ -230,7 +231,7 @@ _init() {
 
     # shellcheck disable=SC2054
     progs=(
-        CC:musl-gcc,gcc
+        CC:gcc
         CXX:g++
         AR:ar
         AS:as
@@ -300,11 +301,21 @@ _init() {
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
         fi
 
-        # link needed static libraries
-        LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
-
         # Security: FULL RELRO
         LDFLAGS+="  -Wl,-z,relro,-z,now"
+    fi
+
+    # musl-gcc
+    if which musl-gcc &>/dev/null; then
+        export GLIBC_CC="$CC"
+        export CC="musl-gcc"
+
+        MUSL_CC_LDFLAGS="-fPIE -pie"
+        # link needed static libraries
+        MUSL_CC_LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
+        LDFLAGS+=" $MUSL_CC_LDFLAGS"
+
+        export LDFLAGS MUSL_CC_LDFLAGS
     fi
 
     CFLAGS="${FLAGS[*]}"
@@ -324,34 +335,12 @@ _init() {
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
 
-    # extend CMAKE with compile tools
-    CMAKE=(
-        "$CMAKE"
-        -DCMAKE_C_COMPILER="$CC"
-        -DCMAKE_CXX_COMPILER="$CXX"
-        -DCMAKE_AR="$AR"
-        -DCMAKE_LINKER="$LD"
-        -DCMAKE_MAKE_PROGRAM="$MAKE"
-    )
-    is_arm64 || CMAKE+=(
-        -DCMAKE_ASM_NASM_COMPILER="$NASM"
-        -DCMAKE_ASM_YASM_COMPILER="$YASM"
-    )
-    if "$CMAKE" --version | grep -Fq 'version 4.'; then
-        CMAKE+=( -DCMAKE_POLICY_VERSION_MINIMUM=3.5 )
-    fi
-    export CMAKE="${CMAKE[*]}"
-
     # ccache
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
         CCACHE_DIR="$PREFIX/.ccache"
         export CC CXX CCACHE_DIR
-
-        # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-        export CMAKE_C_COMPILER_LAUNCHER=ccache
-        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     else
         export CCACHE_DISABLE=1
     fi
@@ -382,6 +371,11 @@ _init() {
 
 inspect_env() {
     env
+}
+
+disable_musl_gcc() {
+    export CC="$GLIBC_CC"
+    export LDFLAGS="${LDFLAGS/"$MUSL_CC_LDFLAGS"/}"
 }
 
 dynamicalize() {
@@ -454,29 +448,46 @@ make() {
 }
 
 cmake() {
+    # no musl-g++
+    disable_musl_gcc
+    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
+    export CC="${CC/ccache\ /}"
+    export CXX="${CXX/ccache\ /}"
     # only apply '-static' to EXE_LINKER_FLAGS only
     export LDFLAGS="${LDFLAGS//\ -static/}"
+    export CFLAGS="${CFLAGS//\ --static/}"
+    export CXXFLAGS="${CXXFLAGS//\ --static/}"
+    # asm
+    is_arm64 || {
+        export CMAKE_ASM_NASM_COMPILER="$NASM"
+        export CMAKE_ASM_YASM_COMPILER="$YASM"
+    }
+    # compatible
+    if "$CMAKE" --version | grep -Fq 'version 4.'; then
+        export DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    fi
+    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
+    if [ -z "$CCACHE_DISABLE" ]; then
+        export CMAKE_C_COMPILER_LAUNCHER=ccache
+        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+    fi
 
-    local cmdline=( 
+    # extend CMAKE with compile tools
+    local cmdline=(
         "$CMAKE"
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_INSTALL_PREFIX="$PREFIX"
-        -DCMAKE_PREFIX_PATH="$PREFIX"
-        -DCMAKE_C_FLAGS="'${CFLAGS//--static/}'"
-        -DCMAKE_CXX_FLAGS="'${CXXFLAGS//--static/}'"
+        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+        -DCMAKE_PREFIX_PATH="'$PREFIX'"
+        -DCMAKE_MAKE_PROGRAM="'$MAKE'"
     )
-
+    # cmake using a mixed path style with MSYS Makefiles, why???
+    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
     # link static executable
     is_darwin || cmdline+=(
         -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS -static'"
     )
-
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
-
     # append user args
     cmdline+=( "${upkg_args[@]}" "$@" )
-
     # cmake
     ulogcmd "${cmdline[@]}"
 }
@@ -1065,7 +1076,7 @@ build() {
     # pull dependencies
     local targets=()
     if [ "$CL_FORCE" -ne 0 ]; then
-        ulogi "-----" "Force rebuild dependencies"
+        ulogi "Force rebuild dependencies"
         targets=( "${deps[@]}" )
     else
         CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
