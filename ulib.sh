@@ -517,7 +517,7 @@ ninja() {
 cargo() {
     # rust
     is_darwin || {
-        export RUSTFLAGS="-C link-self-contained=yes -C linker=rust-lld -C target-feature=+crt-static"
+        export RUSTFLAGS="-C target-feature=+crt-static"
         export PKG_CONFIG_ALL_STATIC=true
         export LIBZ_SYS_STATIC=1
         export ZLIB_STATIC=1
