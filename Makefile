@@ -102,7 +102,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  ccache golang-go
+				  ccache golang-go musl-tools
 
 prepare-host-homebrew:
 	brew update 
@@ -111,13 +111,15 @@ prepare-host-homebrew:
 
 prepare-host-debian:
 	sudo add-apt-repository -y ppa:longsleep/golang-backports
-	sudo apt-get update -q
-	sudo apt-get install -q -y $(DEB_PACKAGES)
+	sudo apt-get update
+	sudo apt-get install -y $(DEB_PACKAGES)
 	$(MAKE) prepare-rust
 
+RUSTUP_INIT_OPTS := -y --no-modify-path --profile minimal --default-toolchain stable
 prepare-rust:
-	which cargo || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-	rustup default stable
+	which rustup-init && rustup-init $(RUSTUP_INIT_OPTS) || true
+	which rustup || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- $(RUSTUP_INIT_OPTS)
+	which xcode-select || rustup target add $(shell uname -m)-unknown-linux-musl
 
 ifneq (,$(shell which apt-get))
 prepare-host: prepare-host-debian
@@ -166,7 +168,9 @@ DOCKER_PLATFORM ?= linux/amd64
 DOCKER_ARGS += --platform $(DOCKER_PLATFORM)
 
 # pull always
+ifneq ($(shell dirname $(DOCKER_IMAGE)),.)
 DOCKER_ARGS += --pull=always #--quiet
+endif
 
 # custom entrypoint
 #DOCKER_ARGS += --entrypoint=''

@@ -170,6 +170,7 @@ _init_rust() {
     # cargo/rust
     CARGO_HOME="$ROOT/.cargo"
     CARGO_BUILD_JOBS="$CL_NJOBS"
+    CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
 
     mkdir -p "$CARGO_HOME"
 
@@ -188,8 +189,6 @@ replace-with = 'crates-io-mirrors'
 [source.crates-io-mirrors]
 registry = "$registry/crates.io-index/"
 EOF
-        # rust
-        export RUSTFLAGS="-C target-feature=+crt-static"
         #export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
         #export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
     fi
@@ -231,7 +230,7 @@ _init() {
 
     # shellcheck disable=SC2054
     progs=(
-        CC:gcc
+        CC:musl-gcc,gcc
         CXX:g++
         AR:ar
         AS:as
@@ -516,9 +515,22 @@ ninja() {
 }
 
 cargo() {
+    # rust
+    is_darwin || {
+        export RUSTFLAGS="-C link-self-contained=yes -C linker=rust-lld -C target-feature=+crt-static"
+        export PKG_CONFIG_ALL_STATIC=true
+        export LIBZ_SYS_STATIC=1
+        export ZLIB_STATIC=1
+    }
+
     local cmdline="$CARGO $* ${upkg_args[*]}"
 
     # cargo always download and rebuild targets
+    case "$1" in
+        build)
+            is_darwin || cmdline+=" --target $(uname -m)-unknown-linux-musl"
+            ;;
+    esac
     
     ulogcmd "$cmdline"
 }

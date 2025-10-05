@@ -20,7 +20,7 @@ upkg_args=(
 upkg_static() {
     cargo build &&
 
-    cmdlet target/release/rg &&
+    cmdlet "$(find target -name rg)" &&
 
     check rg --version
 }
