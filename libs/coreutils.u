@@ -1,45 +1,35 @@
-# GNU File, Shell, and Text utilities
+# Cross-platform Rust rewrite of the GNU coreutils
 
 # shellcheck disable=SC2034
-upkg_lic="GPL-3.0-or-later"
-upkg_ver=9.8
-upkg_url=https://ftpmirror.gnu.org/gnu/coreutils/coreutils-$upkg_ver.tar.xz
-upkg_sha=e6d4fd2d852c9141a1c2a18a13d146a0cd7e45195f72293a4e4c044ec6ccca15
-upkg_dep=(gmp libiconv)
+upkg_name=coreutils
+upkg_lic="MIT"
+upkg_ver=0.2.2
+upkg_url=https://github.com/uutils/coreutils/archive/refs/tags/$upkg_ver.tar.gz
+upkg_zip=$upkg_name-$upkg_ver.tar.gz
+upkg_sha=4a847a3aaf241d11f07fdc04ef36d73c722759675858665bc17e94f56c4fbfb3
+upkg_dep=()
 
-upkg_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
-
-    --without-selinux
-
-    --disable-nls
-    --disable-rpath
-
-    # install common used, gnu version of bsd|busybox utils.
-
-    --disable-doc
-    --disable-man
+utils=(
+    arch base32 base64 
+    cat echo cp rm ln install
+    readlink unlink realpath
+    uniq numfmt 
 )
 
-[[ "${upkg_dep[*]}" =~ gmp ]]       || upkg_args+=(--without-gmp) # make utils more generic
-[[ "${upkg_dep[*]}" =~ libiconv ]]  || upkg_args+=(--without-libiconv-prefix)
+upkg_args=(
+    --release
+    --verbose
+    
+    --no-default-features
+    --features "'${utils[*]}'"
+)
 
 upkg_static() {
-    dynamically_if_glibc || true
+    cargo build &&
 
-    configure &&
+    cmdlet $(find target -name coreutils) coreutils "${utils[@]}" &&
 
-    make &&
-
-    # check => there are some FAILs, help-version.sh|uid|zero
-    # make check &&
-
-    make install-exec &&
-
-    # virsual verify
-    check yes --version
+    check coreutils --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
