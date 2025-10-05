@@ -102,7 +102,16 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  ccache golang-go musl-tools
+				  ccache musl-tools
+
+APK_PACKAGES 	= wget curl git                                   \
+				  grep sed gawk coreutils                         \
+				  tar gzip xz lzip unzip zstd                     \
+				  build-base gettext                              \
+				  automake autoconf libtool pkgconfig cmake meson \
+				  nasm yasm bison flex texinfo                    \
+				  luajit perl perl-http-daemon                    \
+				  ccache
 
 prepare-host-homebrew:
 	brew update 
@@ -110,12 +119,18 @@ prepare-host-homebrew:
 	$(MAKE) prepare-rust
 
 prepare-host-debian:
-	sudo add-apt-repository -y ppa:longsleep/golang-backports
 	sudo apt-get update
 	sudo apt-get install -y $(DEB_PACKAGES)
+	which go || sudo add-apt-repository -y ppa:longsleep/golang-backports && sudo apt-get update && sudo apt-get install golang-go
 	$(MAKE) prepare-rust
 
+prepare-host-alpine:
+	sudo apk update 
+	sudo apk add --no-cache $(APK_PACKAGES)
+	which go || sudo apk add --no-cache go
+
 RUSTUP_INIT_OPTS := -y --no-modify-path --profile minimal --default-toolchain stable
+
 prepare-rust:
 	which rustup-init && rustup-init $(RUSTUP_INIT_OPTS) || true
 	which rustup || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- $(RUSTUP_INIT_OPTS)
@@ -125,6 +140,8 @@ ifneq (,$(shell which apt-get))
 prepare-host: prepare-host-debian
 else ifneq (,$(shell which brew))
 prepare-host: prepare-host-homebrew
+else ifneq (,$(shell which apk))
+prepare-host: prepare-host-alpine
 endif
 
 HOST_ENV := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v))))
