@@ -435,10 +435,6 @@ cmake() {
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
     export CXX="${CXX/ccache\ /}"
-    # only apply '-static' to EXE_LINKER_FLAGS only
-    export LDFLAGS="${LDFLAGS//\ -static/}"
-    export CFLAGS="${CFLAGS//\ --static/}"
-    export CXXFLAGS="${CXXFLAGS//\ --static/}"
     # asm
     is_arm64 || {
         export CMAKE_ASM_NASM_COMPILER="$NASM"
@@ -464,10 +460,6 @@ cmake() {
     )
     # cmake using a mixed path style with MSYS Makefiles, why???
     is_msys && cmdline+=( -G"'MSYS Makefiles'" )
-    # link static executable
-    is_darwin || cmdline+=(
-        -DCMAKE_EXE_LINKER_FLAGS="'$LDFLAGS -static'"
-    )
     # append user args
     cmdline+=( "${upkg_args[@]}" "$@" )
     # cmake
