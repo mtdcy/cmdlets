@@ -371,21 +371,11 @@ inspect_env() {
 }
 
 dynamicalize() {
-    CFLAGS="${CFLAGS//--static/}"
-    CXXFLAGS="${CXXFLAGS//--static/}"
-    LDFLAGS="${LDFLAGS//-static/}"
-
-    export CFLAGS CXXFLAGS LDFLAGS
+    true
 }
 
 dynamically_if_glibc() {
-    is_glibc || return 0
-
-    CFLAGS="${CFLAGS//--static/}"
-    CXXFLAGS="${CXXFLAGS//--static/}"
-    LDFLAGS="${LDFLAGS//-static/}"
-
-    export CFLAGS CXXFLAGS LDFLAGS
+    true
 }
 
 apply_c89_flags() {
