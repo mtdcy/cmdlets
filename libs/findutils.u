@@ -1,55 +1,27 @@
-# Collection of GNU find, xargs, and locate
+# Rust implementation of findutils: xargs find
 
 # shellcheck disable=SC2034
-upkg_desc="Collection of GNU find, xargs, and locate"
+upkg_desc="Rust implementation of findutils"
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=4.10.0
-upkg_url=https://ftpmirror.gnu.org/gnu/findutils/findutils-$upkg_ver.tar.xz
-upkg_sha=1387e0b67ff247d2abde998f90dfbf70c1491391a59ddfecb8ae698789f0a4f5
+upkg_lic='MIT'
+upkg_ver=0.8.0
+upkg_url=https://github.com/uutils/findutils/archive/refs/tags/0.8.0.tar.gz
+upkg_sha=932f153d256f7a4cf40255a948689bf59a10f14c8804151817ab50fa1b46429a
 upkg_dep=()
 
 upkg_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
-
-    --localstatedir=/var/locate
-
-    --with-included-regex
-    --without-selinux
-    --disable-acl
-
-    # always disable nls for single static executable, or
-    #  => PREFIX/share/locale will hardcoded into executable
-    --disable-nls
-    # disable rpath for single static executable
-    --disable-rpath
-
-    --disable-debug
-    --disable-doc
-    --disable-man
-
-    --with-packager=cmdlets
+    --release
+    --verbose
 )
 
 upkg_static() {
-    dynamically_if_glibc || true
+    cargo build &&
+    
+    cmdlet "$(find target -name find)" &&
+    
+    cmdlet "$(find target -name xargs)" &&
 
-    configure &&
-
-    make &&
-
-    # test only find
-    make -C find check &&
-
-    # install cmdlets and symlinks
-    cmdlet find/find gfind find &&
-    cmdlet xargs/xargs          &&
-    cmdlet locate/locate        &&
-
-    # verify
-    check gfind --version
+    check find --version
 }
 
 
