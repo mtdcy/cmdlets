@@ -227,18 +227,21 @@ _init() {
     local _find=which
     is_darwin && _find="xcrun --find" || true
 
+    local _prefix=
+    is_glibc && _prefix=$(uname -m)-unknown-linux-musl- || true
+
     local k v p E progs
 
-    # shellcheck disable=SC2054
+    # shellcheck disable=SC2054,SC2206
     progs=(
-        CC:gcc
-        CXX:g++
-        AR:ar
-        AS:as
-        LD:ld
-        NM:nm
-        RANLIB:ranlib
-        STRIP:strip
+        CC:${_prefix}gcc
+        CXX:${_prefix}g++
+        AR:${_prefix}ar
+        AS:${_prefix}as
+        LD:${_prefix}ld
+        NM:${_prefix}nm
+        RANLIB:${_prefix}ranlib
+        STRIP:${_prefix}strip
         MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
@@ -301,21 +304,13 @@ _init() {
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
         fi
 
-        # Security: FULL RELRO
-        LDFLAGS+="  -Wl,-z,relro,-z,now"
-    fi
-
-    # musl-gcc
-    if which musl-gcc &>/dev/null; then
-        export GLIBC_CC="$CC"
-        export CC="musl-gcc"
-
-        MUSL_CC_LDFLAGS="-fPIE -pie"
+        # pie => cause 'read-only segment has dynamic relocations' error
+        #  => use PIC instead, or let packages decide
+        #LDFLAGS+=" -fPIE -pie"
         # link needed static libraries
-        MUSL_CC_LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
-        LDFLAGS+=" $MUSL_CC_LDFLAGS"
-
-        export LDFLAGS MUSL_CC_LDFLAGS
+        LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
+        # Security: FULL RELRO
+        LDFLAGS+=" -Wl,-z,relro,-z,now"
     fi
 
     CFLAGS="${FLAGS[*]}"
@@ -371,11 +366,6 @@ _init() {
 
 inspect_env() {
     env
-}
-
-disable_musl_gcc() {
-    export CC="$GLIBC_CC"
-    export LDFLAGS="${LDFLAGS/"$MUSL_CC_LDFLAGS"/}"
 }
 
 dynamicalize() {
@@ -448,8 +438,6 @@ make() {
 }
 
 cmake() {
-    # no musl-g++
-    disable_musl_gcc
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
     export CXX="${CXX/ccache\ /}"
