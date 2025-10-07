@@ -452,7 +452,7 @@ cmake() {
     }
     # compatible
     if "$CMAKE" --version | grep -Fq 'version 4.'; then
-        export DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        export CMAKE_POLICY_VERSION_MINIMUM=3.5
     fi
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     if [ -z "$CCACHE_DISABLE" ]; then
@@ -1011,8 +1011,8 @@ compile() {(
     # build library
     _prepare && upkg_static || {
         local logfile="$(_logfile)"
-        tail -v "$logfile"
         mv "$logfile" "$logfile.fail"
+        tail -v "$logfile.fail"
         exit 127
     }
 
@@ -1171,11 +1171,12 @@ arch() {
     basename "$PREFIX"
 }
 
-# save log files to root/logs.tar.gz
+# zip log directory if not empty
 zip_logfiles() {
-    # zip log directory if not empty
     local target="${PREFIX/prebuilts/logs}"
-    test -z "$(ls -A "$target")" || "$TAR" -C "$target" -cvf "$target-logs.tar.gz" .
+    test -d "$target" || return 0
+    test -n "$(ls -A "$target")" || return 0
+    "$TAR" -C "$target" -cvf "$target-logs.tar.gz" .
 }
 
 _init || exit 110
