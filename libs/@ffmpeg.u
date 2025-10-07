@@ -11,7 +11,8 @@ upkg_dep=(
     # image libs
     png giflib turbojpeg tiff webp openjpeg
     # video libs
-    zimg theora vpx
+    #zimg 
+    theora vpx
     openh264 kvazaar
     # text libs
     fribidi libass
@@ -39,7 +40,7 @@ upkg_args=(
     --enable-bzlib
     --enable-lzma
     --enable-iconv --extra-libs=-liconv
-    --enable-libzimg
+    #--enable-libzimg
     --enable-ffmpeg
     --enable-ffprobe
     --disable-autodetect        # manual control external libraries
