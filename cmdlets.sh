@@ -196,7 +196,8 @@ _v3() {
 
 # fetch cmdlet
 cmdlet() {
-    if _v3 "$@" || _v2 "$@" || _v1 "$@"; then
+    # for cmdlet, v1 > v3 > v2
+    if _v1 "$@" || _v3 "$@" || _v2 "$@"; then
         true
     # fallback to linux-musl
     #elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
