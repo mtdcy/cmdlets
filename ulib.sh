@@ -426,6 +426,8 @@ make() {
     # set default njobs
     [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$CL_NJOBS" )
 
+    [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
+
     ulogcmd "${cmdline[@]}"
 }
 
