@@ -16,23 +16,26 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.machine }}
+    container: ${{ matrix.builder }}
     strategy:
       fail-fast: false
       matrix:
-        runner:
+        include:
           # for x86_64-linux-gnu
-          - ubuntu-22.04
+          - machine: ubuntu-22.04
+            builder: ghcr.io/mtdcy/builder:ubuntu-22.04
           # for aarch64-linux-gnu
-          - ubuntu-22.04-arm
+          - machine: ubuntu-22.04-arm
+            builder: ghcr.io/mtdcy/builder:ubuntu-22.04
           # for arm64-apple-darwin
-          - macos-15
+          - machine: macos-15
           # for x86_64-apple-darwin
-          - macos-15-intel
+          - machine: macos-15-intel
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -42,7 +45,7 @@ jobs:
         run: |-
           set -ex
 
-          make prepare-host || true  # FIXME: prepare for alpine
+          test -n "${{ matrix.builder }}" || make prepare-host
 
           export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
 

@@ -19,6 +19,7 @@ jobs:
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           # for arm64-apple-darwin or x86_64-apple-darwin
@@ -34,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Build
         shell: bash
