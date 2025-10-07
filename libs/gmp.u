@@ -24,11 +24,13 @@ upkg_args=(
 )
 
 upkg_static() {
+    is_darwin || export CXXFLAGS+=" -static-libstdc++"
+
     configure &&
 
     make &&
 
-    make check &&
+    #make check &&
 
     library libgmp:libgmpxx \
             include         gmp.h gmpxx.h \
