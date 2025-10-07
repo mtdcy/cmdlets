@@ -17,6 +17,12 @@ upkg_args=(
     --disable-external-sort
 )
 
+# macOS not support --enable-static.
+is_darwin || upkg_args+=(
+    --disable-shared
+    --enable-static
+)
+
 [[ "${upkg_dep[*]}" =~ libiconv ]] || upkg_args+=( --disable-iconv )
 
 upkg_static() {
