@@ -12,6 +12,9 @@ export CL_MIRRORS=${CL_MIRRORS:-}       # package mirrors, and go/cargo/etc
 export CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export CL_NJOBS=${CL_NJOBS:-1}          # noparallel by default
 
+# toolchain prefix
+export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
 
@@ -227,21 +230,20 @@ _init() {
     local _find=which
     is_darwin && _find="xcrun --find" || true
 
-    local _prefix=
-    is_glibc && _prefix=$(uname -m)-unknown-linux-musl- || true
+    is_glibc || unset CL_TOOLCHAIN_PREFIX
 
     local k v p E progs
 
     # shellcheck disable=SC2054,SC2206
     progs=(
-        CC:${_prefix}gcc
-        CXX:${_prefix}g++
-        AR:${_prefix}ar
-        AS:${_prefix}as
-        LD:${_prefix}ld
-        NM:${_prefix}nm
-        RANLIB:${_prefix}ranlib
-        STRIP:${_prefix}strip
+        CC:${CL_TOOLCHAIN_PREFIX}gcc
+        CXX:${CL_TOOLCHAIN_PREFIX}g++
+        AR:${CL_TOOLCHAIN_PREFIX}ar
+        AS:${CL_TOOLCHAIN_PREFIX}as
+        LD:${CL_TOOLCHAIN_PREFIX}ld
+        NM:${CL_TOOLCHAIN_PREFIX}nm
+        RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
+        STRIP:${CL_TOOLCHAIN_PREFIX}strip
         MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
