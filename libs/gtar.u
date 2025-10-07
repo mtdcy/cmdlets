@@ -26,13 +26,16 @@ upkg_args=(
     --disable-man
 )
 
+is_darwin || upkg_args+=(
+    --disable-shared
+    --enable-static
+)
+
 # rmt: avoid hardcoded $PREFIX into executable
 #  => default path on Linux, no rmt on macOS.
 upkg_args+=(--with-rmt="/usr/sbin/rmt")
 
 upkg_static() {
-    is_glibc && dynamicalize || true
-
     # BUG: undefined reference to `libiconv_open'
     # iconv is detected during configure process but -liconv is missing
     # from LDFLAGS as of gnu-tar 1.35. Remove once iconv linking works
