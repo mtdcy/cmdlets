@@ -16,12 +16,19 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.machine }}
+    container: ${{ matrix.builder }}
     strategy:
       matrix:
-        runner:
+        include:
           # for arm64-apple-darwin or x86_64-apple-darwin
-          - macos-latest
+          - machine: macos-latest
+          # for x86_64-linux-gnu
+          - machine: ubuntu-latest
+            builder: lcr.io/mtdcy/builder:ubuntu-22.04
+          # for aarch64-linux-gnu
+          - machine: ubuntu-latest-arm
+            builder: lcr.io/mtdcy/builder:ubuntu-22.04
 
     steps:
       - name: Checkout

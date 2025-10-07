@@ -204,8 +204,8 @@ _init() {
         arch="$(uname -m)-apple-darwin"
     elif test -n "$MSYSTEM"; then
         arch="$(uname -m)-msys-${MSYSTEM,,}"
-    elif ldd --version 2>/dev/null | grep -qFw musl; then
-        arch="$(uname -m)-linux-musl"
+    #elif ldd --version 2>/dev/null | grep -qFw musl; then
+    #    arch="$(uname -m)-linux-musl"
     else
         arch="$(uname -m)-$OSTYPE"
     fi

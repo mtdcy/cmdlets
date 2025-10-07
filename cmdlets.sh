@@ -38,7 +38,7 @@ if [ -z "$ARCH" ]; then
     elif test -n "$MSYSTEM"; then
         ARCH="$(uname -m)-msys-${MSYSTEM,,}"
     else
-        ARCH="$(uname -m)-$OSTYPE"
+        ARCH="$(uname -m)-linux-gnu"
     fi
 fi
 
@@ -196,9 +196,9 @@ cmdlet() {
     if _v3 "$@" || _v2 "$@" || _v1 "$@"; then
         true
     # fallback to linux-musl
-    elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
-        warn "-- Fetch $1/$(uname -m)-linux-musl for $ARCH again\n"
-        ARCH="$(uname -m)-linux-musl" cmdlet "$@"
+    #elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
+    #    warn "-- Fetch $1/$(uname -m)-linux-musl for $ARCH again\n"
+    #    ARCH="$(uname -m)-linux-musl" cmdlet "$@"
     else
         error "<< Fetch $1/$ARCH failed\n"
         return 1
