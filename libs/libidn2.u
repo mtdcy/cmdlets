@@ -27,8 +27,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    apply_c89_flags || true
-
     # https://github.com/spack/spack/issues/23964
     export GTKDOCIZE=echo
 
