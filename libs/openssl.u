@@ -25,8 +25,6 @@ upkg_args=(
     no-zlib
 
     no-shared
-    no-async
-    no-engine
 
     "$CFLAGS"
 
@@ -40,13 +38,6 @@ is_linux  && upkg_args+=( "linux-$(uname -m)" )
 is_darwin && upkg_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
 upkg_static() {
-    if is_musl_gcc; then
-        # https://github.com/openssl/openssl/issues/7207
-        #sed -i 's%linux/mman.h%sys/mman.h%g' crypto/mem_sec.c
-        upkg_args+=( -DOPENSSL_NO_SECURE_MEMORY )
-        # FIXME later
-    fi
-
     ulogcmd ./Configure "${upkg_args[@]}" || return 1
 
     is_darwin || {
