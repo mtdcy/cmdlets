@@ -755,7 +755,7 @@ check() {
 
     local bin="$(which "$1")"
     [[ "$bin" =~ ^"$PREFIX" ]] || {
-        ulogf "....." "cann't find $1"
+        ulogf "CHECK" "cann't find $1"
     }
 
     # print to tty instead of capture it
@@ -769,8 +769,8 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            ulogw "....." "$bin is dynamically linked"
             echocmd ldd "$bin"
+            ulogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
         echocmd otool -L "$bin" # | grep -v "libSystem.*"
