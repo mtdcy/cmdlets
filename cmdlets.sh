@@ -9,7 +9,7 @@ VERSION=0.3
 
 WORKDIR="$(dirname "$0" | xargs realpath)"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
-PREBUILTS="${CMDLETS_PREBUILTS:-$WORKDIR/prebuilts}"
+PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 MANIFEST="$PREBUILTS/cmdlets.manifest"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS
@@ -89,7 +89,7 @@ _exists() (
 # curl file to destination
 _curl() (
     local source dest
-    dest="${2:-$PREBUILTS/$1}"
+    dest="${2:-$TEMPDIR/$1}"
     mkdir -p "$(dirname "$dest")"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
@@ -105,7 +105,7 @@ _curl() (
 _flat() (
     _curl "$1" || return 1
     
-    tar -C "$PREBUILTS" -xvf "$PREBUILTS/$1" |
+    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" |
     while read -r line; do
         echo -en "=> $PREBUILTS/$line\n"
     done
@@ -146,6 +146,9 @@ _v1() {
     info1 ">1 Fetch $binfile\n"
 
     _curl "$binfile" || return 1
+
+    mkdir -p "$PREBUILTS/bin"
+    cp -f "$TEMPDIR/$binfile" "$PREBUILTS/bin/$1"
     chmod a+x "$PREBUILTS/bin/$1"
 }
 
@@ -159,10 +162,10 @@ _v2() {
 
     _curl "$pkginfo" || return 1
 
-    cat "$PREBUILTS/$pkginfo"
+    cat "$TEMPDIR/$pkginfo"
 
     # v2: sha pkgfile
-    IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$PREBUILTS/$pkginfo")"
+    IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
 
     info2 ">2 Fetch $1 > $pkgfile\n"
 
@@ -248,7 +251,7 @@ package() {
     pkginfo="$(_pkginfo "$1")"
 
     if _curl "$pkginfo"; then
-        cat "$PREBUILTS/$pkginfo"
+        cat "$TEMPDIR/$pkginfo"
 
         while read -r pkgfile; do
             [ -n "$pkgfile" ] || continue
@@ -258,7 +261,7 @@ package() {
                 error "<< fetch $pkgfile/$ARCH failed\n"
                 return 1
             }
-        done < "$PREBUILTS/$pkginfo"
+        done < "$TEMPDIR/$pkginfo"
         touch "$PREBUILTS/.$1.d" # mark as ready
     else
         error "<< Fetch package $1/$ARCH failed\n"
@@ -310,12 +313,17 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
         help)   usage;  exit 0 ;;
     esac
 
+    cd "$WORKDIR"
+
     # pull manifest first
     info3 ">> Fetch manifest\n"
     _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
         warn "<< Fetch manifest failed\n"
         touch "$MANIFEST"
     }
+    
+    # shellcheck disable=SC2064
+    TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
     case "$1" in
         manifest)
@@ -327,16 +335,14 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
                 cmdlet "$bin" || ret=$?
 
                 bin="$(basename "$bin")"
-                info "-- Link $bin => $_name\n"
-                ln -sf "$_name" "$WORKDIR/$bin"
+                info "-- Link $bin => $PREBUILTS/bin/$bin\n"
+                ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
 
                 # create alias links
                 if [ -n "$alias" ]; then
                     IFS=':' read -r -a alias <<< "$alias"
                     for a in "${alias[@]}"; do
                         info "-- Link $a => $bin\n"
-                        # double links
-                        ln -sf "$bin" "$PREBUILTS/bin/$a"
                         ln -sf "$bin" "$WORKDIR/$a"
                     done
                 fi

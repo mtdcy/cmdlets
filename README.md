@@ -16,8 +16,6 @@ bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets
 
 # Install cmdlet
 cmdlets.sh install nvim
-# OR
-ln -svf cmdlets.sh nvim
 ```
 
 ## Supported arch
