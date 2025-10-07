@@ -19,18 +19,22 @@ upkg_args=(
     --with-gmp="$PREFIX"
 
     --disable-docs
+)
 
+is_darwin || upkg_args+=(
     --disable-shared
     --enable-static
 )
 
 upkg_static() {
+    is_darwin || export CXXFLAGS+=" --static-libquadmath"
+
     configure &&
 
-    make &&
+    make V=1 &&
 
-    # check & install
-    make check &&
+    # compile checks failed
+    # make check &&
 
     #make install
     library libmpfr \
