@@ -22,6 +22,8 @@ upkg_static() {
     # report AppleClang as Clang
     sed -r '/cmake_policy.*(0025|0054)/d' -i source/CMakeLists.txt
 
+    is_darwin || export LDFLAGS+=" -static-libstdc++"
+
     main_args=(
         -DEXTRA_LINK_FLAGS=-L.
         -DENABLE_SHARED=OFF

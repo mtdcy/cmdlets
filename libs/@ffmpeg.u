@@ -1,6 +1,6 @@
 # common settings for ffmpeg
 
-# shellcheck disable=SC2034
+# shellcheck disable=SC2034,SC2154
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
 upkg_dep=(
@@ -22,8 +22,6 @@ upkg_dep=(
     freetype fribidi harfbuzz    # for drawtext, TODO: fontconfig
 )
 
-dynamically_if_glibc
-
 upkg_args=(
     --enable-pic
     --enable-pthreads
@@ -31,12 +29,16 @@ upkg_args=(
     --extra-version=cmdlets
 
     # toolchain
-    --cc=\"$CC\"
-    --cxx=\"$CXX\"
+    --cc="'$CC'"
+    --cxx="'$CXX'"
+    --objcc="'$CC'"
+    --host_ldflags="'$LDFLAGS'"
+
     # use extra- to avoid override default flags
-    --extra-cflags=\"$CFLAGS $CPPFLAGS\"
-    --extra-cxxflags=\"$CXXFLAGS $CPPFLAGS\"
-    --extra-ldflags=\"$LDFLAGS\"
+    --extra-cflags="'$CFLAGS'"
+    --extra-cxxflags="'$CXXFLAGS'"
+    --extra-ldflags="'$LDFLAGS'"
+
     #--disable-stripping        # result in larger size
     #--enable-shared
     #--enable-rpath
@@ -69,16 +71,21 @@ upkg_args=(
     # static linked
     --disable-shared
     --enable-static
-    --pkg-config=\"$PKG_CONFIG\"
+    --pkg-config="'$PKG_CONFIG'"
 )
 
-is_linux && {
+# Fix: libstdc++.a: linker input file unused because linking not done
+is_darwin || {
+    upkg_args+=( --extra-libs=-lstdc++ )
+    export LDFLAGS+=" -static-libstdc++"
+}
+
+is_darwin || {
     upkg_dep+=(openssl)
     upkg_args+=(
         # ffmpeg prefer shared libs, fix bug using extra libs
-        --extra-libs=\"-lm -lpthread\"
+        #--extra-libs=\"-lm -lpthread\"
         --enable-openssl            # TLS
-        --enable-linux-perf
     )
 
     # TODO: Fix build libdrm with alpine/musl
@@ -106,14 +113,6 @@ is_msys && {
     )
 }
 
-## fixed by set PKG_CONFIG with '--static' in ulib.sh
-# work arrounds: DEPRECATED
-#is_linux && sed 's/-lsoxr/& -lm/g;s/-lxvidcore/& -lm/g' -i configure
-
-## fixed by set PKG_CONFIG with '--static' in ulib.sh
-# fix libavcodec.pc: DEPRECATED
-#sed -i 's/Libs.private:.*$/& -liconv/' libavcodec/libavcodec.pc &&
-
 upkg_lic="BSD"
 for v in ${FFMPEG_VARS//,/ }; do
     case "$v" in
@@ -126,7 +125,7 @@ for v in ${FFMPEG_VARS//,/ }; do
                 --enable-libxvid            # mpeg4 encoding, ffmpeg has native one
                 --enable-frei0r             # frei0r
             )
-            # have trouble with libx265 in macOS
+            # FIXME: have trouble with libx265 in macOS
             is_darwin || {
                 upkg_dep+=( x265 )
                 upkg_args+=( --enable-libx265 )
