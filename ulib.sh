@@ -336,7 +336,7 @@ _init() {
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
-        CCACHE_DIR="$PREFIX/.ccache"
+        CCACHE_DIR="$WORKDIR/.ccache"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
