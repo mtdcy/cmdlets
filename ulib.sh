@@ -279,7 +279,7 @@ _init() {
 
     # common flags for c/c++
     local FLAGS=(
-        -g -O3              # debug with O3
+        -g0 -Os             # optimize for size
         -fPIC -DPIC         # PIC
     )
     is_msys || FLAGS+=(
