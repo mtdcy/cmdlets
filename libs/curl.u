@@ -55,9 +55,6 @@ is_darwin && upkg_args+=(
 )
 
 upkg_static() {
-    # gethostbyname => dynamically linked
-    dynamically_if_glibc || true
-
     apply_c89_flags || true
 
     configure  &&

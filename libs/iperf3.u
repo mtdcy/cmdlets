@@ -18,8 +18,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    dynamically_if_glibc || true
-
     configure &&
 
     make &&

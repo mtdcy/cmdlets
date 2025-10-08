@@ -370,14 +370,6 @@ inspect_env() {
     env
 }
 
-dynamicalize() {
-    true
-}
-
-dynamically_if_glibc() {
-    true
-}
-
 apply_c89_flags() {
     local flags=(
         -std=gnu89
