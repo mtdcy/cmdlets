@@ -11,11 +11,7 @@ upkg_args=(
     -DWITHOUT_GAVL=ON
 )
 
-# always build shared lib
 upkg_static() {
-    # always build shared libs
-    dynamicalize
-
     mkdir -p build &&
 
     cd build &&
@@ -26,7 +22,7 @@ upkg_static() {
 
     library frei0r \
         include ../include/frei0r.h \
-        lib $(find . -name "*.so" | xargs) \
+        lib/frei0r $(find . -name "*.so" | xargs) \
         lib/pkgconfig frei0r.pc
 }
 
