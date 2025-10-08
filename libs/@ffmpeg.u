@@ -29,6 +29,10 @@ upkg_args=(
     --enable-pthreads
     --enable-hardcoded-tables
     --extra-version=cmdlets
+
+    # toolchain
+    --cc=\"$CC\"
+    --cxx=\"$CXX\"
     # use extra- to avoid override default flags
     --extra-cflags=\"$CFLAGS $CPPFLAGS\"
     --extra-cxxflags=\"$CXXFLAGS $CPPFLAGS\"
