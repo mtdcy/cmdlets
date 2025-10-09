@@ -19,6 +19,7 @@ upkg_args=(
     --with-pkg-config-libdir="$PKG_CONFIG_PATH"
     --enable-widec # => ncursesw
 
+    --disable-nls
     --disable-rpath
 
     # from homebrew:ncurses.rb
@@ -32,18 +33,18 @@ upkg_args=(
 
     # from debian:/etc/terminfo/README
     #  => we are building static executable, cann't ship hardcoded prebuilts path into executables.
-    --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/user/share/terminfo"
-    # /user/share/terminfo is a common path for both Linux and macOS
+    --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
+    # /usr/share/terminfo is a common path for both Linux and macOS
 
     # don't install terminfo database, use system defaults
     #  => cause gettext check fail, see gettext.u.
-    #   => disable these configs => default terminfo dir still hardcoded to prebuilts.
-    #--with-default-terminfo-dir="/usr/share/terminfo"
-    #--disable-db-install
+    --with-default-terminfo-dir="/usr/share/terminfo"
+    --disable-db-install
 
-    # static with debug
+    # static without debug
     --without-shared
     --without-cxx-shared
+    --disable-debug
     --without-manpages
 )
 
