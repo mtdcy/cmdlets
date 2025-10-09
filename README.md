@@ -1,6 +1,6 @@
 # cmdlets
 
-Prebuilt single file, pseudo-static binaries and libraries for Linux | macOS | Windows.
+Prebuilt single file, static or pseudo-static binaries and libraries for Linux and macOS
 
 This Project includes:
 
@@ -14,30 +14,21 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdle
 # CN
 bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
 
-# Install cmdlet
-cmdlets.sh install nvim
+# Setup repo (optional)
+export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
+
+# Install bash 3.2 as default bash
+cmdlets.sh install bash@3.2:bash
 ```
 
 ## Supported arch
 
 - x86_64-linux-gnu
-- x86_64-linux-musl
 - x86_64-apple-darwin
-
 - aarch64-linux-gnu
-- aarch64-linux-musl
+- arm64-apple-darwin
 
-### ARM on x86
-
-```shell
-sudo apt install binfmt-support qemu-user-static
-```
-
-## Artifacts
-
-[CN](https://pub.mtdcy.top/cmdlets/latest)
-
-## Build Libraries & Binaries
+## Build
 
 ### Build on Host
 
@@ -50,7 +41,14 @@ make zlib
 ### Build with Docker
 
 ```shell
-export DOCKER_IMAGE=cmdlets
+# ARM on x86 (optional)
+sudo apt install binfmt-support qemu-user-static
+
+# Setup env
+make cmdlets.env
+source cmdlets.env
+# OR, manually
+export DOCKER_IMAGE=ghcr.io/mtdcy/builder:ubuntu-22.04
 export DOCKER_PLATFORM=linux/amd64  # supported: linux/amd64,linux/arm64
 
 make zlib
@@ -59,7 +57,7 @@ make zlib
 ### Build with remote machine
 
 ```shell
-export REMOTE_HOST=10.10.10.234
+export REMOTE_HOST=10.10.10.123
 make prepare-remote-homebrew    # run only once
 
 make zlib
@@ -68,14 +66,22 @@ make zlib
 ### Build options
 
 ```shell
+# local packages cache
 export CL_MIRRORS=http://pub.mtdcy.top
 
+# logging style
 export CL_LOGGING=tty # options: tty,plain,silence
 
-export CL_NJOBS=2   #
+# parallels jobs
+export CL_NJOBS=2
 ```
+
+## Artifacts
+
+- [Github](https://github.com/mtdcy/cmdlets/releases)
+- [CN](https://pub.mtdcy.top:8443/cmdlets/latest)
 
 ## LICENSES
 
-* This Project is licensed under BSD 2-Clause License.
-* The target is either LGPL or GPL or BSD or others depends on the source code's license.
+- This Project is licensed under BSD 2-Clause License.
+- The target is either LGPL or GPL or BSD or others depends on the source code's license.
