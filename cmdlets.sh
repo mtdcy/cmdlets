@@ -86,7 +86,7 @@ _exists() (
     return 1
 )
 
-# curl file to destination
+# curl file to destination or TEMPDIR
 _curl() (
     local source dest
     dest="${2:-$TEMPDIR/$1}"
@@ -102,13 +102,10 @@ _curl() (
 )
 
 # save package to PREBUILTS
-_flat() (
-    _curl "$1" || return 1
+_unzip() (
+    test -f "$1" || _curl "$1" "$TEMPDIR/$1" || return 1
     
-    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" |
-    while read -r line; do
-        echo -en "=> $PREBUILTS/$line\n"
-    done
+    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | sed 's/^/=> /'
 )
 
 # get remote revision url
@@ -148,7 +145,7 @@ _v2() {
 
     pkginfo=$(_revision "$1")
 
-    info2 ">2 Fetch $1 > pkginfo\n"
+    info2 ">2 Fetch $1 < pkginfo\n"
 
     _curl "$pkginfo" || return 1
 
@@ -157,9 +154,9 @@ _v2() {
     # v2: sha pkgfile
     IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
 
-    info2 ">2 Fetch $1 > $pkgfile\n"
+    info2 ">2 Fetch $1 < $pkgfile\n"
 
-    _flat "$pkgfile" || return 1
+    _unzip "$pkgfile" || return 1
 }
 
 _manifest() {
@@ -179,6 +176,7 @@ _manifest() {
 _search() {
     # cmdlets:
     #   minigzip
+    #   minigzip@1.3.1
     #   zlib/minigzip@1.3.1
     # packages:
     #   zlib
@@ -211,11 +209,11 @@ _v3() {
 
     [ -n "$pkgfile" ] || return 1
 
-    info3 ">3 Fetch $1 > $pkgfile\n"
+    info3 ">3 Fetch $1 < $pkgfile\n"
 
     # v3 git repo do not have file hierarchy
-    _flat "$pkgfile" || 
-    _flat "$(basename "$pkgfile")" || 
+    _unzip "$pkgfile" || 
+    _unzip "$(basename "$pkgfile")" || 
     return 1
 }
 
@@ -225,9 +223,7 @@ search() {
 
     info3 ">3 Search $1\n"
 
-    while read -r line; do
-        info3 "=> $line\n"
-    done < <( _search "$1" )
+    _search "$1" | sed 's/^/=> /'
 }
 
 # fetch cmdlet
@@ -269,7 +265,7 @@ library() {
 
 # fetch package
 package() {
-    local pkgname pkgver pkgfile pkginfo parts
+    local pkgname pkgver pkgfile pkginfo
 
     _manifest
    
@@ -277,17 +273,14 @@ package() {
     IFS='@' read -r pkgname pkgver <<< "$1"
 
     # cmdlet v3/manifest
-    if test -n "$pkgver" && [ "$pkgver" != latest ]; then
-        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
-    else
-        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/"           "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
-    fi
+    IFS=' ' read -r -a pkgfile < <( _search "$1" | awk '{print $1}' | uniq | xargs )
 
-    if test -n "${parts[*]}"; then
-        info3 "\n#3 package $pkgname > ${parts[*]}\n"
-        for part in "${parts[@]}"; do 
-            _v3 "$part" "$pkgname" || {
-                error "<< fetch $part/$ARCH failed\n"
+    if test -n "${pkgfile[*]}"; then
+        info3 "\n#3 fetch package $1 < ${pkgfile[*]}\n"
+
+        for file in "${pkgfile[@]}"; do 
+            _v3 "$file" "$pkgname" || {
+                error "<< fetch package $file/$ARCH failed\n"
                 return 1
             }
         done
@@ -297,23 +290,28 @@ package() {
         return 0
     fi
 
-    info2 "\n#2 package $1\n"
+    info2 "\n#2 fetch package $1\n"
 
     [ -n "$pkgver" ] || pkgver=latest
     pkginfo="$pkgname@$pkgver"
 
-    if _curl "$pkginfo"; then
+    if _curl "$pkginfo" "$TEMPDIR/$pkginfo"; then
         cat "$TEMPDIR/$pkginfo"
 
         while read -r pkgfile; do
             [ -n "$pkgfile" ] || continue
+
+            # sha pkgfile
             IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
-            info2 ">2 Fetch $1 > $pkgfile\n"
-            _flat "$pkgfile" || {
-                error "<< fetch $pkgfile/$ARCH failed\n"
+
+            info2 ">2 Fetch $pkgfile\n"
+
+            _unzip "$pkgfile" || {
+                error "<< fetch package $pkgfile/$ARCH failed\n"
                 return 1
             }
         done < "$TEMPDIR/$pkginfo"
+
         touch "$PREBUILTS/.$1.d" # mark as ready
     else
         error "<< Fetch package $1/$ARCH failed\n"
@@ -357,13 +355,18 @@ update() {
 
 # link file [alias...]
 _link() {
-    info "-- Link $1 => $PREBUILTS/bin/$1\n"
+    local bin="$1"
 
-    ln -sf "$PREBUILTS/bin/$1" "$WORKDIR/$1"
+    # cmdlets.sh install find@0.8.0:bash
+    test -f "$PREBUILTS/bin/$1" || IFS='@' read -r bin _ <<< "$bin"
+
+    info "-- Link $bin => $PREBUILTS/bin/$bin\n"
+    ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
 
     for alias in "${@:2}"; do
-        info "-- Link $alias => $1\n"
-        ln -sf "$1" "$WORKDIR/$alias"
+        [ "$alias" = "$bin" ] && continue
+        info "-- Link $alias => $bin\n"
+        ln -sf "$bin" "$WORKDIR/$alias"
     done
 }
 
