@@ -184,6 +184,8 @@ EOF
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
+    mkdir -p "$ROOT"/{prebuilts,out,logs,packages}
+
     local arch
     if [ "$(uname -s)" = Darwin ]; then
         arch="$(uname -m)-apple-darwin"
@@ -1164,12 +1166,16 @@ arch() {
     basename "$PREFIX"
 }
 
-# zip log directory if not empty
-zip_logfiles() {
-    local target="${PREFIX/prebuilts/logs}"
-    test -d "$target" || return 0
-    test -n "$(ls -A "$target")" || return 0
-    "$TAR" -C "$target" -cvf "$target-logs.tar.gz" .
+# zip files for release actions
+zip_files() {
+    # manifest
+    cd "$PREFIX" && "$TAR" -cvf "cmdlets.manifest.tar.gz" cmdlets.manifest && cd - || true
+
+    # log files
+    local logs="${PREFIX/prebuilts/logs}"
+    test -d "$logs" || return 0
+    test -n "$(ls -A "$logs")" || return 0
+    "$TAR" -C "$logs" -cvf "$logs-logs.tar.gz" .
 }
 
 _init || exit 110

@@ -55,7 +55,7 @@ bash ulib.sh build "${cmdlets[@]}" || ret=$?
 unset CL_FORCE
 
 # for release actions
-bash ulib.sh zip_logfiles || true
+bash ulib.sh zip_files || true
 
 ## find out dependents
 #dependents=()
