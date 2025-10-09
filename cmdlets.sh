@@ -47,9 +47,10 @@ _name="$(basename "$0")"
 usage() {
     cat << EOF
 $_name $VERSION
+
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$_name options [args ...]
+$_name cmd [args ...]
 
 Options:
     update                  - update $_name
@@ -57,14 +58,15 @@ Options:
     install <cmdlet>        - fetch and install cmdlet(s)
     library <libname>       - fetch a library from server
     package <pkgname>       - fetch a package(cmdlets & libraries) from server
+    search  <name>          - search for cmdlet, library or package
     help                    - show this help message
 
 Examples:
     $_name install minigzip                 # install the latest version
-    $_name install zlib/minigzip@1.3.1-2    # install the specific version
+    $_name install zlib/minigzip@1.3.1      # install the specific version
 
     $_name package zlib                     # install the latest package
-    $_name package zlib@1.3.1-2             # install the specific version
+    $_name package zlib@1.3.1               # install the specific version
 EOF
 }
 
@@ -124,18 +126,6 @@ _revision() {
     fi
 }
 
-# get remote pkginfo url
-_pkginfo() {
-    # zlib@1.3.1-2
-    IFS='@' read -r pkg ver <<< "$1"
-    IFS='-' read -r ver fix <<< "$ver"
-    if [ -n "$ver" ] && [ "$ver" != "latest" ]; then
-        echo "$pkg/pkginfo@$ver-${fix:-0}"
-    else
-        echo "$pkg/pkginfo@latest"
-    fi
-}
-
 # cmdlet v1: cmdlet
 _v1() {
     local binfile="bin/$1"
@@ -184,19 +174,39 @@ _manifest() {
     }
 }
 
+# search manifest, return multi-line results
+_search() {
+    # cmdlets:
+    #   minigzip
+    #   zlib/minigzip@1.3.1
+    # packages:
+    #   zlib
+    #   zlib@1.3.1
+
+    local pkgname pkgfile pkgver
+
+    IFS='@' read -r pkgname pkgver  <<< "$1"
+    IFS='/' read -r pkgname pkgfile <<< "$pkgname"
+
+    # v3: no latest support
+    [ "$pkgver" = "latest" ] && unset pkgver || true
+
+    if test -n "$pkgfile"; then
+        grep " $pkgname/$pkgfile@$pkgver" "$MANIFEST"
+    else
+        grep "^$pkgname .*/.*@$pkgver\|^$pkgname@$pkgver\| $pkgname/.*@$pkgver\| .*/$pkgname@$pkgver" "$MANIFEST"
+    fi | sort -u
+}
+
 # cmdlet v3/manifest: cmdlet [pkgname]
 _v3() {
-    local pkgfile
-
+    local pkgname pkgfile
+    
     _manifest
 
-    # v3: cmdlet pkgname/pkgfile.tar.gz sha
-    IFS=' ' read -r _ pkgfile _ < <({
-        [ -n "$2" ] &&
-        grep "^$1 $2/"  "$MANIFEST" ||
-        grep "^$1 "     "$MANIFEST" ||
-        grep " $1\|/$1" "$MANIFEST"
-    } | tail -n 1)
+    test -n "$2" && pkgname="$2/$1" || pkgname="$1"
+
+    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" | tail -n 1 )
 
     [ -n "$pkgfile" ] || return 1
 
@@ -206,6 +216,17 @@ _v3() {
     _flat "$pkgfile" || 
     _flat "$(basename "$pkgfile")" || 
     return 1
+}
+
+# v3 only
+search() {
+    _manifest
+
+    info3 ">3 Search $1\n"
+
+    while read -r line; do
+        info3 "=> $line\n"
+    done < <( _search "$1" )
 }
 
 # fetch cmdlet
@@ -242,30 +263,38 @@ library() {
 
 # fetch package
 package() {
-    local pkgfile pkginfo parts
+    local pkgname pkgver pkgfile pkginfo parts
 
     _manifest
+   
+    # zlib@1.3.1
+    IFS='@' read -r pkgname pkgver <<< "$1"
 
     # cmdlet v3/manifest
-    IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
+    if test -n "$pkgver" && [ "$pkgver" != latest ]; then
+        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $2}' | xargs)"
+    else
+        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/"           "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
+    fi
 
     if test -n "${parts[*]}"; then
-        info3 "\n#3 package $1 > ${parts[*]}\n"
+        info3 "\n#3 package $pkgname > ${parts[*]}\n"
         for part in "${parts[@]}"; do 
-            _v3 "$part" "$1" || {
+            _v3 "$part" "$pkgname" || {
                 error "<< fetch $part/$ARCH failed\n"
                 return 1
             }
         done
 
         _fix_pc
-        touch "$PREBUILTS/.$1.d" # mark as ready
+        touch "$PREBUILTS/.$pkgname.d" # mark as ready
         return 0
     fi
 
     info2 "\n#2 package $1\n"
 
-    pkginfo="$(_pkginfo "$1")"
+    [ -n "$pkgver" ] || pkgver=latest
+    pkginfo="$pkgname@$pkgver"
 
     if _curl "$pkginfo"; then
         cat "$TEMPDIR/$pkginfo"
@@ -338,6 +367,9 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
         manifest)
             _manifest
             cat "$MANIFEST"
+            ;;
+        search)
+            search "$2"
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
