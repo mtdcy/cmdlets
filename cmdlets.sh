@@ -289,16 +289,18 @@ package() {
 }
 
 update() {
-    local dest tempfile
+    local target
     if [ -f "$0" ]; then
-        dest="$0"
+        target="$0"
     elif [[ "$PATH" =~ $HOME/.bin ]]; then
-        dest="$HOME/.bin/$(basename "${BASE[0]}")"
+        target="$HOME/.bin/$_name"
+    elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
+        target="$HOME/.local/bin/$_name"
     else 
-        dest="/usr/local/bin/$(basename "${BASE[0]}")"
+        target="/usr/local/bin/$_name"
     fi
 
-    if ! test -w "$(dirname "$dest")"; then
+    if ! test -w "$(dirname "$target")"; then
         error "<< Permission Denied\n"
         return 1
     fi
@@ -306,11 +308,11 @@ update() {
     for base in "${BASE[@]}"; do
         info ">> Fetch $_name < $base\n"
         if _curl "$base" "$TEMPDIR/$_name"; then
-            info "-- $_name > $dest\n"
-            cp "$TEMPDIR/$_name" "$dest"
-            chmod a+x "$dest"
+            info "-- $_name > $target\n"
+            cp "$TEMPDIR/$_name" "$target"
+            chmod a+x "$target"
             # invoke the new file
-            exec "$dest" help
+            exec "$target" help
         fi
     done
 
