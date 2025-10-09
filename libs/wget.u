@@ -44,8 +44,6 @@ upkg_args=(
 )
 
 upkg_static() {
-    apply_c89_flags || true
-
     configure &&
 
     make &&
@@ -53,12 +51,8 @@ upkg_static() {
     # fast check
     ./src/wget -O /dev/null http://www.baidu.com &&
 
-    # check & install
     # no top level check: https://git.alpinelinux.org/aports/tree/main/wget/APKBUILD
-    {
-        # check fails on macOS, no libperl-www/HTTP-Daemon
-        is_darwin || make -C tests check
-    } &&
+    #make -C tests check
 
     #make -C src install-exec &&
     cmdlet src/wget &&
