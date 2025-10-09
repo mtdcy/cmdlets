@@ -251,7 +251,6 @@ _init() {
         PKG_CONFIG:pkg-config
         PATCH:patch
         INSTALL:install
-        GO:go
     )
     is_arm64 || progs+=(
         NASM:nasm
@@ -342,17 +341,6 @@ _init() {
         export CCACHE_DISABLE=1
     fi
 
-    # setup go envs: don't modify GOPATH here
-    export GOBIN="$PREFIX/bin"
-    export GOMODCACHE="$ROOT/.go/pkg/mod"
-    export GO111MODULE=on # go modules on
-    export CGO_CFLAGS="$CFLAGS"
-    export CGO_CXXFLAGS="$CXXFLAGS"
-    export CGO_CPPFLAGS="$CPPFLAGS"
-    export CGO_LDFLAGS="$LDFLAGS"
-    unset CGO_ENABLED # => go()
-    [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
-
     # macos
     if is_darwin; then
         export MACOSX_DEPLOYMENT_TARGET=11.0
@@ -360,7 +348,8 @@ _init() {
         export MSYS=winsymlinks:lnk
     fi
 
-    _init_rust || true
+    _init_go    || return 1
+    _init_rust  || return 1
 
     # cmdlets
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
@@ -510,6 +499,26 @@ cargo() {
     esac
     
     ulogcmd "$cmdline"
+}
+
+_init_go() {
+    GO="$(which go)"
+
+    [ -n "$GO" ] || uloge "....." "missing host tool go"
+
+    # setup go envs: don't modify GOPATH here
+    export GOBIN="$PREFIX/bin"
+    export GOMODCACHE="$ROOT/.go/pkg/mod"
+    export GO111MODULE=on # go modules on
+    export CGO_CFLAGS="$CFLAGS"
+    export CGO_CXXFLAGS="$CXXFLAGS"
+    export CGO_CPPFLAGS="$CPPFLAGS"
+    export CGO_LDFLAGS="$LDFLAGS"
+
+    # => go()
+    unset CGO_ENABLED 
+
+    [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 }
 
 go() {
