@@ -45,11 +45,11 @@ jobs:
         run: |-
           set -ex
 
-          test -n "${{ matrix.builder }}" || make prepare-host
-
           export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
 
           echo "arch=$(bash ulib.sh arch)" | tee -a "$GITHUB_OUTPUT"
+
+          test -n "${{ matrix.builder }}" || make prepare-host
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
@@ -63,6 +63,8 @@ jobs:
           body: ${{ steps.build.outputs.arch }}
           append_body: false
           draft: false
+          prerelease: false
+          make_latest: ${{ steps.build.outputs.arch == 'x86_64-linux-gnu' }}
           files: |-
             prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
             prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz

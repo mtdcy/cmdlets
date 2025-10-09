@@ -165,8 +165,7 @@ _init_rust() {
     fi
 
     if test -z "$CARGO"; then
-        ulogw "....." "rustup/cargo not exists"
-        return 1
+        uloge "Init:" "rustup/cargo not exists"
     fi
 
     export CARGO RUSTC
@@ -271,7 +270,7 @@ _init() {
             p="$($_find "$y" 2>/dev/null)" && break
         done
 
-        [ -n "$p" ] || ulogw "....." "missing host tools ${v[*]}"
+        [ -n "$p" ] || ulogw "Init:" "missing host tools ${v[*]}"
 
         eval export "$k=$p"
     done
@@ -348,8 +347,9 @@ _init() {
         export MSYS=winsymlinks:lnk
     fi
 
-    _init_go    || return 1
-    _init_rust  || return 1
+    # warnings only
+    _init_go    || true
+    _init_rust  || true
 
     # cmdlets
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
@@ -504,7 +504,7 @@ cargo() {
 _init_go() {
     GO="$(which go)"
 
-    [ -n "$GO" ] || uloge "....." "missing host tool go"
+    [ -n "$GO" ] || uloge "Init:" "missing host tool go"
 
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
