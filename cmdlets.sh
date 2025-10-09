@@ -69,12 +69,12 @@ Examples:
 EOF
 }
 
-error() { echo -ne "\\033[31m$*\\033[39m"; }
-info()  { echo -ne "\\033[32m$*\\033[39m"; }
-warn()  { echo -ne "\\033[33m$*\\033[39m"; }
-info1() { echo -ne "\\033[35m$*\\033[39m"; }
-info2() { echo -ne "\\033[34m$*\\033[39m"; }
-info3() { echo -ne "\\033[36m$*\\033[39m"; }
+error() { echo -e "\\033[31m$*\\033[39m";   }
+info()  { echo -e "\\033[32m$*\\033[39m";   }
+warn()  { echo -e "\\033[33m$*\\033[39m";   }
+info1() { echo -e "\\033[35m$*\\033[39m";   }
+info2() { echo -e "\\033[34m$*\\033[39m";   }
+info3() { echo -e "\\033[36m$*\\033[39m";   }
 
 # is file existing in repo
 _exists() (
@@ -93,9 +93,9 @@ _curl() (
     mkdir -p "$(dirname "$dest")"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        info "== $source\n"
+        info "== $source"
         curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo "=> $dest"
+        echo "=> ${2:-$1}"
         curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
     done
     return 1
@@ -103,7 +103,7 @@ _curl() (
 
 # save package to PREBUILTS
 _unzip() (
-    test -f "$1" || _curl "$1" "$TEMPDIR/$1" || return 1
+    test -f "$1" || _curl "$1" || return 1
     
     tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | sed 's/^/=> /'
 )
@@ -128,13 +128,12 @@ _v1() {
 
     _exists "$binfile" || return 1
 
-    info1 ">1 Fetch $binfile\n"
+    info1 ">1 Fetch $binfile"
 
     _curl "$binfile" || return 1
 
     mkdir -p "$PREBUILTS/bin"
 
-    info1 ">> Copy $1 => $PREBUILTS/bin/$1\n"
     cp -f "$TEMPDIR/$binfile" "$PREBUILTS/bin/$1"
     chmod a+x "$PREBUILTS/bin/$1"
 }
@@ -145,7 +144,7 @@ _v2() {
 
     pkginfo=$(_revision "$1")
 
-    info2 ">2 Fetch $1 < pkginfo\n"
+    info2 ">2 Fetch $1 < pkginfo"
 
     _curl "$pkginfo" || return 1
 
@@ -154,7 +153,7 @@ _v2() {
     # v2: sha pkgfile
     IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
 
-    info2 ">2 Fetch $1 < $pkgfile\n"
+    info2 ">2 Fetch $1 < $pkgfile"
 
     _unzip "$pkgfile" || return 1
 }
@@ -165,15 +164,17 @@ _manifest() {
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
 
     # pull manifest first
-    info3 ">> Fetch manifest\n"
+    info3 ">> Fetch manifest"
     _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
-        warn "<< Fetch manifest failed\n"
+        warn "<< Fetch manifest failed"
         touch "$MANIFEST"
     }
 }
 
 # search manifest, return multi-line results
 _search() {
+    _manifest 1>&2
+
     # cmdlets:
     #   minigzip
     #   minigzip@1.3.1
@@ -201,15 +202,13 @@ _search() {
 _v3() {
     local pkgname pkgfile
     
-    _manifest
-
     test -n "$2" && pkgname="$2/$1" || pkgname="$1"
 
     IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" | tail -n 1 )
 
     [ -n "$pkgfile" ] || return 1
 
-    info3 ">3 Fetch $1 < $pkgfile\n"
+    info3 ">3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
     _unzip "$pkgfile" || 
@@ -219,15 +218,17 @@ _v3() {
 
 # v3 only
 search() {
-    _manifest
+    _manifest && echo ""
 
-    info3 ">3 Search $1\n"
+    info3 ">3 Search $1"
 
     _search "$1" | sed 's/^/=> /'
 }
 
 # fetch cmdlet
 cmdlet() {
+    _manifest && echo ""
+
     local ver 
     IFS='@' read -r _ ver <<< "$*"
 
@@ -238,10 +239,10 @@ cmdlet() {
         true
     # fallback to linux-musl
     #elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
-    #    warn "-- Fetch $1/$(uname -m)-linux-musl for $ARCH again\n"
+    #    warn "-- Fetch $1/$(uname -m)-linux-musl for $ARCH again"
     #    ARCH="$(uname -m)-linux-musl" cmdlet "$@"
     else
-        error "<< Fetch $1/$ARCH failed\n"
+        error "<< Fetch $1/$ARCH failed"
         return 1
     fi
 }
@@ -253,22 +254,24 @@ _fix_pc() {
 
 # fetch library from server
 library() {
+    _manifest && echo ""
+
     # cmdlet v3/manifest
     if _v3 "$@" || _v2 "$@"; then
         touch "$PREBUILTS/.$1.d" # mark as ready
         _fix_pc
     else
-        error "<< Fetch $1/$ARCH failed\n"
+        error "<< Fetch $1/$ARCH failed"
         return 1
     fi
 }
 
 # fetch package
 package() {
+    _manifest && echo ""
+
     local pkgname pkgver pkgfile pkginfo
 
-    _manifest
-   
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgver <<< "$1"
 
@@ -276,11 +279,11 @@ package() {
     IFS=' ' read -r -a pkgfile < <( _search "$1" | awk '{print $1}' | uniq | xargs )
 
     if test -n "${pkgfile[*]}"; then
-        info3 "\n#3 fetch package $1 < ${pkgfile[*]}\n"
+        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
         for file in "${pkgfile[@]}"; do 
             _v3 "$file" "$pkgname" || {
-                error "<< fetch package $file/$ARCH failed\n"
+                error "<< Fetch package $file/$ARCH failed"
                 return 1
             }
         done
@@ -290,12 +293,12 @@ package() {
         return 0
     fi
 
-    info2 "\n#2 fetch package $1\n"
+    info2 "#2 fetch package $1"
 
     [ -n "$pkgver" ] || pkgver=latest
     pkginfo="$pkgname@$pkgver"
 
-    if _curl "$pkginfo" "$TEMPDIR/$pkginfo"; then
+    if _curl "$pkginfo"; then
         cat "$TEMPDIR/$pkginfo"
 
         while read -r pkgfile; do
@@ -304,17 +307,17 @@ package() {
             # sha pkgfile
             IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
 
-            info2 ">2 Fetch $pkgfile\n"
+            info2 ">2 Fetch $pkgfile"
 
             _unzip "$pkgfile" || {
-                error "<< fetch package $pkgfile/$ARCH failed\n"
+                error "<< fetch package $pkgfile/$ARCH failed"
                 return 1
             }
         done < "$TEMPDIR/$pkginfo"
 
         touch "$PREBUILTS/.$1.d" # mark as ready
     else
-        error "<< Fetch package $1/$ARCH failed\n"
+        error "<< Fetch package $1/$ARCH failed"
         return 1
     fi
 
@@ -334,14 +337,14 @@ update() {
     fi
 
     if ! mkdir -p "$(dirname "$target")"; then
-        error "<< Permission Denied?\n"
+        error "<< Permission Denied?"
         return 1
     fi
 
     for base in "${BASE[@]}"; do
-        info ">> Fetch $NAME < $base\n"
+        info ">> Fetch $NAME < $base"
         if _curl "$base" "$TEMPDIR/$NAME"; then
-            info "-- $NAME > $target\n"
+            info "-- $NAME > $target"
             cp "$TEMPDIR/$NAME" "$target"
             chmod a+x "$target"
             # invoke the new file
@@ -349,7 +352,7 @@ update() {
         fi
     done
 
-    error "<< Update $(basename "$0") failed\n"
+    error "<< Update $(basename "$0") failed"
     return 1
 }
 
@@ -360,12 +363,12 @@ _link() {
     # cmdlets.sh install find@0.8.0:bash
     test -f "$PREBUILTS/bin/$1" || IFS='@' read -r bin _ <<< "$bin"
 
-    info "-- Link $bin => $PREBUILTS/bin/$bin\n"
+    info "-- Link $bin => $PREBUILTS/bin/$bin"
     ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
 
     for alias in "${@:2}"; do
         [ "$alias" = "$bin" ] && continue
-        info "-- Link $alias => $bin\n"
+        info "-- Link $alias => $bin"
         ln -sf "$bin" "$WORKDIR/$alias"
     done
 }
