@@ -136,6 +136,8 @@ _v1() {
     _curl "$binfile" || return 1
 
     mkdir -p "$PREBUILTS/bin"
+
+    info1 ">> Copy $1 => $PREBUILTS/bin/$1\n"
     cp -f "$TEMPDIR/$binfile" "$PREBUILTS/bin/$1"
     chmod a+x "$PREBUILTS/bin/$1"
 }
@@ -194,7 +196,7 @@ _search() {
         grep " $pkgname/$pkgfile@$pkgver" "$MANIFEST"
     else
         grep "^$pkgname .*/.*@$pkgver\|^$pkgname@$pkgver\| $pkgname/.*@$pkgver\| .*/$pkgname@$pkgver" "$MANIFEST"
-    fi | sort -u
+    fi
 }
 
 # cmdlet v3/manifest: cmdlet [pkgname]
@@ -230,8 +232,13 @@ search() {
 
 # fetch cmdlet
 cmdlet() {
+    local ver 
+    IFS='@' read -r _ ver <<< "$*"
+
     # for cmdlet, v1 > v3 > v2
-    if _v1 "$@" || _v3 "$@" || _v2 "$@"; then
+    if test -z "$ver" && _v1 "$@"; then
+        true;
+    elif _v3 "$@" || _v2 "$@"; then
         true
     # fallback to linux-musl
     #elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
@@ -271,9 +278,9 @@ package() {
 
     # cmdlet v3/manifest
     if test -n "$pkgver" && [ "$pkgver" != latest ]; then
-        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
+        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
     else
-        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/"           "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
+        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/"           "$MANIFEST" | awk '{print $1}' | uniq | xargs)"
     fi
 
     if test -n "${parts[*]}"; then
