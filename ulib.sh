@@ -79,21 +79,22 @@ _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
         cat >> "$(_logfile)"
     elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
-        # tput: DON'T combine caps, not universal.
-        local CL i
+        tput dim                        # dim on
+        tput rmam                       # line break off
 
-        CL="$(tput hpa 0)$(tput el)"
-
-        i=0
-        tput rmam       # line break off
-        tput dim        # dim on
-        tee -a "$(_logfile)" | while read -r line; do
-            printf '%s' "$CL#$i: $line"
+        local i=0
+        while read -r line; do
             i=$((i + 1))
-        done
-        echo -en "$CL"  # clear line
-        tput smam       # line break on
-        tput sgr0       # reset
+
+            tput ed                     # clear to end of screen
+            tput sc                     # save cursor position
+            printf "#$i: %s" "$line"
+            tput rc                     # restore cursor position
+        done < <(tee -a "$(_logfile)")
+
+        tput ed                         # clear to end of screen
+        tput smam                       # line break on
+        tput sgr0                       # reset colors
     else
         tee -a "$(_logfile)"
     fi
