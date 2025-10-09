@@ -29,6 +29,8 @@ BASE=(
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
 )
 
+NAME="$(basename "${BASE[0]}")"
+
 CURL_OPTS=( -L --fail --connect-timeout 1 --progress-bar --no-progress-meter )
 
 if [ -z "$ARCH" ]; then
@@ -41,19 +43,16 @@ if [ -z "$ARCH" ]; then
     fi
 fi
 
-# never resolve symbolic of "$0"
-_name="$(basename "$0")"
-
 usage() {
     cat << EOF
-$_name $VERSION
+$NAME $VERSION
 
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$_name cmd [args ...]
+$NAME cmd [args ...]
 
 Options:
-    update                  - update $_name
+    update                  - update $NAME
     fetch   <cmdlet>        - fetch cmdlet(s) from server
     install <cmdlet>        - fetch and install cmdlet(s)
     library <libname>       - fetch a library from server
@@ -62,11 +61,11 @@ Options:
     help                    - show this help message
 
 Examples:
-    $_name install minigzip                 # install the latest version
-    $_name install zlib/minigzip@1.3.1      # install the specific version
+    $NAME install minigzip                  # install the latest version
+    $NAME install zlib/minigzip@1.3.1       # install the specific version
 
-    $_name package zlib                     # install the latest package
-    $_name package zlib@1.3.1               # install the specific version
+    $NAME package zlib                      # install the latest package
+    $NAME package zlib@1.3.1                # install the specific version
 EOF
 }
 
@@ -272,7 +271,7 @@ package() {
 
     # cmdlet v3/manifest
     if test -n "$pkgver" && [ "$pkgver" != latest ]; then
-        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $2}' | xargs)"
+        IFS=' ' read -r -a parts <<< "$(grep " $pkgname/.*@$pkgver" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
     else
         IFS=' ' read -r -a parts <<< "$(grep " $pkgname/"           "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
     fi
@@ -322,23 +321,23 @@ update() {
     if [ -f "$0" ]; then
         target="$0"
     elif [[ "$PATH" =~ $HOME/.bin ]]; then
-        target="$HOME/.bin/$_name"
+        target="$HOME/.bin/$NAME"
     elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
-        target="$HOME/.local/bin/$_name"
+        target="$HOME/.local/bin/$NAME"
     else 
-        target="/usr/local/bin/$_name"
+        target="/usr/local/bin/$NAME"
     fi
 
-    if ! test -w "$(dirname "$target")"; then
-        error "<< Permission Denied\n"
+    if ! mkdir -p "$(dirname "$target")"; then
+        error "<< Permission Denied?\n"
         return 1
     fi
 
     for base in "${BASE[@]}"; do
-        info ">> Fetch $_name < $base\n"
-        if _curl "$base" "$TEMPDIR/$_name"; then
-            info "-- $_name > $target\n"
-            cp "$TEMPDIR/$_name" "$target"
+        info ">> Fetch $NAME < $base\n"
+        if _curl "$base" "$TEMPDIR/$NAME"; then
+            info "-- $NAME > $target\n"
+            cp "$TEMPDIR/$NAME" "$target"
             chmod a+x "$target"
             # invoke the new file
             exec "$target" help
@@ -361,27 +360,26 @@ _link() {
     done
 }
 
-# for quick install
-if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
-    update
-elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
+# invoke cmd [args...]
+invoke() {
+    cd "$WORKDIR"
+
     # shellcheck disable=SC2064
     TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
-    case "$1" in
-        update) update; exit 0 ;;
-        help)   usage;  exit 0 ;;
-    esac
-
-    cd "$WORKDIR"
-
+    local ret=0
     case "$1" in
         manifest)
             _manifest
             cat "$MANIFEST"
             ;;
+        update)
+            update
+            ;;
         search)
-            search "$2"
+            for x in "${@:2}"; do
+                search "$x"
+            done
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
@@ -412,22 +410,17 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
             usage
             ;;
     esac
-    exit $ret
-else
-    # preapre cmdlet
-    cmdlet="$PREBUILTS/$_name"
-    [ -f "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
-    [ -f "$cmdlet" ] || cmdlet "$_name"
+    exit $?
+}
 
-    # exec cmdlet
-    cmdlet="$PREBUILTS/$_name"
-    [ -f "$cmdlet" ] || cmdlet="$PREBUILTS/bin/$_name"
-    [ -f "$cmdlet" ] || error "no cmdlet $_name found.\n"
+# never resolve symbolic of "$0"
+_name="$(basename "$0")"
 
-    # fix permission
-    [ -x "$cmdlet" ] || chmod a+x "$cmdlet"
-
-    exec "$cmdlet" "$@"
+# for quick install
+if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
+    invoke update
+elif [ "$_name" = "$NAME" ]; then
+    invoke "$@"
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
