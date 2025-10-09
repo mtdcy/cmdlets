@@ -579,6 +579,7 @@ _pack() {
     local name version
     IFS='@' read -r name version <<< "$1"
 
+    # always use full version here
     local pkgname="$upkg_name/$name@$upkg_ver.tar.gz"
     local pkgvern="$upkg_name/$name@$upkg_ver"
     local pkginfo="$upkg_name/pkginfo@$upkg_ver"
@@ -614,7 +615,11 @@ _pack() {
     # v3/manifest: name pkgname sha
     touch cmdlets.manifest
     # only clear records of the corresponding version 
-    sed "\#^$name.*$upkg_ver#d" -i cmdlets.manifest
+    if test -n "$version"; then
+        sed "\#^$name@$version $upkg_name/$name@$upkg_ver#d" -i cmdlets.manifest
+    else
+        sed "\#^$name $upkg_name/$name@$upkg_ver#d"          -i cmdlets.manifest
+    fi
     # new records
     echo "$1 $pkgname $sha" >> cmdlets.manifest
 
@@ -1043,7 +1048,7 @@ build() {
 
     ulogi "dependencies: ${deps[*]}"
 
-    CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh menifest &>/dev/null || true
+    CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()
