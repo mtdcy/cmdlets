@@ -1,16 +1,17 @@
 #!/bin/bash -e
 # shellcheck shell=bash
+# shellcheck disable=SC2154
 
 umask  0022
 export LANG=C
 
-# options
-export CL_FORCE=${CL_FORCE:-0}          # force rebuild all dependencies
-export CL_LOGGING=${CL_LOGGING:-tty}    # tty,plain,silent
-export CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
-export CL_MIRRORS=${CL_MIRRORS:-}       # package mirrors, and go/cargo/etc
-export CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
-export CL_NJOBS=${CL_NJOBS:-1}          # noparallel by default
+# options           =
+export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
+export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
+export     CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
+export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
+export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
+export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
@@ -111,23 +112,6 @@ ulogcmd() {
     echocmd "$@"
 }
 
-CURL="$(which curl)"
-CURL_OPTS=( --fail -vL )
-
-# _curl source destination [options]
-_curl() {
-    local source="$1"
-    local dest="${2:-/dev/null}"
-
-    echocmd "$CURL" -I "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
-    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
-}
-
-# _curl_to_stdout source [options]
-_curl_stdout() {
-    echocmd "$CURL" -S "${@:2}" "${CURL_OPTS[@]}" "$1"
-}
-
 _filter_options() {
     local opts;
     while [ $# -gt 0 ]; do
@@ -197,7 +181,6 @@ EOF
     fi
 }
 
-# TODO: add support for toolchain define
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
@@ -649,7 +632,6 @@ cmdlet() {
 
     target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    # shellcheck disable=SC2154
     "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
 
     local links=()
@@ -702,9 +684,10 @@ _install() {
 }
 
 # library   name:alias1:alias2          \
+#           [include]       abc.h       \
 #           include/xxx     xxx.h       \
-#           lib             libxxx.a    \
-#           lib/pkgconfig   libxxx.pc
+#           [lib]           libxxx.a    \
+#           [lib/pkgconfig] libxxx.pc
 library() {
     local libname libalias subdir installed
     IFS=':' read -r libname libalias <<< "$1"
@@ -779,8 +762,25 @@ check() {
     fi
 }
 
+CURL="$(which curl)"
+CURL_OPTS=( --fail -vL )
+
+# _curl source destination [options]
+_curl() {
+    local source="$1"
+    local dest="${2:-/dev/null}"
+
+    echocmd "$CURL" -I "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
+    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
+}
+
+# _curl_to_stdout source [options]
+_curl_stdout() {
+    echocmd "$CURL" -S "${@:2}" "${CURL_OPTS[@]}" "$1"
+}
+
 # fetch url to packages/ or return error
-# _fetch <zip <sha> <urls...>
+# _fetch <zip> <sha> <urls...>
 _fetch() {
     local zip=$1
     local sha=$2
@@ -887,7 +887,6 @@ _unzip() {
 }
 
 # prepare source code or return error
-# shellcheck disable=SC2154
 _prepare() {
     # use the first url to construct zip file name
     local zip="$ROOT/packages/$upkg_zip"
