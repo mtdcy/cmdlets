@@ -349,6 +349,18 @@ update() {
     return 1
 }
 
+# link file [alias...]
+_link() {
+    info "-- Link $1 => $PREBUILTS/bin/$1\n"
+
+    ln -sf "$PREBUILTS/bin/$1" "$WORKDIR/$1"
+
+    for alias in "${@:2}"; do
+        info "-- Link $alias => $1\n"
+        ln -sf "$1" "$WORKDIR/$alias"
+    done
+}
+
 # for quick install
 if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
     update
@@ -377,17 +389,8 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
                 cmdlet "$bin" || ret=$?
 
                 bin="$(basename "$bin")"
-                info "-- Link $bin => $PREBUILTS/bin/$bin\n"
-                ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
 
-                # create alias links
-                if [ -n "$alias" ]; then
-                    IFS=':' read -r -a alias <<< "$alias"
-                    for a in "${alias[@]}"; do
-                        info "-- Link $a => $bin\n"
-                        ln -sf "$bin" "$WORKDIR/$a"
-                    done
-                fi
+                _link "$bin" ${alias//:/ }
             done
             ;;
         fetch)      # fetch cmdlets
