@@ -193,7 +193,7 @@ _search() {
     if test -n "$pkgfile"; then
         grep " $pkgname/$pkgfile@$pkgver" "$MANIFEST"
     else
-        grep "^$pkgname .*/.*@$pkgver\|^$pkgname@$pkgver\| $pkgname/.*@$pkgver\| .*/$pkgname@$pkgver" "$MANIFEST"
+        grep "^$pkgname .*/.*@$pkgver\|^$pkgname@$pkgver \| $pkgname/.*@$pkgver\| .*/$pkgname@$pkgver" "$MANIFEST"
     fi
 }
 
