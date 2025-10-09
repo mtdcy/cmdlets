@@ -59,21 +59,8 @@ upkg_args=(
 # fix 'error: cannot guess build type'
 is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
-# old bash written in c < C99
-# suppressed warnings
-warnings=(
-    -Wno-error=implicit-function-declaration
-    -Wno-error=implicit-int 
-    -Wno-error=incompatible-pointer-types
-)
-
-is_clang && warnings+=(
-    -Wno-error=deprecated-non-prototype 
-)
-
 upkg_static() {
-    # < C99
-    CFLAGS+=" ${warnings[*]}"
+    apply_c89_flags || true
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
