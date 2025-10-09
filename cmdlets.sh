@@ -10,7 +10,6 @@ VERSION=0.3
 WORKDIR="$(dirname "$0" | xargs realpath)"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
-MANIFEST="$PREBUILTS/cmdlets.manifest"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS
 
@@ -172,9 +171,24 @@ _v2() {
     _flat "$pkgfile" || return 1
 }
 
+_manifest() {
+    [ -z "$MANIFEST" ] || return 0
+
+    export MANIFEST="$PREBUILTS/cmdlets.manifest"
+
+    # pull manifest first
+    info3 ">> Fetch manifest\n"
+    _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
+        warn "<< Fetch manifest failed\n"
+        touch "$MANIFEST"
+    }
+}
+
 # cmdlet v3/manifest: cmdlet [pkgname]
 _v3() {
     local pkgfile
+
+    _manifest
 
     # v3: cmdlet pkgname/pkgfile.tar.gz sha
     IFS=' ' read -r _ pkgfile _ < <({
@@ -229,6 +243,8 @@ library() {
 # fetch package
 package() {
     local pkgfile pkginfo parts
+
+    _manifest
 
     # cmdlet v3/manifest
     IFS=' ' read -r -a parts <<< "$(grep -F " $1/" "$MANIFEST" | awk '{print $1}' | sort -u | xargs)"
@@ -315,19 +331,13 @@ elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
     esac
 
     cd "$WORKDIR"
-
-    # pull manifest first
-    info3 ">> Fetch manifest\n"
-    _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
-        warn "<< Fetch manifest failed\n"
-        touch "$MANIFEST"
-    }
     
     # shellcheck disable=SC2064
     TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
     case "$1" in
         manifest)
+            _manifest
             cat "$MANIFEST"
             ;;
         install)    # install cmdlets
