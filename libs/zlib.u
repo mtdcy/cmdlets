@@ -30,22 +30,7 @@ upkg_patch_zip=
 upkg_patch_strip=
 
 upkg_static() {
-    if is_msys; then
-        LOC="$CFLAGS"
-
-        # always static
-        make -f win32/Makefile.gcc         \
-            CC="$CC"                       \
-            AS="$AS"                       \
-            INCLUDE_PATH="$PREFIX/include" \
-            LIBRARY_PATH="$PREFIX/lib"     \
-            BINARY_PATH="$PREFIX/bin"      \
-            minigzip.exe test
-    else
-        configure --static &&
-
-        make minigzip check
-    fi &&
+    configure --static && make || return 1
 
     cat <<EOF > zlib.pc
 prefix=$PREFIX

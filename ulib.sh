@@ -296,9 +296,7 @@ _init() {
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
         FLAGS+=( --static ) # static linking => two '--' vs ldflags
-        if is_msys; then
-            LDFLAGS="-L$PREFIX/lib -static"
-        elif is_clang; then
+        if is_clang; then
             LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
         else
             LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
@@ -308,9 +306,9 @@ _init() {
         #  => use PIC instead, or let packages decide
         #LDFLAGS+=" -fPIE -pie"
         # link needed static libraries
-        LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
+        is_msys || LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
         # Security: FULL RELRO
-        LDFLAGS+=" -Wl,-z,relro,-z,now"
+        is_msys || LDFLAGS+=" -Wl,-z,relro,-z,now"
     fi
 
     CFLAGS="${FLAGS[*]}"
