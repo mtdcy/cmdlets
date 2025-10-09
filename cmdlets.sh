@@ -303,14 +303,11 @@ update() {
         return 1
     fi
 
-    # shellcheck disable=SC2064
-    tempfile="$(mktemp)" && trap "rm -f $tempfile" EXIT
-
     for base in "${BASE[@]}"; do
         info ">> Fetch $_name < $base\n"
-        if _curl "$base" "$tempfile"; then
-            info "-- cmdlets > $dest\n"
-            cp "$tempfile" "$dest"
+        if _curl "$base" "$TEMPDIR/$_name"; then
+            info "-- $_name > $dest\n"
+            cp "$TEMPDIR/$_name" "$dest"
             chmod a+x "$dest"
             # invoke the new file
             exec "$dest" help
@@ -325,15 +322,15 @@ update() {
 if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
     update
 elif [ "$_name" = "$(basename "${BASE[0]}")" ]; then
+    # shellcheck disable=SC2064
+    TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
+
     case "$1" in
         update) update; exit 0 ;;
         help)   usage;  exit 0 ;;
     esac
 
     cd "$WORKDIR"
-    
-    # shellcheck disable=SC2064
-    TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
     case "$1" in
         manifest)
