@@ -342,10 +342,14 @@ inspect_env() {
 
 apply_c89_flags() {
     local flags=(
-        -std=gnu89
-        -Wno-error=implicit-function-declaration
         -Wno-error=implicit-int 
         -Wno-error=incompatible-pointer-types
+    )
+
+    is_clang && flags+=(
+        -Wno-error=implicit-function-declaration
+    ) || flags+=(
+        -Wno-implicit-function-declaration
     )
 
     export CFLAGS+=" ${flags[*]}"

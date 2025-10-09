@@ -27,12 +27,15 @@ is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 upkg_static() {
     apply_c89_flags || true
 
+    # bash 3.2 won't start with `-Os'
+    CFLAGS="${CFLAGS//-Os/-O2}"
+
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
     CFLAGS+=" -DSSH_SOURCE_BASHRC"
 
     # some version needs this
-    CPPFLAGS="$CFLAGS"
+    CPPFLAGS+="$CFLAGS"
 
     export CFLAGS CPPFLAGS
 
