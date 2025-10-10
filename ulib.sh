@@ -617,15 +617,10 @@ _pack() {
     local name version
     IFS='@' read -r name version <<< "$1"
 
-    test -n "$version" || version="$upkg_ver"
-
     # always use full version here
-    local pkgname="$upkg_name/$name@$version.tar.gz"
-    local pkgvern="$upkg_name/$name@$version"
-
-    # pkginfo is shared by library() and cmdlet(), full versioned
+    local pkgname="$upkg_name/$name@$upkg_ver.tar.gz"
+    local pkgvern="$upkg_name/$name@$upkg_ver"
     local pkginfo="$upkg_name/pkginfo@$upkg_ver"
-    touch "$pkginfo"
 
     local files
 
@@ -633,6 +628,9 @@ _pack() {
     IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
 
     echocmd "$TAR" -czvf "$pkgname" "${files[@]}"
+
+    # pkginfo is shared by library() and cmdlet(), full versioned
+    touch "$pkginfo" 
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgname" >> "$pkginfo"
@@ -646,15 +644,20 @@ _pack() {
     _link "$pkginfo" "$upkg_name/pkginfo@latest"
     _link "$pkgvern" "$upkg_name/$name@latest"
 
-    if [[ "$1" == *@* ]]; then
+    if test -n "$version"; then
         _link "$upkg_name/$name@latest" "$name@$version"
     else
         _link "$upkg_name/$name@latest" "$name@latest"
     fi
 
     # v3/manifest: name pkgname sha
+    touch cmdlets.manifest
     # only clear records of the corresponding version 
-    sed "\#^$1 $pkgname #d" -i cmdlets.manifest
+    if test -n "$version"; then
+        sed "\#^$name@$version $upkg_name/$name@$upkg_ver#d" -i cmdlets.manifest
+    else
+        sed "\#^$name $upkg_name/$name@$upkg_ver#d"          -i cmdlets.manifest
+    fi
     # new records
     echo "$1 $pkgname $sha" >> cmdlets.manifest
 
@@ -1087,15 +1090,8 @@ compile() {(
 
     ulogi ".Path" "$PWD"
 
-    _prepare || return 101
-
-    # clear manifest for upkg_name
-    touch "$PREFIX/cmdlets.manifest"
-    # clear full versioned records here only
-    sed -i "\# $upkg_name/.*@$upkg_ver#d" "$PREFIX/cmdlets.manifest"
-
-    # build static linked
-    upkg_static || {
+    # build library
+    _prepare && upkg_static || {
         sleep 1 # let _capture() finish
 
         local logfile="$(_logfile)"
