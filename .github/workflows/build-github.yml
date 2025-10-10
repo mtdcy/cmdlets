@@ -18,6 +18,7 @@ jobs:
   build:
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
+    if: ${{ vars.LOCAL_REGISTRY == '' }}
     strategy:
       fail-fast: false
       matrix:
