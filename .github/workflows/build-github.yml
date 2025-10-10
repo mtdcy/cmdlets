@@ -37,6 +37,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 2
 
       - name: Build
@@ -47,9 +48,22 @@ jobs:
 
           export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
 
-          echo "arch=$(bash ulib.sh arch)" | tee -a "$GITHUB_OUTPUT"
+          arch="$(bash ulib.sh arch)"
+          echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
 
           test -n "${{ matrix.builder }}" || make prepare-host
+
+          pwd -P
+          ls -lha
+
+          git config --global --add safe.directory '*'
+
+          git checkout HEAD
+
+          git config user.name "bot"
+          git config user.email "bot@noreply.mtdcy.github.com"
+          git tag -a "$arch" -m "$arch" --force
+          git push origin "$arch" --force
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
