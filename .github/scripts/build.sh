@@ -7,6 +7,7 @@ info() {
 info "build $*"
 
 pwd -P
+bash --version
           
 export CL_LOGGING=silent
 export CL_CCACHE=0

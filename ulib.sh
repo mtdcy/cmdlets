@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -e -o pipefail
 # shellcheck shell=bash
 # shellcheck disable=SC2154
 
@@ -8,7 +8,7 @@ export LANG=C
 # options           =
 export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
 export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
-export     CL_STRICT=${CL_STRICT:-1}        # check on file changes on ulib.sh
+export     CL_STRICT=${CL_STRICT:-0}        # check on file changes on ulib.sh
 export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
@@ -497,11 +497,7 @@ _init_go() {
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
     export GOMODCACHE="$ROOT/.go/pkg/mod"
-    export GO111MODULE=on # go modules on
-    export CGO_CFLAGS="$CFLAGS"
-    export CGO_CXXFLAGS="$CXXFLAGS"
-    export CGO_CPPFLAGS="$CPPFLAGS"
-    export CGO_LDFLAGS="$LDFLAGS"
+    export GO111MODULE=auto
 
     # => go()
     unset CGO_ENABLED 
@@ -509,9 +505,52 @@ _init_go() {
     [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 }
 
-go() {
-    local cmdline=("$GO")
+# go can not amend `-ldflags='
+_filter_go_ldflags() {
+    local _ldflags=()
+    while [ $# -gt 0 ]; do
+        local args
+        case "$1" in
+            -ldflags=*)
+                # use xargs to remove quotes
+                IFS=' ' read -r -a args <<< "$(echo "${1#-ldflags=}" | xargs)"
+                _ldflags+=( "${args[@]}" )
+                ;;
+            -ldflags)
+                IFS=' ' read -r -a args <<< "$(echo "$2" | xargs)"
+                _ldflags+=( "${args[@]}" )
+                shift
+                ;;
+        esac
+        shift
+    done
+    echo "${_ldflags[@]}"
+}
 
+_filter_go_options() {
+    local _options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -ldflags=*) ;;
+            -ldflags)   shift ;;
+            *)          _options+=( "$1" ) ;;
+        esac
+        shift
+    done
+    echo "${_options[@]}"
+}
+
+# shellcheck disable=SC2207
+go() {
+    export CGO_CFLAGS="$CFLAGS"
+    export CGO_CXXFLAGS="$CXXFLAGS"
+    export CGO_CPPFLAGS="$CPPFLAGS"
+    export CGO_LDFLAGS="$LDFLAGS"
+
+    # CGO_ENABLED=0 is necessary for build static binaries
+    CGO_ENABLED="${CGO_ENABLED:-0}"
+
+    local cmdline=("$GO" "$1" )
     case "$1" in
         build)
             # fix 'invalid go version'
@@ -524,27 +563,36 @@ go() {
                 ulogcmd "$GO" mod tidy
             fi
 
-            cmdline+=(build -x)
+            # verbose
+            cmdline+=( -x -v )
 
             #1. static without dwarf and stripped
             #2. add version info
-            cmdline+=(-ldflags="'-w -s -extldflags=-static -X main.version=$upkg_ver'")
+            local ldflags=( -w -s -X main.version="$upkg_ver" )
 
-            cmdline+=("${@:2}")
+            [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
+
+            # user ldflags
+            ldflags+=( $(_filter_go_ldflags "${@:2}") )
+
+            # set ldflags
+            cmdline+=( -ldflags="'${ldflags[*]}'" )
+
+            # append user options
+            cmdline+=( $(_filter_go_options "${@:2}") )
             ;;
         *)
-            cmdline+=("$@")
+            cmdline+=( "${@:2}" )
             ;;
     esac
 
-    # CGO_ENABLED=0 is necessary for build static binaries
-    ulogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}"
+    ulogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}"
 }
 
 # easy command for go project
 go_build() {
     go clean || true
-    go build . 
+    go build "$@"
 }
 
 # link source target 
@@ -832,6 +880,27 @@ _fetch() {
     fi
 }
 
+# _fetch git_url#branch_or_tag_name [path]
+_fetch_git() {
+    local url branch
+
+    ulogi "..GIT" "$1 => $2"
+
+    IFS='#' read -r url branch <<< "$1"
+    if test -d "${2%.git}/.git"; then
+        true
+    else
+        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "${2%.git}"
+    fi
+}
+
+# show git tag > branch > commit
+git_version() {
+    git describe --tags --exact-match 2> /dev/null ||
+    git symbolic-ref -q --short HEAD ||
+    git rev-parse --short HEAD
+}
+
 # unzip file to current dir, or exit program
 # _unzip <file> [strip]
 _unzip() {
@@ -895,13 +964,23 @@ _unzip() {
 
 # prepare source code or return error
 _prepare() {
-    # use the first url to construct zip file name
-    local zip="$ROOT/packages/$upkg_zip"
+    if test -n "$upkg_git"; then
+        _fetch_git "$upkg_git" . || return 1
 
-    # download zip file
-    _fetch "$zip" "$upkg_sha" "${upkg_url[@]}" || return 1
-    # unzip to current fold
-    _unzip "$zip" "$upkg_zip_strip" || return 2
+        for submodule in "${upkg_git_submodules[@]}"; do
+            _fetch_git "$submodule" "$(basename "${submodule%#*}")" || return 2
+        done
+
+        return 0
+    else
+        # use the first url to construct zip file name local zip="$ROOT/packages/$upkg_zip"
+        local zip="$ROOT/packages/$upkg_zip"
+
+        # download zip file
+        _fetch "$zip" "$upkg_sha" "${upkg_url[@]}" || return 1
+        # unzip to current fold
+        _unzip "$zip" "$upkg_zip_strip" || return 2
+    fi
 
     # patch urls
     if test -n "${upkg_patch_url[*]}"; then
@@ -940,6 +1019,9 @@ _load() {
     [ -n "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
 
     [ "$upkg_type" = ".PHONY" ] && return 0
+
+    # git
+    [ -n "$upkg_git" ] && return 0
 
     # sanity checks: always exit program|subshell here
     [ -n "$upkg_url" ] || exit 127
@@ -981,10 +1063,10 @@ compile() {(
     ulogi ".Load" "$1"
     _load "$1"
 
-    [ -n "$upkg_url" ] || {
+    if test -z "$upkg_url" && test -z "$upkg_git"; then
         ulogw "<<<<<" "skip dummy target $upkg_name"
         return 0
-    }
+    fi
 
     # clear
     find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
@@ -1006,6 +1088,8 @@ compile() {(
 
     # build library
     _prepare && upkg_static || {
+        sleep 1 # let _capture() finish
+
         local logfile="$(_logfile)"
         mv "$logfile" "$logfile.fail"
         tail -v "$logfile.fail"
