@@ -998,8 +998,8 @@ _prepare() {
     # apply patches
     for patch in "${upkg_patches[@]}"; do
         case "$patch" in
-            http://|https://)
-                ulogi "..Run" "patch -p1 -N < $patch"
+            http://*|https://*)
+                ulogi "..Run" "patch p1 -N < $patch"
                 _curl_stdout "$patch" | patch -p1 -N
                 ;;
             *)
