@@ -75,12 +75,13 @@ is_darwin && upkg_args+=(bsd) || upkg_args+=(unzips)
 
 upkg_static() {
     make -f unix/Makefile "${upkg_args[@]}" V=1 &&
+    
+    make -f unix/Makefile check     &&
 
-    # check & install
-    make -f unix/Makefile check &&
-
-    cmdlet unzip &&
-    cmdlet funzip &&
+    cmdlet ./unzip unzip zipinfo    &&
+    cmdlet ./unzipsfx               &&
+    cmdlet ./funzip                 &&
+    cmdlet ./unix/zipgrep           &&
 
     # verify
     check unzip
