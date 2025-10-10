@@ -40,14 +40,17 @@ upkg_static() {
 #       # fixme: test fails in MSYS2
 #       is_msys || make check V=1
 #   } &&
-    #make install
 
-    library libxml2 \
-            include/libxml2/libxml include/libxml/*.h \
-            lib .libs/*.a \
-            lib/pkgconfig libxml-2.0.pc &&
+    library libxml2                                      \
+            include/libxml2/libxml  include/libxml/*.h   \
+            lib                     .libs/*.a            \
+            lib/cmake               libxml2-config.cmake \
+            lib/pkgconfig           libxml-2.0.pc        \
+            &&
 
     cmdlet  xmllint &&
+
+    #inspect_install make install
 
     check xmllint --version
 }

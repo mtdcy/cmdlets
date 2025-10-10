@@ -669,7 +669,7 @@ inspect_install() {
     
     find "$PREFIX" > "$upkg_name.pack.post"
 
-    diff "$upkg_name.pack.post" "$upkg_name.pack.pre" > "$upkg_name.pack"
+    diff "$upkg_name.pack.post" "$upkg_name.pack.pre" | sed "s%$PREFIX%%g" > "$upkg_name.pack"
 }
 
 # cmdlet executable [name] [alias ...]
@@ -761,6 +761,10 @@ library() {
                 ;;
             *.a|*.so|*.so.*)
                 [[ "$subdir" =~ ^lib ]] || subdir="lib"
+                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
+                ;;
+            *.cmake)
+                [[ "$subdir" =~ ^lib\/cmake ]] || subdir="lib/cmake"
                 installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
                 ;;
             *.pc)
