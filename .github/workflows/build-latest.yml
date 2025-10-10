@@ -35,6 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.COMMIT_TOKEN }}
           fetch-depth: 2
 
       - name: Build
@@ -44,5 +45,15 @@ jobs:
           export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
           export CL_MIRRORS="${{ vars.MIRRORS }}"
+
+          arch="$(bash ulib.sh arch)"
+
+          git config --global --add safe.directory '*'
+
+          # tag to HEAD
+          git config user.name "bot"
+          git config user.email "bot@noreply.mtdcy.top"
+          git tag -a "$arch" -m "$arch" --force
+          git push origin "$arch" --force
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
