@@ -819,13 +819,13 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            echocmd ldd "$bin"
+            ldd "$bin"
             ulogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
-        echocmd otool -L "$bin" # | grep -v "libSystem.*"
+        otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
-        echocmd ntldd "$bin"
+        ntldd "$bin"
     else
         ulogw "FIXME: $OSTYPE"
     fi
