@@ -269,12 +269,12 @@ _init() {
         -g0 -Os             # optimize for size
         -fPIC -DPIC         # PIC
     )
-    is_msys || FLAGS+=(
-        -ffunction-sections #
+
+    # tell compiler to place each function and data into its own section
+    is_darwin || FLAGS+=(
+        -ffunction-sections
+        -fdata-sections
     )
-    # Notes:
-    #   1. some libs may fail with '-fdata-sections'
-    #   2. some test may fail with '-DNDEBUG'
 
     is_clang && FLAGS+=(
         -Wno-error=deprecated-non-prototype
@@ -285,17 +285,19 @@ _init() {
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
         FLAGS+=( --static ) # static linking => two '--' vs ldflags
-        if is_clang; then
-            LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip -static"
-        else
-            LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -static"
-        fi
+
+        LDFLAGS="-L$PREFIX/lib -static"
+
+        # remove unused sections, need -ffunction-sections and -fdata-sections
+        LDFLAGS+=" -Wl,-gc-sections"
 
         # pie => cause 'read-only segment has dynamic relocations' error
         #  => use PIC instead, or let packages decide
         #LDFLAGS+=" -fPIE -pie"
+
         # link needed static libraries
         is_msys || LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
+
         # Security: FULL RELRO
         is_msys || LDFLAGS+=" -Wl,-z,relro,-z,now"
     fi
