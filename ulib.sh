@@ -107,7 +107,7 @@ echocmd() {
     {
         echo "$*"
         eval -- "$*"
-    } 2>&1 | _capture
+    } 2>&1 | CL_LOGGING=${CL_LOGGING:-silent} _capture
 }
 
 # ulogcmd <command>
@@ -817,13 +817,13 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            echocmd ldd "$bin"
+            ldd "$bin"
             ulogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
-        echocmd otool -L "$bin" # | grep -v "libSystem.*"
+        otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
-        echocmd ntldd "$bin"
+        ntldd "$bin"
     else
         ulogw "FIXME: $OSTYPE"
     fi
@@ -958,7 +958,8 @@ _unzip() {
             ;;
     esac
 
-    echocmd "${cmd[@]}" "$1" || ulogf ".Zipx" "$1 failed."
+    # silent this cmd to speed up build procedure
+    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || ulogf ".Zipx" "$1 failed."
 
     # post strip
     case "${cmd[0]}" in
