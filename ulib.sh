@@ -1,6 +1,9 @@
-#!/bin/bash -e -o pipefail
+#!/bin/bash
+
 # shellcheck shell=bash
 # shellcheck disable=SC2154
+
+set -e -o pipefail
 
 umask  0022
 export LANG=C
@@ -105,7 +108,7 @@ echocmd() {
         echo "$*"
         eval -- "$*"
     } 2>&1 | _capture
-} 
+}
 
 # ulogcmd <command>
 ulogcmd() {
@@ -273,8 +276,8 @@ _init() {
     #   1. some libs may fail with '-fdata-sections'
     #   2. some test may fail with '-DNDEBUG'
 
-    is_clang && FLAGS+=( 
-        -Wno-error=deprecated-non-prototype 
+    is_clang && FLAGS+=(
+        -Wno-error=deprecated-non-prototype
     ) || true
 
     # macOS does not support statically linked binaries
@@ -345,7 +348,7 @@ inspect_env() {
 
 apply_c89_flags() {
     local flags=(
-        -Wno-error=implicit-int 
+        -Wno-error=implicit-int
         -Wno-error=incompatible-pointer-types
     )
 
@@ -441,7 +444,7 @@ meson() {
     # meson
     # builtin options: https://mesonbuild.com/Builtin-options.html
     #  libdir: some package prefer install to lib/<machine>/
-    cmdline+=(                              
+    cmdline+=(
         -Dprefix="'$PREFIX'"
         -Dlibdir=lib
         -Dbuildtype=release
@@ -485,7 +488,7 @@ cargo() {
             is_darwin || cmdline+=" --target $(uname -m)-unknown-linux-musl"
             ;;
     esac
-    
+
     ulogcmd "$cmdline"
 }
 
@@ -500,7 +503,7 @@ _init_go() {
     export GO111MODULE=auto
 
     # => go()
-    unset CGO_ENABLED 
+    unset CGO_ENABLED
 
     [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
 }
@@ -595,20 +598,20 @@ go_build() {
     go build "$@"
 }
 
-# link source target 
+# link source target
 _link() {
     #echo "link: $1 => $2" >&2
     if is_msys; then
-        cp "$1" "$2"
+        echocmd cp -v "$1" "$2"
     else
-        ln -srf "$1" "$2"
+        echocmd ln -srvf "$1" "$2"
     fi
 }
 
 TAR="$(which gtar 2>/dev/null || which tar)"
 
-# _pack name <file list>
-_pack() {
+# _pkgfile name <file list>
+_pkgfile() {
     pushd "$PREFIX"
 
     mkdir -pv "$upkg_name"
@@ -669,7 +672,7 @@ inspect_install() {
     find "$PREFIX" > "$upkg_name.pack.pre"
 
     ulogcmd "$@"
-    
+
     find "$PREFIX" > "$upkg_name.pack.post"
 
     diff "$upkg_name.pack.post" "$upkg_name.pack.pre" | sed "s%$PREFIX%%g" > "$upkg_name.pack"
@@ -677,25 +680,23 @@ inspect_install() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    ulogi ".Inst" "install cmdlet $1 => ${2:-$1} (alias ${*:3})"
+    ulogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
 
     # strip or not ?
-    local args=(-v)
-    file "$1" | grep -qFw 'not stripped' && args+=(-s)
+    local args=( -v )
+    file "$1" | grep -qFw 'not stripped' && args+=( -s )
 
-    local target
+    local target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    target="$PREFIX/bin/$(basename "${2:-$1}")"
+    echocmd "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
 
-    "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
-
-    local links=()
+    local alias=()
     for x in "${@:3}"; do
         _link "$target" "$PREFIX/bin/$x"
-        links+=( "$PREFIX/bin/$x" )
+        alias+=( "$PREFIX/bin/$x" )
     done
 
-    _pack "$(basename "$target")" "$target" "${links[@]}"
+    _pkgfile "$(basename "$target")" "$target" "${alias[@]}"
 }
 
 # _fix_pc path/to/xxx.pc
@@ -708,85 +709,92 @@ _fix_pc() {
     fi
 }
 
-# _library file subdir [libname] [alias]
-#  => return installed files and links if alias exists
-_install() {
-    local target syml
-
-    target="$PREFIX/$2/$(basename "$1")"
-
-    $INSTALL -m644 "$1" "$target" || return 1
-
-    local installed=( "$target" )
-        
-    # install with alias
-    if [ $# -ge 4 ]; then
-        if [[ "$1" =~ $3.${1##*.}$ ]]; then
-            for alias in "${@:4}"; do
-                syml="$(dirname "$target")/$alias.${1##*.}"
-                _link "$target" "$syml"
-                installed+=( "$syml" )
-            done
-        elif [[ "$1" =~ ${3#lib}.${1##*.}$ ]]; then
-            for alias in "${@:4}"; do
-                syml="$(dirname "$target")/${alias#lib}.${1##*.}"
-                _link "$target" "$syml"
-                installed+=( "$syml" )
-            done
-        fi
+# install pkgfile
+pkgfile() {
+    if [ "$*" = "--help" ]; then
+        cat << "EOF"
+pkgfile name[:alias:...]            \
+        [include]       header.h    \
+        include/xxx     xxx.h       \
+        [lib]           libxxx.a    \
+        [lib/pkgconfig] xxx.pc      \
+        share           yyy         \
+        share/man       zzz
+EOF
+        return 0
     fi
-    echo "${installed[@]}"
+
+    ulogi ".Inst" "pkgfile $*"
+
+    local name alias subdir installed
+    IFS=':' read -r name alias <<< "$1"
+    shift # skip name and alias
+
+    while [ $# -ne 0 ]; do
+        local file
+
+        file="$1"; shift
+        case "$file" in
+            # no libtool archive files
+            # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
+            *.la) ;;
+            *.h|*.hxx|*.hpp)    [[ "$subdir" =~ ^include        ]] || subdir="include"      ;;
+            *.a|*.so|*.so.*)    [[ "$subdir" =~ ^lib            ]] || subdir="lib"          ;;
+            *.cmake)            [[ "$subdir" =~ ^lib/cmake      ]] || subdir="lib/cmake"    ;;
+            *.pc)               [[ "$subdir" =~ ^lib/pkgconfig  ]] || subdir="lib/pkgconfig"
+                _fix_pc "$file"
+                ;;
+            include*|lib*|bin*|share*)
+                subdir="$file"
+                echocmd "$INSTALL" -d -m755 "$PREFIX/$subdir"
+                continue
+                ;;
+        esac
+
+        local target symlink
+
+        # install file to target
+        target="$PREFIX/$subdir/$(basename "$file")"
+
+        echocmd "$INSTALL" -m644 "$file" "$target" || return 1
+
+        # override existing symlink?
+        [[ "${installed[*]}" == *"$target"* ]] || installed+=( "$target" )
+
+        # install alias(links)
+        #1. match file name with pkg name
+        #2. match file name with pkg name without lib prefix
+        #  e.g: library libncursesw:libncurses:libcurses include/ncursesw.h
+
+        for x in ${alias//:/ }; do
+            if [[ "${file%.*}" =~ "$name"$ ]]; then
+                symlink="$PREFIX/$subdir/$x.${file##*.}"
+            elif [[ "${file%.*}" =~ "${name#lib}"$ ]]; then
+                symlink="$PREFIX/$subdir/${x#lib}.${file##*.}"
+            fi
+
+            # no match
+            test -n "$symlink" || continue
+
+            # already installed?
+            [[ "${installed[*]}" == *"$symlink"* ]] && continue
+
+            _link "$target" "$symlink"
+
+            installed+=( "$symlink" )
+        done
+    done
+
+    _pkgfile "$name" "${installed[@]}"
 }
 
-# library   name:alias1:alias2          \
-#           [include]       abc.h       \
-#           include/xxx     xxx.h       \
-#           [lib]           libxxx.a    \
-#           [lib/pkgconfig] libxxx.pc
+# append lib prefix if not exists then call install()
 library() {
-    local libname libalias subdir installed
-    IFS=':' read -r libname libalias <<< "$1"
-    IFS=':' read -r -a libalias <<< "$libalias"
-    shift # skip libname and libalias
+    local libname="$1"
 
     [[ "$libname" =~ ^lib ]] || libname="lib$libname"
 
-    ulogi ".Libx" "install library $libname => (alias ${libalias[*]})"
-    while [ $# -ne 0 ]; do
-        case "$1" in
-            *.la)
-                # no libtool archive files
-                # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
-                ;;
-            *.h|*.hxx|*.hpp)
-                [[ "$subdir" =~ ^include ]] || subdir="include"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
-                ;;
-            *.a|*.so|*.so.*)
-                [[ "$subdir" =~ ^lib ]] || subdir="lib"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
-                ;;
-            *.cmake)
-                [[ "$subdir" =~ ^lib\/cmake ]] || subdir="lib/cmake"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
-                ;;
-            *.pc)
-                [[ "$subdir" =~ ^lib\/pkgconfig ]] || subdir="lib/pkgconfig"
-                _fix_pc "$1"
-                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
-                ;;
-            include*|lib*|bin*|share*)
-                subdir="$1"
-                mkdir -pv "$PREFIX/$subdir"
-                ;;
-            *)
-                installed+=("$(_install "$1" "$subdir" "$libname" "${libalias[@]}")") || return 1
-                ;;
-        esac
-        shift
-    done
-
-    _pack "$libname" "${installed[@]}"
+    pkgfile "$libname" "${@:2}"
 }
 
 # perform visual check on cmdlet
@@ -830,7 +838,7 @@ _curl() {
     local dest="${2:-/dev/null}"
 
     echocmd "$CURL" -I "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
-    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"   
+    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"
 }
 
 # _curl_to_stdout source [options]
@@ -914,7 +922,7 @@ _unzip() {
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
-  
+
     # match extensions
     case "$1" in
         *.tar)                  cmd=( "$TAR" -xv )          ;;
@@ -939,13 +947,13 @@ _unzip() {
             #local skip="${2:-$(tar -tf "$1" | grep -E '^[^/]+/?$' | head -n 1 | tr -cd "/" | wc -c)}"
             local skip="${2:-$("$TAR" -tf "$1" | grep -o '^[^/]*' | sort -u | wc -l)}"
             [ "$skip" -eq 1 ] || skip=0
-    
+
             if "$TAR" --version | grep -qFw "bsdtar"; then
                 cmd+=( --strip-components "$skip" )
             else
                 cmd+=( --strip-components="$skip" )
             fi
-            
+
             cmd+=( -f )
             ;;
     esac
@@ -1028,8 +1036,9 @@ _load() {
     [ -n "$upkg_git" ] && return 0
 
     # sanity checks: always exit program|subshell here
-    [ -n "$upkg_url" ] || exit 127
-    [ -n "$upkg_sha" ] || exit 127
+    if test -z "$upkg_url" || test -z "$upkg_sha"; then
+        _on_failure "$upkg_name: missing upkg_url or upkg_sha"
+    fi
 }
 
 _load_deps() {( _load "$1"; echo "${upkg_dep[@]}"; )}
@@ -1053,7 +1062,7 @@ _deps_get() {
         for x in "${_deps[@]}"; do
             [[ "${list[*]}" == *"$x"* ]] || list+=( "$x" )
         done
-        
+
         list+=( "$dep" )
     done
     echo "${list[@]}"
@@ -1248,7 +1257,7 @@ load() {
 fetch() {
     _load "$1"
 
-    _fetch "$ROOT/packages/$upkg_zip" "$upkg_sha" "$upkg_url" 
+    _fetch "$ROOT/packages/$upkg_zip" "$upkg_sha" "$upkg_url"
 }
 
 arch() {
