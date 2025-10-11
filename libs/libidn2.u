@@ -32,8 +32,6 @@ upkg_static() {
 
     configure &&
 
-        find . -name config.status -exec touch {} \;
-
     make &&
 
     # check & install
