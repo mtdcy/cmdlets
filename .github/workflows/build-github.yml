@@ -52,7 +52,8 @@ jobs:
           arch="$(bash ulib.sh arch)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
 
-          test -n "${{ matrix.builder }}" || make prepare-host
+          # make prepare-host fails on macos-15-intel
+          test -n "${{ matrix.builder }}" || make prepare-host || true
 
           pwd -P
           ls -lha

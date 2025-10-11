@@ -1,3 +1,5 @@
+.NOTPARALLEL:
+
 SHELL := /bin/bash
 
 all: shell
@@ -114,8 +116,8 @@ APK_PACKAGES 	= wget curl git                                   \
 				  ccache
 
 prepare-host-homebrew:
-	brew update 
-	brew install -q $(BREW_PACKAGES)
+	brew update
+	brew install $(BREW_PACKAGES)
 	$(MAKE) prepare-rust
 
 prepare-host-debian:
@@ -125,7 +127,7 @@ prepare-host-debian:
 	$(MAKE) prepare-rust
 
 prepare-host-alpine:
-	sudo apk update 
+	sudo apk update
 	sudo apk add --no-cache $(APK_PACKAGES)
 	which go || sudo apk add --no-cache go
 
