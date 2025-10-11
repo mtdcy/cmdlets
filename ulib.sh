@@ -270,21 +270,19 @@ _init() {
         -fPIC -DPIC         # PIC
     )
 
-    # tell compiler to place each function and data into its own section
-    is_darwin || FLAGS+=(
-        -ffunction-sections
-        -fdata-sections
-    )
-
-    is_clang && FLAGS+=(
-        -Wno-error=deprecated-non-prototype
-    ) || true
-
     # macOS does not support statically linked binaries
     if is_darwin; then
+        FLAGS+=( -Wno-error=deprecated-non-prototype )
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
-        FLAGS+=( --static ) # static linking => two '--' vs ldflags
+        # static linking => two '--' vs ldflags
+        FLAGS+=( --static )
+
+        # tell compiler to place each function and data into its own section
+        is_msys || FLAGS+=(
+            -ffunction-sections
+            -fdata-sections
+        )
 
         LDFLAGS="-L$PREFIX/lib -static"
 
