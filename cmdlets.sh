@@ -172,7 +172,7 @@ _manifest() {
 }
 
 # search manifest for package
-#  input: name [--pkgname] [--pkgfile]
+#  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
 _search() {
     _manifest 1>&2
@@ -205,6 +205,9 @@ _search() {
                 ;;
             --pkgname)
                 grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST"
+                ;;
+            --any)
+                grep "$1" "$MANIFEST"
                 ;;
         esac
     done | uniq
