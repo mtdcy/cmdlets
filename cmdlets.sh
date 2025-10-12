@@ -240,7 +240,7 @@ search() {
 }
 
 # fetch cmdlet: name [options]
-#  input: name [--install name:alias:...]
+#  input: name [--install [links...] ]
 #  output: return 0 on success
 fetch() {
     _manifest && echo ""
@@ -259,22 +259,37 @@ fetch() {
         return 1
     fi
 
+    # target with or without version
+    test -f "$PREBUILTS/bin/$1" && target="$1" || target="$name"
+
     shift 1
     while [ $# -gt 0 ]; do
         case "$1" in
             --install)
-                local bin links
-                IFS=':' read -r bin links <<< "$2"
-
                 # cmdlets.sh install bash@3.2:bash
-                info "-- Link $bin => $PREBUILTS/bin/$bin"
-                ln -sf "$PREBUILTS/bin/$bin" "$bin"
+                info "== Install $target => $PREBUILTS/bin/$target"
+                ln -sf "$PREBUILTS/bin/$target" "$target"
 
-                for link in ${links//:/ }; do
-                    [ "$link" = "$bin" ] && continue
-                    info "-- Link $link => $bin"
-                    ln -sf "$bin" "$link"
-                done
+                local links=( ${2//:/ } )
+
+                if [ ${#links[@]} -gt 0 ]; then
+                    info "== Install links"
+                    for link in "${links[@]}"; do
+                        [ "$link" = "$target" ] && continue
+                        echo "=> $link => $target"
+                        ln -sf "$target" "$link"
+                    done
+                else
+                    info "== Install default links"
+                    while read -r link; do
+                        [ "$(readlink "$link")" = "$target" ] || continue
+
+                        link="$(basename "$link")"
+                        echo "=> $link => $target"
+                        ln -sf "$target" "$link"
+                    done < <(find "$PREBUILTS/bin" -type l)
+                fi
+
                 shift 1
                 ;;
         esac
@@ -416,7 +431,8 @@ invoke() {
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
-                fetch "${x%%:*}" --install "$x" || ret=$?
+                IFS=':' read -r bin alias <<< "$x"
+                fetch "$bin" --install "$alias" || ret=$?
             done
             ;;
         fetch)      # fetch cmdlets
