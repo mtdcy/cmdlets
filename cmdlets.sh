@@ -239,23 +239,6 @@ search() {
     _search "$@" | sed 's/^/=> /'
 }
 
-# link file [alias...]
-_link() {
-    local bin="$1"
-
-    # cmdlets.sh install find@0.8.0:bash
-    test -f "$PREBUILTS/bin/$1" || IFS='@' read -r bin _ <<< "$bin"
-
-    info "-- Link $bin => $PREBUILTS/bin/$bin"
-    ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
-
-    for alias in "${@:2}"; do
-        [ "$alias" = "$bin" ] && continue
-        info "-- Link $alias => $bin"
-        ln -sf "$bin" "$WORKDIR/$alias"
-    done
-}
-
 # fetch cmdlet: name [options]
 #  input: name [--install name:alias:...]
 #  output: return 0 on success
