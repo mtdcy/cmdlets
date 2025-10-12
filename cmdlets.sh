@@ -330,20 +330,6 @@ _fix_pc() {
         sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
 } 2>/dev/null
 
-# fetch library from server
-library() {
-    _manifest && echo ""
-
-    # cmdlet v3/manifest
-    if _v3 "$@" || _v2 "$@"; then
-        touch "$PREBUILTS/.$1.d" # mark as ready
-        _fix_pc
-    else
-        error "<< Fetch $1/$ARCH failed"
-        return 1
-    fi
-}
-
 # fetch package
 package() {
     _manifest && echo ""
@@ -467,11 +453,6 @@ invoke() {
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
                 fetch "$x" || ret=$?
-            done
-            ;;
-        library)    # fetch lib files
-            for x in "${@:2}"; do
-                library "$x" || ret=$?
             done
             ;;
         package)    # fetch package files
