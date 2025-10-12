@@ -449,7 +449,7 @@ invoke() {
             ;;
         update)
             if test -n "$2"; then
-                for x in "${@:2}"; do fetch "$x" || ret=$?; done
+                fetch "$2" || ret=$?
             else
                 update
             fi
@@ -457,16 +457,12 @@ invoke() {
         search)
             search "${@:2}"
             ;;
-        install)    # install cmdlets
-            for x in "${@:2}"; do
-                IFS=':' read -r bin alias <<< "$x"
-                fetch "$bin" --install "$alias" || ret=$?
-            done
+        install)
+            IFS=':' read -r bin alias <<< "$2"
+            fetch "$bin" --install "$alias" || ret=$?
             ;;
         remove)
-            for x in "${@:2}"; do
-                remove "$x" || ret=$?
-            done
+            remove "$2" || ret=$?
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
