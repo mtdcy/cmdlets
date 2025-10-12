@@ -5,28 +5,22 @@ upkg_lic='LGPL|GPL'
 upkg_ver=1.4
 upkg_url=https://ftpmirror.gnu.org/gnu/libunistring/libunistring-$upkg_ver.tar.gz
 upkg_sha=f7e39ddeca18858ecdd02c60d1d5374fcdcbbcdb6b68a391f8497cb1cb2cf3f7
-upkg_dep=()
+upkg_dep=( libiconv )
 
 upkg_args=(
     --disable-dependency-tracking
     --disable-silent-rules
     --disable-dependency-tracking
 
+    --with-libiconv
+    --with-libiconv-prefix="'$PREFIX'"
+
+    --disable-nls
     --disable-rpath
 
     --disable-shared
     --enable-static
 )
-
-# https://github.com/gnosis/libunistring/blob/master/DEPENDENCIES
-# GNU libiconv
-# + Not needed on systems with glibc, on macOS, and NetBSD.
-#   But highly recommended on all other systems.
-is_darwin && upkg_args+=(--without-libiconv) || {
-    upkg_dep+=(libiconv)
-    upkg_args+=( --with-libiconv )
-}
-
 
 # install to include/
 common_headers=(

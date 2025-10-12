@@ -62,13 +62,13 @@ upkg_static() {
     make V=1 &&
 
     #make install &&
-    library libcurl                              \
-            include/curl    include/curl/curl*.h \
-            lib             lib/.libs/libcurl.a  \
-            lib/pkgconfig   libcurl.pc           \
+    library libcurl                             \
+            include/curl    include/curl/*.h    \
+            lib             lib/.libs/libcurl.a \
+            lib/pkgconfig   libcurl.pc          \
             &&
 
-    cmdlet  ./src/curl &&
+    cmdlet  ./src/curl  &&
 
     check curl --version
 }
