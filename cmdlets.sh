@@ -297,6 +297,38 @@ fetch() {
     done
 }
 
+# remove cmdlets
+#  input: name
+remove() {
+    local target="$1"
+
+    info "=> remove $1"
+
+    if ! test -L "$target"; then
+        error "-- $target not exists"
+        return 1
+    fi
+
+    while read -r link; do
+        [ "$(readlink "$link")" = "$target" ] || continue
+        echo "-- $link"
+        rm -f "$link"
+    done < <(find "$(pwd -P)" -maxdepth 1 -type l)
+
+    while read -r link; do
+        [ "$(readlink "$link")" = "$target" ] || continue
+
+        echo "-- $link"
+        rm -f "$link"
+    done < <(find "$(pwd -P)/$PREBUILTS/bin" -type l)
+
+    echo "-- $(pwd -P)/$PREBUILTS/bin/$target"
+    rm -f "$PREBUILTS/bin/$target"
+
+    echo "-- $(pwd -P)/$target"
+    rm -f "$target"
+}
+
 _fix_pc() {
     find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
         sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
@@ -433,6 +465,11 @@ invoke() {
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 fetch "$bin" --install "$alias" || ret=$?
+            done
+            ;;
+        remove)
+            for x in "${@:2}"; do
+                remove "$x" || ret=$?
             done
             ;;
         fetch)      # fetch cmdlets
