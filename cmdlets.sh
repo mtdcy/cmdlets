@@ -352,7 +352,6 @@ package() {
             }
         done
 
-        _fix_pc
         touch "$PREBUILTS/.$pkgname.d" # mark as ready
         return 0
     fi
@@ -384,8 +383,6 @@ package() {
         error "<< Fetch package $1/$ARCH failed"
         return 1
     fi
-
-    _fix_pc
 }
 
 update() {
@@ -459,6 +456,7 @@ invoke() {
             for x in "${@:2}"; do
                 package "$x" || ret=$?
             done
+            _fix_pc
             ;;
         *)
             usage
