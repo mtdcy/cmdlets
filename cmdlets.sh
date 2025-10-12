@@ -171,7 +171,9 @@ _manifest() {
     }
 }
 
-# search manifest, return multi-line results
+# search manifest for package
+#  input: name [--pkgname] [--pkgfile]
+#  output: multi-line match results
 _search() {
     _manifest 1>&2
 
@@ -185,26 +187,38 @@ _search() {
 
     local pkgname pkgfile pkgver
 
-    IFS='@' read -r pkgname pkgver  <<< "$1"
-    IFS='/' read -r pkgname pkgfile <<< "$pkgname"
+    IFS='@' read -r pkgfile pkgver  <<< "$1"
 
     # v3: no latest support
     [ "$pkgver" = "latest" ] && unset pkgver || true
 
-    if test -n "$pkgfile"; then
-        grep " $pkgname/$pkgfile@$pkgver" "$MANIFEST"
-    else
-        grep "^$pkgname .*/.*@$pkgver\|^$pkgname@$pkgver \| $pkgname/.*@$pkgver\| .*/$pkgname@$pkgver" "$MANIFEST"
-    fi
+    # pkgname exists?
+    [[ "$pkgfile" =~ / ]] && IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
+
+    options=( "${@:2}" )
+    test -n "${options[*]}" || options=( --pkgfile --pkgname )
+
+    for opt in "${options[@]}"; do
+        case "$opt" in
+            --pkgfile)
+                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST"
+                ;;
+            --pkgname)
+                grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST"
+                ;;
+        esac
+    done | uniq
 }
 
-# cmdlet v3/manifest: cmdlet [pkgname]
+# cmdlet v3/manifest
+#  input: pkgfile [pkgname] [options]
+#  output: return 0 on success
 _v3() {
-    local pkgname pkgfile
+    local pkgfile pkgname
     
     test -n "$2" && pkgname="$2/$1" || pkgname="$1"
 
-    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" | tail -n 1 )
+    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" "${@:3}" | tail -n 1 )
 
     [ -n "$pkgfile" ] || return 1
 
@@ -220,31 +234,69 @@ _v3() {
 search() {
     _manifest && echo ""
 
-    info3 ">3 Search $1"
+    info3 ">3 Search $*"
 
-    _search "$1" | sed 's/^/=> /'
+    _search "$@" | sed 's/^/=> /'
 }
 
-# fetch cmdlet
-cmdlet() {
+# link file [alias...]
+_link() {
+    local bin="$1"
+
+    # cmdlets.sh install find@0.8.0:bash
+    test -f "$PREBUILTS/bin/$1" || IFS='@' read -r bin _ <<< "$bin"
+
+    info "-- Link $bin => $PREBUILTS/bin/$bin"
+    ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
+
+    for alias in "${@:2}"; do
+        [ "$alias" = "$bin" ] && continue
+        info "-- Link $alias => $bin"
+        ln -sf "$bin" "$WORKDIR/$alias"
+    done
+}
+
+# fetch cmdlet: name [options]
+#  input: name [--install name:alias:...]
+#  output: return 0 on success
+fetch() {
     _manifest && echo ""
 
-    local ver 
-    IFS='@' read -r _ ver <<< "$*"
+    local name ver target
+    IFS='@' read -r name ver <<< "$1"
 
-    # for cmdlet, v1 > v3 > v2
-    if test -z "$ver" && _v1 "$@"; then
-        true;
-    elif _v3 "$@" || _v2 "$@"; then
+    # v3/manifest
+    if test -n "$ver" && [ "$ver" != "latest" ]; then
+        _v3 "$1" "" --pkgfile || return 3
+    elif _v1 "$1" || _v3 "$1" "" --pkgfile || _v2 "$1"; then
+        # for cmdlet, v1 > v3 > v2
         true
-    # fallback to linux-musl
-    #elif [[ "$ARCH" == "$(uname -m)-linux-gnu" ]]; then
-    #    warn "-- Fetch $1/$(uname -m)-linux-musl for $ARCH again"
-    #    ARCH="$(uname -m)-linux-musl" cmdlet "$@"
     else
         error "<< Fetch $1/$ARCH failed"
         return 1
     fi
+
+    shift 1
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --install)
+                local bin links
+                IFS=':' read -r bin links <<< "$2"
+
+                # cmdlets.sh install bash@3.2:bash
+                info "-- Link $bin => $PREBUILTS/bin/$bin"
+                ln -sf "$PREBUILTS/bin/$bin" "$bin"
+
+                for link in ${links//:/ }; do
+                    [ "$link" = "$bin" ] && continue
+                    info "-- Link $link => $bin"
+                    ln -sf "$bin" "$link"
+                done
+                shift 1
+                ;;
+        esac
+        shift 1
+    done
 }
 
 _fix_pc() {
@@ -276,13 +328,13 @@ package() {
     IFS='@' read -r pkgname pkgver <<< "$1"
 
     # cmdlet v3/manifest
-    IFS=' ' read -r -a pkgfile < <( _search "$1" | awk '{print $1}' | uniq | xargs )
+    IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
 
     if test -n "${pkgfile[*]}"; then
         info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
         for file in "${pkgfile[@]}"; do 
-            _v3 "$file" "$pkgname" || {
+            _v3 "$file" "$pkgname" --pkgfile || {
                 error "<< Fetch package $file/$ARCH failed"
                 return 1
             }
@@ -293,7 +345,7 @@ package() {
         return 0
     fi
 
-    info2 "#2 fetch package $1"
+    info2 "#2 Fetch package $1"
 
     [ -n "$pkgver" ] || pkgver=latest
     pkginfo="$pkgname@$pkgver"
@@ -356,23 +408,6 @@ update() {
     return 1
 }
 
-# link file [alias...]
-_link() {
-    local bin="$1"
-
-    # cmdlets.sh install find@0.8.0:bash
-    test -f "$PREBUILTS/bin/$1" || IFS='@' read -r bin _ <<< "$bin"
-
-    info "-- Link $bin => $PREBUILTS/bin/$bin"
-    ln -sf "$PREBUILTS/bin/$bin" "$WORKDIR/$bin"
-
-    for alias in "${@:2}"; do
-        [ "$alias" = "$bin" ] && continue
-        info "-- Link $alias => $bin"
-        ln -sf "$bin" "$WORKDIR/$alias"
-    done
-}
-
 # invoke cmd [args...]
 invoke() {
     cd "$WORKDIR"
@@ -387,26 +422,23 @@ invoke() {
             cat "$MANIFEST"
             ;;
         update)
-            update
+            if test -n "$2"; then
+                for x in "${@:2}"; do fetch "$x" || ret=$?; done
+            else
+                update
+            fi
             ;;
         search)
-            for x in "${@:2}"; do
-                search "$x"
-            done
+            search "${@:2}"
             ;;
         install)    # install cmdlets
             for x in "${@:2}"; do
-                IFS=':' read -r bin alias <<< "$x"
-                cmdlet "$bin" || ret=$?
-
-                bin="$(basename "$bin")"
-
-                _link "$bin" ${alias//:/ }
+                fetch "${x%%:*}" --install "$x" || ret=$?
             done
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
-                cmdlet "$x" || ret=$?
+                fetch "$x" || ret=$?
             done
             ;;
         library)    # fetch lib files
