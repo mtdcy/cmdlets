@@ -245,14 +245,7 @@ search() {
 fetch() {
     _manifest && echo ""
 
-    local name ver target
-    IFS='@' read -r name ver <<< "$1"
-
-    # v3/manifest
-    if test -n "$ver" && [ "$ver" != "latest" ]; then
-        _v3 "$1" "" --pkgfile || return 3
-    elif _v1 "$1" || _v3 "$1" "" --pkgfile || _v2 "$1"; then
-        # for cmdlet, v1 > v3 > v2
+    if _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
         error "<< Fetch $1/$ARCH failed"
