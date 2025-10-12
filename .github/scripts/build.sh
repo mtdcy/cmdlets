@@ -35,7 +35,7 @@ else
         IFS='/.' read -r _ ulib _ <<< "$line"
         [[ "$ulib" =~ ^[\.@_] ]] && continue # ignored files
         cmdlets+=( "$ulib" )
-    done < <(git show --pretty="" --name-only HEAD | grep "^libs/.*\.u")
+    done < <(git diff --name-only ORIG_HEAD HEAD | grep "^libs/.*\.u")
 fi
 
 # default test target
