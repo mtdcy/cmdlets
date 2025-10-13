@@ -291,11 +291,8 @@ fetch() {
                 else
                     info "== Install default links"
                     while read -r link; do
-                        [ "$(readlink "$link")" = "$target" ] || continue
-
-                        link="$(basename "$link")"
-                        ln -sfv "$target" "$link" | _details | xargs
-                    done < <(find "$PREBUILTS/bin" -type l)
+                        ln -sfv "$target" "$(basename "$link")" | _details | xargs
+                    done < <(find "$PREBUILTS/bin" -type l -lname "$target")
                 fi
 
                 shift 1
@@ -310,31 +307,20 @@ fetch() {
 remove() {
     local target="$1"
 
-    info "== remove $1"
+    info "== remove $target"
 
     if ! test -L "$target"; then
-        error "-- $target not exists"
+        error "<< $target not exists"
         return 1
     fi
 
     while read -r link; do
-        [ "$(readlink "$link")" = "$target" ] || continue
-        echo "-- $link"
-        rm -f "$link"
-    done < <(find "$(pwd -P)" -maxdepth 1 -type l)
+        rm -fv "$link" | _details
+    done < <(find "$(pwd -P)" -type l -lname "$target")
 
-    while read -r link; do
-        [ "$(readlink "$link")" = "$target" ] || continue
+    rm -fv "$target" | _details
 
-        echo "-- $link"
-        rm -f "$link"
-    done < <(find "$(pwd -P)/$PREBUILTS/bin" -type l)
-
-    echo "-- $(pwd -P)/$PREBUILTS/bin/$target"
-    rm -f "$PREBUILTS/bin/$target"
-
-    echo "-- $(pwd -P)/$target"
-    rm -f "$target"
+    rm -fv "$PREBUILTS/bin/$target" | _details
 }
 
 # fetch package
@@ -436,13 +422,13 @@ list() {
     local width link real
     info "== List installed cmdlets"
 
-    width="$(find . -type l | wc -L)"
+    width="$(find . -type l -maxdepth 1 | wc -L)"
 
     while read -r link; do
         real="$(readlink "$link")"
         [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
         printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -type l)
+    done < <(find . -type l -maxdepth 1)
 }
 
 # invoke cmd [args...]
