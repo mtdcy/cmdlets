@@ -5,7 +5,6 @@ libs_name=libyaml
 libs_lic="MIT"
 libs_ver=0.2.5
 libs_url=https://github.com/yaml/libyaml/archive/refs/tags/$libs_ver.tar.gz
-libs_zip=$libs_name-$libs_ver.tar.gz
 libs_sha=fa240dbf262be053f3898006d502d514936c818e422afdcf33921c63bed9bf2e
 
 libs_args=(

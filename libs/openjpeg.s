@@ -4,7 +4,6 @@
 
 libs_ver=2.5.4
 libs_url=https://github.com/uclouvain/openjpeg/archive/v$libs_ver.tar.gz
-libs_zip=openjpeg-$libs_ver.tar.gz
 libs_sha=a695fbe19c0165f295a8531b1e4e855cd94d0875d2f88ec4b61080677e27188a
 
 libs_args=(

@@ -5,7 +5,6 @@ libs_lic="MIT"
 libs_ver=2.1
 libs_url=https://github.com/LuaJIT/LuaJIT/archive/refs/tags/v$libs_ver.ROLLING.tar.gz
 libs_sha=31d7a4853df4c548bf91c13d3b690d19663d4c06ae952b62606c8225d0b410ad
-libs_zip=LuaJIT.$libs_ver.${libs_sha:0:7}.tar.gz
 libs_dep=()
 
 libs_args=(

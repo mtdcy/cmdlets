@@ -6,7 +6,6 @@ libs_lic="WTFPL"
 libs_ver=3.0.6
 libs_url=https://github.com/sekrit-twc/zimg/archive/refs/tags/release-$libs_ver.tar.gz
 libs_sha=be89390f13a5c9b2388ce0f44a5e89364a20c1c57ce46d382b1fcc3967057577
-libs_zip=zimg-release-$libs_ver.tar.gz
 libs_dep=()
 
 libs_args=(

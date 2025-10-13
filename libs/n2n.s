@@ -5,7 +5,6 @@
 libs_name=n2n
 libs_ver=3.1.1
 libs_url=https://github.com/ntop/n2n/archive/refs/tags/$libs_ver.zip
-libs_zip=n2n-$libs_ver.zip
 libs_sha=3e3eb29ec3f6c8d79538776baea0eeb2d5f5f041b9c544091b7bee2a3afe44a8
 libs_dep=()
 

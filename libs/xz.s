@@ -9,7 +9,6 @@ libs_url=(
     https://downloads.sourceforge.net/project/lzmautils/xz-$libs_ver.tar.xz
     https://mirrors.wikimedia.org/ubuntu/pool/main/x/xz-utils/xz-utils_$libs_ver.orig.tar.xz
 )
-libs_zip=$libs_name-$libs_ver.tar.xz
 libs_sha=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
 libs_dep=()
 

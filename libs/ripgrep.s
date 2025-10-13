@@ -5,7 +5,6 @@ libs_name=ripgrep
 libs_lic="Unlicensed"
 libs_ver=14.1.1
 libs_url=https://github.com/BurntSushi/ripgrep/archive/refs/tags/$libs_ver.tar.gz
-libs_zip=$libs_name-$(basename "$libs_url")
 libs_sha=4dad02a2f9c8c3c8d89434e47337aa654cb0e2aa50e806589132f186bf5c2b66
 libs_dep=( pcre2 )
 

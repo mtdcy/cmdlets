@@ -9,7 +9,6 @@ libs_url=(
     https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%20$libs_ver/unzip${libs_ver//\./}.tar.gz
 )
 
-libs_zip_strip=1
 
 libs_sha=(
     036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37

@@ -996,7 +996,7 @@ _prepare() {
         # download zip file
         _fetch "$zip" "$libs_sha" "${libs_url[@]}" || return 1
         # unzip to current fold
-        _unzip "$zip" "$libs_zip_strip" || return 2
+        _unzip "$zip" || return 2
     fi
 
     # patch urls
@@ -1033,7 +1033,8 @@ _load() {
 
     # default values:
     [ -n "$libs_name" ] || libs_name="$(basename "${1%.s}")"
-    [ -n "$libs_zip"  ] || libs_zip="$(basename "$libs_url")"
+
+    libs_zip="$libs_name-$libs_ver${libs_url##*/*$libs_ver}"
 
     [ "$libs_type" = ".PHONY" ] && return 0
 

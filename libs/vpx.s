@@ -5,7 +5,6 @@
 libs_lic="BSD-3-Clause"
 libs_ver=1.15.2
 libs_url=https://github.com/webmproject/libvpx/archive/v$libs_ver.tar.gz
-libs_zip=libvpx-$libs_ver.tar.gz
 libs_sha=26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa
 
 libs_args=(
