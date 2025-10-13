@@ -653,10 +653,10 @@ _pkgfile() {
         _link "$pkginfo" "$upkg_name/pkginfo@$version"
     fi
 
-    if [[ "$1" == *@* ]]; then
-        _link "$upkg_name/$name@latest" "$name@$version"
+    if [ "$version" != "$upkg_ver" ]; then
+        _link "$upkg_name/$name@$version" "$name@$version"
     else
-        _link "$upkg_name/$name@latest" "$name@latest"
+        _link "$upkg_name/$name@latest"   "$name@latest"
     fi
 
     # v3/manifest: name pkgfile sha
