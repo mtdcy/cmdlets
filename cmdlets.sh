@@ -5,7 +5,7 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=0.3
+VERSION=1.0-alpha
 
 API="${CMDLETS_API:-v3}"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
@@ -49,16 +49,22 @@ $NAME $VERSION
 
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$NAME cmd [args ...]
+Usage: $NAME cmd [args ...]
 
 Options:
     update                  - update $NAME
-    fetch   <cmdlet>        - fetch cmdlet(s) from server
-    install <cmdlet>        - fetch and install cmdlet(s)
-    library <libname>       - fetch a library from server
-    package <pkgname>       - fetch a package(cmdlets & libraries) from server
+    update  <cmdlet>        - update cmdlet
+
+    list                    - list installed cmdlets
     search  <name>          - search for cmdlet, library or package
+    install <cmdlet>        - fetch and install cmdlet
+    remove  <cmdlet>        - remove cmdlet
+
     help                    - show this help message
+
+    (for developers)
+    fetch   <cmdlet ...>    - fetch cmdlet(s)
+    package <pkgname ...>   - fetch package(s) (cmdlets & libraries)
 
 Examples:
     $NAME install minigzip                  # install the latest version
@@ -458,6 +464,9 @@ invoke() {
                 update
             fi
             ;;
+        list)
+            list
+            ;;
         search)
             search "${@:2}"
             ;;
@@ -465,11 +474,8 @@ invoke() {
             IFS=':' read -r bin alias <<< "$2"
             fetch "$bin" --install "$alias" || ret=$?
             ;;
-        remove)
+        remove|uninstall)
             remove "$2" || ret=$?
-            ;;
-        list)
-            list
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
