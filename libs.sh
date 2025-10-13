@@ -339,10 +339,6 @@ _init() {
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
-inspect_env() {
-    env
-}
-
 apply_c89_flags() {
     local flags=(
         -Wno-error=implicit-int
@@ -1280,6 +1276,19 @@ zip_files() {
     test -d "$logs" || return 0
     test -n "$(ls -A "$logs")" || return 0
     "$TAR" -C "$logs" -cvf "$logs-logs.tar.gz" .
+}
+
+env() {
+    /usr/bin/env | grep -v "^PROMPT"
+}
+
+clean() {
+    rm -rf "$WORKDIR" "${PREFIX/prebuilts/logs}"
+}
+
+distclean() {
+    clean
+    rm -rf "$PREFIX"
 }
 
 _init || exit 110

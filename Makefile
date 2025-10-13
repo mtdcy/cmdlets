@@ -51,16 +51,16 @@ vpath %.s libs
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 clean:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="rm -rf out/$(ARCH) logs/$(ARCH)"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
 
-distclean: clean
-	@$(MAKE) runc MAKEFLAGS= OPCODE="rm -rf prebuilts/$(ARCH)"
+distclean:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
+
+inspect:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
 
 shell:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
-
-inspect:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="env && pwd && ls"
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
