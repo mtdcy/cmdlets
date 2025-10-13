@@ -33,8 +33,8 @@ is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
-# ulog [error|info|warn] "leading" "message"
-_ulog() {
+# slog [error|info|warn] "leading" "message"
+_slog() {
     local lvl date message
 
     [ $# -gt 1 ] && lvl="$1" && shift 1
@@ -55,10 +55,10 @@ _ulog() {
     echo -e "$message"
 }
 
-ulogi() { _ulog info  "$@" >&2;             }
-ulogw() { _ulog warn  "$@" >&2;             }
-uloge() { _ulog error "$@" >&2; return 1;   }
-ulogf() { _ulog error "$@" >&2; exit 1;     } # exit shell
+slogi() { _slog info  "$@" >&2;             }
+slogw() { _slog warn  "$@" >&2;             }
+sloge() { _slog error "$@" >&2; return 1;   }
+slogf() { _slog error "$@" >&2; exit 1;     } # exit shell
 
 _logfile() {
     echo "${PREFIX/prebuilts/logs}/$libs_name.log"
@@ -74,7 +74,7 @@ _on_failure() {
 # for main shell
 _exit_on_failure() {
     if test -s "$PREFIX/.ERR_MSG"; then
-        ulogf "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
+        slogf "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
     fi
 }
 
@@ -110,9 +110,9 @@ echocmd() {
     } 2>&1 | CL_LOGGING=${CL_LOGGING:-silent} _capture
 }
 
-# ulogcmd <command>
-ulogcmd() {
-    ulogi "..Run" "$(tr -s ' ' <<< "$*")"
+# slogcmd <command>
+slogcmd() {
+    slogi "..Run" "$(tr -s ' ' <<< "$*")"
     echocmd "$@"
 }
 
@@ -153,7 +153,7 @@ _init_rust() {
     fi
 
     if test -z "$CARGO"; then
-        uloge "Init:" "rustup/cargo not exists"
+        sloge "Init:" "rustup/cargo not exists"
     fi
 
     export CARGO RUSTC
@@ -259,7 +259,7 @@ _init() {
             p="$($_find "$y" 2>/dev/null)" && break
         done
 
-        [ -n "$p" ] || ulogw "Init:" "missing host tools ${v[*]}"
+        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
 
         eval export "$k=$p"
     done
@@ -368,11 +368,11 @@ deparallelize() {
 configure() {
     if ! test -f configure; then
         if test -f autogen.sh; then
-            ulogcmd ./autogen.sh
+            slogcmd ./autogen.sh
         elif test -f bootstrap; then
-            ulogcmd ./bootstrap
+            slogcmd ./bootstrap
         elif test -f configure.ac; then
-            ulogcmd autoreconf -fis
+            slogcmd autoreconf -fis
         fi
     fi
 
@@ -389,7 +389,7 @@ configure() {
         -e 's/ --disable-static//g'     \
         <<<"$cmdline")
 
-    ulogcmd "$cmdline"
+    slogcmd "$cmdline"
 }
 
 make() {
@@ -400,7 +400,7 @@ make() {
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
-    ulogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}"
 }
 
 cmake() {
@@ -435,7 +435,7 @@ cmake() {
     # append user args
     cmdline+=( "${libs_args[@]}" "$@" )
     # cmake
-    ulogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}"
 }
 
 meson() {
@@ -459,7 +459,7 @@ meson() {
     # append user args
     cmdline+=( "${libs_args[@]}" "$(_filter_options "$@")" )
 
-    ulogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}"
 }
 
 ninja() {
@@ -468,7 +468,7 @@ ninja() {
     # append user args
     cmdline="$NINJA -j $CL_NJOBS -v $*"
 
-    ulogcmd "$cmdline"
+    slogcmd "$cmdline"
 }
 
 cargo() {
@@ -489,13 +489,13 @@ cargo() {
             ;;
     esac
 
-    ulogcmd "$cmdline"
+    slogcmd "$cmdline"
 }
 
 _init_go() {
     GO="$(which go)"
 
-    [ -n "$GO" ] || uloge "Init:" "missing host tool go"
+    [ -n "$GO" ] || sloge "Init:" "missing host tool go"
 
     # setup go envs: don't modify GOPATH here
     export GOBIN="$PREFIX/bin"
@@ -562,8 +562,8 @@ go() {
                 IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
                 sed "s/^go [0-9.]\+$/go $m.$n/" -i go.mod
                 # go mod edit won't work here
-                #ulogcmd "$GO" mod edit -go="$m.$n"
-                ulogcmd "$GO" mod tidy
+                #slogcmd "$GO" mod edit -go="$m.$n"
+                slogcmd "$GO" mod tidy
             fi
 
             # verbose
@@ -589,7 +589,7 @@ go() {
             ;;
     esac
 
-    ulogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}"
+    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}"
 }
 
 # easy command for go project
@@ -675,7 +675,7 @@ _pkgfile() {
 inspect_install() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
-    ulogcmd "$@"
+    slogcmd "$@"
 
     find "$PREFIX" > "$libs_name.pack.post"
 
@@ -684,7 +684,7 @@ inspect_install() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    ulogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
+    slogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
 
     # strip or not ?
     local args=( -v )
@@ -728,7 +728,7 @@ EOF
         return 0
     fi
 
-    ulogi ".Inst" "pkgfile $*"
+    slogi ".Inst" "pkgfile $*"
 
     local name alias subdir installed
     IFS=':' read -r name alias <<< "$1"
@@ -803,11 +803,11 @@ library() {
 
 # perform visual check on cmdlet
 check() {
-    ulogi "..Run" "check $*"
+    slogi "..Run" "check $*"
 
     local bin="$(which "$1")"
     [[ "$bin" =~ ^"$PREFIX" ]] || {
-        ulogf "CHECK" "cann't find $1"
+        slogf "CHECK" "cann't find $1"
     }
 
     # print to tty instead of capture it
@@ -822,14 +822,14 @@ check() {
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
             ldd "$bin"
-            ulogf "CHECK" "$bin is dynamically linked"
+            slogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
         otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
         ntldd "$bin"
     else
-        ulogw "FIXME: $OSTYPE"
+        slogw "FIXME: $OSTYPE"
     fi
 }
 
@@ -862,12 +862,12 @@ _fetch() {
 
     #1. try local file first
     if [ -f "$zip" ]; then
-        ulogi ".FILE" "$zip"
+        slogi ".FILE" "$zip"
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
             return 0
         else
-            ulogw "..SHA" "$_sha vs $sha (expected)"
+            slogw "..SHA" "$_sha vs $sha (expected)"
             rm -f "$zip"
         fi
     fi
@@ -875,23 +875,23 @@ _fetch() {
     #2. try mirror
     if test -n "$CL_MIRRORS"; then
         mirror="$CL_MIRRORS/packages/$(basename "$zip")"
-        ulogi ".CURL" "$mirror"
+        slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip"
     fi
 
     #3. try originals
     if ! test -f "$zip"; then
         for url in "${@:3}"; do
-            ulogi ".CURL" "$url"
+            slogi ".CURL" "$url"
             _curl "$url" "$zip" && break
         done
     fi
 
     if test -f "$zip"; then
-        ulogi ".FILE" "$(sha256sum "$zip")"
+        slogi ".FILE" "$(sha256sum "$zip")"
         return 0
     else
-        uloge ".CURL" "$* failed"
+        sloge ".CURL" "$* failed"
         return 1
     fi
 }
@@ -900,7 +900,7 @@ _fetch() {
 _fetch_git() {
     local url branch
 
-    ulogi "..GIT" "$1 => $2"
+    slogi "..GIT" "$1 => $2"
 
     IFS='#' read -r url branch <<< "$1"
     if test -d "${2%.git}/.git"; then
@@ -920,9 +920,9 @@ git_version() {
 # unzip file to current dir, or exit program
 # _unzip <file> [strip]
 _unzip() {
-    ulogi ".Zipx" "$1 => $(pwd)"
+    slogi ".Zipx" "$1 => $(pwd)"
 
-    [ -r "$1" ] || ulogf ".Zipx" "$1 read failed, permission denied?"
+    [ -r "$1" ] || slogf ".Zipx" "$1 read failed, permission denied?"
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
@@ -963,7 +963,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || ulogf ".Zipx" "$1 failed."
+    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || slogf ".Zipx" "$1 failed."
 
     # post strip
     case "${cmd[0]}" in
@@ -1015,11 +1015,11 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                ulogi "..Run" "patch p1 -N < $patch"
+                slogi "..Run" "patch p1 -N < $patch"
                 _curl_stdout "$patch" | patch -p1 -N
                 ;;
             *)
-                ulogcmd "patch -p1 -N < $patch"
+                slogcmd "patch -p1 -N < $patch"
                 ;;
         esac
     done
@@ -1078,11 +1078,11 @@ compile() {(
     # start subshell before source
     set -eo pipefail
 
-    ulogi ".Load" "$1"
+    slogi ".Load" "$1"
     _load "$1"
 
     if test -z "$libs_url" && test -z "$libs_git"; then
-        ulogw "<<<<<" "skip dummy target $libs_name"
+        slogw "<<<<<" "skip dummy target $libs_name"
         return 0
     fi
 
@@ -1102,7 +1102,7 @@ compile() {(
 
     echo -e "**** start build $libs_name ****\n$(date)\n" > "$(_logfile)"
 
-    ulogi ".Path" "$PWD"
+    slogi ".Path" "$PWD"
 
     # build library
     _prepare && libs_build || {
@@ -1117,7 +1117,7 @@ compile() {(
     # update tracking file
     touch "$PREFIX/.$libs_name.d"
 
-    ulogi "<<<<<" "$libs_name@$libs_ver"
+    slogi "<<<<<" "$libs_name@$libs_ver"
 )}
 
 # check dependencies for libraries
@@ -1148,20 +1148,20 @@ _check_deps() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    ulogi "$*"
+    slogi "$*"
 
     IFS=' ' read -r -a deps <<< "$(_check_deps "$@")"
 
     _exit_on_failure
 
-    ulogi "dependencies: ${deps[*]}"
+    slogi "dependencies: ${deps[*]}"
 
     CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()
     if [ "$CL_FORCE" -ne 0 ]; then
-        ulogi "Force rebuild dependencies"
+        slogi "Force rebuild dependencies"
         targets=( "${deps[@]}" )
     else
         CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
@@ -1180,13 +1180,13 @@ build() {
 
     _exit_on_failure
 
-    ulogi "Build" "${targets[*]}"
+    slogi "Build" "${targets[*]}"
 
     for i in "${!targets[@]}"; do
-        ulogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
+        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
 
         time compile "${targets[i]}" || {
-            ulogf "Error" "build ${targets[i]} failed"
+            slogf "Error" "build ${targets[i]} failed"
         }
     done
 }
@@ -1218,24 +1218,24 @@ _sort_by_depends() {
 }
 
 search() {
-    ulogi "Search $PREFIX"
+    slogi "Search $PREFIX"
     for x in "$@"; do
         # binaries ?
-        ulogi "Search binaries ..."
+        slogi "Search binaries ..."
         find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # libraries?
-        ulogi "Search libraries ..."
+        slogi "Search libraries ..."
         find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # headers?
-        ulogi "Search headers ..."
+        slogi "Search headers ..."
         find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # pkg-config?
-        ulogi "Search pkgconfig ..."
+        slogi "Search pkgconfig ..."
         if $PKG_CONFIG --exists "$x"; then
-            ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
+            slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
             echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
             echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
@@ -1244,7 +1244,7 @@ search() {
 
         x=lib$x
         if $PKG_CONFIG --exists "$x"; then
-            ulogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
+            slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
             echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
             echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
@@ -1284,7 +1284,7 @@ zip_files() {
 _init || exit 110
 
 if [[ "$0" =~ libs.sh$ ]]; then
-    "$@"
+    cd "$(dirname "$0")" && "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

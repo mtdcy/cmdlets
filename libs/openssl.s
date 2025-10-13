@@ -38,7 +38,7 @@ is_linux  && libs_args+=( "linux-$(uname -m)" )
 is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
 libs_build() {
-    ulogcmd ./Configure "${libs_args[@]}" || return 1
+    slogcmd ./Configure "${libs_args[@]}" || return 1
 
     is_darwin || {
         # use host paths

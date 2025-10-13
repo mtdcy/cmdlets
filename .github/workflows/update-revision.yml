@@ -69,7 +69,7 @@ jobs:
                 exit
               fi
 
-              ulogi "updated $ulib => $newver"
+              slogi "updated $ulib => $newver"
               IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$libs_zip")"
               sed -e "s/libs_sha=.*$/libs_sha=$sha/" \
                   -i "libs/$ulib.u"

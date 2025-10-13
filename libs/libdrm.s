@@ -14,7 +14,7 @@ libs_args=(
 
 libs_build() {
     is_darwin && {
-        ulogw "*****" "**** Not supported on $OSTYPE! ****"
+        slogw "*****" "**** Not supported on $OSTYPE! ****"
         exit 0
     }
 
