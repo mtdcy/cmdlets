@@ -259,7 +259,8 @@ fetch() {
     fi
 
     # target with or without version
-    test -f "$PREBUILTS/bin/$1" && target="$1" || target="${1%%@*}"
+    target="$(basename "$1")"
+    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
     shift 1
     while [ $# -gt 0 ]; do
