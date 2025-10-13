@@ -325,11 +325,6 @@ remove() {
     rm -f "$target"
 }
 
-_fix_pc() {
-    find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
-        sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
-} 2>/dev/null
-
 # fetch package
 package() {
     _manifest &>/dev/null
@@ -473,7 +468,8 @@ invoke() {
             for x in "${@:2}"; do
                 package "$x" || ret=$?
             done
-            _fix_pc
+            find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
+                sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
             ;;
         *)
             usage
