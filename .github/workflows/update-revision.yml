@@ -36,7 +36,7 @@ jobs:
 
           commits=/tmp/commits-$$.txt
           for ulib in libs/*; do
-            ulib="$(basename "${ulib%.u}")"
+            ulib="$(basename "${ulib%.s}")"
 
             # ignores
             [[ "$ulib" =~ ^ALL    ]] && continue
@@ -49,20 +49,20 @@ jobs:
 
               [ -n "$libs_ver" ] || exit
 
-              trap "git checkout 'libs/$ulib.u'" EXIT
+              trap "git checkout 'libs/$ulib.s'" EXIT
 
               IFS='=.' read -r m n r _ <<< "$libs_ver"
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
                 sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
-                    -i "libs/$ulib.u"
+                    -i "libs/$ulib.s"
 
                 fetch "$ulib" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
                 sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
-                    -i "libs/$ulib.u"
+                    -i "libs/$ulib.s"
 
                 fetch "$ulib" || exit
               else
@@ -72,9 +72,9 @@ jobs:
               slogi "updated $ulib => $newver"
               IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$libs_zip")"
               sed -e "s/libs_sha=.*$/libs_sha=$sha/" \
-                  -i "libs/$ulib.u"
+                  -i "libs/$ulib.s"
 
-              git add "libs/$ulib.u"
+              git add "libs/$ulib.s"
               echo "updated $ulib => $newver" >> "$commits"
             ) || true
           done
