@@ -1,19 +1,19 @@
 
 #
 # shellcheck disable=SC2034
-upkg_lic='LGPL'
-upkg_ver=4.20.0
-upkg_url=https://ftpmirror.gnu.org/gnu/libtasn1/libtasn1-$upkg_ver.tar.gz
-upkg_sha=92e0e3bd4c02d4aeee76036b2ddd83f0c732ba4cda5cb71d583272b23587a76c
+libs_lic='LGPL'
+libs_ver=4.20.0
+libs_url=https://ftpmirror.gnu.org/gnu/libtasn1/libtasn1-$libs_ver.tar.gz
+libs_sha=92e0e3bd4c02d4aeee76036b2ddd83f0c732ba4cda5cb71d583272b23587a76c
 
-upkg_args=(
+libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
     --disable-shared
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure && make &&
 
     make install &&

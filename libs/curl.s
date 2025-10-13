@@ -1,16 +1,16 @@
 # URL retrival utility and library
 
 # shellcheck disable=SC2034
-upkg_desc="Get a file from an HTTP, HTTPS or FTP server"
-upkg_lic="curl"
-upkg_ver=8.13.0
-upkg_url=https://curl.se/download/curl-$upkg_ver.tar.bz2
-upkg_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
-upkg_dep=(brotli zlib zstd libidn2 nghttp2)
+libs_desc="Get a file from an HTTP, HTTPS or FTP server"
+libs_lic="curl"
+libs_ver=8.13.0
+libs_url=https://curl.se/download/curl-$libs_ver.tar.bz2
+libs_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
+libs_dep=(brotli zlib zstd libidn2 nghttp2)
 
-is_darwin || upkg_dep+=( openssl )
+is_darwin || libs_dep+=( openssl )
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -47,14 +47,14 @@ upkg_args=(
     --enable-static
 )
 
-is_darwin && upkg_args+=(
+is_darwin && libs_args+=(
     --with-secure-transport
-) || upkg_args+=(
+) || libs_args+=(
     --with-openssl
     --with-default-ssl-backend=openssl
 )
 
-upkg_static() {
+libs_build() {
     apply_c89_flags || true
 
     configure  &&

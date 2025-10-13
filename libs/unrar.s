@@ -2,19 +2,19 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic='UnRAR'
-upkg_ver=7.0.9
-upkg_url=https://www.rarlab.com/rar/unrarsrc-$upkg_ver.tar.gz
-upkg_sha=505c13f9e4c54c01546f2e29b2fcc2d7fabc856a060b81e5cdfe6012a9198326
-upkg_dep=()
+libs_lic='UnRAR'
+libs_ver=7.0.9
+libs_url=https://www.rarlab.com/rar/unrarsrc-$libs_ver.tar.gz
+libs_sha=505c13f9e4c54c01546f2e29b2fcc2d7fabc856a060b81e5cdfe6012a9198326
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
 )
 
-upkg_static() {
+libs_build() {
     echocmd sed -i makefile           \
         -e 's/^CXX=/CXX?=/'           \
         -e 's/^AR=/AR?=/'             \
@@ -27,7 +27,7 @@ upkg_static() {
     make -f makefile &&
 
     # quick check
-    ./unrar | grep "${upkg_ver%.*}" &&
+    ./unrar | grep "${libs_ver%.*}" &&
 
     # install
     cmdlet unrar &&

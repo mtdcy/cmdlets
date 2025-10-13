@@ -1,23 +1,23 @@
 # Search tool like grep and The Silver Searcher
 
 # shellcheck disable=SC2034
-upkg_name=ripgrep
-upkg_lic="Unlicensed"
-upkg_ver=14.1.1
-upkg_url=https://github.com/BurntSushi/ripgrep/archive/refs/tags/$upkg_ver.tar.gz
-upkg_zip=$upkg_name-$(basename "$upkg_url")
-upkg_sha=4dad02a2f9c8c3c8d89434e47337aa654cb0e2aa50e806589132f186bf5c2b66
-upkg_dep=( pcre2 )
+libs_name=ripgrep
+libs_lic="Unlicensed"
+libs_ver=14.1.1
+libs_url=https://github.com/BurntSushi/ripgrep/archive/refs/tags/$libs_ver.tar.gz
+libs_zip=$libs_name-$(basename "$libs_url")
+libs_sha=4dad02a2f9c8c3c8d89434e47337aa654cb0e2aa50e806589132f186bf5c2b66
+libs_dep=( pcre2 )
 
 # configure args
-upkg_args=(
+libs_args=(
     --release
     --features pcre2
     --bin rg
     --verbose
 )
 
-upkg_static() {
+libs_build() {
     cargo build &&
 
     cmdlet "$(find target -name rg)" &&

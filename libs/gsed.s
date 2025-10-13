@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=4.9
-upkg_url=https://ftpmirror.gnu.org/gnu/sed/sed-$upkg_ver.tar.xz
-upkg_sha=6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181
-upkg_dep=(libiconv)
+libs_lic='GPL-3.0-or-later'
+libs_ver=4.9
+libs_url=https://ftpmirror.gnu.org/gnu/sed/sed-$libs_ver.tar.xz
+libs_sha=6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181
+libs_dep=(libiconv)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -32,7 +32,7 @@ upkg_args=(
     --program-prefix=g
 )
 
-upkg_static() {
+libs_build() {
     configure && make &&
 
     # install as gsed and symlink to sed

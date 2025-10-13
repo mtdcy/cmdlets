@@ -1,19 +1,19 @@
 # shellcheck disable=SC2034
-upkg_name=gzip
-upkg_desc="Popular GNU data compression program"
+libs_name=gzip
+libs_desc="Popular GNU data compression program"
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=1.14
-upkg_url=(
-    https://ftpmirror.gnu.org/gnu/gzip/gzip-$upkg_ver.tar.xz
+libs_lic='GPL-3.0-or-later'
+libs_ver=1.14
+libs_url=(
+    https://ftpmirror.gnu.org/gnu/gzip/gzip-$libs_ver.tar.xz
     # mirrors
-    https://ftp.gnu.org/gnu/gzip/gzip-$upkg_ver.tar.xz
-    https://mirrors.ustc.edu.cn/gnu/gzip/gzip-$upkg_ver.tar.xz
+    https://ftp.gnu.org/gnu/gzip/gzip-$libs_ver.tar.xz
+    https://mirrors.ustc.edu.cn/gnu/gzip/gzip-$libs_ver.tar.xz
 )
-upkg_sha=01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6
-upkg_dep=()
+libs_sha=01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -29,7 +29,7 @@ upkg_args=(
 
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

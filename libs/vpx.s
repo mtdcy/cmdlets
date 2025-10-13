@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="BSD-3-Clause"
-upkg_ver=1.15.2
-upkg_url=https://github.com/webmproject/libvpx/archive/v$upkg_ver.tar.gz
-upkg_zip=libvpx-$upkg_ver.tar.gz
-upkg_sha=26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa
+libs_lic="BSD-3-Clause"
+libs_ver=1.15.2
+libs_url=https://github.com/webmproject/libvpx/archive/v$libs_ver.tar.gz
+libs_zip=libvpx-$libs_ver.tar.gz
+libs_sha=26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa
 
-upkg_args=(
+libs_args=(
     --enable-vp8
     --enable-vp9
     --disable-examples
@@ -22,7 +22,7 @@ upkg_args=(
 )
     #--disable-libyuv
 
-upkg_static() {
+libs_build() {
     configure && make &&
     
     library vpx \

@@ -1,15 +1,15 @@
 # GNU libiconv is a conversion library
 
 # shellcheck disable=SC2034
-upkg_desc="Character sets conversion library"
-upkg_page="https://www.gnu.org/software/libiconv/"
+libs_desc="Character sets conversion library"
+libs_page="https://www.gnu.org/software/libiconv/"
 
-upkg_lic="GPL-3.0-or-later|LGPL-2.0-or-later"
-upkg_ver=1.18
-upkg_url=https://ftpmirror.gnu.org/gnu/libiconv/libiconv-$upkg_ver.tar.gz
-upkg_sha=3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8
+libs_lic="GPL-3.0-or-later|LGPL-2.0-or-later"
+libs_ver=1.18
+libs_url=https://ftpmirror.gnu.org/gnu/libiconv/libiconv-$libs_ver.tar.gz
+libs_sha=3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
     --enable-silent-rules
@@ -24,7 +24,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     export CFLAGS+=" -Wno-error=implicit-function-declaration"
 
     configure &&

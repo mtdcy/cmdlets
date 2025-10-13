@@ -1,11 +1,11 @@
 #
 # shellcheck disable=SC2034
-upkg_lic="Zlib"
-upkg_ver=2.30.12
-upkg_url=https://github.com/libsdl-org/SDL/releases/download/release-$upkg_ver/SDL2-$upkg_ver.tar.gz
-upkg_sha=ac356ea55e8b9dd0b2d1fa27da40ef7e238267ccf9324704850d5d47375b48ea
+libs_lic="Zlib"
+libs_ver=2.30.12
+libs_url=https://github.com/libsdl-org/SDL/releases/download/release-$libs_ver/SDL2-$libs_ver.tar.gz
+libs_sha=ac356ea55e8b9dd0b2d1fa27da40ef7e238267ccf9324704850d5d47375b48ea
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
     --without-x
@@ -14,7 +14,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     rm CMakeLists.txt
 
     configure && 

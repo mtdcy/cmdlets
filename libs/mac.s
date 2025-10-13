@@ -1,17 +1,17 @@
 
 #
 # shellcheck disable=SC2034
-upkg_lic="3-Clause BSD"
-upkg_ver=1085
-upkg_url=https://monkeysaudio.com/files/MAC_${upkg_ver}_SDK.zip
-upkg_sha=f8169319f2bbe86feaaf4e900154f6d7d9eb74ac712026c202719aebceee7ec0
-upkg_zip_strip=0 # default: 1
+libs_lic="3-Clause BSD"
+libs_ver=1085
+libs_url=https://monkeysaudio.com/files/MAC_${libs_ver}_SDK.zip
+libs_sha=f8169319f2bbe86feaaf4e900154f6d7d9eb74ac712026c202719aebceee7ec0
+libs_zip_strip=0 # default: 1
 
-upkg_args=(
+libs_args=(
     -DBUILD_SHARED=OFF
 )
 
-upkg_static() {
+libs_build() {
     cmake . && make && make install
 }
 

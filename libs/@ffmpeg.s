@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034,SC2154
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
-upkg_dep=(
+libs_dep=(
     # basic libs
     zlib bzip2 xz libiconv
     # audio libs
@@ -22,7 +22,7 @@ upkg_dep=(
     freetype fribidi harfbuzz    # for drawtext, TODO: fontconfig
 )
 
-upkg_args=(
+libs_args=(
     --enable-pic
     --enable-pthreads
     --enable-hardcoded-tables
@@ -76,13 +76,13 @@ upkg_args=(
 
 # Fix: libstdc++.a: linker input file unused because linking not done
 is_darwin || {
-    upkg_args+=( --extra-libs=-lstdc++ )
+    libs_args+=( --extra-libs=-lstdc++ )
     export LDFLAGS+=" -static-libstdc++"
 }
 
 is_darwin || {
-    upkg_dep+=(openssl)
-    upkg_args+=(
+    libs_dep+=(openssl)
+    libs_args+=(
         # ffmpeg prefer shared libs, fix bug using extra libs
         #--extra-libs=\"-lm -lpthread\"
         --enable-openssl            # TLS
@@ -90,14 +90,14 @@ is_darwin || {
 
     # TODO: Fix build libdrm with alpine/musl
     is_glibc && {
-        upkg_dep+=(libdrm)
-        upkg_args+=( --enable-libdrm )
+        libs_dep+=(libdrm)
+        libs_args+=( --enable-libdrm )
     }
 }
 
 # always enable hwaccels for macOS
 is_darwin && {
-    upkg_args+=(
+    libs_args+=(
         --enable-hwaccels
         --enable-securetransport    # TLS
         --enable-coreimage          # for avfilter
@@ -108,18 +108,18 @@ is_darwin && {
 }
 
 is_msys && {
-    upkg_args+=(
+    libs_args+=(
         --extra-cflags=-DKVZ_STATIC_LIB # read kvazaar's README
     )
 }
 
-upkg_lic="BSD"
+libs_lic="BSD"
 for v in ${FFMPEG_VARS//,/ }; do
     case "$v" in
         gpl)
-            upkg_lic="GPL-2.0-and-later"
-            upkg_dep+=(amr x264 xvidcore frei0r)
-            upkg_args+=(
+            libs_lic="GPL-2.0-and-later"
+            libs_dep+=(amr x264 xvidcore frei0r)
+            libs_args+=(
                 --enable-gpl                # GPL 2.x
                 --enable-libx264            # h264 encoding
                 --enable-libxvid            # mpeg4 encoding, ffmpeg has native one
@@ -127,13 +127,13 @@ for v in ${FFMPEG_VARS//,/ }; do
             )
             # FIXME: have trouble with libx265 in macOS
             is_darwin || {
-                upkg_dep+=( x265 )
-                upkg_args+=( --enable-libx265 )
+                libs_dep+=( x265 )
+                libs_args+=( --enable-libx265 )
             }
             ;;
         lgpl)
-            upkg_lic="LGPL-3.0-and-later"
-            upkg_args+=(
+            libs_lic="LGPL-3.0-and-later"
+            libs_args+=(
                 --enable-version3           # LGPL 3.0
                 --enable-libopencore-amrnb  # amrnb encoding
                 --enable-libopencore-amrwb  # amrwb encoding
@@ -141,8 +141,8 @@ for v in ${FFMPEG_VARS//,/ }; do
             ;;
         nonfree)
             # nonfree -> unredistributable
-            upkg_dep+=(fdk-aac)
-            upkg_args+=(
+            libs_dep+=(fdk-aac)
+            libs_args+=(
                 --enable-nonfree
                 --enable-libfdk-aac         # aac encoding
             )
@@ -150,25 +150,25 @@ for v in ${FFMPEG_VARS//,/ }; do
         hwaccels)
             # platform hw accel
             # https://trac.ffmpeg.org/wiki/HWAccelIntro
-            upkg_args+=(--enable-hwaccels)
+            libs_args+=(--enable-hwaccels)
 
-            is_darwin || upkg_dep+=(libva OpenCL)
+            is_darwin || libs_dep+=(libva OpenCL)
 
-            is_linux && upkg_args+=(
+            is_linux && libs_args+=(
                 #--enable-opencl
                 #--enable-opengl
                 #--enable-vdpau
                 --enable-vaapi
             )
-            is_msys && upkg_args+=(
+            is_msys && libs_args+=(
                 --enable-opencl
                 --enable-d3d11va
                 --enable-dxva2
             )
             ;;
         ffplay)
-            upkg_dep+=(sdl2)
-            upkg_args+=(
+            libs_dep+=(sdl2)
+            libs_args+=(
                 --enable-ffplay
                 --enable-sdl2
                 --enable-outdevs
@@ -176,7 +176,7 @@ for v in ${FFMPEG_VARS//,/ }; do
             ;;
         huge)
             # custom your own build here
-            upkg_args+=(
+            libs_args+=(
                 --enable-demuxers
                 --enable-muxers
                 --enable-decoders

@@ -61,7 +61,7 @@ uloge() { _ulog error "$@" >&2; return 1;   }
 ulogf() { _ulog error "$@" >&2; exit 1;     } # exit shell
 
 _logfile() {
-    echo "${PREFIX/prebuilts/logs}/$upkg_name.log"
+    echo "${PREFIX/prebuilts/logs}/$libs_name.log"
 }
 
 # for subshell
@@ -381,7 +381,7 @@ configure() {
     cmdline="./configure --prefix=$PREFIX"
 
     # append user args
-    cmdline+=" ${upkg_args[*]} $*"
+    cmdline+=" ${libs_args[*]} $*"
 
     # suffix options, override user's
     cmdline=$(sed                       \
@@ -433,7 +433,7 @@ cmake() {
     # cmake using a mixed path style with MSYS Makefiles, why???
     is_msys && cmdline+=( -G"'MSYS Makefiles'" )
     # append user args
-    cmdline+=( "${upkg_args[@]}" "$@" )
+    cmdline+=( "${libs_args[@]}" "$@" )
     # cmake
     ulogcmd "${cmdline[@]}"
 }
@@ -457,7 +457,7 @@ meson() {
     #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
 
     # append user args
-    cmdline+=( "${upkg_args[@]}" "$(_filter_options "$@")" )
+    cmdline+=( "${libs_args[@]}" "$(_filter_options "$@")" )
 
     ulogcmd "${cmdline[@]}"
 }
@@ -480,7 +480,7 @@ cargo() {
         export ZLIB_STATIC=1
     }
 
-    local cmdline="$CARGO $* ${upkg_args[*]}"
+    local cmdline="$CARGO $* ${libs_args[*]}"
 
     # cargo always download and rebuild targets
     case "$1" in
@@ -571,7 +571,7 @@ go() {
 
             #1. static without dwarf and stripped
             #2. add version info
-            local ldflags=( -w -s -X main.version="$upkg_ver" )
+            local ldflags=( -w -s -X main.version="$libs_ver" )
 
             [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
 
@@ -614,20 +614,20 @@ TAR="$(which gtar 2>/dev/null || which tar)"
 _pkgfile() {
     pushd "$PREFIX"
 
-    mkdir -pv "$upkg_name"
+    mkdir -pv "$libs_name"
 
     # name contains version code?
     local name version
     IFS='@' read -r name version <<< "$1"
 
-    test -n "$version" || version="$upkg_ver"
+    test -n "$version" || version="$libs_ver"
 
     # pkgfile with full version
-    local pkgfile="$upkg_name/$name@$upkg_ver.tar.gz"
-    local pkgvern="$upkg_name/$name@$upkg_ver"
+    local pkgfile="$libs_name/$name@$libs_ver.tar.gz"
+    local pkgvern="$libs_name/$name@$libs_ver"
 
     # pkginfo is shared by library() and cmdlet(), full versioned
-    local pkginfo="$upkg_name/pkginfo@$upkg_ver"; touch "$pkginfo"
+    local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
     local files
 
@@ -645,24 +645,24 @@ _pkgfile() {
     grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
     # v2/pkginfo
-    _link "$pkgvern" "$upkg_name/$name@latest"
-    _link "$pkginfo" "$upkg_name/pkginfo@latest"
+    _link "$pkgvern" "$libs_name/$name@latest"
+    _link "$pkginfo" "$libs_name/pkginfo@latest"
 
-    if [ "$version" != "$upkg_ver" ]; then
-        _link "$pkgvern" "$upkg_name/$name@$version"
-        _link "$pkginfo" "$upkg_name/pkginfo@$version"
+    if [ "$version" != "$libs_ver" ]; then
+        _link "$pkgvern" "$libs_name/$name@$version"
+        _link "$pkginfo" "$libs_name/pkginfo@$version"
     fi
 
-    if [ "$version" != "$upkg_ver" ]; then
-        _link "$upkg_name/$name@$version" "$name@$version"
+    if [ "$version" != "$libs_ver" ]; then
+        _link "$libs_name/$name@$version" "$name@$version"
     else
-        _link "$upkg_name/$name@latest"   "$name@latest"
+        _link "$libs_name/$name@latest"   "$name@latest"
     fi
 
     # v3/manifest: name pkgfile sha
     touch "cmdlets.manifest"
     # clear full versioned records
-    sed -i "\#^$name@\?[^\ ]\+ $upkg_name/.*@$upkg_ver\.#d" cmdlets.manifest
+    sed -i "\#^$name@\?[^\ ]\+ $libs_name/.*@$libs_ver\.#d" cmdlets.manifest
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
@@ -673,13 +673,13 @@ _pkgfile() {
 
 # find out which files are installed by `make install'
 inspect_install() {
-    find "$PREFIX" > "$upkg_name.pack.pre"
+    find "$PREFIX" > "$libs_name.pack.pre"
 
     ulogcmd "$@"
 
-    find "$PREFIX" > "$upkg_name.pack.post"
+    find "$PREFIX" > "$libs_name.pack.post"
 
-    diff "$upkg_name.pack.post" "$upkg_name.pack.pre" | sed "s%$PREFIX%%g" > "$upkg_name.pack"
+    diff "$libs_name.pack.post" "$libs_name.pack.pre" | sed "s%$PREFIX%%g" > "$libs_name.pack"
 }
 
 # cmdlet executable [name] [alias ...]
@@ -815,7 +815,7 @@ check() {
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
-        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$upkg_ver"
+        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$libs_ver"
     fi
 
     # check linked libraries
@@ -981,38 +981,38 @@ _unzip() {
 
 # prepare source code or return error
 _prepare() {
-    if test -n "$upkg_git"; then
-        _fetch_git "$upkg_git" . || return 1
+    if test -n "$libs_git"; then
+        _fetch_git "$libs_git" . || return 1
 
-        for submodule in "${upkg_git_submodules[@]}"; do
+        for submodule in "${libs_git_submodules[@]}"; do
             _fetch_git "$submodule" "$(basename "${submodule%#*}")" || return 2
         done
 
         return 0
     else
-        # use the first url to construct zip file name local zip="$ROOT/packages/$upkg_zip"
-        local zip="$ROOT/packages/$upkg_zip"
+        # use the first url to construct zip file name local zip="$ROOT/packages/$libs_zip"
+        local zip="$ROOT/packages/$libs_zip"
 
         # download zip file
-        _fetch "$zip" "$upkg_sha" "${upkg_url[@]}" || return 1
+        _fetch "$zip" "$libs_sha" "${libs_url[@]}" || return 1
         # unzip to current fold
-        _unzip "$zip" "$upkg_zip_strip" || return 2
+        _unzip "$zip" "$libs_zip_strip" || return 2
     fi
 
     # patch urls
-    if test -n "${upkg_patch_url[*]}"; then
-        for i in "${!upkg_patch_url[@]}"; do
-            local zip="$ROOT/packages/${upkg_patch_zip[i]:-$(basename "${upkg_patch_url[i]}")}"
+    if test -n "${libs_patch_url[*]}"; then
+        for i in "${!libs_patch_url[@]}"; do
+            local zip="$ROOT/packages/${libs_patch_zip[i]:-$(basename "${libs_patch_url[i]}")}"
 
             # download files
-            _fetch "$zip" "${upkg_patch_sha[i]}" "${upkg_patch_url[i]}" || return 3
+            _fetch "$zip" "${libs_patch_sha[i]}" "${libs_patch_url[i]}" || return 3
             # unzip to current fold
             _unzip "$zip" || return 4
         done
     fi
 
     # apply patches
-    for patch in "${upkg_patches[@]}"; do
+    for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
                 ulogi "..Run" "patch p1 -N < $patch"
@@ -1027,26 +1027,26 @@ _prepare() {
 
 # _load library
 _load() {
-    unset "${!upkg_@}"
+    unset "${!libs_@}"
 
     [ -f "$1" ] && source "$1" || source "libs/$1.u"
 
     # default values:
-    [ -n "$upkg_name" ] || upkg_name="$(basename "${1%.u}")"
-    [ -n "$upkg_zip"  ] || upkg_zip="$(basename "$upkg_url")"
+    [ -n "$libs_name" ] || libs_name="$(basename "${1%.u}")"
+    [ -n "$libs_zip"  ] || libs_zip="$(basename "$libs_url")"
 
-    [ "$upkg_type" = ".PHONY" ] && return 0
+    [ "$libs_type" = ".PHONY" ] && return 0
 
     # git
-    [ -n "$upkg_git" ] && return 0
+    [ -n "$libs_git" ] && return 0
 
     # sanity checks: always exit program|subshell here
-    if test -z "$upkg_url" || test -z "$upkg_sha"; then
-        _on_failure "$upkg_name: missing upkg_url or upkg_sha"
+    if test -z "$libs_url" || test -z "$libs_sha"; then
+        _on_failure "$libs_name: missing libs_url or libs_sha"
     fi
 }
 
-_load_deps() {( _load "$1"; echo "${upkg_dep[@]}"; )}
+_load_deps() {( _load "$1"; echo "${libs_dep[@]}"; )}
 
 # _deps_get libname
 _deps_get() {
@@ -1081,31 +1081,31 @@ compile() {(
     ulogi ".Load" "$1"
     _load "$1"
 
-    if test -z "$upkg_url" && test -z "$upkg_git"; then
-        ulogw "<<<<<" "skip dummy target $upkg_name"
+    if test -z "$libs_url" && test -z "$libs_git"; then
+        ulogw "<<<<<" "skip dummy target $libs_name"
         return 0
     fi
 
     # clear
-    find "$PREFIX/$upkg_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
+    find "$PREFIX/$libs_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
 
     # prepare work dir
     mkdir -p "$PREFIX"
     mkdir -p "$(dirname "$(_logfile)")"
 
-    local workdir="$WORKDIR/$upkg_name-$upkg_ver"
+    local workdir="$WORKDIR/$libs_name-$libs_ver"
 
     # strict mode: clean before compile
     [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
 
     mkdir -p "$workdir" && cd "$workdir"
 
-    echo -e "**** start build $upkg_name ****\n$(date)\n" > "$(_logfile)"
+    echo -e "**** start build $libs_name ****\n$(date)\n" > "$(_logfile)"
 
     ulogi ".Path" "$PWD"
 
     # build library
-    _prepare && upkg_static || {
+    _prepare && libs_build || {
         sleep 1 # let _capture() finish
 
         local logfile="$(_logfile)"
@@ -1115,9 +1115,9 @@ compile() {(
     }
 
     # update tracking file
-    touch "$PREFIX/.$upkg_name.d"
+    touch "$PREFIX/.$libs_name.d"
 
-    ulogi "<<<<<" "$upkg_name@$upkg_ver"
+    ulogi "<<<<<" "$libs_name@$libs_ver"
 )}
 
 # check dependencies for libraries
@@ -1262,7 +1262,7 @@ load() {
 fetch() {
     _load "$1"
 
-    _fetch "$ROOT/packages/$upkg_zip" "$upkg_sha" "$upkg_url"
+    _fetch "$ROOT/packages/$libs_zip" "$libs_sha" "$libs_url"
 }
 
 arch() {

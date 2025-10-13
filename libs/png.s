@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="libpng-2.0"
-upkg_ver=1.6.50
-upkg_url=https://downloads.sourceforge.net/libpng/libpng16/libpng-$upkg_ver.tar.xz
-upkg_sha=4df396518620a7aa3651443e87d1b2862e4e88cad135a8b93423e01706232307
-upkg_dep=(zlib)
+libs_lic="libpng-2.0"
+libs_ver=1.6.50
+libs_url=https://downloads.sourceforge.net/libpng/libpng16/libpng-$libs_ver.tar.xz
+libs_sha=4df396518620a7aa3651443e87d1b2862e4e88cad135a8b93423e01706232307
+libs_dep=(zlib)
 
-upkg_args=(
+libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
     --enable-hardware-optimizations
@@ -18,7 +18,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     # force configure
     rm CMakeLists.txt
 

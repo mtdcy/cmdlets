@@ -1,14 +1,14 @@
 
 #
 # shellcheck disable=SC2034
-upkg_des="Perl compatible regular expressions library with a new API"
-upkg_lic="BSD-3-Clause"
-upkg_ver=10.46
-upkg_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$upkg_ver/pcre2-$upkg_ver.tar.bz2
-upkg_sha=15fbc5aba6beee0b17aecb04602ae39432393aba1ebd8e39b7cabf7db883299f
-upkg_dep=(zlib bzip2)
+libs_des="Perl compatible regular expressions library with a new API"
+libs_lic="BSD-3-Clause"
+libs_ver=10.46
+libs_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$libs_ver/pcre2-$libs_ver.tar.bz2
+libs_sha=15fbc5aba6beee0b17aecb04602ae39432393aba1ebd8e39b7cabf7db883299f
+libs_dep=(zlib bzip2)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -23,7 +23,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure  &&
 
     make &&

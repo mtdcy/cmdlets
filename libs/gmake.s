@@ -1,13 +1,13 @@
 # Utility for directing compilation
 
 # shellcheck disable=SC2034
-upkg_lic='GPL-3.0-only'
-upkg_ver=4.4.1
-upkg_url=https://ftpmirror.gnu.org/gnu/make/make-$upkg_ver.tar.lz
-upkg_sha=8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9
-upkg_dep=(libiconv)
+libs_lic='GPL-3.0-only'
+libs_ver=4.4.1
+libs_url=https://ftpmirror.gnu.org/gnu/make/make-$libs_ver.tar.lz
+libs_sha=8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9
+libs_dep=(libiconv)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -22,7 +22,7 @@ upkg_args=(
     --disable-man
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

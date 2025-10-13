@@ -1,13 +1,13 @@
 # C string library for manipulating Unicode strings
 #
 # shellcheck disable=SC2034
-upkg_lic='LGPL|GPL'
-upkg_ver=1.4
-upkg_url=https://ftpmirror.gnu.org/gnu/libunistring/libunistring-$upkg_ver.tar.gz
-upkg_sha=f7e39ddeca18858ecdd02c60d1d5374fcdcbbcdb6b68a391f8497cb1cb2cf3f7
-upkg_dep=( libiconv )
+libs_lic='LGPL|GPL'
+libs_ver=1.4
+libs_url=https://ftpmirror.gnu.org/gnu/libunistring/libunistring-$libs_ver.tar.gz
+libs_sha=f7e39ddeca18858ecdd02c60d1d5374fcdcbbcdb6b68a391f8497cb1cb2cf3f7
+libs_dep=( libiconv )
 
-upkg_args=(
+libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
     --disable-dependency-tracking
@@ -38,7 +38,7 @@ common_headers=(
     lib/unictype.h
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

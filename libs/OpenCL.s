@@ -1,13 +1,13 @@
 
 #
 # shellcheck disable=SC2034
-upkg_lic="GPL"
-upkg_ver=2023.12.14
-upkg_url=https://github.com/KhronosGroup/OpenCL-Headers/archive/refs/tags/v$upkg_ver.zip
-upkg_zip=OpenCL-Headers-$upkg_ver.zip
-upkg_sha=cc55c351b1b71346469c7ecdec3d62ad6661b2e3c41b9df165ee8b1ab75563d3
+libs_lic="GPL"
+libs_ver=2023.12.14
+libs_url=https://github.com/KhronosGroup/OpenCL-Headers/archive/refs/tags/v$libs_ver.zip
+libs_zip=OpenCL-Headers-$libs_ver.zip
+libs_sha=cc55c351b1b71346469c7ecdec3d62ad6661b2e3c41b9df165ee8b1ab75563d3
 
-upkg_static() {
+libs_build() {
     cmake . && make && make install
 }
 

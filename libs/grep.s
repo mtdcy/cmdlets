@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=3.12
-upkg_url=https://ftpmirror.gnu.org/gnu/grep/grep-$upkg_ver.tar.xz
-upkg_sha=2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9
-upkg_dep=(libiconv pcre2)
+libs_lic='GPL-3.0-or-later'
+libs_ver=3.12
+libs_url=https://ftpmirror.gnu.org/gnu/grep/grep-$libs_ver.tar.xz
+libs_sha=2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9
+libs_dep=(libiconv pcre2)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -23,9 +23,9 @@ upkg_args=(
     --disable-man
 )
 
-[[ ${upkg_dep[*]} =~ libiconv ]] || upkg_args+=(--without-libiconv-prefix)
+[[ ${libs_dep[*]} =~ libiconv ]] || libs_args+=(--without-libiconv-prefix)
 
-upkg_static() {
+libs_build() {
     # note: egrep & fgrep are obsolescent;
     configure && 
     make -C lib &&

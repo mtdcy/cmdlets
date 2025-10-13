@@ -1,9 +1,9 @@
 # Play, record, convert, and stream audio and video
 
 # shellcheck disable=SC2034
-upkg_ver=7.1.2
-upkg_url=https://ffmpeg.org/releases/ffmpeg-$upkg_ver.tar.xz
-upkg_sha=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
+libs_ver=7.1.2
+libs_url=https://ffmpeg.org/releases/ffmpeg-$libs_ver.tar.xz
+libs_sha=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
@@ -17,7 +17,7 @@ install_ffmpeg_libs() {
         lib/pkgconfig   lib$1/lib$1.pc
 }
 
-upkg_static() {
+libs_build() {
 	CC_C='' configure  &&
 
 	make &&

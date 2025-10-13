@@ -1,12 +1,12 @@
 # High-performance, high-quality MPEG-4 video library
 
 # shellcheck disable=SC2034
-upkg_lic="GPL-2.0-or-later"
-upkg_ver=1.3.7
-upkg_url=https://downloads.xvid.com/downloads/xvidcore-$upkg_ver.tar.bz2
-upkg_sha=aeeaae952d4db395249839a3bd03841d6844843f5a4f84c271ff88f7aa1acff7
+libs_lic="GPL-2.0-or-later"
+libs_ver=1.3.7
+libs_url=https://downloads.xvid.com/downloads/xvidcore-$libs_ver.tar.bz2
+libs_sha=aeeaae952d4db395249839a3bd03841d6844843f5a4f84c271ff88f7aa1acff7
 
-upkg_static() {
+libs_build() {
     cd build/generic
 
     configure --disable-shared --enable-static &&

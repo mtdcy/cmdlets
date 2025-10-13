@@ -2,19 +2,19 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="BSD"
-upkg_ver=0.1.6
-upkg_url=https://downloads.sourceforge.net/opencore-amr/opencore-amr-$upkg_ver.tar.gz
-upkg_sha=483eb4061088e2b34b358e47540b5d495a96cd468e361050fae615b1809dc4a1
+libs_lic="BSD"
+libs_ver=0.1.6
+libs_url=https://downloads.sourceforge.net/opencore-amr/opencore-amr-$libs_ver.tar.gz
+libs_sha=483eb4061088e2b34b358e47540b5d495a96cd468e361050fae615b1809dc4a1
 
-upkg_args=(
+libs_args=(
     --enable-amrnb-decoder
     --enable-amrnb-encoder
     --disable-shared
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure && make &&
 
     library opencore-amrnb \

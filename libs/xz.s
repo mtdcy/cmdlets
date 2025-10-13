@@ -1,19 +1,19 @@
 # General-purpose data compression with high compression ratio
 # shellcheck disable=SC2034
 
-upkg_name=xz
-upkg_lic="BSD"
-upkg_ver=5.8.1
-upkg_url=(
-    https://github.com/tukaani-project/xz/releases/download/v$upkg_ver/xz-$upkg_ver.tar.xz
-    https://downloads.sourceforge.net/project/lzmautils/xz-$upkg_ver.tar.xz
-    https://mirrors.wikimedia.org/ubuntu/pool/main/x/xz-utils/xz-utils_$upkg_ver.orig.tar.xz
+libs_name=xz
+libs_lic="BSD"
+libs_ver=5.8.1
+libs_url=(
+    https://github.com/tukaani-project/xz/releases/download/v$libs_ver/xz-$libs_ver.tar.xz
+    https://downloads.sourceforge.net/project/lzmautils/xz-$libs_ver.tar.xz
+    https://mirrors.wikimedia.org/ubuntu/pool/main/x/xz-utils/xz-utils_$libs_ver.orig.tar.xz
 )
-upkg_zip=$upkg_name-$upkg_ver.tar.xz
-upkg_sha=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
-upkg_dep=()
+libs_zip=$libs_name-$libs_ver.tar.xz
+libs_sha=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -25,7 +25,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     rm CMakeLists.txt # force use configure
 
     configure &&

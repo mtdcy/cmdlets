@@ -1,13 +1,13 @@
 # GNU awk utility
 
 # shellcheck disable=SC2034
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=5.3.2
-upkg_url=https://ftpmirror.gnu.org/gnu/gawk/gawk-$upkg_ver.tar.xz
-upkg_sha=f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc
-upkg_dep=(gmp mpfr readline)
+libs_lic='GPL-3.0-or-later'
+libs_ver=5.3.2
+libs_url=https://ftpmirror.gnu.org/gnu/gawk/gawk-$libs_ver.tar.xz
+libs_sha=f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc
+libs_dep=(gmp mpfr readline)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -22,11 +22,11 @@ upkg_args=(
     --disable-man
 )
 
-[[ ${upkg_dep[*]} =~ mpfr ]] || upkg_args+=(--without-mpfr)
+[[ ${libs_dep[*]} =~ mpfr ]] || libs_args+=(--without-mpfr)
 
-[[ ${upkg_dep[*]} =~ readline ]] || upkg_args+=(--without-readline)
+[[ ${libs_dep[*]} =~ readline ]] || libs_args+=(--without-readline)
 
-upkg_static() {
+libs_build() {
     # refer to: https://github.com/macports/macports-ports/blob/master/lang/gawk/Portfile
     if is_darwin; then
         sed -i 's:-Xlinker -no_pie::' configure

@@ -1,22 +1,22 @@
 # shellcheck disable=SC2034
 
-upkg_name=lzop
-upkg_desc="lzop is a file compressor which is very similar to gzip."
+libs_name=lzop
+libs_desc="lzop is a file compressor which is very similar to gzip."
 
-upkg_lic='GPL-2.0'
-upkg_ver=1.04
-upkg_url=https://www.lzop.org/download/lzop-$upkg_ver.tar.gz
-upkg_sha=7e72b62a8a60aff5200a047eea0773a8fb205caf7acbe1774d95147f305a2f41
-upkg_dep=(lzo)
+libs_lic='GPL-2.0'
+libs_ver=1.04
+libs_url=https://www.lzop.org/download/lzop-$libs_ver.tar.gz
+libs_sha=7e72b62a8a60aff5200a047eea0773a8fb205caf7acbe1774d95147f305a2f41
+libs_dep=(lzo)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
     --enable-silent-rules
 
 )
 
-upkg_static() {
+libs_build() {
     # force use configure
     rm -f CMakeLists.txt || true
 

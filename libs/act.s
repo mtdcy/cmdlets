@@ -1,17 +1,17 @@
 # Run your GitHub Actions locally 🚀
 
 # shellcheck disable=SC2034
-upkg_name=act
-upkg_lic="MIT"
-upkg_ver=0.2.82
-upkg_url=https://github.com/nektos/act/archive/refs/tags/v$upkg_ver.tar.gz
-upkg_zip=$upkg_name-$upkg_ver.tar.gz
-upkg_sha=9a346d558672a23822f5fbfc020547a2b96ed4945e6c36dc239d9ac545cd64a9
+libs_name=act
+libs_lic="MIT"
+libs_ver=0.2.82
+libs_url=https://github.com/nektos/act/archive/refs/tags/v$libs_ver.tar.gz
+libs_zip=$libs_name-$libs_ver.tar.gz
+libs_sha=9a346d558672a23822f5fbfc020547a2b96ed4945e6c36dc239d9ac545cd64a9
 
-upkg_args=(
+libs_args=(
 )
 
-upkg_static() {
+libs_build() {
     go_build && cmdlet act && check act
 }
 

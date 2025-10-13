@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="MIT"
-upkg_ver=8.5.0
-upkg_url=https://github.com/harfbuzz/harfbuzz/releases/download/$upkg_ver/harfbuzz-$upkg_ver.tar.xz
-upkg_sha=77e4f7f98f3d86bf8788b53e6832fb96279956e1c3961988ea3d4b7ca41ddc27
-upkg_dep=(freetype)
+libs_lic="MIT"
+libs_ver=8.5.0
+libs_url=https://github.com/harfbuzz/harfbuzz/releases/download/$libs_ver/harfbuzz-$libs_ver.tar.xz
+libs_sha=77e4f7f98f3d86bf8788b53e6832fb96279956e1c3961988ea3d4b7ca41ddc27
+libs_dep=(freetype)
 
-#upkg_args=(
+#libs_args=(
 #    -Dfreetype=enabled
 #    -Dglib=disabled         # for Pango
 #    -Dgobject=disabled      # for GNOME
@@ -18,9 +18,9 @@ upkg_dep=(freetype)
 #    -Dtests=disabled
 #    -Ddocs=disabled
 #)
-#is_darwin && upkg_args+=(-Dcoretext=enabled)
+#is_darwin && libs_args+=(-Dcoretext=enabled)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -41,11 +41,11 @@ upkg_args=(
     #LIBS="-lbrotlidec -lbrotlicommon -lpng -lz"
 )
 
-is_darwin && upkg_args+=(--with-coretext=yes)
+is_darwin && libs_args+=(--with-coretext=yes)
 
-upkg_static() {
+libs_build() {
     #meson setup build &&
-    #meson setup --reconfigure build "${upkg_args[@]}" &&
+    #meson setup --reconfigure build "${libs_args[@]}" &&
     #meson compile -C build --verbose &&
     #meson install -C build
 

@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic=""
-upkg_ver=2.22.0
-upkg_url=https://github.com/intel/libva/releases/download/$upkg_ver/libva-$upkg_ver.tar.bz2
-upkg_sha=e3da2250654c8d52b3f59f8cb3f3d8e7fb1a2ee64378dbc400fbc5663de7edb8
-upkg_dep=(libdrm)
+libs_lic=""
+libs_ver=2.22.0
+libs_url=https://github.com/intel/libva/releases/download/$libs_ver/libva-$libs_ver.tar.bz2
+libs_sha=e3da2250654c8d52b3f59f8cb3f3d8e7fb1a2ee64378dbc400fbc5663de7edb8
+libs_dep=(libdrm)
 
-upkg_args+=(
+libs_args+=(
     --enable-static
     --disable-shared
     --disable-x11
@@ -16,7 +16,7 @@ upkg_args+=(
     --disable-wayland
 )
 
-upkg_static() {
+libs_build() {
     configure &&
     make &&
     make install

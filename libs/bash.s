@@ -4,16 +4,16 @@
 #   #1. DON'T use this version as default interpreter
 
 # shellcheck disable=SC2034
-upkg_name="bash"
-upkg_lic="GPL-3.0-or-later"
-upkg_ver=5.3
-upkg_url=https://github.com/bminor/bash/archive/refs/tags/bash-$upkg_ver.tar.gz
-#https://ftpmirror.gnu.org/gnu/bash/bash-$upkg_ver.tar.gz
+libs_name="bash"
+libs_lic="GPL-3.0-or-later"
+libs_ver=5.3
+libs_url=https://github.com/bminor/bash/archive/refs/tags/bash-$libs_ver.tar.gz
+#https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
 
-upkg_sha=6c377fd89688d0ce9bef112ce82c83418f1b6d5457ad6ea2ef2d8558bd552f2c
-upkg_dep=(ncurses libiconv) # readline embbed
+libs_sha=6c377fd89688d0ce9bef112ce82c83418f1b6d5457ad6ea2ef2d8558bd552f2c
+libs_dep=(ncurses libiconv) # readline embbed
 
-upkg_args=(
+libs_args=(
     #--disable-option-checking -> make sure all options are recognized.
     --enable-silent-rules
     --disable-dependency-tracking
@@ -59,9 +59,9 @@ upkg_args=(
 )
 
 # fix 'error: cannot guess build type'
-is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
-upkg_static() {
+libs_build() {
     apply_c89_flags || true
 
     # macOS defined this:

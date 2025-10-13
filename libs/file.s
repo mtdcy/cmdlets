@@ -1,19 +1,19 @@
 # Implementation of the file(1) command
 
 # shellcheck disable=SC2034
-upkg_ver=5.46
-upkg_url=(
-    "https://astron.com/pub/file/file-$upkg_ver.tar.gz"
+libs_ver=5.46
+libs_url=(
+    "https://astron.com/pub/file/file-$libs_ver.tar.gz"
 )
-upkg_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
-upkg_lic="BSD-2-Clause"
-upkg_dep=( zlib bzip2 xz )
+libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
+libs_lic="BSD-2-Clause"
+libs_dep=( zlib bzip2 xz )
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
-upkg_patch_url=https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.46-5build1.debian.tar.xz
-upkg_patch_sha=d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb
+libs_patch_url=https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.46-5build1.debian.tar.xz
+libs_patch_sha=d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb
 
-upkg_patches=(
+libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order
     patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
     patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
@@ -33,7 +33,7 @@ upkg_patches=(
     #patches/local.manpage-seccomp-is-disabled.patch
 )
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -51,7 +51,7 @@ upkg_args=(
 #
 # version mismatched magic.mgc may not work
 
-upkg_static() {
+libs_build() {
     MAGIC_PATH="share/file"
 
     configure || return 1

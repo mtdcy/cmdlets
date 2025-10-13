@@ -1,18 +1,18 @@
 # Nettle is a cryptographic library that is designed to fit easily in more or less any context: In crypto toolkits for object-oriented languages.
 # shellcheck disable=SC2034
-upkg_lic='LGPL|GPL'
-upkg_ver=3.9.1
-upkg_url=https://ftpmirror.gnu.org/gnu/nettle/nettle-$upkg_ver.tar.gz
-upkg_sha=ccfeff981b0ca71bbd6fbcb054f407c60ffb644389a5be80d6716d5b550c6ce3
-upkg_dep=(gmp)
+libs_lic='LGPL|GPL'
+libs_ver=3.9.1
+libs_url=https://ftpmirror.gnu.org/gnu/nettle/nettle-$libs_ver.tar.gz
+libs_sha=ccfeff981b0ca71bbd6fbcb054f407c60ffb644389a5be80d6716d5b550c6ce3
+libs_dep=(gmp)
 
-upkg_args=(
+libs_args=(
     --libdir=$PREFIX/lib    # default install to lib64
     --disable-shared
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure && make &&
 
     #make install

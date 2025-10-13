@@ -1,18 +1,18 @@
 # Docker clients
 
 # shellcheck disable=SC2034,SC2248
-upkg_ver=28.5.1
-upkg_git="https://github.com/docker/cli.git#v$upkg_ver"
+libs_ver=28.5.1
+libs_git="https://github.com/docker/cli.git#v$libs_ver"
 
 DOCKER_COMPOSE_VERSION=2.39.4
 DOCKER_BUILDX_VERSION=0.29.0
 
-upkg_git_submodules=(
+libs_git_submodules=(
     "https://github.com/docker/compose.git#v$DOCKER_COMPOSE_VERSION"
     "https://github.com/docker/buildx.git#v$DOCKER_BUILDX_VERSION"
 )
 
-upkg_static() (
+libs_build() (
     # setup go modules path
     export GOPATH="$PWD"
 
@@ -26,7 +26,7 @@ upkg_static() (
     ln -srfv . src/github.com/docker/cli
 
     # -X main.version not working for docker
-    go_build -ldflags="'-X github.com/docker/cli/cli/version.Version=$upkg_ver -X github.com/docker/cli/cli/version.GitCommit=$(git_version)'" github.com/docker/cli/cmd/docker &&
+    go_build -ldflags="'-X github.com/docker/cli/cli/version.Version=$libs_ver -X github.com/docker/cli/cli/version.GitCommit=$(git_version)'" github.com/docker/cli/cmd/docker &&
 
     # docker plugins
     ( 
@@ -44,7 +44,7 @@ upkg_static() (
     ) &&
 
     # install versioned files
-    cmdlet docker docker@${upkg_ver%.*} docker &&
+    cmdlet docker docker@${libs_ver%.*} docker &&
 
     cmdlet docker-compose docker-compose@${DOCKER_COMPOSE_VERSION%.*} docker-compose &&
 

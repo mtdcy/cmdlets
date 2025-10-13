@@ -1,12 +1,12 @@
 # all cmdlets
 
 # shellcheck disable=SC2034
-upkg_type=.PHONY
+libs_type=.PHONY
 
-upkg_ver="$(cat VERSION)"
+libs_ver="$(cat VERSION)"
 
 # only cmdlets here, no libraries
-upkg_dep=(
+libs_dep=(
     # zip
     gtar unrar unzip
     # utils

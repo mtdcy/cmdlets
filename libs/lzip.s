@@ -1,18 +1,18 @@
 # shellcheck disable=SC2034
 
-upkg_name=lzip
-upkg_desc="LZMA lossless data compressor"
+libs_name=lzip
+libs_desc="LZMA lossless data compressor"
 
-upkg_lic='GPL-2.0-or-later'
-upkg_ver=1.24.1
-upkg_url=http://download.savannah.gnu.org/releases/lzip/lzip-$upkg_ver.tar.gz
-upkg_sha=30c9cb6a0605f479c496c376eb629a48b0a1696d167e3c1e090c5defa481b162
-upkg_dep=()
+libs_lic='GPL-2.0-or-later'
+libs_ver=1.24.1
+libs_url=http://download.savannah.gnu.org/releases/lzip/lzip-$libs_ver.tar.gz
+libs_sha=30c9cb6a0605f479c496c376eb629a48b0a1696d167e3c1e090c5defa481b162
+libs_dep=()
 
-upkg_args=(
+libs_args=(
 )
 
-upkg_static() {
+libs_build() {
     # non-standard configure
     configure \
         CXX=\"$CXX\" \

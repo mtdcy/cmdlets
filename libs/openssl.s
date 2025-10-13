@@ -4,13 +4,13 @@
 #  we built shared libraries, but not suppose to use it.
 
 # shellcheck disable=SC2034
-upkg_lic='Apache-2.0'
-upkg_ver=3.5.4
-upkg_url=https://www.openssl.org/source/openssl-$upkg_ver.tar.gz
-upkg_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
-upkg_dep=()
+libs_lic='Apache-2.0'
+libs_ver=3.5.4
+libs_url=https://www.openssl.org/source/openssl-$libs_ver.tar.gz
+libs_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --prefix="$PREFIX"
 
     --libdir=lib
@@ -33,12 +33,12 @@ upkg_args=(
     "$LDFLAGS"
 )
 
-is_linux  && upkg_args+=( "linux-$(uname -m)" )
+is_linux  && libs_args+=( "linux-$(uname -m)" )
 
-is_darwin && upkg_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
+is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
-upkg_static() {
-    ulogcmd ./Configure "${upkg_args[@]}" || return 1
+libs_build() {
+    ulogcmd ./Configure "${libs_args[@]}" || return 1
 
     is_darwin || {
         # use host paths

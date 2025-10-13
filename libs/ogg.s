@@ -2,16 +2,16 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="BSD"
-upkg_ver=1.3.6
-upkg_url=https://downloads.xiph.org/releases/ogg/libogg-$upkg_ver.tar.gz
-upkg_sha=83e6704730683d004d20e21b8f7f55dcb3383cdf84c0daedf30bde175f774638
+libs_lic="BSD"
+libs_ver=1.3.6
+libs_url=https://downloads.xiph.org/releases/ogg/libogg-$libs_ver.tar.gz
+libs_sha=83e6704730683d004d20e21b8f7f55dcb3383cdf84c0daedf30bde175f774638
 
-upkg_args=(
+libs_args=(
     -DBUILD_SHARED_LIBS=FALSE
 )
 
-upkg_static() {
+libs_build() {
     # it seems ogg configure on every make command 
 
     cmake -S . -B build &&

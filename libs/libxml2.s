@@ -1,13 +1,13 @@
 # GNOME XML library
 
 # shellcheck disable=SC2034
-upkg_lic="MIT"
-upkg_ver=2.13.9
-upkg_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${upkg_ver}.tar.xz
-upkg_sha=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
-upkg_dep=(zlib libiconv readline)
+libs_lic="MIT"
+libs_ver=2.13.9
+libs_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${libs_ver}.tar.xz
+libs_sha=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
+libs_dep=(zlib libiconv readline)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -29,7 +29,7 @@ upkg_args=(
     --enable-static
     )
 
-upkg_static() {
+libs_build() {
 
     configure &&
 

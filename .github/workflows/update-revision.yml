@@ -47,21 +47,21 @@ jobs:
               . libs.sh
               load $ulib
 
-              [ -n "$upkg_ver" ] || exit
+              [ -n "$libs_ver" ] || exit
 
               trap "git checkout 'libs/$ulib.u'" EXIT
 
-              IFS='=.' read -r m n r _ <<< "$upkg_ver"
+              IFS='=.' read -r m n r _ <<< "$libs_ver"
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
-                sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
+                sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
                     -i "libs/$ulib.u"
 
                 fetch "$ulib" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
-                sed -e "s/upkg_ver=.*$/upkg_ver=$newver/" \
+                sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
                     -i "libs/$ulib.u"
 
                 fetch "$ulib" || exit
@@ -70,8 +70,8 @@ jobs:
               fi
 
               ulogi "updated $ulib => $newver"
-              IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$upkg_zip")"
-              sed -e "s/upkg_sha=.*$/upkg_sha=$sha/" \
+              IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$libs_zip")"
+              sed -e "s/libs_sha=.*$/libs_sha=$sha/" \
                   -i "libs/$ulib.u"
 
               git add "libs/$ulib.u"

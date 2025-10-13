@@ -1,17 +1,17 @@
 # free video effect plugin collection
 
 # shellcheck disable=SC2034
-upkg_lic="GPL"
-upkg_ver=2.3.3
-upkg_url=https://github.com/dyne/frei0r/archive/refs/tags/v$upkg_ver.tar.gz
-upkg_sha=aeeefe3a9b44761b2cf110017d2b1dfa2ceeb873da96d283ba5157380c5d0ce5
+libs_lic="GPL"
+libs_ver=2.3.3
+libs_url=https://github.com/dyne/frei0r/archive/refs/tags/v$libs_ver.tar.gz
+libs_sha=aeeefe3a9b44761b2cf110017d2b1dfa2ceeb873da96d283ba5157380c5d0ce5
 
-upkg_args=(
+libs_args=(
     -DWITHOUT_OPENCV=ON
     -DWITHOUT_GAVL=ON
 )
 
-upkg_static() {
+libs_build() {
     mkdir -p build &&
 
     cd build &&

@@ -2,16 +2,16 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=1.25.0
-upkg_url=https://ftpmirror.gnu.org/gnu/wget/wget-$upkg_ver.tar.gz
-upkg_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
-upkg_dep=(zlib xz libidn2 openssl)
+libs_lic='GPL-3.0-or-later'
+libs_ver=1.25.0
+libs_url=https://ftpmirror.gnu.org/gnu/wget/wget-$libs_ver.tar.gz
+libs_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
+libs_dep=(zlib xz libidn2 openssl)
 
 # using system tls on macOS
-#is_darwin || upkg_dep+=(openssl)
+#is_darwin || libs_dep+=(openssl)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -43,7 +43,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

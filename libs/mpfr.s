@@ -2,16 +2,16 @@
 #
 # shellcheck disable=SC2034
 
-upkg_desc="C library for multiple-precision floating-point computations"
-upkg_page="https://www.mpfr.org/"
+libs_desc="C library for multiple-precision floating-point computations"
+libs_page="https://www.mpfr.org/"
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=4.2.2
-upkg_url=https://ftpmirror.gnu.org/gnu/mpfr/mpfr-$upkg_ver.tar.xz
-upkg_sha=b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
-upkg_dep=(gmp)
+libs_lic='GPL-3.0-or-later'
+libs_ver=4.2.2
+libs_url=https://ftpmirror.gnu.org/gnu/mpfr/mpfr-$libs_ver.tar.xz
+libs_sha=b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01
+libs_dep=(gmp)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -21,12 +21,12 @@ upkg_args=(
     --disable-docs
 )
 
-is_darwin || upkg_args+=(
+is_darwin || libs_args+=(
     --disable-shared
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     is_darwin || export CXXFLAGS+=" --static-libquadmath"
 
     configure &&

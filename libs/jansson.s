@@ -1,13 +1,13 @@
 # C library for encoding, decoding, and manipulating JSON
 
 # shellcheck disable=SC2034
-upkg_name=jansson
-upkg_lic="MIT"
-upkg_ver=2.14
-upkg_url=https://github.com/akheron/jansson/releases/download/v$upkg_ver/jansson-$upkg_ver.tar.gz
-upkg_sha=c739578bf6b764aa0752db9a2fdadcfe921c78f1228c7ec0bb47fa804c55d17b
+libs_name=jansson
+libs_lic="MIT"
+libs_ver=2.14
+libs_url=https://github.com/akheron/jansson/releases/download/v$libs_ver/jansson-$libs_ver.tar.gz
+libs_sha=c739578bf6b764aa0752db9a2fdadcfe921c78f1228c7ec0bb47fa804c55d17b
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -15,7 +15,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure &&
     make &&
     library libjansson \

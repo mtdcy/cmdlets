@@ -1,13 +1,13 @@
 # GNU File, Shell, and Text utilities
 
 # shellcheck disable=SC2034
-upkg_lic="GPL-3.0-or-later"
-upkg_ver=9.8
-upkg_url=https://ftpmirror.gnu.org/gnu/coreutils/coreutils-$upkg_ver.tar.xz
-upkg_sha=e6d4fd2d852c9141a1c2a18a13d146a0cd7e45195f72293a4e4c044ec6ccca15
-upkg_dep=(gmp libiconv)
+libs_lic="GPL-3.0-or-later"
+libs_ver=9.8
+libs_url=https://ftpmirror.gnu.org/gnu/coreutils/coreutils-$libs_ver.tar.xz
+libs_sha=e6d4fd2d852c9141a1c2a18a13d146a0cd7e45195f72293a4e4c044ec6ccca15
+libs_dep=(gmp libiconv)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -27,10 +27,10 @@ upkg_args=(
     --disable-man
 )
 
-[[ "${upkg_dep[*]}" =~ gmp ]]       || upkg_args+=(--without-gmp) # make utils more generic
-[[ "${upkg_dep[*]}" =~ libiconv ]]  || upkg_args+=(--without-libiconv-prefix)
+[[ "${libs_dep[*]}" =~ gmp ]]       || libs_args+=(--without-gmp) # make utils more generic
+[[ "${libs_dep[*]}" =~ libiconv ]]  || libs_args+=(--without-libiconv-prefix)
 
-upkg_static() {
+libs_build() {
     #dynamically_if_glibc || true
 
     configure &&

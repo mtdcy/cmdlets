@@ -1,17 +1,17 @@
 # Extremely Fast Compression algorithm
 # shellcheck disable=SC2034
 
-upkg_name=lz4
-upkg_lic="BSD-2-Clause"
-upkg_ver=1.10.0
-upkg_url=https://github.com/lz4/lz4/releases/download/v$upkg_ver/lz4-$upkg_ver.tar.gz
-upkg_sha=537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
-upkg_dep=()
+libs_name=lz4
+libs_lic="BSD-2-Clause"
+libs_ver=1.10.0
+libs_url=https://github.com/lz4/lz4/releases/download/v$libs_ver/lz4-$libs_ver.tar.gz
+libs_sha=537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
+libs_dep=()
 
-upkg_args=(
+libs_args=(
 )
 
-upkg_static() {
+libs_build() {
     sed -e 's/^BUILD_SHARED.*:=.*$/BUILD_SHARED:=no/' \
         -i lib/Makefile &&
 

@@ -2,15 +2,15 @@
 # XML 1.0 parser
 
 # shellcheck disable=SC2034
-upkg_name=expat
-upkg_lic="MIT"
-upkg_ver=2.7.3
-upkg_url=https://github.com/libexpat/libexpat/releases/download/R_${upkg_ver//./_}/expat-$upkg_ver.tar.gz
-upkg_sha=821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732
-upkg_dep=()
+libs_name=expat
+libs_lic="MIT"
+libs_ver=2.7.3
+libs_url=https://github.com/libexpat/libexpat/releases/download/R_${libs_ver//./_}/expat-$libs_ver.tar.gz
+libs_sha=821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732
+libs_dep=()
 
 # configure args
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -23,7 +23,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
 
     configure &&
 

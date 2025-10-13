@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="BSD-3-Clause"
-upkg_ver=1.1.1
-upkg_url=https://downloads.xiph.org/releases/theora/libtheora-$upkg_ver.tar.bz2
-upkg_sha=b6ae1ee2fa3d42ac489287d3ec34c5885730b1296f0801ae577a35193d3affbc
-upkg_dep=(ogg vorbis)
+libs_lic="BSD-3-Clause"
+libs_ver=1.1.1
+libs_url=https://downloads.xiph.org/releases/theora/libtheora-$libs_ver.tar.bz2
+libs_sha=b6ae1ee2fa3d42ac489287d3ec34c5885730b1296f0801ae577a35193d3affbc
+libs_dep=(ogg vorbis)
 
-upkg_args=(
+libs_args=(
     --disable-examples
     --disable-oggtest
     --disable-vorbistest
@@ -19,9 +19,9 @@ upkg_args=(
     )
 
 # fix 'error: cannot guess build type'
-is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
-upkg_static() {
+libs_build() {
     configure && 
 
     make && 

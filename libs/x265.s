@@ -1,10 +1,10 @@
 # x265 HEVC Encoder
 
 # shellcheck disable=SC2034
-upkg_lic="GPL-2.0-only"
-upkg_ver=4.1
-upkg_url=http://ftp.videolan.org/pub/videolan/x265/x265_$upkg_ver.tar.gz
-upkg_sha=a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29
+libs_lic="GPL-2.0-only"
+libs_ver=4.1
+libs_url=http://ftp.videolan.org/pub/videolan/x265/x265_$libs_ver.tar.gz
+libs_sha=a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29
 
 HIGH_BIT_DEPTH=0
 
@@ -18,7 +18,7 @@ is_darwin || arm64_args=(
 
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
-upkg_static() {
+libs_build() {
     # report AppleClang as Clang
     sed -r '/cmake_policy.*(0025|0054)/d' -i source/CMakeLists.txt
 

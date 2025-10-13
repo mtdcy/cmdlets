@@ -1,13 +1,13 @@
 # libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alpha/Substation Alpha) subtitle format.
 
 # shellcheck disable=SC2034
-upkg_lic=FTL
-upkg_ver=2.13.3
-upkg_url=https://downloads.sourceforge.net/project/freetype/freetype2/$upkg_ver/freetype-$upkg_ver.tar.xz
-upkg_sha=0550350666d427c74daeb85d5ac7bb353acba5f76956395995311a9c6f063289
-upkg_dep=(zlib bzip2 brotli png)
+libs_lic=FTL
+libs_ver=2.13.3
+libs_url=https://downloads.sourceforge.net/project/freetype/freetype2/$libs_ver/freetype-$libs_ver.tar.xz
+libs_sha=0550350666d427c74daeb85d5ac7bb353acba5f76956395995311a9c6f063289
+libs_dep=(zlib bzip2 brotli png)
 
-upkg_args=(
+libs_args=(
     #--enable-freetype-config
 
     --disable-shared
@@ -17,7 +17,7 @@ upkg_args=(
     --without-harfbuzz
 )
 
-upkg_static() {
+libs_build() {
     # for apinames
     export CCexe_CFLAGS="$CFLAGS"
 

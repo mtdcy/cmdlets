@@ -1,15 +1,15 @@
 # Distributed revision control system
 
 # shellcheck disable=SC2034,SC2154
-upkg_lic="GPL-2.0-only"
-upkg_ver=2.51.0
-upkg_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$upkg_ver.tar.xz"
-upkg_sha=60a7c2251cc2e588d5cd87bae567260617c6de0c22dca9cdbfc4c7d2b8990b62
-upkg_dep=( zlib pcre2 libiconv expat curl )
+libs_lic="GPL-2.0-only"
+libs_ver=2.51.0
+libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
+libs_sha=60a7c2251cc2e588d5cd87bae567260617c6de0c22dca9cdbfc4c7d2b8990b62
+libs_dep=( zlib pcre2 libiconv expat curl )
 
-is_darwin || upkg_dep+=( openssl )
+is_darwin || libs_dep+=( openssl )
 
-upkg_args=(
+libs_args=(
     prefix="'$PREFIX'"
 
     CC="'$CC'"
@@ -36,15 +36,15 @@ upkg_args=(
     ICONVDIR="'$PREFIX'"
 )
 
-is_darwin && upkg_args+=(
+is_darwin && libs_args+=(
     NO_OPENSSL=1
     APPLE_COMMON_CRYPTO=1
-) || upkg_args+=(
+) || libs_args+=(
     NO_APPLE_COMMON_CRYPTO=1
 )
 
 # "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
-is_musl_gcc && upkg_args+=( NO_REGEX=NeedsStartEnd )
+is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 
 #1. avoid hardcode PREFIX into git commands
 #2. avoid system libexec
@@ -53,12 +53,12 @@ is_musl_gcc && upkg_args+=( NO_REGEX=NeedsStartEnd )
 #
 # exec-cmd.c:setup_path => GIT_EXEC_PATH > PATH
 # => disable libexec and use PATH instead
-upkg_args+=( gitexecdir='/git-no-libexec' )
+libs_args+=( gitexecdir='/git-no-libexec' )
 
-upkg_static() {
+libs_build() {
     #make configure && configure || return 1
 
-    make "${upkg_args[@]}" || return 1
+    make "${libs_args[@]}" || return 1
 
     # git and alias
     local sum="$(md5sum git | cut -d' ' -f1)"

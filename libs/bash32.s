@@ -3,14 +3,14 @@
 # 3.2: a classic version
 
 # shellcheck disable=SC2034
-upkg_lic="GPL-3.0-or-later"
-upkg_ver=3.2.57
-upkg_url=https://ftpmirror.gnu.org/gnu/bash/bash-$upkg_ver.tar.gz
-upkg_sha=3fa9daf85ebf35068f090ce51283ddeeb3c75eb5bc70b1a4a7cb05868bfe06a4
-upkg_dep=(ncurses libiconv)
+libs_lic="GPL-3.0-or-later"
+libs_ver=3.2.57
+libs_url=https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+libs_sha=3fa9daf85ebf35068f090ce51283ddeeb3c75eb5bc70b1a4a7cb05868bfe06a4
+libs_dep=(ncurses libiconv)
 
 # this formula is used to compatible check, don't enable any extra features
-upkg_args=(
+libs_args=(
     --with-curses
     --enable-readline
     --without-installed-readline
@@ -24,9 +24,9 @@ upkg_args=(
 )
 
 # fix 'error: cannot guess build type'
-is_darwin || upkg_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
-upkg_static() {
+libs_build() {
     apply_c89_flags || true
 
     # bash 3.2 won't start with `-Os'
@@ -46,7 +46,7 @@ upkg_static() {
     make &&
 
     # install versioned bash
-    cmdlet bash bash@${upkg_ver%.*} bash@${upkg_ver%%.*} &&
+    cmdlet bash bash@${libs_ver%.*} bash@${libs_ver%%.*} &&
 
     check bash@3.2 --version
 }

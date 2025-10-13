@@ -3,33 +3,33 @@
 #   (Also Free, Not to Mention Unencumbered by Patents)
 
 # shellcheck disable=SC2034
-upkg_name=zlib
-upkg_lic="zlib"
-upkg_ver=1.3.1
-upkg_url=(
+libs_name=zlib
+libs_lic="zlib"
+libs_ver=1.3.1
+libs_url=(
     # has different sha vs office package
-    https://mirrors.wikimedia.org/ubuntu/pool/main/z/zlib/zlib_${upkg_ver%.*}.dfsg+really$upkg_ver.orig.tar.gz
-    #https://zlib.net/zlib-$upkg_ver.tar.gz
+    https://mirrors.wikimedia.org/ubuntu/pool/main/z/zlib/zlib_${libs_ver%.*}.dfsg+really$libs_ver.orig.tar.gz
+    #https://zlib.net/zlib-$libs_ver.tar.gz
 )
-upkg_sha=60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb
-upkg_dep=()
+libs_sha=60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb
+libs_dep=()
 
 # types: app or cmdlet
-upkg_type=cmdlet
+libs_type=cmdlet
 
 # configure args
-upkg_args=()
-
-# patches
-upkg_patches=()
+libs_args=()
 
 # patch zip
-upkg_patch_url=
-upkg_patch_sha=
-upkg_patch_zip=
-upkg_patch_strip=
+libs_patch_url=
+libs_patch_sha=
+libs_patch_zip=
+libs_patch_strip=
 
-upkg_static() {
+# patches
+libs_patches=()
+
+libs_build() {
     configure --static && make || return 1
 
     cat <<EOF > zlib.pc
@@ -41,7 +41,7 @@ includedir=\${prefix}/include
 
 Name: zlib
 Description: zlib compression library
-Version: $upkg_ver
+Version: $libs_ver
 
 Requires:
 Libs: -L\${libdir} -L\${sharedlibdir} -lz

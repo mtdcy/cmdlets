@@ -2,14 +2,14 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="WTFPL"
-upkg_ver=3.0.6
-upkg_url=https://github.com/sekrit-twc/zimg/archive/refs/tags/release-$upkg_ver.tar.gz
-upkg_sha=be89390f13a5c9b2388ce0f44a5e89364a20c1c57ce46d382b1fcc3967057577
-upkg_zip=zimg-release-$upkg_ver.tar.gz
-upkg_dep=()
+libs_lic="WTFPL"
+libs_ver=3.0.6
+libs_url=https://github.com/sekrit-twc/zimg/archive/refs/tags/release-$libs_ver.tar.gz
+libs_sha=be89390f13a5c9b2388ce0f44a5e89364a20c1c57ce46d382b1fcc3967057577
+libs_zip=zimg-release-$libs_ver.tar.gz
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -21,7 +21,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     ./autogen.sh &&
     configure &&
     make && {

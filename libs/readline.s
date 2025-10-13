@@ -3,13 +3,13 @@
 # BE CAREFUL: macOS provide libedit
 
 # shellcheck disable=SC2034
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=8.3
-upkg_url=https://ftpmirror.gnu.org/gnu/readline/readline-$upkg_ver.tar.gz
-upkg_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
-upkg_dep=(ncurses)
+libs_lic='GPL-3.0-or-later'
+libs_ver=8.3
+libs_url=https://ftpmirror.gnu.org/gnu/readline/readline-$libs_ver.tar.gz
+libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
+libs_dep=(ncurses)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -26,7 +26,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

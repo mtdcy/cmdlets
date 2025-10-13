@@ -1,13 +1,13 @@
 # An internationalization and localization (i18n and l10n) system commonly used for writing multilingual programs.
 
 # shellcheck disable=SC2034
-upkg_lic='GPL'
-upkg_ver=0.23
-upkg_url=https://ftpmirror.gnu.org/gnu/gettext/gettext-${upkg_ver}.tar.gz
-upkg_sha=945dd7002a02dd7108ad0510602e13416b41d327898cf8522201bc6af10907a6
-upkg_dep=(libunistring libxml2 ncurses libiconv)
+libs_lic='GPL'
+libs_ver=0.23
+libs_url=https://ftpmirror.gnu.org/gnu/gettext/gettext-${libs_ver}.tar.gz
+libs_sha=945dd7002a02dd7108ad0510602e13416b41d327898cf8522201bc6af10907a6
+libs_dep=(libunistring libxml2 ncurses libiconv)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
     --enable-silent-rules
@@ -33,9 +33,9 @@ upkg_args=(
 )
 
 # libintl.h for macOS only, Linux use glibc:/usr/include/libintl.h
-is_linux || upkg_args+=(--with-included-gettext)
+is_linux || libs_args+=(--with-included-gettext)
 
-upkg_static() {
+libs_build() {
     # install doesn't support multiple make jobs
     configure &&
 

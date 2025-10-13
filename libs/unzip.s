@@ -1,32 +1,32 @@
 # shellcheck disable=SC2034
 
-upkg_name=unzip
-upkg_desc="Extraction utility for .zip compressed archives"
+libs_name=unzip
+libs_desc="Extraction utility for .zip compressed archives"
 
-upkg_lic='Info-ZIP'
-upkg_ver=6.0
-upkg_url=(
-    https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%20$upkg_ver/unzip${upkg_ver//\./}.tar.gz
+libs_lic='Info-ZIP'
+libs_ver=6.0
+libs_url=(
+    https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%20$libs_ver/unzip${libs_ver//\./}.tar.gz
 )
 
-upkg_zip_strip=1
+libs_zip_strip=1
 
-upkg_sha=(
+libs_sha=(
     036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37
 )
 
-upkg_dep=(libiconv bzip2)
+libs_dep=(libiconv bzip2)
 
-upkg_patch_url=(
+libs_patch_url=(
     # patches from ubuntu: https://packages.ubuntu.com/kinetic/unzip
     http://archive.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu6.debian.tar.xz
 )
 
-upkg_patch_sha=(
+libs_patch_sha=(
     7b124db7b04823549413ac8d5fadb9465f38530bebc24363e313351b7e1071fb
 )
 
-upkg_patches=(
+libs_patches=(
     patches/01-manpages-in-section-1-not-in-section-1l.patch
     patches/02-this-is-debian-unzip.patch
     patches/03-include-unistd-for-kfreebsd.patch
@@ -62,7 +62,7 @@ upkg_patches=(
     patches/CVE-2021-4217.patch
 )
 
-upkg_args=(
+libs_args=(
     CC="'$CC'"
     CFLAGS="'$CFLAGS $CPPFLAGS -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_WORKING_ISPRINT'"
     LF2="'$LDFLAGS -liconv'"
@@ -71,10 +71,10 @@ upkg_args=(
 )
 
 # targets:
-is_darwin && upkg_args+=(bsd) || upkg_args+=(unzips)
+is_darwin && libs_args+=(bsd) || libs_args+=(unzips)
 
-upkg_static() {
-    make -f unix/Makefile "${upkg_args[@]}" V=1 &&
+libs_build() {
+    make -f unix/Makefile "${libs_args[@]}" V=1 &&
     
     make -f unix/Makefile check     &&
 

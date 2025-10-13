@@ -1,13 +1,13 @@
 # libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alpha/Substation Alpha) subtitle format.
 
 # shellcheck disable=SC2034
-upkg_lic=ISC
-upkg_ver=0.17.4
-upkg_url=https://github.com/libass/libass/releases/download/$upkg_ver/libass-$upkg_ver.tar.xz
-upkg_sha=78f1179b838d025e9c26e8fef33f8092f65611444ffa1bfc0cfac6a33511a05a
-upkg_dep=(fribidi freetype harfbuzz libunibreak)
+libs_lic=ISC
+libs_ver=0.17.4
+libs_url=https://github.com/libass/libass/releases/download/$libs_ver/libass-$libs_ver.tar.xz
+libs_sha=78f1179b838d025e9c26e8fef33f8092f65611444ffa1bfc0cfac6a33511a05a
+libs_dep=(fribidi freetype harfbuzz libunibreak)
 
-upkg_args=(
+libs_args=(
     --enable-silent-rules
     --disable-option-checking
     --disable-dependency-tracking
@@ -16,9 +16,9 @@ upkg_args=(
     --enable-static
 )
 
-is_darwin && upkg_args+=(--disable-fontconfig)
+is_darwin && libs_args+=(--disable-fontconfig)
 
-upkg_static() {
+libs_build() {
     # use coretext on mac
 
     configure &&

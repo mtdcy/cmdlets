@@ -1,11 +1,11 @@
 # H.264/AVC encoder
 
 # shellcheck disable=SC2034
-upkg_ver=0480cb05
-upkg_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-$upkg_ver.tar.bz2
-upkg_sha=c28a4273ba87ddb5ceb3b6397554bd0c0e68e6484434e41467673ac80b7f7f19
+libs_ver=0480cb05
+libs_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-$libs_ver.tar.bz2
+libs_sha=c28a4273ba87ddb5ceb3b6397554bd0c0e68e6484434e41467673ac80b7f7f19
 
-upkg_args=(
+libs_args=(
     --disable-avs
     --disable-swscale
     --disable-lavf
@@ -20,9 +20,9 @@ upkg_args=(
     )
 
 # arm64: build fail with asm
-is_arm64 && upkg_args+=( --disable-asm )
+is_arm64 && libs_args+=( --disable-asm )
 
-upkg_static() {
+libs_build() {
     # old versions use yasm, but newer version use nasm
     AS="$NASM" configure &&
 

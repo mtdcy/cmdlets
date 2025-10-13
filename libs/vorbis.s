@@ -2,15 +2,15 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="BSD"
-upkg_ver=1.3.7
-upkg_url=https://downloads.xiph.org/releases/vorbis/libvorbis-$upkg_ver.tar.xz
-upkg_sha=b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b
-upkg_dep=(ogg)
+libs_lic="BSD"
+libs_ver=1.3.7
+libs_url=https://downloads.xiph.org/releases/vorbis/libvorbis-$libs_ver.tar.xz
+libs_sha=b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b
+libs_dep=(ogg)
 
-upkg_args=()
+libs_args=()
 
-upkg_static() {
+libs_build() {
     cmake -S . -B build &&
 
     make -C build &&

@@ -2,13 +2,13 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic='BSD-3-Clause'
-upkg_ver=3.18
-upkg_url=https://github.com/esnet/iperf/releases/download/$upkg_ver/iperf-$upkg_ver.tar.gz
-upkg_sha=c0618175514331e766522500e20c94bfb293b4424eb27d7207fb427b88d20bab
-upkg_dep=()
+libs_lic='BSD-3-Clause'
+libs_ver=3.18
+libs_url=https://github.com/esnet/iperf/releases/download/$libs_ver/iperf-$libs_ver.tar.gz
+libs_sha=c0618175514331e766522500e20c94bfb293b4424eb27d7207fb427b88d20bab
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -17,7 +17,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

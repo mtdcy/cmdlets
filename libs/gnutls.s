@@ -1,13 +1,13 @@
 # GNU Transport Layer Security (TLS) Library
 
 # shellcheck disable=SC2034
-upkg_lic='LGPL|GPL'
-upkg_ver=3.8.10
-upkg_url=https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-${upkg_ver}.tar.xz
-upkg_sha=db7fab7cce791e7727ebbef2334301c821d79a550ec55c9ef096b610b03eb6b7
-upkg_dep=(zlib zstd brotli gmp libidn2 libtasn1 nettle libunistring)
+libs_lic='LGPL|GPL'
+libs_ver=3.8.10
+libs_url=https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-${libs_ver}.tar.xz
+libs_sha=db7fab7cce791e7727ebbef2334301c821d79a550ec55c9ef096b610b03eb6b7
+libs_dep=(zlib zstd brotli gmp libidn2 libtasn1 nettle libunistring)
 
-upkg_args=(
+libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
     --disable-dependency-tracking
@@ -27,7 +27,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     #1. gnutls_priority_set_direct detect failed
     #export PKG_CONFIG="$PKG_CONFIG --static" ==> moved to libs.sh
 

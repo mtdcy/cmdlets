@@ -1,15 +1,15 @@
 # shellcheck disable=SC2034
 
-upkg_name=lzo
-upkg_desc="Real-time data compression library"
+libs_name=lzo
+libs_desc="Real-time data compression library"
 
-upkg_lic='GPL-2.0-or-later'
-upkg_ver=2.10
-upkg_url=https://www.oberhumer.com/opensource/lzo/download/lzo-$upkg_ver.tar.gz
-upkg_sha=c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072
-upkg_dep=()
+libs_lic='GPL-2.0-or-later'
+libs_ver=2.10
+libs_url=https://www.oberhumer.com/opensource/lzo/download/lzo-$libs_ver.tar.gz
+libs_sha=c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
     --enable-silent-rules
@@ -18,7 +18,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     # force use configure
     rm -f CMakeLists.txt || true
 

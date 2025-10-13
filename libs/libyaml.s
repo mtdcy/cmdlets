@@ -1,14 +1,14 @@
 # YAML parser
 
 # shellcheck disable=SC2034
-upkg_name=libyaml
-upkg_lic="MIT"
-upkg_ver=0.2.5
-upkg_url=https://github.com/yaml/libyaml/archive/refs/tags/$upkg_ver.tar.gz
-upkg_zip=$upkg_name-$upkg_ver.tar.gz
-upkg_sha=fa240dbf262be053f3898006d502d514936c818e422afdcf33921c63bed9bf2e
+libs_name=libyaml
+libs_lic="MIT"
+libs_ver=0.2.5
+libs_url=https://github.com/yaml/libyaml/archive/refs/tags/$libs_ver.tar.gz
+libs_zip=$libs_name-$libs_ver.tar.gz
+libs_sha=fa240dbf262be053f3898006d502d514936c818e422afdcf33921c63bed9bf2e
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -16,7 +16,7 @@ upkg_args=(
     --enable-static
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

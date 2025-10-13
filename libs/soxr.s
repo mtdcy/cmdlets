@@ -1,12 +1,12 @@
 
 #
 # shellcheck disable=SC2034
-upkg_lic="LGPL-2.1-or-later"
-upkg_ver=0.1.3
-upkg_url=https://downloads.sourceforge.net/project/soxr/soxr-$upkg_ver-Source.tar.xz
-upkg_sha=b111c15fdc8c029989330ff559184198c161100a59312f5dc19ddeb9b5a15889
+libs_lic="LGPL-2.1-or-later"
+libs_ver=0.1.3
+libs_url=https://downloads.sourceforge.net/project/soxr/soxr-$libs_ver-Source.tar.xz
+libs_sha=b111c15fdc8c029989330ff559184198c161100a59312f5dc19ddeb9b5a15889
 
-upkg_args=(
+libs_args=(
     -DWITH_OPENMP=OFF
     -DBUILD_SHARED_LIBS=OFF
     -DWITH_LSR_BINDINGS=OFF
@@ -14,7 +14,7 @@ upkg_args=(
     -DBUILD_EXAMPLES=OFF
 )
 
-upkg_static() {
+libs_build() {
     cmake . &&
 
     make &&

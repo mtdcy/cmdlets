@@ -1,15 +1,15 @@
 # Collection of GNU find, xargs, and locate
 
 # shellcheck disable=SC2034
-upkg_desc="Collection of GNU find, xargs, and locate"
+libs_desc="Collection of GNU find, xargs, and locate"
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=4.10.0
-upkg_url=https://ftpmirror.gnu.org/gnu/findutils/findutils-$upkg_ver.tar.xz
-upkg_sha=1387e0b67ff247d2abde998f90dfbf70c1491391a59ddfecb8ae698789f0a4f5
-upkg_dep=()
+libs_lic='GPL-3.0-or-later'
+libs_ver=4.10.0
+libs_url=https://ftpmirror.gnu.org/gnu/findutils/findutils-$libs_ver.tar.xz
+libs_sha=1387e0b67ff247d2abde998f90dfbf70c1491391a59ddfecb8ae698789f0a4f5
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -36,7 +36,7 @@ upkg_args=(
     --with-packager=cmdlets
 )
 
-upkg_static() {
+libs_build() {
     dynamically_if_glibc || true
 
     configure &&

@@ -2,15 +2,15 @@
 #
 # shellcheck disable=SC2034
 
-upkg_name=ncurses
-upkg_lic='MIT'
-upkg_ver=6.5
-upkg_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$upkg_ver.tar.gz
-#https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$upkg_ver.tar.gz
-upkg_sha=136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6
-upkg_dep=()
+libs_name=ncurses
+libs_lic='MIT'
+libs_ver=6.5
+libs_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
+#https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
+libs_sha=136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -48,7 +48,7 @@ upkg_args=(
     --without-manpages
 )
 
-upkg_static() {
+libs_build() {
     configure &&
 
     make &&

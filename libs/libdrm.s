@@ -1,18 +1,18 @@
 # Library for accessing the direct rendering manager
 
 # shellcheck disable=SC2034
-upkg_lic="MIT"
-upkg_ver=2.4.126
-upkg_url=https://dri.freedesktop.org/libdrm/libdrm-$upkg_ver.tar.xz
-upkg_sha=6cab16d4d259b6abc9f485233863454114a3c307eca806679aad3edbe967bf42
+libs_lic="MIT"
+libs_ver=2.4.126
+libs_url=https://dri.freedesktop.org/libdrm/libdrm-$libs_ver.tar.xz
+libs_sha=6cab16d4d259b6abc9f485233863454114a3c307eca806679aad3edbe967bf42
 
-upkg_args=(
+libs_args=(
     -Dudev=false
     -Dcairo-tests=disabled
     -Dvalgrind=disabled
 )
 
-upkg_static() {
+libs_build() {
     is_darwin && {
         ulogw "*****" "**** Not supported on $OSTYPE! ****"
         exit 0

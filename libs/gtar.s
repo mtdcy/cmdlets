@@ -1,14 +1,14 @@
 # shellcheck disable=SC2034
-upkg_name="gtar"
-upkg_desc="GNU version of the tar archiving utility"
+libs_name="gtar"
+libs_desc="GNU version of the tar archiving utility"
 
-upkg_lic='GPL-3.0-or-later'
-upkg_ver=1.35
-upkg_url=https://ftpmirror.gnu.org/gnu/tar/tar-$upkg_ver.tar.xz
-upkg_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
-upkg_dep=(gzip bzip2 xz zstd lzip lzop libiconv)
+libs_lic='GPL-3.0-or-later'
+libs_ver=1.35
+libs_url=https://ftpmirror.gnu.org/gnu/tar/tar-$libs_ver.tar.xz
+libs_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
+libs_dep=(gzip bzip2 xz zstd lzip lzop libiconv)
 
-upkg_args=(
+libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
@@ -26,16 +26,16 @@ upkg_args=(
     --disable-man
 )
 
-is_darwin || upkg_args+=(
+is_darwin || libs_args+=(
     --disable-shared
     --enable-static
 )
 
 # rmt: avoid hardcoded $PREFIX into executable
 #  => default path on Linux, no rmt on macOS.
-upkg_args+=(--with-rmt="/usr/sbin/rmt")
+libs_args+=(--with-rmt="/usr/sbin/rmt")
 
-upkg_static() {
+libs_build() {
     # BUG: undefined reference to `libiconv_open'
     # iconv is detected during configure process but -liconv is missing
     # from LDFLAGS as of gnu-tar 1.35. Remove once iconv linking works

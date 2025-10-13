@@ -2,20 +2,20 @@
 #
 # shellcheck disable=SC2034
 
-upkg_lic="IJG"
-upkg_ver=3.0.1
-upkg_url=https://downloads.sourceforge.net/project/libjpeg-turbo/$upkg_ver/libjpeg-turbo-$upkg_ver.tar.gz
-upkg_sha=22429507714ae147b3acacd299e82099fce5d9f456882fc28e252e4579ba2a75
-upkg_dep=()
+libs_lic="IJG"
+libs_ver=3.0.1
+libs_url=https://downloads.sourceforge.net/project/libjpeg-turbo/$libs_ver/libjpeg-turbo-$libs_ver.tar.gz
+libs_sha=22429507714ae147b3acacd299e82099fce5d9f456882fc28e252e4579ba2a75
+libs_dep=()
 
-upkg_args=(
+libs_args=(
     -DREQUIRE_SIMD=TRUE
     -DWITH_JPEG8=1
     -DENABLE_SHARED=FALSE
     -DENABLE_STATIC=TRUE
 )
 
-upkg_static() {
+libs_build() {
     cmake . && 
 
     make && 
