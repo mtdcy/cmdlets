@@ -62,11 +62,6 @@ libs_build() {
     #   'file: Size of `/usr/share/file/magic.mgc' 7273344 is not a multiple of 432'
     sed -i "s%^MAGIC = .*$%MAGIC = .magic.mgc%" src/Makefile
 
-    # hack for our project: avoid hard coding PREFIX into libmagic.a
-    ln -srfv "$PREFIX/$MAGIC_PATH/magic.mgc" "$ROOT/.magic.mgc"
-    ln -srfv "$PREFIX/$MAGIC_PATH/magic.mgc" "$PREFIX/.magic.mgc"
-    ln -srfv "$PREFIX/$MAGIC_PATH/magic.mgc" ".magic.mgc"
-
     # it seems the dependencies checking is broken
     touch src/magic.c
 
