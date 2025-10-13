@@ -5,13 +5,13 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=0.3
+VERSION=1.0-alpha
 
-WORKDIR="$(dirname "$0" | xargs realpath)"
+API="${CMDLETS_API:-v3}"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
-unset CMDLETS_ARCH CMDLETS_PREBUILTS
+unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
 
 REPO=(
     # v3 & v2 & v1
@@ -49,16 +49,22 @@ $NAME $VERSION
 
 Copyright (c) 2025, mtdcy.chen@gmail.com
 
-$NAME cmd [args ...]
+Usage: $NAME cmd [args ...]
 
 Options:
     update                  - update $NAME
-    fetch   <cmdlet>        - fetch cmdlet(s) from server
-    install <cmdlet>        - fetch and install cmdlet(s)
-    library <libname>       - fetch a library from server
-    package <pkgname>       - fetch a package(cmdlets & libraries) from server
+    update  <cmdlet>        - update cmdlet
+
+    list                    - list installed cmdlets
     search  <name>          - search for cmdlet, library or package
+    install <cmdlet>        - fetch and install cmdlet
+    remove  <cmdlet>        - remove cmdlet
+
     help                    - show this help message
+
+    (for developers)
+    fetch   <cmdlet ...>    - fetch cmdlet(s)
+    package <pkgname ...>   - fetch package(s) (cmdlets & libraries)
 
 Examples:
     $NAME install minigzip                  # install the latest version
@@ -69,12 +75,17 @@ Examples:
 EOF
 }
 
-error() { echo -e "\\033[31m$*\\033[39m";   }
-info()  { echo -e "\\033[32m$*\\033[39m";   }
-warn()  { echo -e "\\033[33m$*\\033[39m";   }
-info1() { echo -e "\\033[35m$*\\033[39m";   }
-info2() { echo -e "\\033[34m$*\\033[39m";   }
-info3() { echo -e "\\033[36m$*\\033[39m";   }
+error() { echo -e "\\033[31m$*\\033[39m" 1>&2; }
+info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
+warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
+info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
+info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
+info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
+
+# prepend each line with '=> '
+_details() {
+    sed 's/^/=> /'
+}
 
 # is file existing in repo
 _exists() (
@@ -93,9 +104,9 @@ _curl() (
     mkdir -p "$(dirname "$dest")"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        info "== $source"
+        info "== curl < $source"
         curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo "=> ${2:-$1}"
+        echo ">> ${2:-$1}"
         curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
     done
     return 1
@@ -105,57 +116,57 @@ _curl() (
 _unzip() (
     test -f "$1" || _curl "$1" || return 1
     
-    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | sed 's/^/=> /'
+    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | _details
 )
 
-# get remote revision url
-_revision() {
+# cmdlet v1
+#  input: path/to/file
+_v1() {
+    local name="$1"
+
+    [[ "$name" =~ / ]] || name="bin/$name"
+
+    _exists "$name" || return 1
+
+    info1 "#1 Fetch $name"
+
+    _curl "$name" || return 2
+
+    mkdir -p "$PREBUILTS/$(dirname "$name")"
+
+    cp -f "$TEMPDIR/$name" "$PREBUILTS/$name"
+
+    chmod a+x "$PREBUILTS/$name"
+}
+
+# cmdlet v2:
+#  input: name
+_v2() {
+    [ "$API" != "v1" ] || return 127
+
+    local pkgfile pkgver pkginfo 
+
     # zlib
     # zlib@1.3.1
     # zlib/minigzip@1.3.1
-    IFS='@' read -r pkg ver <<< "$1"
-    if [ -n "$ver" ]; then
-        IFS='/' read -r a b <<< "$pkg"
-        [ -n "$b" ] && echo "$1" || echo "$a/$a@$ver"
-    else
-        echo "$pkg@latest"
-    fi
-}
+    IFS='@' read -r pkgfile pkgver <<< "$1"
 
-# cmdlet v1: cmdlet
-_v1() {
-    local binfile="bin/$1"
+    test -n "$pkgver" || pkgver="latest"
 
-    _exists "$binfile" || return 1
+    pkginfo="$pkgfile@$pkgver"
 
-    info1 ">1 Fetch $binfile"
-
-    _curl "$binfile" || return 1
-
-    mkdir -p "$PREBUILTS/bin"
-
-    cp -f "$TEMPDIR/$binfile" "$PREBUILTS/bin/$1"
-    chmod a+x "$PREBUILTS/bin/$1"
-}
-
-# cmdlet v2: cmdlet
-_v2() {
-    local pkgfile pkginfo 
-
-    pkginfo=$(_revision "$1")
-
-    info2 ">2 Fetch $1 < pkginfo"
+    info2 "#2 Fetch $1 < $pkginfo"
 
     _curl "$pkginfo" || return 1
 
-    cat "$TEMPDIR/$pkginfo"
+    cat "$TEMPDIR/$pkginfo" | _details
 
     # v2: sha pkgfile
-    IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
+    IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
 
-    info2 ">2 Fetch $1 < $pkgfile"
+    info2 "#2 Fetch $1 < $pkgfile"
 
-    _unzip "$pkgfile" || return 1
+    _unzip "$pkgfile" || return 2
 }
 
 _manifest() {
@@ -164,7 +175,7 @@ _manifest() {
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
 
     # pull manifest first
-    info3 ">> Fetch manifest"
+    info3 "== Fetch manifest"
     _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
         warn "<< Fetch manifest failed"
         touch "$MANIFEST"
@@ -175,7 +186,7 @@ _manifest() {
 #  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
 _search() {
-    _manifest 1>&2
+    _manifest &>/dev/null
 
     # cmdlets:
     #   minigzip
@@ -201,13 +212,13 @@ _search() {
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST"
+                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
                 ;;
             --pkgname)
-                grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST"
+                grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST" || true
                 ;;
             --any)
-                grep "$1" "$MANIFEST"
+                grep -F "$1" "$MANIFEST" || true
                 ;;
         esac
     done | uniq
@@ -217,6 +228,8 @@ _search() {
 #  input: pkgfile [pkgname] [options]
 #  output: return 0 on success
 _v3() {
+    [ "$API" = "v3" ] || return 127
+
     local pkgfile pkgname
     
     test -n "$2" && pkgname="$2/$1" || pkgname="$1"
@@ -225,7 +238,7 @@ _v3() {
 
     [ -n "$pkgfile" ] || return 1
 
-    info3 ">3 Fetch $1 < $pkgfile"
+    info3 "#3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
     _unzip "$pkgfile" || 
@@ -235,18 +248,18 @@ _v3() {
 
 # v3 only
 search() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
-    info3 ">3 Search $*"
+    info3 "#3 Search $*"
 
-    _search "$@" | sed 's/^/=> /'
+    _search "$@" | _details
 }
 
 # fetch cmdlet: name [options]
 #  input: name [--install [links...] ]
 #  output: return 0 on success
 fetch() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
     if _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
@@ -256,7 +269,8 @@ fetch() {
     fi
 
     # target with or without version
-    test -f "$PREBUILTS/bin/$1" && target="$1" || target="${1%%@*}"
+    target="$(basename "$1")"
+    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
     shift 1
     while [ $# -gt 0 ]; do
@@ -272,8 +286,7 @@ fetch() {
                     info "== Install links"
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
-                        echo "=> $link => $target"
-                        ln -sf "$target" "$link"
+                        ln -sfv "$target" "$link" | _details | xargs
                     done
                 else
                     info "== Install default links"
@@ -281,8 +294,7 @@ fetch() {
                         [ "$(readlink "$link")" = "$target" ] || continue
 
                         link="$(basename "$link")"
-                        echo "=> $link => $target"
-                        ln -sf "$target" "$link"
+                        ln -sfv "$target" "$link" | _details | xargs
                     done < <(find "$PREBUILTS/bin" -type l)
                 fi
 
@@ -298,7 +310,7 @@ fetch() {
 remove() {
     local target="$1"
 
-    info "=> remove $1"
+    info "== remove $1"
 
     if ! test -L "$target"; then
         error "-- $target not exists"
@@ -325,14 +337,9 @@ remove() {
     rm -f "$target"
 }
 
-_fix_pc() {
-    find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
-        sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
-} 2>/dev/null
-
 # fetch package
 package() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
     local pkgname pkgver pkgfile pkginfo
 
@@ -340,49 +347,55 @@ package() {
     IFS='@' read -r pkgname pkgver <<< "$1"
 
     # cmdlet v3/manifest
-    IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
+    if [ "$API" = "v3" ]; then
+        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
 
-    if test -n "${pkgfile[*]}"; then
-        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
+        if test -n "${pkgfile[*]}"; then
+            info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
-        for file in "${pkgfile[@]}"; do 
-            _v3 "$file" "$pkgname" --pkgfile || {
-                error "<< Fetch package $file/$ARCH failed"
-                return 1
-            }
-        done
+            for file in "${pkgfile[@]}"; do 
+                _v3 "$file" "$pkgname" --pkgfile || {
+                    error "<< Fetch package $file/$ARCH failed"
+                    return 1
+                }
+            done
 
-        touch "$PREBUILTS/.$pkgname.d" # mark as ready
-        return 0
+            touch "$PREBUILTS/.$pkgname.d" # mark as ready
+            return 0
+        else
+            error "<< Fetch package $1/$ARCH failed"
+            return 1
+        fi
     fi
 
     info2 "#2 Fetch package $1"
 
     [ -n "$pkgver" ] || pkgver=latest
-    pkginfo="$pkgname@$pkgver"
 
-    if _curl "$pkginfo"; then
-        cat "$TEMPDIR/$pkginfo"
+    pkginfo="$pkgname/pkginfo@$pkgver"
 
-        while read -r pkgfile; do
-            [ -n "$pkgfile" ] || continue
-
-            # sha pkgfile
-            IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
-
-            info2 ">2 Fetch $pkgfile"
-
-            _unzip "$pkgfile" || {
-                error "<< fetch package $pkgfile/$ARCH failed"
-                return 1
-            }
-        done < "$TEMPDIR/$pkginfo"
-
-        touch "$PREBUILTS/.$1.d" # mark as ready
-    else
-        error "<< Fetch package $1/$ARCH failed"
+    if ! _curl "$pkginfo"; then
+        error "<< Fetch $pkginfo failed"
         return 1
     fi
+
+    cat "$TEMPDIR/$pkginfo" | _details
+
+    while read -r pkgfile; do
+        [ -n "$pkgfile" ] || continue
+
+        # sha pkgfile
+        IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
+
+        info2 "#2 Fetch $pkgfile"
+
+        _unzip "$pkgfile" || {
+            error "<< Fetch package $pkgfile/$ARCH failed"
+            return 1
+        }
+    done < "$TEMPDIR/$pkginfo"
+
+    # no v1 package()
 }
 
 update() {
@@ -397,33 +410,43 @@ update() {
         target="/usr/local/bin/$NAME"
     fi
 
-    if ! mkdir -p "$(dirname "$target")"; then
+    info "## Install $NAME => $target"
+
+    if ! mkdir -pv "$(dirname "$target")" | _details; then
         error "<< Permission Denied?"
         return 1
     fi
 
     for base in "${BASE[@]}"; do
-        info ">> Fetch $NAME < $base"
         if _curl "$base" "$TEMPDIR/$NAME"; then
-            info "-- $NAME > $target"
-            cp "$TEMPDIR/$NAME" "$target"
-            chmod a+x "$target"
-            # invoke the new file
-            exec "$target" help
+            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details | xargs
+            chmod -v a+x "$target" | _details
+
+            # test target and exit
+            "$target" help && exit 0
         fi
     done
 
     error "<< Update $(basename "$0") failed"
-    return 1
+    return 127
+}
+
+# list installed cmdlets
+list() {
+    local width link real
+    info "== List installed cmdlets"
+
+    width="$(find . -type l | wc -L)"
+
+    while read -r link; do
+        real="$(readlink "$link")"
+        [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
+        printf "%${width}s => %s\n" "$(basename "$link")" "$real"
+    done < <(find . -type l)
 }
 
 # invoke cmd [args...]
 invoke() {
-    cd "$WORKDIR"
-
-    # shellcheck disable=SC2064
-    TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
-
     local ret=0
     case "$1" in
         manifest)
@@ -437,6 +460,9 @@ invoke() {
                 update
             fi
             ;;
+        list)
+            list
+            ;;
         search)
             search "${@:2}"
             ;;
@@ -444,7 +470,7 @@ invoke() {
             IFS=':' read -r bin alias <<< "$2"
             fetch "$bin" --install "$alias" || ret=$?
             ;;
-        remove)
+        remove|uninstall)
             remove "$2" || ret=$?
             ;;
         fetch)      # fetch cmdlets
@@ -456,7 +482,8 @@ invoke() {
             for x in "${@:2}"; do
                 package "$x" || ret=$?
             done
-            _fix_pc
+            find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
+                sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
             ;;
         *)
             usage
@@ -465,14 +492,14 @@ invoke() {
     exit $?
 }
 
-# never resolve symbolic of "$0"
-_name="$(basename "$0")"
+# shellcheck disable=SC2064
+TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
 # for quick install
-if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
-    invoke update
-elif [ "$_name" = "$NAME" ]; then
-    invoke "$@"
+if [ "$0" = "install" ]; then
+    update
+else
+    cd "$(dirname "$0")" && invoke "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
