@@ -113,20 +113,24 @@ _unzip() (
     tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | _details
 )
 
-# cmdlet v1: cmdlet
+# cmdlet v1
+#  input: path/to/file
 _v1() {
-    local binfile="bin/$1"
+    local name="$1"
 
-    _exists "$binfile" || return 1
+    [[ "$name" =~ / ]] || name="bin/$name"
 
-    info1 "#1 Fetch $binfile"
+    _exists "$name" || return 1
 
-    _curl "$binfile" || return 1
+    info1 "#1 Fetch $name"
 
-    mkdir -p "$PREBUILTS/bin"
+    _curl "$name" || return 2
 
-    cp -f "$TEMPDIR/$binfile" "$PREBUILTS/bin/$1"
-    chmod a+x "$PREBUILTS/bin/$1"
+    mkdir -p "$PREBUILTS/$(dirname "$name")"
+
+    cp -f "$TEMPDIR/$name" "$PREBUILTS/$name"
+
+    chmod a+x "$PREBUILTS/$name"
 }
 
 # cmdlet v2:
