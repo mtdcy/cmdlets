@@ -622,32 +622,36 @@ _pkgfile() {
 
     test -n "$version" || version="$upkg_ver"
 
-    # always use full version here
-    local pkgname="$upkg_name/$name@$version.tar.gz"
-    local pkgvern="$upkg_name/$name@$version"
+    # pkgfile with full version
+    local pkgfile="$upkg_name/$name@$upkg_ver.tar.gz"
+    local pkgvern="$upkg_name/$name@$upkg_ver"
 
     # pkginfo is shared by library() and cmdlet(), full versioned
-    local pkginfo="$upkg_name/pkginfo@$upkg_ver"
-    touch "$pkginfo"
+    local pkginfo="$upkg_name/pkginfo@$upkg_ver"; touch "$pkginfo"
 
     local files
 
     # shellcheck disable=SC2001
     IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
 
-    echocmd "$TAR" -czvf "$pkgname" "${files[@]}"
+    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
-    #sha256sum "$pkgname" >> "$pkginfo"
-    IFS=' *' read -r sha _ <<< "$(sha256sum "$pkgname")"
-    echo "$sha $pkgname" >> "$pkginfo"
+    #sha256sum "$pkgfile" >> "$pkginfo"
+    IFS=' *' read -r sha _ <<< "$(sha256sum "$pkgfile")"
+    echo "$sha $pkgfile" >> "$pkginfo"
 
     # create a version file
-    grep -Fw "$pkgname" "$pkginfo" > "$pkgvern"
+    grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
     # v2/pkginfo
-    _link "$pkginfo" "$upkg_name/pkginfo@latest"
     _link "$pkgvern" "$upkg_name/$name@latest"
+    _link "$pkginfo" "$upkg_name/pkginfo@latest"
+
+    if [ "$version" != "$upkg_ver" ]; then
+        _link "$pkgvern" "$upkg_name/$name@$version"
+        _link "$pkginfo" "$upkg_name/pkginfo@$version"
+    fi
 
     if [[ "$1" == *@* ]]; then
         _link "$upkg_name/$name@latest" "$name@$version"
@@ -655,14 +659,14 @@ _pkgfile() {
         _link "$upkg_name/$name@latest" "$name@latest"
     fi
 
-    # v3/manifest: name pkgname sha
+    # v3/manifest: name pkgfile sha
     touch "cmdlets.manifest"
     # clear full versioned records
     sed -i "\#^$name@\?[^\ ]\+ $upkg_name/.*@$upkg_ver\.#d" cmdlets.manifest
     # clear versioned records
-    sed -i "\#^$1 $pkgname #d" cmdlets.manifest
+    sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
-    echo "$1 $pkgname $sha" >> cmdlets.manifest
+    echo "$1 $pkgfile $sha" >> cmdlets.manifest
 
     popd
 }
