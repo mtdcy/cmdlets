@@ -417,6 +417,20 @@ update() {
     return 1
 }
 
+# list installed cmdlets
+list() {
+    local width link real
+    info "== List installed cmdlets"
+
+    width="$(find . -type l | wc -L)"
+
+    while read -r link; do
+        real="$(readlink "$link")"
+        [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
+        printf "%${width}s => %s\n" "$(basename "$link")" "$real"
+    done < <(find . -type l)
+}
+
 # invoke cmd [args...]
 invoke() {
     cd "$WORKDIR"
@@ -446,6 +460,9 @@ invoke() {
             ;;
         remove)
             remove "$2" || ret=$?
+            ;;
+        list)
+            list
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
