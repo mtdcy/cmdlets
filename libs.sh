@@ -610,8 +610,8 @@ _link() {
 
 TAR="$(which gtar 2>/dev/null || which tar)"
 
-# _pkgfile name <file list>
-_pkgfile() {
+# pkgfile name <file or directories list>
+pkgfile() {
     pushd "$PREFIX"
 
     mkdir -pv "$libs_name"
@@ -628,6 +628,8 @@ _pkgfile() {
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
+
+    slogi ".Pack" "$pkgfile < ${*:2}"
 
     local files
 
@@ -672,14 +674,14 @@ _pkgfile() {
 }
 
 # find out which files are installed by `make install'
-inspect_install() {
+inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
-    slogcmd "$@"
+    slogcmd "$@" || return $?
 
     find "$PREFIX" > "$libs_name.pack.post"
 
-    diff "$libs_name.pack.post" "$libs_name.pack.pre" | sed "s%$PREFIX%%g" > "$libs_name.pack"
+    diff "$libs_name.pack.post" "$libs_name.pack.pre" | sed "s%$PREFIX%%g" > "$libs_name.pack.diff"
 }
 
 # cmdlet executable [name] [alias ...]
@@ -700,7 +702,7 @@ cmdlet() {
         alias+=( "$PREFIX/bin/$x" )
     done
 
-    _pkgfile "$(basename "$target")" "$target" "${alias[@]}"
+    pkgfile "$(basename "$target")" "$target" "${alias[@]}"
 }
 
 # _fix_pc path/to/xxx.pc
@@ -713,26 +715,22 @@ _fix_pc() {
     fi
 }
 
-# install pkgfile
-pkgfile() {
-    if [ "$*" = "--help" ]; then
-        cat << "EOF"
-pkgfile name[:alias:...]            \
-        [include]       header.h    \
-        include/xxx     xxx.h       \
-        [lib]           libxxx.a    \
-        [lib/pkgconfig] xxx.pc      \
-        share           yyy         \
-        share/man       zzz
-EOF
-        return 0
-    fi
-
-    slogi ".Inst" "pkgfile $*"
+# install library
+#  input: name[:alias:...]         \
+#         [include]       header.h \
+#         include/xxx     xxx.h    \
+#         [lib]           libxxx.a \
+#         [lib/pkgconfig] xxx.pc   \
+#         share           yyy      \
+#         share/man       zzz
+library() {
+    slogi ".Inst" "$1 < ${*:2}"
 
     local name alias subdir installed
     IFS=':' read -r name alias <<< "$1"
     shift # skip name and alias
+    
+    [[ "$name" =~ ^lib ]] || name="lib$name"
 
     while [ $# -ne 0 ]; do
         local file
@@ -789,16 +787,7 @@ EOF
         done
     done
 
-    _pkgfile "$name" "${installed[@]}"
-}
-
-# append lib prefix if not exists then call install()
-library() {
-    local libname="$1"
-
-    [[ "$libname" =~ ^lib ]] || libname="lib$libname"
-
-    pkgfile "$libname" "${@:2}"
+    pkgfile "$name" "${installed[@]}"
 }
 
 # perform visual check on cmdlet
