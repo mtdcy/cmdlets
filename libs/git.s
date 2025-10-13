@@ -58,28 +58,19 @@ libs_args+=( gitexecdir='/git-no-libexec' )
 libs_build() {
     #make configure && configure || return 1
 
+    # git build system prefer hard link, disable it
+    sed -i '/ln \$< \$@/d' Makefile || true
+
     make "${libs_args[@]}" || return 1
-
-    # git and alias
-    local sum="$(md5sum git | cut -d' ' -f1)"
-    local alias=()
-    for cmd in git-*; do
-        test -f "$cmd" || continue
-
-        if [ "$(md5sum "$cmd" | cut -d' ' -f1)" = "$sum" ]; then
-            alias+=( "$cmd" )
-        fi
-    done
-
-    cmdlet ./git git "${alias[@]}" || return 2
-
 
     # standalone cmds
     local cmds=(
+        # basic
+        git git-shell git-sh-setup git-sh-i18n
         # core utils
-        git-shell git-cvsserver git-receive-pack git-upload-pack git-upload-archive
+        git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
-        git-http-backend git-http-fetch git-http-push
+        git-http-backend git-http-fetch git-http-push git-remote-http git-remote-ftp
         # submodule
         git-submodule
         # mail
@@ -91,19 +82,15 @@ libs_build() {
     if is_darwin; then
         cd contrib/credential/osxkeychain &&
         make CC="'$CC'" CFLAGS="'$CFLAGS'" LDFLAGS="'$LDFLAGS'"  &&
-        cd - || return 3
-        cmds+=( ./contrib/credential/osxkeychain/git-credential-osxkeychain )
+        cd - || return 2
+        cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
     fi
 
     for x in "${cmds[@]}"; do
-        cmdlet "./$x" || return 4
+        cmdlet "./$x" || return 3
     done
 
-    # specials
-    cmdlet ./git-remote-http git-remote-http git-remote-https &&
-    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
-
-    #inspect_install make install
+    #inspect make install
 
     check git --version
 }
