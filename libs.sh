@@ -61,7 +61,7 @@ sloge() { _slog error "$@" >&2; return 1;   }
 slogf() { _slog error "$@" >&2; exit 1;     } # exit shell
 
 _logfile() {
-    echo "${PREFIX/prebuilts/logs}/$libs_name.log"
+    echo "$LOGFILES/$libs_name.log"
 }
 
 # for subshell
@@ -204,12 +204,13 @@ _init() {
     # prepare directories and files
     PREFIX="$ROOT/prebuilts/$arch"
     WORKDIR="$ROOT/out/$arch"
+    LOGFILES="$ROOT/logs/$arch"
 
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export ROOT PREFIX WORKDIR
+    export ROOT PREFIX WORKDIR LOGFILES
 
     # setup program envs
     local _find=which
@@ -1262,10 +1263,8 @@ zip_files() {
     cd "$PREFIX" && "$TAR" -cvf "cmdlets.manifest.tar.gz" cmdlets.manifest && cd - || true
 
     # log files
-    local logs="${PREFIX/prebuilts/logs}"
-    test -d "$logs" || return 0
-    test -n "$(ls -A "$logs")" || return 0
-    "$TAR" -C "$logs" -cvf "$logs-logs.tar.gz" .
+    test -n "$(ls -A "$LOGFILES")" || return 0
+    "$TAR" -C "$LOGFILES" -cvf "$LOGFILES-logs.tar.gz" .
 }
 
 env() {
@@ -1273,7 +1272,7 @@ env() {
 }
 
 clean() {
-    rm -rf "$WORKDIR" "${PREFIX/prebuilts/logs}"
+    rm -rf "$WORKDIR" "$LOGFILES"
 }
 
 distclean() {
