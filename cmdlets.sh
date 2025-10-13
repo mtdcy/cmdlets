@@ -7,11 +7,11 @@ export LANG="${LANG:-en_US.UTF-8}"
 
 VERSION=0.3
 
-WORKDIR="$(dirname "$0" | xargs realpath)"
+API="${CMDLETS_API:-v3}"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
-unset CMDLETS_ARCH CMDLETS_PREBUILTS
+unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
 
 REPO=(
     # v3 & v2 & v1
@@ -113,20 +113,6 @@ _unzip() (
     tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | _details
 )
 
-# get remote revision url
-_revision() {
-    # zlib
-    # zlib@1.3.1
-    # zlib/minigzip@1.3.1
-    IFS='@' read -r pkg ver <<< "$1"
-    if [ -n "$ver" ]; then
-        IFS='/' read -r a b <<< "$pkg"
-        [ -n "$b" ] && echo "$1" || echo "$a/$a@$ver"
-    else
-        echo "$pkg@latest"
-    fi
-}
-
 # cmdlet v1: cmdlet
 _v1() {
     local binfile="bin/$1"
@@ -143,24 +129,34 @@ _v1() {
     chmod a+x "$PREBUILTS/bin/$1"
 }
 
-# cmdlet v2: cmdlet
+# cmdlet v2:
+#  input: name
 _v2() {
-    local pkgfile pkginfo 
+    [ "$API" != "v1" ] || return 127
 
-    pkginfo=$(_revision "$1")
+    local pkgfile pkgver pkginfo 
 
-    info2 "#2 Fetch $1 < pkginfo"
+    # zlib
+    # zlib@1.3.1
+    # zlib/minigzip@1.3.1
+    IFS='@' read -r pkgfile pkgver <<< "$1"
+
+    test -n "$pkgver" || pkgver="latest"
+
+    pkginfo="$pkgfile@$pkgver"
+
+    info2 "#2 Fetch $1 < $pkginfo"
 
     _curl "$pkginfo" || return 1
 
-    cat "$TEMPDIR/$pkginfo"
+    cat "$TEMPDIR/$pkginfo" | _details
 
     # v2: sha pkgfile
-    IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
+    IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
 
     info2 "#2 Fetch $1 < $pkgfile"
 
-    _unzip "$pkgfile" || return 1
+    _unzip "$pkgfile" || return 2
 }
 
 _manifest() {
@@ -222,6 +218,8 @@ _search() {
 #  input: pkgfile [pkgname] [options]
 #  output: return 0 on success
 _v3() {
+    [ "$API" = "v3" ] || return 127
+
     local pkgfile pkgname
     
     test -n "$2" && pkgname="$2/$1" || pkgname="$1"
@@ -338,49 +336,55 @@ package() {
     IFS='@' read -r pkgname pkgver <<< "$1"
 
     # cmdlet v3/manifest
-    IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
+    if [ "$API" = "v3" ]; then
+        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
 
-    if test -n "${pkgfile[*]}"; then
-        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
+        if test -n "${pkgfile[*]}"; then
+            info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
-        for file in "${pkgfile[@]}"; do 
-            _v3 "$file" "$pkgname" --pkgfile || {
-                error "<< Fetch package $file/$ARCH failed"
-                return 1
-            }
-        done
+            for file in "${pkgfile[@]}"; do 
+                _v3 "$file" "$pkgname" --pkgfile || {
+                    error "<< Fetch package $file/$ARCH failed"
+                    return 1
+                }
+            done
 
-        touch "$PREBUILTS/.$pkgname.d" # mark as ready
-        return 0
+            touch "$PREBUILTS/.$pkgname.d" # mark as ready
+            return 0
+        else
+            error "<< Fetch package $1/$ARCH failed"
+            return 1
+        fi
     fi
 
     info2 "#2 Fetch package $1"
 
     [ -n "$pkgver" ] || pkgver=latest
-    pkginfo="$pkgname@$pkgver"
 
-    if _curl "$pkginfo"; then
-        cat "$TEMPDIR/$pkginfo"
+    pkginfo="$pkgname/pkginfo@$pkgver"
 
-        while read -r pkgfile; do
-            [ -n "$pkgfile" ] || continue
-
-            # sha pkgfile
-            IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
-
-            info2 "#2 Fetch $pkgfile"
-
-            _unzip "$pkgfile" || {
-                error "<< fetch package $pkgfile/$ARCH failed"
-                return 1
-            }
-        done < "$TEMPDIR/$pkginfo"
-
-        touch "$PREBUILTS/.$1.d" # mark as ready
-    else
-        error "<< Fetch package $1/$ARCH failed"
+    if ! _curl "$pkginfo"; then
+        error "<< Fetch $pkginfo failed"
         return 1
     fi
+
+    cat "$TEMPDIR/$pkginfo" | _details
+
+    while read -r pkgfile; do
+        [ -n "$pkgfile" ] || continue
+
+        # sha pkgfile
+        IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
+
+        info2 "#2 Fetch $pkgfile"
+
+        _unzip "$pkgfile" || {
+            error "<< Fetch package $pkgfile/$ARCH failed"
+            return 1
+        }
+    done < "$TEMPDIR/$pkginfo"
+
+    # no v1 package()
 }
 
 update() {
@@ -431,7 +435,7 @@ list() {
 
 # invoke cmd [args...]
 invoke() {
-    cd "$WORKDIR"
+    dirname "$0" | xargs cd
 
     # shellcheck disable=SC2064
     TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
