@@ -205,14 +205,11 @@ _init() {
     PREFIX="$ROOT/prebuilts/$arch"
     WORKDIR="$ROOT/out/$arch"
 
-    # prepend PREFIX/bin to PATH
-    PATH="$PREFIX/bin:$PATH"
-
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export ROOT PREFIX WORKDIR PATH
+    export ROOT PREFIX WORKDIR
 
     # setup program envs
     local _find=which
@@ -805,8 +802,11 @@ library() {
 check() {
     slogi "..Run" "check $*"
 
-    local bin="$(which "$1")"
-    [[ "$bin" =~ ^"$PREFIX" ]] || {
+    local bin="$1"
+
+    test -x "$bin" || bin="$PREFIX/bin/$1"
+
+    test -x "$bin" || {
         slogf "CHECK" "cann't find $1"
     }
 
