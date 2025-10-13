@@ -29,7 +29,7 @@ upkg_args=(
 
 upkg_static() {
     #1. gnutls_priority_set_direct detect failed
-    #export PKG_CONFIG="$PKG_CONFIG --static" ==> moved to ulib.sh
+    #export PKG_CONFIG="$PKG_CONFIG --static" ==> moved to libs.sh
 
     configure &&
 

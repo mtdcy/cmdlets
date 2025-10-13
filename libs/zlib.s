@@ -55,7 +55,7 @@ EOF
             lib libz.a \
             lib/pkgconfig zlib.pc &&
 
-    # shellcheck source=SCRIPTDIR/ulib.sh
+    # shellcheck source=SCRIPTDIR/libs.sh
     check minigzip
 
 }

@@ -48,7 +48,7 @@ CL_ENVS :=  CL_FORCE 		\
 vpath %.u libs
 
 %: %.u
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash ulib.sh build $@"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="rm -rf out/$(ARCH) logs/$(ARCH)"
@@ -276,19 +276,19 @@ RSYNC_ARGS += --exclude='out'
 # contants: use '-acz' for remote without time sync.
 REMOTE_SYNC := rsync -e 'ssh $(SSH_OPTS)' $(RSYNC_ARGS)
 push-remote:
-	@bash ulib.sh ulogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@bash libs.sh ulogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_SYNC) --exclude='prebuilts' --exclude='logs' --delete $(WORKDIR)/ $(REMOTE_HOST):$(REMOTE_WORKDIR)/
 
 pull-remote:
-	@bash ulib.sh ulogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
+	@bash libs.sh ulogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
 	$(REMOTE_SYNC) $(REMOTE_HOST):$(REMOTE_WORKDIR)/ $(WORKDIR)/
 
 # ToDo: enable AcceptEnv ?
 runc-remote: push-remote
-	@bash ulib.sh ulogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@bash libs.sh ulogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(OPCODE)"'
 	@make pull-remote
-	@bash ulib.sh ulogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@bash libs.sh ulogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 
 endif
 

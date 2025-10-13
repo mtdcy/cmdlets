@@ -44,7 +44,7 @@ jobs:
 
             # update revision
             (
-              . ulib.sh
+              . libs.sh
               load $ulib
 
               [ -n "$upkg_ver" ] || exit

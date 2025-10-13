@@ -11,7 +11,7 @@ export LANG=C
 # options           =
 export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
 export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
-export     CL_STRICT=${CL_STRICT:-0}        # check on file changes on ulib.sh
+export     CL_STRICT=${CL_STRICT:-0}        # check on file changes on libs.sh
 export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
@@ -1133,10 +1133,10 @@ _check_deps() {
 
             #1. dep not installed
             #2. dep.u been updated
-            #3. ulib.sh been updated (CL_STRICT)
+            #3. libs.sh been updated (CL_STRICT)
             if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.u" -nt "$PREFIX/.$x.d" ]; then
                 deps+=( "$x" )
-            #elif [ "$CL_STRICT" -ne 0 ] && [ "ulib.sh" -nt "$PREFIX/.$x.d" ]; then
+            #elif [ "$CL_STRICT" -ne 0 ] && [ "libs.sh" -nt "$PREFIX/.$x.d" ]; then
             #    deps+=( "$x" )
             fi
         done
@@ -1283,7 +1283,7 @@ zip_files() {
 
 _init || exit 110
 
-if [[ "$0" =~ ulib.sh$ ]]; then
+if [[ "$0" =~ libs.sh$ ]]; then
     "$@"
 fi
 

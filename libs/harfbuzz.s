@@ -51,7 +51,7 @@ upkg_static() {
 
     rm -f CMakeLists.txt meson.build # force configure
 
-    #export PKG_CONFIG="$PKG_CONFIG --static" # => moved to ulib.sh
+    #export PKG_CONFIG="$PKG_CONFIG --static" # => moved to libs.sh
 
     configure &&
 

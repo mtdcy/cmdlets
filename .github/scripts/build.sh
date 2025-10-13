@@ -51,12 +51,12 @@ if [[ "${cmdlets[*]}" =~ =force ]]; then
     IFS=' ' read -r -a cmdlets <<< "${cmdlets[*]//=force/}"
 fi
     
-bash ulib.sh build "${cmdlets[@]}" || ret=$?
+bash libs.sh build "${cmdlets[@]}" || ret=$?
 
 unset CL_FORCE
 
 # for release actions
-bash ulib.sh zip_files || true
+bash libs.sh zip_files || true
 
 ## find out dependents
 #dependents=()
@@ -69,7 +69,7 @@ bash ulib.sh zip_files || true
 #    # already exists
 #    [[ "${dependents[*]}" == *"$ulib"* ]] && continue
 #
-#    IFS=' ' read -r -a deps <<< "$(bash ulib.sh _deps_get "$ulib")"
+#    IFS=' ' read -r -a deps <<< "$(bash libs.sh _deps_get "$ulib")"
 #
 #    for x in "${deps[@]}"; do
 #        if [[ "${cmdlets[*]}" == *"$x"* ]]; then
@@ -80,11 +80,11 @@ bash ulib.sh zip_files || true
 #done
 #
 #if [ -n "${dependents[*]}" ]; then 
-#    IFS=' ' read -r -a dependents <<< "$(bash ulib.sh _sort_by_depends "${dependents[@]}")"
+#    IFS=' ' read -r -a dependents <<< "$(bash libs.sh _sort_by_depends "${dependents[@]}")"
 #
 #    info "*** build dependents: ${dependents[*]} ***"
 #
-#    bash ulib.sh build "${dependents[@]}" || ret=$?
+#    bash libs.sh build "${dependents[@]}" || ret=$?
 #fi
 
 if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then

@@ -4,7 +4,7 @@ Prebuilt single file, static or pseudo-static binaries and libraries for Linux a
 
 This Project includes:
 
-- [bash script](ulib.sh) functions for creating static libraries and binaries.
+- [bash script](libs.sh) functions for creating static libraries and binaries.
 
 ## Quick Start
 
