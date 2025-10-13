@@ -418,12 +418,12 @@ update() {
     fi
 
     for base in "${BASE[@]}"; do
-        info "== Fetch $NAME < $base"
         if _curl "$base" "$TEMPDIR/$NAME"; then
-            cp -fv "$TEMPDIR/$NAME" "$target" | _details
+            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details | xargs
             chmod -v a+x "$target" | _details
-            # invoke the new file
-            exec "$target" help
+
+            # test target and exit
+            "$target" help && exit 0
         fi
     done
 
@@ -447,11 +447,6 @@ list() {
 
 # invoke cmd [args...]
 invoke() {
-    dirname "$0" | xargs cd
-
-    # shellcheck disable=SC2064
-    TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
-
     local ret=0
     case "$1" in
         manifest)
@@ -497,14 +492,14 @@ invoke() {
     exit $?
 }
 
-# never resolve symbolic of "$0"
-_name="$(basename "$0")"
+# shellcheck disable=SC2064
+TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
 # for quick install
-if [ "$_name" = "install" ] && [ $# -eq 0 ]; then
-    invoke update
-elif [ "$_name" = "$NAME" ]; then
-    invoke "$@"
+if [ "$0" = "install" ]; then
+    update
+else
+    cd "$(dirname "$0")" && invoke "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
