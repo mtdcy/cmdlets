@@ -207,7 +207,7 @@ _search() {
                 grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST" || true
                 ;;
             --any)
-                grep "$1" "$MANIFEST" || true
+                grep -F "$1" "$MANIFEST" || true
                 ;;
         esac
     done | uniq
