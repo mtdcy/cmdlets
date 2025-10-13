@@ -1283,19 +1283,28 @@ distclean() {
 # speed up prepare-host by making prerequisites.tar.gz
 #  input: [url]
 prerequisites() {
-    test -f "$PREFIX/prerequisites.tar.gz" && return 0
+    test -f "$PREFIX/prerequisites-0" && return 0
 
     # no prerequisites except for brew on macOS
     which brew || return 0
 
+    # for _capture
     export libs_name=prerequisites
+
+    cd "$PREFIX"
     if test -n "$1"; then
-        _curl "$1/$(basename "$PREFIX")/prerequisites.tar.gz" "$PREFIX/prerequisites.tar.gz" &&
-        tar -C / -xzf "$PREFIX/prerequisites.tar.gz"
+        for i in {0..9}; do
+            _curl "$1/$(basename "$PREFIX")/prerequisites-$i" "prerequisites-$i" || break
+        done
+
+        if test -f prerequisites-0; then
+            cat prerequisites-* | tar -C / -xz
+        fi
     else
-        # use a different prerequisites path to avoid uploading the downloaded one again
-        mkdir -p "$PREFIX/$libs_name"
-        tar -C / -czf "$PREFIX/$libs_name/prerequisites.tar.gz" "$(brew --prefix)"
+        mkdir -pv "$libs_name" && cd "$libs_name"
+        tar -C / -czf "prerequisites.tar.gz" "$(brew --prefix)"
+        split -b 1G -d -a 1 prerequisites.tar.gz prerequisites-
+        rm prerequisites.tar.gz
     fi
 }
 

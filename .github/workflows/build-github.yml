@@ -87,5 +87,6 @@ jobs:
           make_latest: ${{ steps.build.outputs.arch == 'x86_64-linux-gnu' }}
           files: |-
             prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
+            prebuilts/${{ steps.build.outputs.arch }}/prerequisites/prerequisites-*
             prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
             logs/*.tar.gz
