@@ -1,0 +1,79 @@
+# Cryptography and SSL/TLS Toolkit
+#
+# Headers Only:
+#  we built shared libraries, but not suppose to use it.
+
+# shellcheck disable=SC2034
+libs_lic='Apache-2.0'
+libs_ver=3.5.4
+libs_url=https://www.openssl.org/source/openssl-$libs_ver.tar.gz
+libs_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
+libs_dep=()
+
+libs_args=(
+    --prefix="$PREFIX"
+
+    --libdir=lib
+
+    # host paths
+    --openssldir=/etc/ssl
+
+    --api=3.0
+
+    no-ssl3
+    no-ssl3-method
+    no-zlib
+
+    no-shared
+
+    "$CFLAGS"
+
+    "$CPPFLAGS"
+
+    "$LDFLAGS"
+)
+
+is_linux  && libs_args+=( "linux-$(uname -m)" )
+
+is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
+
+libs_build() {
+    slogcmd ./Configure "${libs_args[@]}" || return 1
+
+    is_darwin || {
+        # use host paths
+        engines=$(find /lib/ /usr/lib/ -type d -name "engines-3" | head -n1) || true
+        if [ -n "$engines" ]; then
+            modules="${engines/%engines-3/ossl-modules}"
+            sed -e "s!^ENGINESDIR=.*\$!ENGINESDIR=${engines}!" \
+                -e "s!^MODULESDIR=.*\$!MODULESDIR=${modules}!" \
+                -i Makefile
+        fi
+    }
+
+    make clean || true
+
+    make V=1 || return 2
+
+    # don't install engines and modules
+    #make install_dev install_runtime &&
+    library libopenssl                       \
+        include/openssl include/openssl/*.h  \
+        lib             libssl.a             \
+        lib/pkgconfig   openssl.pc libssl.pc \
+        &&
+
+    library libcrypto                        \
+        include/crypto  include/crypto/*.h   \
+        lib             libcrypto.a          \
+        lib/pkgconfig   libcrypto.pc         \
+        &&
+
+    cmdlet apps/openssl openssl &&
+
+    # verify
+    check openssl version
+}
+
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -1,0 +1,51 @@
+# Library for command-line editing
+#
+# BE CAREFUL: macOS provide libedit
+
+# shellcheck disable=SC2034
+libs_lic='GPL-3.0-or-later'
+libs_ver=8.3
+libs_url=https://ftpmirror.gnu.org/gnu/readline/readline-$libs_ver.tar.gz
+libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
+libs_dep=(ncurses)
+
+libs_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # use ncurses instead of termcap
+    --with-curses
+    --enable-multibyte
+
+    --disable-install-examples
+
+    --disable-doc
+    --disable-man
+    --disable-shared
+    --enable-static
+)
+
+libs_build() {
+    configure &&
+
+    make &&
+
+    # check & install
+    make check &&
+
+    #install-headers install-static install-pc
+    library libreadline \
+            include/readline    readline.h \
+            lib                 libreadline.a \
+            lib/pkgconfig       readline.pc \
+            &&
+
+    library libhistory \
+            include/history     history.h \
+            lib                 libhistory.a \
+            lib/pkgconfig       history.pc
+}
+
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
