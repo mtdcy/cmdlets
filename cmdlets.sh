@@ -69,12 +69,12 @@ Examples:
 EOF
 }
 
-error() { echo -e "\\033[31m$*\\033[39m";   }
-info()  { echo -e "\\033[32m$*\\033[39m";   }
-warn()  { echo -e "\\033[33m$*\\033[39m";   }
-info1() { echo -e "\\033[35m$*\\033[39m";   }
-info2() { echo -e "\\033[34m$*\\033[39m";   }
-info3() { echo -e "\\033[36m$*\\033[39m";   }
+error() { echo -e "\\033[31m$*\\033[39m" 1>&2; }
+info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
+warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
+info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
+info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
+info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
 # is file existing in repo
 _exists() (
@@ -175,7 +175,7 @@ _manifest() {
 #  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
 _search() {
-    _manifest 1>&2
+    _manifest &>/dev/null
 
     # cmdlets:
     #   minigzip
@@ -235,7 +235,7 @@ _v3() {
 
 # v3 only
 search() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
     info3 ">3 Search $*"
 
@@ -246,7 +246,7 @@ search() {
 #  input: name [--install [links...] ]
 #  output: return 0 on success
 fetch() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
     if _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
@@ -332,7 +332,7 @@ _fix_pc() {
 
 # fetch package
 package() {
-    _manifest && echo ""
+    _manifest &>/dev/null
 
     local pkgname pkgver pkgfile pkginfo
 
