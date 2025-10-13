@@ -52,7 +52,7 @@ libs_args=(
 # version mismatched magic.mgc may not work
 
 libs_build() {
-    MAGIC_PATH="share/file"
+    MAGIC_PATH="share/misc"
 
     configure || return 1
 
@@ -67,13 +67,17 @@ libs_build() {
 
     make &&
 
-    pkgfile libmagic src/magic.h src/.libs/libmagic.a libmagic.pc &&
+    inspect make install &&
 
-    pkgfile magic.mgc "$MAGIC_PATH" magic/magic.mgc &&
+    pkgfile libmagic                  \
+            include/magic.h           \
+            lib/libmagic.a            \
+            lib/pkgconfig/libmagic.pc \
+            &&
+
+    pkgfile magic.mgc "$MAGIC_PATH/magic.mgc" &&
 
     cmdlet ./src/file &&
-
-    #inspect_install make install
 
     check file --version
 }

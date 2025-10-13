@@ -22,6 +22,9 @@ libs_args=(
     --disable-nls
     --disable-rpath
 
+    # no termcap and tinfo
+    --disable-termcap
+
     # from homebrew:ncurses.rb
     --enable-sigwinch
     --enable-symlinks
@@ -31,15 +34,13 @@ libs_args=(
     # from macports:ncurses
     --enable-overwrite  # overwrite curses
 
-    # from debian:/etc/terminfo/README
+    # terminfo search dirs: `infocmp -D' or set TERMINFO
     #  => we are building static executable, cann't ship hardcoded prebuilts path into executables.
+    #
+    # from debian:/etc/terminfo/README
     --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
     # /usr/share/terminfo is a common path for both Linux and macOS
-
-    # don't install terminfo database, use system defaults
-    #  => cause gettext check fail, see gettext.u.
     --with-default-terminfo-dir="/usr/share/terminfo"
-    --disable-db-install
 
     # static without debug
     --without-shared
@@ -57,11 +58,10 @@ libs_build() {
     cp include/curses*.h include/ncursesw.h &&
 
     # install libraries
-    pkgfile libncursesw:libncurses:libcurses     \
+    library libncursesw:libncurses:libcurses     \
             include         include/ncurses*.h   \
                             include/curses*.h    \
                             include/term.h       \
-                            include/termcap.h    \
                             include/eti.h        \
                             include/unctrl.h     \
                             include/term_entry.h \
@@ -69,7 +69,7 @@ libs_build() {
             lib/pkgconfig   misc/ncursesw.pc     \
             &&
 
-    pkgfile libncurses++w                        \
+    library libncurses++w                        \
             include         c++/curses*.h        \
                             c++/etip.h           \
                             c++/cursslk.h        \
@@ -77,33 +77,47 @@ libs_build() {
             lib/pkgconfig   misc/ncurses++w.pc   \
             &&
 
-    pkgfile libformw:libform                     \
+    library libformw:libform                     \
             include         include/form.h       \
             lib             lib/libform*.a       \
             lib/pkgconfig   misc/form*.pc        \
             &&
 
-    pkgfile libpanelw:libpanel                   \
+    library libpanelw:libpanel                   \
             include         include/panel.h      \
             lib             lib/libpanel*.a      \
             lib/pkgconfig   misc/panel*.pc       \
             &&
 
-    pkgfile libmenuw:libmenu                     \
+    library libmenuw:libmenu                     \
             include         include/menu.h       \
                             menu/eti.h           \
             lib             lib/libmenu*.a       \
             lib/pkgconfig   misc/menu*.pc        \
             &&
 
-    cmdlet  progs/clear &&
-    cmdlet  progs/tabs &&
-    cmdlet  progs/tput &&
-    cmdlet  progs/tset &&
-    cmdlet  progs/tic &&
-    cmdlet  progs/toe &&
+    cmdlet  ./progs/tic     tic infotocap captoinfo &&
+    cmdlet  ./progs/tset    tset reset              &&
+    cmdlet  ./progs/infocmp                         &&
+    cmdlet  ./progs/clear                           &&
+    cmdlet  ./progs/tabs                            &&
+    cmdlet  ./progs/tput                            &&
+    cmdlet  ./progs/toe                             &&
 
-    inspect_install make install
+    # ncurses-config --terminfo-dirs
+    cmdlet  ./misc/ncurses-config ncursesw-config ncurses-config &&
+
+    #inspect_install make install
+
+    # make and install terminfo database
+    make install.data                   \
+        datarootdir="$PREFIX/share"     \
+        datadir="$PREFIX/share"         \
+        ticdir="$PREFIX/share/terminfo" \
+        &&
+
+    pkgfile terminfo share/tabset share/terminfo    &&
+
 
     # verify
     check tput
