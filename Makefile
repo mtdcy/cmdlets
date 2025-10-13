@@ -45,9 +45,9 @@ CL_ENVS :=  CL_FORCE 		\
 #${warning $(MAKEOVERRIDES)}
 #${warning $(MAKEFLAGS)}
 
-vpath %.u libs
+vpath %.s libs
 
-%: %.u
+%: %.s
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 clean:

@@ -1029,10 +1029,10 @@ _prepare() {
 _load() {
     unset "${!libs_@}"
 
-    [ -f "$1" ] && source "$1" || source "libs/$1.u"
+    [ -f "$1" ] && source "$1" || source "libs/$1.s"
 
     # default values:
-    [ -n "$libs_name" ] || libs_name="$(basename "${1%.u}")"
+    [ -n "$libs_name" ] || libs_name="$(basename "${1%.s}")"
     [ -n "$libs_zip"  ] || libs_zip="$(basename "$libs_url")"
 
     [ "$libs_type" = ".PHONY" ] && return 0
@@ -1132,9 +1132,9 @@ _check_deps() {
             [[ "${deps[*]}" == *"$x"* ]] && continue
 
             #1. dep not installed
-            #2. dep.u been updated
+            #2. dep.s been updated
             #3. libs.sh been updated (CL_STRICT)
-            if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.u" -nt "$PREFIX/.$x.d" ]; then
+            if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
                 deps+=( "$x" )
             #elif [ "$CL_STRICT" -ne 0 ] && [ "libs.sh" -nt "$PREFIX/.$x.d" ]; then
             #    deps+=( "$x" )
