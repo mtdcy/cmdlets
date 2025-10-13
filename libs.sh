@@ -681,7 +681,8 @@ inspect() {
 
     find "$PREFIX" > "$libs_name.pack.post"
 
-    diff "$libs_name.pack.post" "$libs_name.pack.pre" | sed "s%$PREFIX%%g" > "$libs_name.pack.diff"
+    # diff returns 1 if differences found
+    diff "$libs_name.pack.post" "$libs_name.pack.pre" || true
 }
 
 # cmdlet executable [name] [alias ...]
