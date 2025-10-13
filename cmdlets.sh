@@ -76,6 +76,11 @@ info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
 info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
 info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
+# prepend each line with '=> '
+_details() {
+    sed 's/^/=> /'
+}
+
 # is file existing in repo
 _exists() (
     local source
@@ -93,9 +98,9 @@ _curl() (
     mkdir -p "$(dirname "$dest")"
     for repo in "${REPO[@]}"; do
         [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        info "== $source"
+        info "== curl < $source"
         curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo "=> ${2:-$1}"
+        echo ">> ${2:-$1}"
         curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
     done
     return 1
@@ -105,7 +110,7 @@ _curl() (
 _unzip() (
     test -f "$1" || _curl "$1" || return 1
     
-    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | sed 's/^/=> /'
+    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | _details
 )
 
 # get remote revision url
@@ -128,7 +133,7 @@ _v1() {
 
     _exists "$binfile" || return 1
 
-    info1 ">1 Fetch $binfile"
+    info1 "#1 Fetch $binfile"
 
     _curl "$binfile" || return 1
 
@@ -144,7 +149,7 @@ _v2() {
 
     pkginfo=$(_revision "$1")
 
-    info2 ">2 Fetch $1 < pkginfo"
+    info2 "#2 Fetch $1 < pkginfo"
 
     _curl "$pkginfo" || return 1
 
@@ -153,7 +158,7 @@ _v2() {
     # v2: sha pkgfile
     IFS=' ' read -r _ pkgfile _ <<< "$(tail -n1 "$TEMPDIR/$pkginfo")"
 
-    info2 ">2 Fetch $1 < $pkgfile"
+    info2 "#2 Fetch $1 < $pkgfile"
 
     _unzip "$pkgfile" || return 1
 }
@@ -164,7 +169,7 @@ _manifest() {
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
 
     # pull manifest first
-    info3 ">> Fetch manifest"
+    info3 "== Fetch manifest"
     _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
         warn "<< Fetch manifest failed"
         touch "$MANIFEST"
@@ -225,7 +230,7 @@ _v3() {
 
     [ -n "$pkgfile" ] || return 1
 
-    info3 ">3 Fetch $1 < $pkgfile"
+    info3 "#3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
     _unzip "$pkgfile" || 
@@ -237,9 +242,9 @@ _v3() {
 search() {
     _manifest &>/dev/null
 
-    info3 ">3 Search $*"
+    info3 "#3 Search $*"
 
-    _search "$@" | sed 's/^/=> /'
+    _search "$@" | _details
 }
 
 # fetch cmdlet: name [options]
@@ -272,8 +277,7 @@ fetch() {
                     info "== Install links"
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
-                        echo "=> $link => $target"
-                        ln -sf "$target" "$link"
+                        ln -sfv "$target" "$link" | _details | xargs
                     done
                 else
                     info "== Install default links"
@@ -281,8 +285,7 @@ fetch() {
                         [ "$(readlink "$link")" = "$target" ] || continue
 
                         link="$(basename "$link")"
-                        echo "=> $link => $target"
-                        ln -sf "$target" "$link"
+                        ln -sfv "$target" "$link" | _details | xargs
                     done < <(find "$PREBUILTS/bin" -type l)
                 fi
 
@@ -298,7 +301,7 @@ fetch() {
 remove() {
     local target="$1"
 
-    info "=> remove $1"
+    info "== remove $1"
 
     if ! test -L "$target"; then
         error "-- $target not exists"
@@ -365,7 +368,7 @@ package() {
             # sha pkgfile
             IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
 
-            info2 ">2 Fetch $pkgfile"
+            info2 "#2 Fetch $pkgfile"
 
             _unzip "$pkgfile" || {
                 error "<< fetch package $pkgfile/$ARCH failed"
