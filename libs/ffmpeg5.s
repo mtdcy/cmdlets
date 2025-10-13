@@ -7,8 +7,8 @@ libs_sha=27d87965c5b0ab857a0092aeb9f55d975becb7126d83aefe39ae24102492180b
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 
-# shellcheck source=@ffmpeg.u
-. libs/@ffmpeg.u
+# shellcheck source=@ffmpeg.s
+. libs/@ffmpeg.s
 
 # Unknown option "--enable-libharfbuzz".
 libs_args=(${libs_args[@]//--enable-libharfbuzz/})

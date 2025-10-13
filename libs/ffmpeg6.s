@@ -7,8 +7,8 @@ libs_sha=bc5f1e4a4d283a6492354684ee1124129c52293bcfc6a9169193539fbece3487
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 
-# shellcheck source=@ffmpeg.u
-. libs/@ffmpeg.u
+# shellcheck source=@ffmpeg.s
+. libs/@ffmpeg.s
 
 libs_build() {
     configure &&

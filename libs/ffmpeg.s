@@ -7,8 +7,8 @@ libs_sha=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
-# shellcheck source=@ffmpeg.u
-. libs/@ffmpeg.u
+# shellcheck source=@ffmpeg.s
+. libs/@ffmpeg.s
 
 install_ffmpeg_libs() {
     library $1                         \
