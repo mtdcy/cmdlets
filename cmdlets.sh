@@ -201,13 +201,13 @@ _search() {
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST"
+                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
                 ;;
             --pkgname)
-                grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST"
+                grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST" || true
                 ;;
             --any)
-                grep "$1" "$MANIFEST"
+                grep "$1" "$MANIFEST" || true
                 ;;
         esac
     done | uniq
