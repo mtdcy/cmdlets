@@ -410,24 +410,25 @@ update() {
         target="/usr/local/bin/$NAME"
     fi
 
-    if ! mkdir -p "$(dirname "$target")"; then
+    info "## Install $NAME => $target"
+
+    if ! mkdir -pv "$(dirname "$target")" | _details; then
         error "<< Permission Denied?"
         return 1
     fi
 
     for base in "${BASE[@]}"; do
-        info ">> Fetch $NAME < $base"
+        info "== Fetch $NAME < $base"
         if _curl "$base" "$TEMPDIR/$NAME"; then
-            info "-- $NAME > $target"
-            cp "$TEMPDIR/$NAME" "$target"
-            chmod a+x "$target"
+            cp -fv "$TEMPDIR/$NAME" "$target" | _details
+            chmod -v a+x "$target" | _details
             # invoke the new file
             exec "$target" help
         fi
     done
 
     error "<< Update $(basename "$0") failed"
-    return 1
+    return 127
 }
 
 # list installed cmdlets
