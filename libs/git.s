@@ -75,7 +75,7 @@ libs_build() {
     # standalone cmds
     local cmds=(
         # basic
-        git git-shell git-sh-setup git-sh-i18n
+        git git-shell
         # core utils
         git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
@@ -102,6 +102,16 @@ libs_build() {
     # specials
     cmdlet ./git-remote-http git-remote-http git-remote-https &&
     cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
+
+    # bug fix: NO_GETTEXT
+    sed -i git-sh-setup                     \
+        -e '/git-sh-i18n/d'                 \
+        -e 's/eval_gettextln/eval echo/g'   \
+        -e 's/eval_gettext/eval echo/g'     \
+        -e 's/gettextln/echo/g'             \
+        &&
+
+    cmdlet ./git-sh-setup                                     &&
 
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-*                             &&
