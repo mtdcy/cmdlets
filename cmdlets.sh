@@ -141,6 +141,8 @@ _v1() {
     cp -f "$TEMPDIR/$name" "$PREBUILTS/$name"
 
     chmod a+x "$PREBUILTS/$name"
+
+    echo "$name" > "$TEMPDIR/files"
 }
 
 # cmdlet v2:
@@ -290,13 +292,13 @@ fetch() {
                     info "== Install target"
                     ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
 
-                    info "== Install links"
+                    info "== Install link(s)"
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
                         ln -sfv "$target" "$link" | _details_escape
                     done
                 elif test -s "$TEMPDIR/files"; then
-                    info "== Install targets"
+                    info "== Install target(s)"
                     while read -r file; do
                         file="$PREBUILTS/$file"
                         if test -L "$file"; then
