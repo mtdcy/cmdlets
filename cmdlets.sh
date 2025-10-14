@@ -346,7 +346,7 @@ package() {
 
     # cmdlet v3/manifest
     if [ "$API" = "v3" ]; then
-        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
+        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
 
         if test -n "${pkgfile[*]}"; then
             info3 "#3 Fetch package $1 < ${pkgfile[*]}"
