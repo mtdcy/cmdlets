@@ -9,24 +9,26 @@ info "build $*"
 pwd -P
 bash --version
           
-export CL_LOGGING=silent
-export CL_CCACHE=0
-export CL_NJOBS=1
+export CL_LOGGING="${CL_LOGGING:-silent}"
+export CL_CCACHE="${CL_CCACHE:-0}"
+export CL_NJOBS="${CL_NJOBS:-1}"
 
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
 # fix: detected dubious ownership in repository
-git config --global --add safe.directory "$PWD"
+git config --global --add safe.directory '*'
 
 if which brew; then
-    _brewprefix="$(brew --prefix)"
     _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
     for x in "${_gnubin[@]}"; do
-        [ -d "$_brewprefix/opt/$x/libexec" ] && export PATH="$_brewprefix/opt/$x/libexec/gnubin:$PATH"
+        export PATH="$(brew --prefix "$x")/libexec/gnubin:$PATH"
     done
-    unset _brewprefix _gnubin
+    unset _gnubin
 fi
+
+echo $PATH
+env | grep "^CL_" | grep -v TOKEN
 
 if test -n "$*"; then
     IFS=', ' read -r -a cmdlets <<< "$@"
