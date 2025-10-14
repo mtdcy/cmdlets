@@ -285,15 +285,19 @@ fetch() {
         case "$1" in
             --install)
                 if test -n "$2"; then
-                    # cmdlets.sh install bash@3.2:bash
-                    local links=( ${2//:/ } )
-                    info "== Install target"
-                    ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
+                    # cmdlets.sh install bash@3.2:bash@3.2:bash
+                    info "== Install target and link(s)"
 
-                    info "== Install link(s)"
+                    local links=( ${2//:/ } )
+                    local width=$( printf 'bin/%s\n' "$target" "${links[@]}" | wc -L )
+
+                    printf "%${width}s -> %s\n" "$target" "$PREBUILTS/bin/$target"
+                    ln -sf "$PREBUILTS/bin/$target" "$target"
+
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
-                        ln -sfv "$target" "$link" | _details_escape
+                        printf "%${width}s -> %s\n" "$link" "$target"
+                        ln -sf "$target" "$link"
                     done
                 elif test -s "$TEMPDIR/files"; then
                     info "== Install target(s)"
