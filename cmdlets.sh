@@ -446,18 +446,22 @@ invoke() {
                 update
             fi
             ;;
-        list)
+        ls|list)
             list
             ;;
         search)
-            search "${@:2}"
+            search "${*:2}"
             ;;
         install)
-            IFS=':' read -r bin alias <<< "$2"
-            fetch "$bin" --install "$alias" || ret=$?
+            for x in "${@:2}"; do
+                IFS=':' read -r bin alias <<< "$x"
+                fetch "$bin" --install "$alias" || ret=$?
+            done
             ;;
-        remove|uninstall)
-            remove "$2" || ret=$?
+        rm|remove|uninstall)
+            for x in "${@:2}"; do
+                remove "$x" || ret=$?
+            done
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
