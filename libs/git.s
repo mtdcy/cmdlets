@@ -11,6 +11,7 @@ is_darwin || libs_dep+=( openssl )
 
 libs_args=(
     prefix="'$PREFIX'"
+    sysconfdir=/etc
 
     CC="'$CC'"
     CFLAGS="'$CFLAGS'"
@@ -24,6 +25,14 @@ libs_args=(
     NO_GITWEB=1
     NO_PYTHON=1
     NO_TCLTK=1
+    NO_FINK=1
+    NO_DARWIN_PORTS=1
+
+    # 
+    USE_LIBPCRE2=1
+    LIBPCREDIR="'$PREFIX'"
+    
+    INSTALL_SYMLINKS=1
 
     # curl & expat for git-http-*
     EXPATDIR="'$PREFIX'"
