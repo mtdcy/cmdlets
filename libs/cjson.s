@@ -15,9 +15,16 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p build && cd build && cmake .. || return 1
+    mkdir -p build && cd build && cmake .. && make || return 1
 
-    make
+    pkgfile libcjson                  \
+            include/cjson/*           \
+            lib/libcjson*.a           \
+            lib/pkgconfig/libcjson.pc \
+            lib/cmake/cJSON/*.cmake   \
+            &&
+    
+    inspect make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
