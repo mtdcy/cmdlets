@@ -658,7 +658,7 @@ pkgfile() {
     # v3/manifest: name pkgfile sha
     touch "cmdlets.manifest"
     # clear full versioned records
-    sed -i "\#^$name@\?[^\ ]\+ $libs_name/.*@$libs_ver\.#d" cmdlets.manifest
+    sed -i "\#^$name $libs_name/$name@$libs_ver\.#d" cmdlets.manifest
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
