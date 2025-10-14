@@ -87,6 +87,10 @@ _details() {
     sed 's/^/=> /'
 }
 
+_details_escape() {
+    sed 's/^/=> /' | xargs
+}
+
 # is file existing in repo
 _exists() (
     local source
@@ -116,7 +120,7 @@ _curl() (
 _unzip() (
     test -f "$1" || _curl "$1" || return 1
     
-    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | _details
+    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | tee -a "$TEMPDIR/files" | _details
 )
 
 # cmdlet v1
@@ -261,6 +265,8 @@ search() {
 fetch() {
     _manifest &>/dev/null
 
+    true > "$TEMPDIR/files"
+
     if _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
@@ -277,22 +283,28 @@ fetch() {
         case "$1" in
             --install)
                 # cmdlets.sh install bash@3.2:bash
-                info "== Install $target => $PREBUILTS/bin/$target"
-                ln -sf "$PREBUILTS/bin/$target" "$target"
 
                 local links=( ${2//:/ } )
 
                 if [ ${#links[@]} -gt 0 ]; then
+                    info "== Install target"
+                    ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
+
                     info "== Install links"
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
-                        ln -sfv "$target" "$link" | _details | xargs
+                        ln -sfv "$target" "$link" | _details_escape
                     done
-                else
-                    info "== Install default links"
-                    while read -r link; do
-                        ln -sfv "$target" "$(basename "$link")" | _details | xargs
-                    done < <(find "$PREBUILTS/bin" -type l -lname "$target")
+                elif test -s "$TEMPDIR/files"; then
+                    info "== Install targets"
+                    while read -r file; do
+                        file="$PREBUILTS/$file"
+                        if test -L "$file"; then
+                            ln -sfv "$(readlink "$file")" "$(basename "$file")" | _details_escape
+                        else
+                            ln -sfv "$file"               "$(basename "$file")" | _details_escape
+                        fi
+                    done < "$TEMPDIR/files"
                 fi
 
                 shift 1
