@@ -820,21 +820,19 @@ check() {
     fi
 }
 
-CURL="$(which curl)"
-CURL_OPTS=( --fail -vL )
-
 # _curl source destination [options]
 _curl() {
     local source="$1"
-    local dest="${2:-/dev/null}"
 
-    echocmd "$CURL" -I "${@:3}" "${CURL_OPTS[@]}" "$source" -o /dev/null &&
-    echocmd "$CURL" -S "${@:3}" "${CURL_OPTS[@]}" "$source" -o "$dest"
-}
+    curl -fsI "${@:3}" "$source" -o /dev/null || return 1
 
-# _curl_to_stdout source [options]
-_curl_stdout() {
-    echocmd "$CURL" -S "${@:2}" "${CURL_OPTS[@]}" "$1"
+    if test -n "$2"; then
+        # show errors
+        echocmd curl -fvSL "${@:3}" "$source" -o "$2"
+    else
+        # silent curl output for stdout
+        curl -fsSL "${@:3}" "$source"
+    fi
 }
 
 # fetch url to packages/ or return error
@@ -1002,11 +1000,10 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                slogi "..Run" "patch p1 -N < $patch"
-                _curl_stdout "$patch" | patch -p1 -N
+                slogcmd "_curl $patch | $PATCH -p1 -N"
                 ;;
             *)
-                slogcmd "patch -p1 -N < $patch"
+                slogcmd "$PATCH -p1 -N < $patch"
                 ;;
         esac
     done
