@@ -300,9 +300,9 @@ fetch() {
                     while read -r file; do
                         file="$PREBUILTS/$file"
                         if test -L "$file"; then
-                            ln -sfv "$(readlink "$file")" "$(basename "$file")" | _details_escape
+                            mv -fv  "$file" "$(basename "$file")" | _details_escape 
                         else
-                            ln -sfv "$file"               "$(basename "$file")" | _details_escape
+                            ln -sfv "$file" "$(basename "$file")" | _details_escape
                         fi
                     done < "$TEMPDIR/files"
                 fi
