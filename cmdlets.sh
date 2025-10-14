@@ -215,10 +215,15 @@ _search() {
     options=( "${@:2}" )
     test -n "${options[*]}" || options=( --pkgfile --pkgname )
 
+    set -x
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
+                if test -n "$pkgver"; then
+                    grep "^$pkgfile@$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
+                else
+                    grep "^$pkgfile " "$MANIFEST" || true
+                fi
                 ;;
             --pkgname)
                 grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST" || true
@@ -236,13 +241,13 @@ _search() {
 _v3() {
     [ "$API" = "v3" ] || return 127
 
-    local pkgfile pkgname
-    
-    test -n "$2" && pkgname="$2/$1" || pkgname="$1"
+    local pkgfile="$1"
+    test -z "$2" || pkgfile="$2/$pkgfile"
 
-    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" "${@:3}" | tail -n 1 )
+    # name file sha
+    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgfile" "${@:3}" | tail -n 1 )
 
-    [ -n "$pkgfile" ] || return 1
+    test -n "$pkgfile" || return 1
 
     info3 "#3 Fetch $1 < $pkgfile"
 
@@ -464,7 +469,7 @@ invoke() {
             list
             ;;
         search)
-            search "${*:2}"
+            search "${@:2}"
             ;;
         install)
             for x in "${@:2}"; do
