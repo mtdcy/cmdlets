@@ -53,7 +53,7 @@ is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 #
 # exec-cmd.c:setup_path => GIT_EXEC_PATH > PATH
 # => disable libexec and use PATH instead
-libs_args+=( gitexecdir='/git-no-libexec' )
+libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
     #make configure && configure || return 1
@@ -61,7 +61,19 @@ libs_build() {
     # git build system prefer hard link, disable it
     sed -i '/ln \$< \$@/d' Makefile || true
 
-    make "${libs_args[@]}" || return 1
+    # create a setup script
+    cat > git-setup << 'EOF'
+#!/bin/sh
+
+cmdlets.sh install git
+
+cd "$(dirname "$(which cmdlets.sh)")"
+
+for cmd in prebuilts/bin/git-*; do
+    ln -sf "$cmd" "$(basename "$cmd")"
+done
+EOF
+    chmod a+x git-setup
 
     # standalone cmds
     local cmds=(
@@ -79,6 +91,8 @@ libs_build() {
         git-archimport git-cvsimport git-quiltimport git-request-pull
     )
 
+    make "${libs_args[@]}" &&
+
     if is_darwin; then
         cd contrib/credential/osxkeychain &&
         make CC="'$CC'" CFLAGS="'$CFLAGS'" LDFLAGS="'$LDFLAGS'"  &&
@@ -90,17 +104,20 @@ libs_build() {
         cmdlet "./$x" || return 3
     done
 
-    # specials
+    ## specials
     cmdlet ./git-remote-http git-remote-http git-remote-https &&
-    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps &&
+    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
 
     # merge sh cmds
-    sed '/git-sh-i18n/d' git-sh-setup    > git-sh-setup-new &&
-    set "s%$PREFIX%/usr%g" git-sh-i18n  >> git-sh-setup-new &&
+    sed '/git-sh-i18n/d' git-sh-setup    > git-sh-setup-new   &&
+    set "s%$PREFIX%/usr%g" git-sh-i18n  >> git-sh-setup-new   &&
 
-    cmdlet ./git-sh-setup-new git-sh-setup &&
+    cmdlet ./git-sh-setup-new git-sh-setup                    &&
 
-    #inspect make install
+    # pack all git tools into one
+    pkgfile git bin/git bin/git-*                             &&
+
+    cmdlet ./git-setup                                        &&
 
     check git --version
 }
