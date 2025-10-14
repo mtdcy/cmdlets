@@ -11,6 +11,7 @@ is_darwin || libs_dep+=( openssl )
 
 libs_args=(
     prefix="'$PREFIX'"
+    sysconfdir=/etc
 
     CC="'$CC'"
     CFLAGS="'$CFLAGS'"
@@ -24,6 +25,14 @@ libs_args=(
     NO_GITWEB=1
     NO_PYTHON=1
     NO_TCLTK=1
+    NO_FINK=1
+    NO_DARWIN_PORTS=1
+
+    # 
+    USE_LIBPCRE2=1
+    LIBPCREDIR="'$PREFIX'"
+    
+    INSTALL_SYMLINKS=1
 
     # curl & expat for git-http-*
     EXPATDIR="'$PREFIX'"
@@ -94,11 +103,15 @@ libs_build() {
     cmdlet ./git-remote-http git-remote-http git-remote-https &&
     cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
 
-    # merge sh cmds
-    sed '/git-sh-i18n/d'    git-sh-setup > git-sh-setup-new   &&
-    set "s%$PREFIX%/usr%g"  git-sh-i18n >> git-sh-setup-new   &&
+    # bug fix: NO_GETTEXT
+    sed -i git-sh-setup                     \
+        -e '/git-sh-i18n/d'                 \
+        -e 's/eval_gettextln/eval echo/g'   \
+        -e 's/eval_gettext/eval echo/g'     \
+        -e 's/gettextln/echo/g'             \
+        &&
 
-    cmdlet ./git-sh-setup-new git-sh-setup                    &&
+    cmdlet ./git-sh-setup                                     &&
 
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-*                             &&
