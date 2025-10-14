@@ -294,7 +294,7 @@ fetch() {
                     printf "%${width}s -> %s\n" "$target" "$PREBUILTS/bin/$target"
                     ln -sf "$PREBUILTS/bin/$target" "$target"
 
-                    for link in "${links[@]}"; do
+                    for link in "${links[@]//*\//}"; do
                         [ "$link" = "$target" ] && continue
                         printf "%${width}s -> %s\n" "$link" "$target"
                         ln -sf "$target" "$link"
