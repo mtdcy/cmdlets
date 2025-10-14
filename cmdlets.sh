@@ -141,6 +141,8 @@ _v1() {
     cp -f "$TEMPDIR/$name" "$PREBUILTS/$name"
 
     chmod a+x "$PREBUILTS/$name"
+
+    echo "$name" > "$TEMPDIR/files"
 }
 
 # cmdlet v2:
@@ -290,19 +292,19 @@ fetch() {
                     info "== Install target"
                     ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
 
-                    info "== Install links"
+                    info "== Install link(s)"
                     for link in "${links[@]}"; do
                         [ "$link" = "$target" ] && continue
                         ln -sfv "$target" "$link" | _details_escape
                     done
                 elif test -s "$TEMPDIR/files"; then
-                    info "== Install targets"
+                    info "== Install target(s)"
                     while read -r file; do
                         file="$PREBUILTS/$file"
                         if test -L "$file"; then
-                            ln -sfv "$(readlink "$file")" "$(basename "$file")" | _details_escape
+                            mv -fv  "$file" "$(basename "$file")" | _details_escape 
                         else
-                            ln -sfv "$file"               "$(basename "$file")" | _details_escape
+                            ln -sfv "$file" "$(basename "$file")" | _details_escape
                         fi
                     done < "$TEMPDIR/files"
                 fi
@@ -346,7 +348,7 @@ package() {
 
     # cmdlet v3/manifest
     if [ "$API" = "v3" ]; then
-        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | uniq | xargs )
+        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
 
         if test -n "${pkgfile[*]}"; then
             info3 "#3 Fetch package $1 < ${pkgfile[*]}"
