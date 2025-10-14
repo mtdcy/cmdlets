@@ -284,11 +284,9 @@ fetch() {
     while [ $# -gt 0 ]; do
         case "$1" in
             --install)
-                # cmdlets.sh install bash@3.2:bash
-
-                local links=( ${2//:/ } )
-
-                if [ ${#links[@]} -gt 0 ]; then
+                if test -n "$2"; then
+                    # cmdlets.sh install bash@3.2:bash
+                    local links=( ${2//:/ } )
                     info "== Install target"
                     ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
 
@@ -323,18 +321,13 @@ remove() {
 
     info "== remove $target"
 
-    if ! test -L "$target"; then
-        error "<< $target not exists"
-        return 1
-    fi
-
     while read -r link; do
-        rm -fv "$link" | _details
-    done < <(find "$(pwd -P)" -type l -lname "$target")
+        rm -fv "$link" | _details_escape
+    done < <( find . -type l -lname "$target" -printf '%P\n' )
 
-    rm -fv "$target" | _details
-
-    rm -fv "$PREBUILTS/bin/$target" | _details
+    while read -r file; do
+        rm -fv "$file" | _details_escape
+    done < <( find . -name "$target" -printf '%P\n' )
 }
 
 # fetch package
