@@ -215,10 +215,15 @@ _search() {
     options=( "${@:2}" )
     test -n "${options[*]}" || options=( --pkgfile --pkgname )
 
+    set -x
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                grep "^$pkgfile@?$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
+                if test -n "$pkgver"; then
+                    grep "^$pkgfile@$pkgver \|/$pkgfile@$pkgver" "$MANIFEST" || true
+                else
+                    grep "^$pkgfile " "$MANIFEST" || true
+                fi
                 ;;
             --pkgname)
                 grep " ${pkgname:-$pkgfile}/.*@$pkgver" "$MANIFEST" || true
@@ -236,13 +241,13 @@ _search() {
 _v3() {
     [ "$API" = "v3" ] || return 127
 
-    local pkgfile pkgname
-    
-    test -n "$2" && pkgname="$2/$1" || pkgname="$1"
+    local pkgfile="$1"
+    test -z "$2" || pkgfile="$2/$pkgfile"
 
-    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgname" "${@:3}" | tail -n 1 )
+    # name file sha
+    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgfile" "${@:3}" | tail -n 1 )
 
-    [ -n "$pkgfile" ] || return 1
+    test -n "$pkgfile" || return 1
 
     info3 "#3 Fetch $1 < $pkgfile"
 
@@ -284,29 +289,34 @@ fetch() {
     while [ $# -gt 0 ]; do
         case "$1" in
             --install)
-                # cmdlets.sh install bash@3.2:bash
+                if test -n "$2"; then
+                    # cmdlets.sh install bash@3.2:bash@3.2:bash
+                    info "== Install target and link(s)"
 
-                local links=( ${2//:/ } )
+                    local links=( ${2//:/ } )
+                    local width=$( printf 'bin/%s\n' "$target" "${links[@]}" | wc -L )
 
-                if [ ${#links[@]} -gt 0 ]; then
-                    info "== Install target"
-                    ln -sfv "$PREBUILTS/bin/$target" "$target" | _details_escape
+                    printf "%${width}s -> %s\n" "$target" "$PREBUILTS/bin/$target"
+                    ln -sf "$PREBUILTS/bin/$target" "$target"
 
-                    info "== Install link(s)"
-                    for link in "${links[@]}"; do
+                    for link in "${links[@]//*\//}"; do
                         [ "$link" = "$target" ] && continue
-                        ln -sfv "$target" "$link" | _details_escape
+                        printf "%${width}s -> %s\n" "$link" "$target"
+                        ln -sf "$target" "$link"
                     done
                 elif test -s "$TEMPDIR/files"; then
                     info "== Install target(s)"
+                    local width=$(wc -L < "$TEMPDIR/files")
+
                     while read -r file; do
-                        file="$PREBUILTS/$file"
                         if test -L "$file"; then
-                            mv -fv  "$file" "$(basename "$file")" | _details_escape 
+                            printf "%${width}s -> %s\n" "$(basename "$file")" "$(readlink "$file")"
+                            mv -f "$file" .
                         else
-                            ln -sfv "$file" "$(basename "$file")" | _details_escape
+                            printf "%${width}s -> %s\n" "$(basename "$file")" "$file"
+                            ln -sf "$file" .
                         fi
-                    done < "$TEMPDIR/files"
+                    done < <(cat "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%")
                 fi
 
                 shift 1
@@ -323,18 +333,13 @@ remove() {
 
     info "== remove $target"
 
-    if ! test -L "$target"; then
-        error "<< $target not exists"
-        return 1
-    fi
-
     while read -r link; do
-        rm -fv "$link" | _details
-    done < <(find "$(pwd -P)" -type l -lname "$target")
+        rm -fv "$link" | _details_escape
+    done < <( find . -type l -lname "$target" -printf '%P\n' )
 
-    rm -fv "$target" | _details
-
-    rm -fv "$PREBUILTS/bin/$target" | _details
+    while read -r file; do
+        rm -fv "$file" | _details_escape
+    done < <( find . -name "$target" -printf '%P\n' )
 }
 
 # fetch package
@@ -464,7 +469,7 @@ invoke() {
             list
             ;;
         search)
-            search "${*:2}"
+            search "${@:2}"
             ;;
         install)
             for x in "${@:2}"; do
