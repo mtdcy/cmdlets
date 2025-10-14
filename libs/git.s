@@ -70,7 +70,7 @@ libs_build() {
         # core utils
         git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
-        git-http-backend git-http-fetch git-http-push git-remote-http git-remote-ftp
+        git-http-backend git-http-fetch git-http-push 
         # submodule
         git-submodule
         # mail
@@ -90,11 +90,15 @@ libs_build() {
         cmdlet "./$x" || return 3
     done
 
-    # merge sh cmds
-    sed '/git-sh-i18n/d' git-sh-setup    > git-sh-setup-new
-    set "s%$PREFIX%/usr%g" git-sh-i18n  >> git-sh-setup-new
+    # specials
+    cmdlet ./git-remote-http git-remote-http git-remote-https &&
+    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps &&
 
-    cmdlet ./git-sh-setup-new git-sh-setup
+    # merge sh cmds
+    sed '/git-sh-i18n/d' git-sh-setup    > git-sh-setup-new &&
+    set "s%$PREFIX%/usr%g" git-sh-i18n  >> git-sh-setup-new &&
+
+    cmdlet ./git-sh-setup-new git-sh-setup &&
 
     #inspect make install
 
