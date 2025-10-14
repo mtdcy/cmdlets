@@ -67,9 +67,14 @@ jobs:
           rm -rf prebuilts
 
           # v3: versioned pkgfile
-          cmdlets.sh install bash@3.2:bash
-          ./bash --version | grep -w "3.2"
-          rm -rf bash@3.2 bash prebuilts
+          latest=5.3
+          versioned() {
+            cmdlets.sh install $1@${2:-$latest}:$1
+            ./$1 --version | grep -w "${2:-$latest}" || return 1
+          }
+          versioned bash 3.2
+          versioned bash 4.4
+          versioned bash
 
       - name: Notify on failure
         if: ${{ failure() && vars.NOTIFY_WEBHOOK != '' }}
