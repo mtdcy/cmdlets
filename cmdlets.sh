@@ -297,13 +297,13 @@ fetch() {
                     done
                 elif test -s "$TEMPDIR/files"; then
                     info "== Install target(s)"
+                    local width=$(wc -L < "$TEMPDIR/files")
+
                     while read -r file; do
                         file="$PREBUILTS/$file"
-                        if test -L "$file"; then
-                            ln -sfv "$(readlink "$file")" "$(basename "$file")" | _details_escape
-                        else
-                            ln -sfv "$file"               "$(basename "$file")" | _details_escape
-                        fi
+                        local target="$(basename "$file")"
+                        printf "%${width}s -> %s\n" "$target" "$file"
+                        ln -sf "$file" "$target"
                     done < "$TEMPDIR/files"
                 fi
 
