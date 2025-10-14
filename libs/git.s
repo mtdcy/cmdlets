@@ -66,7 +66,7 @@ libs_build() {
     # standalone cmds
     local cmds=(
         # basic
-        git git-shell git-sh-setup git-sh-i18n
+        git git-shell
         # core utils
         git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
@@ -89,6 +89,12 @@ libs_build() {
     for x in "${cmds[@]}"; do
         cmdlet "./$x" || return 3
     done
+
+    # merge sh cmds
+    sed '/git-sh-i18n/d' git-sh-setup    > git-sh-setup-new
+    set "s%$PREFIX%/usr%g" git-sh-i18n  >> git-sh-setup-new
+
+    cmdlet ./git-sh-setup-new git-sh-setup
 
     #inspect make install
 
