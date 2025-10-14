@@ -300,11 +300,14 @@ fetch() {
                     local width=$(wc -L < "$TEMPDIR/files")
 
                     while read -r file; do
-                        file="$PREBUILTS/$file"
-                        local target="$(basename "$file")"
-                        printf "%${width}s -> %s\n" "$target" "$file"
-                        ln -sf "$file" "$target"
-                    done < "$TEMPDIR/files"
+                        if test -L "$file"; then
+                            printf "%${width}s -> %s\n" "$(basename "$file")" "$(readlink "$file")"
+                            mv -f "$file" .
+                        else
+                            printf "%${width}s -> %s\n" "$(basename "$file")" "$file"
+                            ln -sf "$file" .
+                        fi
+                    done < <(cat "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%")
                 fi
 
                 shift 1
