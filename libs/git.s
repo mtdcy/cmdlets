@@ -75,7 +75,7 @@ libs_build() {
     # standalone cmds
     local cmds=(
         # basic
-        git git-shell
+        git git-shell git-sh-setup git-sh-i18n
         # core utils
         git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
@@ -102,12 +102,6 @@ libs_build() {
     # specials
     cmdlet ./git-remote-http git-remote-http git-remote-https &&
     cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
-
-    # merge sh cmds
-    sed '/git-sh-i18n/d'    git-sh-setup > git-sh-setup-new   &&
-    set "s%$PREFIX%/usr%g"  git-sh-i18n >> git-sh-setup-new   &&
-
-    cmdlet ./git-sh-setup-new git-sh-setup                    &&
 
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-*                             &&
