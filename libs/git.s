@@ -53,7 +53,7 @@ is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 #
 # exec-cmd.c:setup_path => GIT_EXEC_PATH > PATH
 # => disable libexec and use PATH instead
-libs_args+=( gitexecdir='/git-no-libexec' )
+libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
     #make configure && configure || return 1
@@ -66,11 +66,11 @@ libs_build() {
     # standalone cmds
     local cmds=(
         # basic
-        git git-shell git-sh-setup git-sh-i18n
+        git git-shell
         # core utils
         git-cvsserver git-receive-pack git-upload-pack git-upload-archive
         # http & https
-        git-http-backend git-http-fetch git-http-push git-remote-http git-remote-ftp
+        git-http-backend git-http-fetch git-http-push 
         # submodule
         git-submodule
         # mail
@@ -90,7 +90,18 @@ libs_build() {
         cmdlet "./$x" || return 3
     done
 
-    #inspect make install
+    # specials
+    cmdlet ./git-remote-http git-remote-http git-remote-https &&
+    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
+
+    # merge sh cmds
+    sed '/git-sh-i18n/d'    git-sh-setup > git-sh-setup-new   &&
+    set "s%$PREFIX%/usr%g"  git-sh-i18n >> git-sh-setup-new   &&
+
+    cmdlet ./git-sh-setup-new git-sh-setup                    &&
+
+    # pack all git tools into one pkgfile
+    pkgfile git bin/git bin/git-*                             &&
 
     check git --version
 }
