@@ -34,9 +34,12 @@ if test -n "$*"; then
     IFS=', ' read -r -a cmdlets <<< "$@"
 else
     while read -r line; do
-        IFS='/.' read -r _ ulib _ <<< "$line"
-        [[ "$ulib" =~ ^[\.@_] ]] && continue # ignored files
-        cmdlets+=( "$ulib" )
+        # file been deleted or renamed
+        test -f "$line" || continue
+
+        IFS='/.' read -r _ libs _ <<< "$line"
+
+        [[ "$libs" =~ ^[\.@_] ]] || cmdlets+=( "$libs" )
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
 fi
 

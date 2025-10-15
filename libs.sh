@@ -282,7 +282,7 @@ _init() {
             -fdata-sections
         )
 
-        LDFLAGS="-L$PREFIX/lib -static"
+        LDFLAGS="-L$PREFIX/lib -static -static-libstdc++ -static-libgcc"
 
         # remove unused sections, need -ffunction-sections and -fdata-sections
         LDFLAGS+=" -Wl,-gc-sections"
@@ -673,6 +673,9 @@ inspect() {
 
     slogcmd "$@" || return $?
 
+    # remove libtool *.la files
+    find "$PREFIX/lib" -name "*.la" -exec rm -f {} \;
+
     find "$PREFIX" > "$libs_name.pack.post"
 
     # diff returns 1 if differences found
@@ -791,9 +794,9 @@ check() {
 
     local bin="$1"
 
-    test -x "$bin" || bin="$PREFIX/bin/$1"
+    test -f "$bin" || bin="$PREFIX/bin/$1"
 
-    test -x "$bin" || {
+    test -f "$bin" || {
         slogf "CHECK" "cann't find $1"
     }
 
@@ -808,13 +811,13 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            ldd "$bin"
+            echocmd ldd "$bin"
             slogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
-        otool -L "$bin" # | grep -v "libSystem.*"
+        echocmd otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
-        ntldd "$bin"
+        echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
     fi

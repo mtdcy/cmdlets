@@ -215,7 +215,6 @@ _search() {
     options=( "${@:2}" )
     test -n "${options[*]}" || options=( --pkgfile --pkgname )
 
-    set -x
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
