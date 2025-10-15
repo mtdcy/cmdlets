@@ -13,24 +13,19 @@ is_darwin && libs_patches=(
 
 # configure args
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    -DENABLE_DECODER=ON
+    -DENABLE_ENCODER=OFF
 
-    --disable-sherlock265
-    --enable-dec265         # needs sdl2
-   
-    # static
-    --disable-shared
-    --enable-static
+    -DENABLE_SDL=ON
+
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
-    if is_darwin && is_arm64; then
-        libs_args+=( --build=aarch64-apple-darwin )
-    fi
 
-    configure && make || return 1
+    mkdir -p build && cd build 
+
+    cmake .. &&
 
     inspect make install &&
 
