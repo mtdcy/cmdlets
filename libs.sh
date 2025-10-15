@@ -791,9 +791,9 @@ check() {
 
     local bin="$1"
 
-    test -x "$bin" || bin="$PREFIX/bin/$1"
+    test -f "$bin" || bin="$PREFIX/bin/$1"
 
-    test -x "$bin" || {
+    test -f "$bin" || {
         slogf "CHECK" "cann't find $1"
     }
 
@@ -808,13 +808,13 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            ldd "$bin"
+            echocmd ldd "$bin"
             slogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
-        otool -L "$bin" # | grep -v "libSystem.*"
+        echocmd otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
-        ntldd "$bin"
+        echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
     fi
