@@ -4,7 +4,7 @@
 libs_ver=0.21.4
 libs_url=https://www.libraw.org/data/LibRaw-$libs_ver.tar.gz
 libs_sha=6be43f19397e43214ff56aab056bf3ff4925ca14012ce5a1538a172406a09e63
-libs_dep=( zlib turbojpeg )
+libs_dep=( zlib turbojpeg jasper )
 
 # configure args
 libs_args=(
@@ -14,10 +14,10 @@ libs_args=(
 
     --enable-jpeg
     --enable-zlib
+    --enable-jasper     # jpeg2000
 
     # not ready
     --disable-lcms      # color management
-    --disable-jasper    # jpeg2000
     --disable-openmp
 
     --disable-examples
