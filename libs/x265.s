@@ -16,6 +16,12 @@ is_darwin || arm64_args=(
     -DENABLE_SVE2=OFF
 )
 
+# cmake 4 workaround, from homebrew
+libs_patches=(
+    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04014e200a1ee9c45c167
+    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4710812072289af91492a8
+)
+
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
 libs_build() {
