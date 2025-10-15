@@ -18,7 +18,7 @@ libs_args=(
     --disable-dependency-tracking
 
     --disable-sherlock265
-    --enable-dec265         # needs sdl2
+    --disable-dec265         # needs sdl2
    
     # static
     --disable-shared
@@ -29,6 +29,11 @@ libs_build() {
     if is_darwin && is_arm64; then
         libs_args+=( --build=aarch64-apple-darwin )
     fi
+    
+    is_darwin || export CXXFLAGS+=" -static-libstdc++"
+
+    # no tools
+    sed -i '/SUBDIRS+=tools/d' Makefile.am
 
     configure && make || return 1
 
@@ -37,12 +42,13 @@ libs_build() {
     pkgfile libde265                  \
             include/libde265          \
             lib/libde265.a            \
-            lib/pkgconfig/libde265.pc \
-            &&
+            lib/pkgconfig/libde265.pc
 
-    cmdlet  ./dec265/dec265 &&
+    # FIXME: can not find where is wrong
+    #  attempted static link of dynamic object `.../libstdc++.so'
+    #cmdlet  ./dec265/dec265 &&
 
-    check dec265 --version
+    #check dec265 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
