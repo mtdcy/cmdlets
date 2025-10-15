@@ -4,7 +4,7 @@
 libs_ver=7.1.2-5
 libs_url=https://imagemagick.org/archive/releases/ImageMagick-$libs_ver.tar.xz
 libs_sha=3f8a2ef3744a704edec90734106107a6f4548e65a30d91d4dedce4c17c6f9e75
-libs_dep=( freetype libraw libjpeg-turbo jasper png tiff openjpeg webp libheif xz bzip2 libxml2 zlib )
+libs_dep=( freetype libraw libjpeg-turbo openjpeg png tiff webp libheif xz bzip2 libxml2 zlib )
 
 # configure args
 libs_args=(
@@ -15,20 +15,25 @@ libs_args=(
     --disable-opencl
 
     --with-freetype=yes
-    --with-gvc=no
+
+    --with-jpeg         # JPEG
+    --with-openjp2      # JPEG 2000
+    --with-heic         # HEIF
+    --with-png
+    --with-tiff
+    --with-webp
+    --with-raw
+
     --with-modules
-    --with-openjp2
-    --with-jpeg=yes
-    --with-webp=yes
-    --with-heic=yes
-    --with-raw=yes
-    --with-zip=yes
+    --with-zip
     --with-lqr
     
     #--with-gs-font-dir=#{HOMEBREW_PREFIX}/share/ghostscript/fonts
 
+    # disabled features
     --without-fontconfig
-    --without-jxl   # jpeg-xl
+    --without-gvc
+    --without-jxl       # jpeg-xl
     --without-gslib
     --without-openexr
     --without-djvu
