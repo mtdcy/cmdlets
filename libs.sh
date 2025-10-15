@@ -282,7 +282,7 @@ _init() {
             -fdata-sections
         )
 
-        LDFLAGS="-L$PREFIX/lib -static"
+        LDFLAGS="-L$PREFIX/lib -static -static-libstdc++ -static-libgcc"
 
         # remove unused sections, need -ffunction-sections and -fdata-sections
         LDFLAGS+=" -Wl,-gc-sections"
