@@ -29,6 +29,7 @@ libs_args=(
     --with-modules
     --with-zip
     --with-lqr
+    --enable-openmp     # openmp is not ready for macOS
     
     #--with-gs-font-dir=#{HOMEBREW_PREFIX}/share/ghostscript/fonts
 
@@ -44,8 +45,6 @@ libs_args=(
     --without-wmf
     --without-x
 
-    # openmp not ready
-    --disable-openmp
     --disable-docs
 
     --disable-shared
