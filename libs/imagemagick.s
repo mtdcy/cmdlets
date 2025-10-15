@@ -4,7 +4,7 @@
 libs_ver=7.1.2-5
 libs_url=https://imagemagick.org/archive/releases/ImageMagick-$libs_ver.tar.xz
 libs_sha=3f8a2ef3744a704edec90734106107a6f4548e65a30d91d4dedce4c17c6f9e75
-libs_dep=( freetype libraw turbojpeg jasper png tiff openjpeg webp libheif xz bzip2 libxml2 zlib )
+libs_dep=( freetype libraw libjpeg-turbo jasper png tiff openjpeg webp libheif xz bzip2 libxml2 zlib )
 
 # configure args
 libs_args=(

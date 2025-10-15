@@ -16,12 +16,20 @@ libs_args=(
 )
 
 libs_build() {
-    cmake . && 
+    # https://github.com/libjpeg-turbo/libjpeg-turbo/issues/709 <= homebrew
+    if is_darwin && is_arm64; then
+        libs_args+=(
+            -DFLOATTEST8=fp-contract
+            -DFLOATTEST12=fp-contract
+        )
+    fi
 
-    make && 
+    cmake . && make || return 1
 
-    library turbojpeg \
-            include     turbojpeg.h jpeglib.h jconfig.h jerror.h jmorecfg.h \
+    inspect make install &&
+
+    library libjpeg-turbo \
+            include     libjpeg-turbo.h jpeglib.h jconfig.h jerror.h jmorecfg.h \
             lib         *.a \
             lib/pkgconfig  pkgscripts/*.pc &&
 

@@ -4,7 +4,7 @@
 libs_ver=4.2.8
 libs_url=https://github.com/jasper-software/jasper/releases/download/version-$libs_ver/jasper-$libs_ver.tar.gz
 libs_sha=98058a94fbff57ec6e31dcaec37290589de0ba6f47c966f92654681a56c71fae
-libs_dep=( turbojpeg )
+libs_dep=( libjpeg-turbo )
 
 # configure args
 libs_args=(

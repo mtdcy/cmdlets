@@ -4,7 +4,7 @@
 libs_ver=1.20.2
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
 libs_sha=68ac9084243004e0ef3633f184eeae85d615fe7e4444373a0a21cebccae9d12a
-libs_dep=( turbojpeg png tiff webp x265 libde265 )
+libs_dep=( openjpeg png tiff webp x265 libde265 )
 
 # configure args
 libs_args=(
@@ -43,6 +43,7 @@ libs_args=(
 )
 
 libs_build() {
+    rm -f static || true
     mkdir -p static && cd static
 
     cmake .. && make || return 1
