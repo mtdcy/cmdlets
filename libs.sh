@@ -673,6 +673,9 @@ inspect() {
 
     slogcmd "$@" || return $?
 
+    # remove libtool *.la files
+    find "$PREFIX/lib" -name "*.la" -exec rm -f {} \;
+
     find "$PREFIX" > "$libs_name.pack.post"
 
     # diff returns 1 if differences found
