@@ -15,7 +15,7 @@ libs_args=(
     --enable-jpeg
     --enable-zlib
     --enable-lcms      # color management
-    #--enable-openmp
+    --enable-openmp
 
     # prefer openjpeg
     --disable-jasper     # JPEG-2000
