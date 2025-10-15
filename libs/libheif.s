@@ -41,6 +41,8 @@ libs_args=(
 
     # static
     -DBUILD_SHARED_LIBS=OFF
+
+    -DENABLE_PLUGIN_LOADING=OFF
 )
 
 libs_build() {
