@@ -15,12 +15,10 @@ libs_args=(
     --enable-jpeg
     --enable-zlib
     --enable-lcms      # color management
+    #--enable-openmp
 
     # prefer openjpeg
     --disable-jasper     # JPEG-2000
-
-    # not ready
-    --disable-openmp
 
     --disable-examples
     --disable-docs
