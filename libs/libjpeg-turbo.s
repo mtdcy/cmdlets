@@ -1,4 +1,5 @@
 # JPEG image codec that aids compression and decompression
+# conflicts with jpeg (https://www.ijg.org)
 #
 # shellcheck disable=SC2034
 
@@ -28,13 +29,20 @@ libs_build() {
 
     inspect make install &&
 
-    library libjpeg-turbo \
-            include     libjpeg-turbo.h jpeglib.h jconfig.h jerror.h jmorecfg.h \
-            lib         *.a \
-            lib/pkgconfig  pkgscripts/*.pc &&
+    pkgfile libturbojpeg                                   \
+        include/turbojpeg.h                                \
+        include/{jpeglib.sh,jerror.h,jconfig.h,jmorecfg.h} \
+        lib/{libturbojpeg.a,libjpeg.a}                     \
+        lib/pkgconfig/{libturbojpeg.pc,libjpeg.pc}         \
+        lib/cmake/libjpeg-turbo                            \
+        &&
 
-    cmdlet  cjpeg-static cjpeg &&
-    cmdlet  djpeg-static djpeg &&
+    cmdlet  cjpeg-static cjpeg       &&
+    cmdlet  djpeg-static djpeg       &&
+    cmdlet  jpegtran-static jpegtran &&
+    cmdlet  tjbench-static tjbench   &&
+    cmdlet  wrjpgcom                 &&
+    cmdlet  rdjpgcom                 &&
 
     check   cjpeg -version
 }
