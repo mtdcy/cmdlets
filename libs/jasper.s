@@ -8,8 +8,11 @@ libs_dep=( libjpeg-turbo )
 
 # configure args
 libs_args=(
+    # disable extra dependencies
+    -DJAS_ENABLE_LIBHEIF=OFF
+
     -DJAS_ENABLE_DOC=OFF
-    -DJAS_ENABLE_AUTOMATIC_DEPENDENCIES=OFF
+    -DJAS_ENABLE_LATEX=OFF
 
     -DJAS_ENABLE_SHARED=OFF
 
