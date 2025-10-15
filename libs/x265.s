@@ -8,15 +8,28 @@ libs_sha=a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29
 
 HIGH_BIT_DEPTH=0
 
-is_darwin || arm64_args=(
-    -DENABLE_NEON=ON 
-    -DENABLE_NEON_DOTPROD=OFF
-    -DENABLE_NEON_I8MM=OFF
-    -DENABLE_SVE=OFF
-    -DENABLE_SVE2=OFF
-)
+if is_arm64; then
+    asm_args=( -DENABLE_ASSEMBLY=ON )
+
+    is_darwin || asm_args+=(
+        -DENABLE_ASSEMBLY=ON
+        -DENABLE_NEON=ON 
+        -DENABLE_NEON_DOTPROD=OFF
+        -DENABLE_NEON_I8MM=OFF
+        -DENABLE_SVE=ON
+    )
+
+    # homebrew set this for linux aarch64
+    is_linux && asm_args+=( -DENABLE_SVE2=OFF )
+else
+    asm_args=(
+        # https://bitbucket.org/multicoreware/x265_git/issues/559
+        -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
+    )
+fi
 
 # cmake 4 workaround, from homebrew
+# report AppleClang as Clang
 libs_patches=(
     https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04014e200a1ee9c45c167
     https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4710812072289af91492a8
@@ -25,19 +38,16 @@ libs_patches=(
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
 libs_build() {
-    # report AppleClang as Clang
-    sed -r '/cmake_policy.*(0025|0054)/d' -i source/CMakeLists.txt
-
-    is_darwin || export LDFLAGS+=" -static-libstdc++"
+    # -static-libstdc++: force static libstdc++.a
+    # -Wl,-Bsymbolic: fix relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol `x265_entropyStateBits'
+    is_darwin || export LDFLAGS+=" -static-libstdc++ -Wl,-Bsymbolic"
 
     main_args=(
         -DEXTRA_LINK_FLAGS=-L.
         -DENABLE_SHARED=OFF
-        # https://bitbucket.org/multicoreware/x265_git/issues/559
-        -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+        "${asm_args[@]}"
     )
-
-    is_arm64 && main_args+=( "${arm64_args[@]}" )
 
     # build high bits always as static
     mkdir -pv {8bit,10bit,12bit}
@@ -54,12 +64,12 @@ libs_build() {
             -DEXPORT_C_API=OFF
             -DENABLE_CLI=OFF
             -DENABLE_SHARED=OFF
-            # https://bitbucket.org/multicoreware/x265_git/issues/559
-            -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy
+            "${asm_args[@]}"
+        )
+
+        is_arm64 || high_args+=(
         )
     
-        is_arm64 && high_args+=( "${arm64_args[@]}" )
-
         # 12 bit
         (
             cd 12bit
@@ -103,6 +113,8 @@ EOF
     sed -i 's/-lgcc_s//g' x265.pc &&
 
     library libx265 x265_config.h ../source/x265.h libx265.a x265.pc
+
+    inspect make install
 
     # FIXME: we have problem to compile a static x265 executable
 }
