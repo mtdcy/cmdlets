@@ -37,7 +37,9 @@ libs_build() {
     cmdlet  ./utils/linkicc/linkicc   &&
     cmdlet  ./utils/transicc/transicc &&
     cmdlet  ./utils/psicc/psicc       &&
-    cmdlet  ./utils/jpgicc/jpgicc     &&
+
+    # install: cannot stat './utils/jpgicc/jpgicc': No such file or directory
+    #cmdlet  ./utils/jpgicc/jpgicc     &&
 
     check linkicc --version
 }
