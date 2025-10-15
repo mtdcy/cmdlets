@@ -64,7 +64,12 @@ if is_darwin; then
 fi
 
 libs_build() {
-    configure && make || return 1
+    # `-all-static' for libtool as -static/-static-libstdc++ not working for libtool
+    export AM_CXXFLAGS=" -all-static"
+
+    configure &&
+
+    make &&
 
     cmdlet ./utilities/magick &&
 
