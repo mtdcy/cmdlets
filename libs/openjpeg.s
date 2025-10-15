@@ -5,24 +5,28 @@
 libs_ver=2.5.4
 libs_url=https://github.com/uclouvain/openjpeg/archive/v$libs_ver.tar.gz
 libs_sha=a695fbe19c0165f295a8531b1e4e855cd94d0875d2f88ec4b61080677e27188a
+libs_dep=( )
 
 libs_args=(
     -DBUILD_SHARED_LIBS=OFF
     -DBUILD_STATIC_LIBS=ON
+
+    -DBUILD_DOC=OFF
+
     # no applications
     -DBUILD_CODEC=OFF
 )
 
 libs_build() {
-    cmake . && 
+    cmake . && make || return 1
 
-    make && 
+    inspect make install 
 
-    library openjp2 \
-        include/openjpeg-${libs_ver%.*} src/lib/openjp2/openjpeg.h src/lib/openjp2/opj_config.h \
-        lib bin/libopenjp2.a \
-        lib/pkgconfig libopenjp2.pc  \
-        lib/cmake/openjpeg-${libs_ver%.*} *.cmake
+    pkgfile libopenjp2                        \
+            include/openjpeg-${libs_ver%.*}   \
+            lib/libopenjp2.a                  \
+            lib/cmake/openjpeg-${libs_ver%.*} \
+            lib/pkgconfig/libopenjp2.pc
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
