@@ -1,9 +1,9 @@
 # Tools and libraries to manipulate images in many formats
 
 # shellcheck disable=SC2034
-libs_ver=7.1.2-5
-libs_url=https://imagemagick.org/archive/releases/ImageMagick-$libs_ver.tar.xz
-libs_sha=3f8a2ef3744a704edec90734106107a6f4548e65a30d91d4dedce4c17c6f9e75
+libs_ver=7.1.2-7
+libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
+libs_sha=d532c7be0b4fbd17d03ef311f55ad8a4845c63cb74f8725320b7d3d3c6a7a4f7
 libs_dep=( freetype libraw libjpeg-turbo openjpeg png libtiff webp libheif xz bzip2 libxml2 zlib lcms2 )
 
 # configure args
@@ -65,7 +65,7 @@ fi
 
 libs_build() {
     # `-all-static' for libtool as -static/-static-libstdc++ not working for libtool
-    export AM_CXXFLAGS=" -all-static"
+    export utilities_magick_LDFLAGS=" -all-static"
 
     configure &&
 
