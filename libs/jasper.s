@@ -16,6 +16,9 @@ libs_args=(
 
     -DJAS_ENABLE_SHARED=OFF
 
+    # static
+    -DBUILD_SHARED_LIBS=OFF
+
     -DALLOW_IN_SOURCE_BUILD=ON
 )
 
@@ -44,12 +47,16 @@ libs_build() {
             lib/pkgconfig/jasper.pc \
             &&
 
-    cmdlet ./src/app/jiv     &&
+    # opengl
+    if is_darwin; then
+        cmdlet ./src/app/jiv || return 2
+    fi
+
     cmdlet ./src/app/jasper  &&
     cmdlet ./src/app/imginfo &&
     cmdlet ./src/app/imgcmp  &&
 
-    check  jiv --version
+    check  jasper --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
