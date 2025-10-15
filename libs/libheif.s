@@ -4,18 +4,19 @@
 libs_ver=1.20.2
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
 libs_sha=68ac9084243004e0ef3633f184eeae85d615fe7e4444373a0a21cebccae9d12a
-libs_dep=( openjpeg png tiff webp x265 libde265 )
+libs_dep=( libjpeg-turbo openjpeg png tiff webp x265 libde265 )
 
 # configure args
 libs_args=(
-    # h265 
-    -DWITH_X265=ON      # h265 encoder
-    -DWITH_LIBDE265=ON  # h265 decoder
+    # h265 decode & encode
+    -DWITH_X265=ON          # h265 encoder
+    -DWITH_LIBDE265=ON      # h265 decoder
     -DWITH_KVAZAAR=OFF
 
     # jpeg
-    -DWITH_OpenJPEG_DECODER=OFF
-    -DWITH_JPEG_DECODER=OFF
+    -DWITH_JPEG_DECODER=ON      # libjpeg decode
+    -DWITH_JPEG_ENCODER=ON      # libjpeg encode
+    -DWITH_OpenJPEG_DECODER=ON  # JPEG 2000 decode
 
     # h264
     -DWITH_OpenH264_DECODER=OFF
