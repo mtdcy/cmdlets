@@ -4,7 +4,7 @@
 libs_ver=7.1.2-5
 libs_url=https://imagemagick.org/archive/releases/ImageMagick-$libs_ver.tar.xz
 libs_sha=3f8a2ef3744a704edec90734106107a6f4548e65a30d91d4dedce4c17c6f9e75
-libs_dep=( freetype libraw libjpeg-turbo openjpeg png libtiff webp libheif xz bzip2 libxml2 zlib )
+libs_dep=( freetype libraw libjpeg-turbo openjpeg png libtiff webp libheif xz bzip2 libxml2 zlib lcms2 )
 
 # configure args
 libs_args=(
@@ -23,6 +23,8 @@ libs_args=(
     --with-tiff
     --with-webp
     --with-raw
+    
+    --with-lcms
 
     --with-modules
     --with-zip
@@ -40,7 +42,6 @@ libs_args=(
     --without-fftw
     --without-pango
     --without-wmf
-    --without-lcms
     --without-x
 
     # openmp not ready
