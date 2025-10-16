@@ -638,6 +638,24 @@ pkgfile() {
     IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
     slogi ".Pack" "$1 < ${files[@]}"
 
+    # preprocessing installed files
+    for x in "${files[@]}"; do
+        case "$x" in
+            *.a)
+                "$STRIP" --strip-unneeded "$x"
+                "$RANLIB" "$x"
+                ;;
+            *.pc)
+                sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
+                    -e "s%$PREFIX%\${prefix}%g"             \
+                    -i "$x"
+                ;;
+            bin/*)
+                "$STRIP" -strip-all "$x"
+                ;;
+        esac
+    done
+
     # name contains version code?
     local name version
     IFS='@' read -r name version <<< "$1"
