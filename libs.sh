@@ -433,25 +433,35 @@ cmake() {
 }
 
 meson() {
-    local cmdline=( "$MESON" "$(_filter_targets "$@")" )
+    local cmdline=( "$MESON" )
 
-    # meson
-    # builtin options: https://mesonbuild.com/Builtin-options.html
-    #  libdir: some package prefer install to lib/<machine>/
-    cmdline+=(
-        -Dprefix="'$PREFIX'"
-        -Dlibdir=lib
-        -Dbuildtype=release
-        -Ddefault_library=static
-        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+    # global args < meson configure
+    args=(
     )
 
-    ## meson >= 0.37.0
-    #IFS='.' read -r _ ver _ < <($MESON --version)
-    #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+    case "$1" in
+        setup)
+            # meson builtin options: https://mesonbuild.com/Builtin-options.html
+            #  libdir: some package prefer install to lib/<machine>/
+            args+=(
+                -Dprefix="'$PREFIX'"
+                -Dlibdir=lib
+                -Dbuildtype=release
+                -Ddefault_library=static
+                -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+            )
 
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$(_filter_options "$@")" )
+            ## meson >= 0.37.0
+            #IFS='.' read -r _ ver _ < <($MESON --version)
+            #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+
+            # append user args
+            cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            ;;
+        *)
+            cmdline+=( "$1" "${args[@]}" "${@:2}" )
+            ;;
+    esac
 
     slogcmd "${cmdline[@]}"
 }
@@ -606,9 +616,45 @@ TAR="$(which gtar 2>/dev/null || which tar)"
 
 # pkgfile name <file or directories list>
 pkgfile() {
-    pushd "$PREFIX"
+    local files
+    if [ "$2" = "--" ]; then
+        # install with DESTDIR to get file list
+        export DESTDIR=$(pwd -P)/DESTDIR
+        eval -- "${@:3}" || return 1
+        # no libtool *.la files
+        find DESTDIR -name "*.la" -exec rm -f {} \;
+        IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
+        rm -rf DESTDIR
+        unset DESTDIR
 
-    mkdir -pv "$libs_name"
+        # do a real install
+        eval -- "${@:3}"
+    else
+        IFS=' ' read -r -a files <<< "${@:2}"
+    fi
+    
+    pushd "$PREFIX" && mkdir -pv "$libs_name"
+    
+    IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
+    slogi ".Pack" "$1 < ${files[@]}"
+
+    # preprocessing installed files
+    for x in "${files[@]}"; do
+        case "$x" in
+            *.a)
+                "$STRIP" --strip-unneeded "$x"
+                "$RANLIB" "$x"
+                ;;
+            *.pc)
+                sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
+                    -e "s%$PREFIX%\${prefix}%g"             \
+                    -i "$x"
+                ;;
+            bin/*)
+                "$STRIP" -strip-all "$x"
+                ;;
+        esac
+    done
 
     # name contains version code?
     local name version
@@ -622,13 +668,6 @@ pkgfile() {
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
-
-    slogi ".Pack" "$pkgfile < ${*:2}"
-
-    local files
-
-    # shellcheck disable=SC2001
-    IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
 
     echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
 
@@ -656,9 +695,6 @@ pkgfile() {
     fi
 
     # v3/manifest: name pkgfile sha
-    touch "cmdlets.manifest"
-    # clear full versioned records
-    sed -i "\#^$name $libs_name/$name@$libs_ver\.#d" cmdlets.manifest
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
@@ -722,6 +758,7 @@ _fix_pc() {
 #         share           yyy      \
 #         share/man       zzz
 library() {
+    echo "WARNING: library() is deprecated, please use pkgfile() instead" > $(_logfile)
     slogi ".Inst" "$1 < ${*:2}"
 
     local name alias subdir installed
@@ -1074,9 +1111,6 @@ compile() {(
         return 0
     fi
 
-    # clear
-    find "$PREFIX/$libs_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
-
     # prepare work dir
     mkdir -p "$PREFIX"
     mkdir -p "$(dirname "$(_logfile)")"
@@ -1092,8 +1126,17 @@ compile() {(
 
     slogi ".Path" "$PWD"
 
+    _prepare || exit $?
+
+    # clear pkginfo
+    rm -rf "$PREFIX/$libs_name"
+
+    # clear manifest
+    touch "$PREFIX/cmdlets.manifest"
+    sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+
     # build library
-    _prepare && libs_build || {
+    libs_build || {
         sleep 1 # let _capture() finish
 
         local logfile="$(_logfile)"

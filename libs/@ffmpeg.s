@@ -9,7 +9,7 @@ libs_dep=(
     # audio libs
     soxr lame ogg vorbis opus
     # image libs
-    png giflib libjpeg-turbo libtiff webp openjpeg
+    libpng giflib libjpeg-turbo libtiff webp openjpeg
     # video libs
     #zimg 
     theora vpx
