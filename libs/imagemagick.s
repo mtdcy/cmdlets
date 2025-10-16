@@ -4,7 +4,7 @@
 libs_ver=7.1.2-7
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=d532c7be0b4fbd17d03ef311f55ad8a4845c63cb74f8725320b7d3d3c6a7a4f7
-libs_dep=( freetype libraw libjpeg-turbo openjpeg libpng libtiff webp libheif xz bzip2 libxml2 zlib lcms2 liblqr )
+libs_dep=( freetype libraw libjpeg-turbo openjpeg libpng libtiff webp libheif xz bzip2 libxml2 zlib lcms2 liblqr imath )
 
 # configure args
 libs_args=(
