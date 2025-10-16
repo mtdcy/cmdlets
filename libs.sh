@@ -423,6 +423,7 @@ cmake() {
         -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
         -DCMAKE_PREFIX_PATH="'$PREFIX'"
         -DCMAKE_MAKE_PROGRAM="'$MAKE'"
+        -DCMAKE_VERBOSE_MAKEFILE=ON
     )
     # cmake using a mixed path style with MSYS Makefiles, why???
     is_msys && cmdline+=( -G"'MSYS Makefiles'" )
@@ -640,10 +641,11 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
+        test -e "$x" || ulogf "$x not exists"
         case "$x" in
             *.a)
-                "$STRIP" --strip-unneeded "$x"
-                "$RANLIB" "$x"
+                echocmd "$STRIP" --strip-unneeded "$x"
+                echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
                 sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
@@ -651,7 +653,7 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                "$STRIP" -strip-all "$x"
+                test -f "$x" && echocmd "$STRIP" --strip-all "$x" || true
                 ;;
         esac
     done
@@ -722,13 +724,9 @@ inspect() {
 cmdlet() {
     slogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
 
-    # strip or not ?
-    local args=( -v )
-    file "$1" | grep -qFw 'not stripped' && args+=( -s )
-
     local target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    echocmd "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
+    echocmd "$INSTALL" -v -m755 "$1" "$target" || return 1
 
     local alias=()
     for x in "${@:3}"; do
@@ -1268,8 +1266,8 @@ search() {
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
             # TODO: add a sanity check here
         fi
 
@@ -1277,8 +1275,8 @@ search() {
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
             # TODO: add a sanity check here
         fi
     done

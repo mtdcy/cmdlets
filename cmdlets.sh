@@ -121,6 +121,9 @@ _unzip() (
     test -f "$1" || _curl "$1" || return 1
     
     tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | tee -a "$TEMPDIR/files" | _details
+
+    # remove libtool archive files
+    find "$PREBUILTS/lib" -name "*.la" -exec rm -rf {} \;
 )
 
 # cmdlet v1

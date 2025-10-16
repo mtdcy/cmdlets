@@ -35,12 +35,9 @@ libs_build() {
 
     configure && make || return 1
 
-    inspect make install
+    #inspect make install
 
-    pkgfile libfreetype2               \
-            include/freetype2          \
-            lib/libfreetype2.a         \
-            lib/pkgconfig/freetype2.pc
+    pkgfile libfreetype2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
