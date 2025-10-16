@@ -722,6 +722,7 @@ _fix_pc() {
 #         share           yyy      \
 #         share/man       zzz
 library() {
+    echo "WARNING: library() is deprecated, please use pkgfile() instead" > $(_logfile)
     slogi ".Inst" "$1 < ${*:2}"
 
     local name alias subdir installed
