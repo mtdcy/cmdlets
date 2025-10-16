@@ -610,6 +610,7 @@ pkgfile() {
     if [ "$2" = "--" ]; then
         # install with DESTDIR to get file list
         eval -- "${@:3}" DESTDIR=$(pwd -P)/DESTDIR || return 1
+        find DESTDIR -name "*.la" -exec rm -f {} \;
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
 
