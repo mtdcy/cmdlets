@@ -14,13 +14,9 @@ libs_args=(
 )
 
 libs_build() {
-    rm -fv CMakeLists.txt || true
-    configure && make && make check &&
+    configure && make && make check || return $?
 
-    library fdk-aac \
-        include/fdk-aac libSYS/include/*.h libAACdec/include/*.h libAACenc/include/*.h \
-        lib .libs/*.a \
-        lib/pkgconfig fdk-aac.pc
+    pkgfile libfdk-aac -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
