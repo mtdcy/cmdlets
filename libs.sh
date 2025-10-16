@@ -433,25 +433,35 @@ cmake() {
 }
 
 meson() {
-    local cmdline=( "$MESON" "$(_filter_targets "$@")" )
+    local cmdline=( "$MESON" )
 
-    # meson
-    # builtin options: https://mesonbuild.com/Builtin-options.html
-    #  libdir: some package prefer install to lib/<machine>/
-    cmdline+=(
-        -Dprefix="'$PREFIX'"
-        -Dlibdir=lib
-        -Dbuildtype=release
-        -Ddefault_library=static
-        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+    # global args < meson configure
+    args=(
     )
 
-    ## meson >= 0.37.0
-    #IFS='.' read -r _ ver _ < <($MESON --version)
-    #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+    case "$1" in
+        setup)
+            # meson builtin options: https://mesonbuild.com/Builtin-options.html
+            #  libdir: some package prefer install to lib/<machine>/
+            args+=(
+                -Dprefix="'$PREFIX'"
+                -Dlibdir=lib
+                -Dbuildtype=release
+                -Ddefault_library=static
+                -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+            )
 
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$(_filter_options "$@")" )
+            ## meson >= 0.37.0
+            #IFS='.' read -r _ ver _ < <($MESON --version)
+            #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+
+            # append user args
+            cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            ;;
+        *)
+            cmdline+=( "$1" "${args[@]}" "${@:2}" )
+            ;;
+    esac
 
     slogcmd "${cmdline[@]}"
 }
@@ -609,22 +619,24 @@ pkgfile() {
     local files
     if [ "$2" = "--" ]; then
         # install with DESTDIR to get file list
-        eval -- "${@:3}" DESTDIR=$(pwd -P)/DESTDIR || return 1
+        export DESTDIR=$(pwd -P)/DESTDIR
+        eval -- "${@:3}" || return 1
+        # no libtool *.la files
         find DESTDIR -name "*.la" -exec rm -f {} \;
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
+        unset DESTDIR
 
         # do a real install
         eval -- "${@:3}"
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
-        
-    slogi ".Pack" "$1 < ${files[@]}"
     
-    pushd "$PREFIX"
-
-    mkdir -pv "$libs_name"
+    pushd "$PREFIX" && mkdir -pv "$libs_name"
+    
+    IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
+    slogi ".Pack" "$1 < ${files[@]}"
 
     # name contains version code?
     local name version
@@ -639,7 +651,7 @@ pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    echocmd "$TAR" -czvf "$pkgfile" $(sed -e "s%$PWD/%%g" <<< "${files[@]}")
+    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
