@@ -664,9 +664,6 @@ pkgfile() {
     fi
 
     # v3/manifest: name pkgfile sha
-    touch "cmdlets.manifest"
-    # clear full versioned records
-    sed -i "\#^$name $libs_name/$name@$libs_ver\.#d" cmdlets.manifest
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
@@ -1083,9 +1080,6 @@ compile() {(
         return 0
     fi
 
-    # clear
-    find "$PREFIX/$libs_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
-
     # prepare work dir
     mkdir -p "$PREFIX"
     mkdir -p "$(dirname "$(_logfile)")"
@@ -1101,8 +1095,17 @@ compile() {(
 
     slogi ".Path" "$PWD"
 
+    _prepare || exit $?
+
+    # clear pkginfo
+    rm -rf "$PREFIX/$libs_name"
+
+    # clear manifest
+    touch "$PREFIX/cmdlets.manifest"
+    sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+
     # build library
-    _prepare && libs_build || {
+    libs_build || {
         sleep 1 # let _capture() finish
 
         local logfile="$(_logfile)"
