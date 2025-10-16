@@ -640,6 +640,7 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
+        test -e "$x" || ulogf "$x not exists"
         case "$x" in
             *.a)
                 echocmd "$STRIP" --strip-unneeded "$x"
@@ -651,7 +652,7 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                echocmd "$STRIP" -strip-all "$x"
+                test -f "$x" && echocmd "$STRIP" -strip-all "$x" || true
                 ;;
         esac
     done
