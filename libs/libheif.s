@@ -4,7 +4,7 @@
 libs_ver=1.20.2
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
 libs_sha=68ac9084243004e0ef3633f184eeae85d615fe7e4444373a0a21cebccae9d12a
-libs_dep=( libjpeg-turbo openjpeg png libtiff webp x265 libde265 )
+libs_dep=( libjpeg-turbo openjpeg libpng libtiff webp x265 libde265 )
 
 # configure args
 libs_args=(
