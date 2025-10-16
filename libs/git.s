@@ -37,9 +37,6 @@ libs_args=(
     # curl & expat for git-http-*
     EXPATDIR="'$PREFIX'"
     CURLDIR="'$PREFIX'"
-    CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
-    CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
-
     # iconv is required except for glibc
     NEEDS_LIBICONV=1
     ICONVDIR="'$PREFIX'"
@@ -65,7 +62,10 @@ is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
-    #make configure && configure || return 1
+    libs_args+=(
+        CURL_CFLAGS="'$($PKG_CONFIG --cflags curl)'"
+        CURL_LDFLAGS="'$($PKG_CONFIG --libs curl)'"
+    )
 
     # git build system prefer hard link, disable it
     sed -i '/ln \$< \$@/d' Makefile || true
