@@ -640,10 +640,11 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
+        test -e "$x" || ulogf "$x not exists"
         case "$x" in
             *.a)
-                "$STRIP" --strip-unneeded "$x"
-                "$RANLIB" "$x"
+                echocmd "$STRIP" --strip-unneeded "$x"
+                echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
                 sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
@@ -651,7 +652,7 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                "$STRIP" -strip-all "$x"
+                test -f "$x" && echocmd "$STRIP" -strip-all "$x" || true
                 ;;
         esac
     done
