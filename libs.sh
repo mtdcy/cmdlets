@@ -1272,7 +1272,7 @@ search() {
         find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # pkg-config?
-        slogi "Search pkgconfig ..."
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
@@ -1281,7 +1281,10 @@ search() {
             # TODO: add a sanity check here
         fi
 
+        [[ "$x" =~ ^lib ]] && continue
+
         x=lib$x
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
