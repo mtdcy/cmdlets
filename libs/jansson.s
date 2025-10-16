@@ -12,16 +12,15 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
+    # static only
+    --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure &&
-    make &&
-    library libjansson \
-        include         src/jansson.h src/jansson_config.h \
-        lib             src/.libs/libjansson.{a,la} \
-        lib/pkgconfig   jansson.pc
+    configure && make || return $?
+
+    pkgfile libjansson -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

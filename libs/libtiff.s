@@ -29,14 +29,8 @@ libs_build() {
     rm CMakeLists.txt
 
     configure && make || return 1
-
-    inspect make install &&
-
-    pkgfile libtiff                    \
-            include/tiff*              \
-            lib/libtiff*.a             \
-            lib/pkgconfig/libtiff-4.pc \
-            &&
+    
+    pkgfile libtiff -- make install SUBDIRS=libtiff &&
 
     IFS=' ' read -r -a tools < <(find tools -name "*.o" | xargs)
 

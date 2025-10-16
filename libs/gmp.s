@@ -24,18 +24,9 @@ libs_args=(
 )
 
 libs_build() {
-    is_darwin || export CXXFLAGS+=" -static-libstdc++"
+    configure && make || return $?
 
-    configure &&
-
-    make &&
-
-    #make check &&
-
-    library libgmp:libgmpxx \
-            include         gmp.h gmpxx.h \
-            lib             .libs/libgmp*.{a,la} \
-            lib/pkgconfig   gmp.pc gmpxx.pc
+    pkgfile libgmp -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

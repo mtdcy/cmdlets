@@ -24,15 +24,11 @@ libs_args=(
 )
 
 libs_build() {
+    configure && make || return $?
 
-    configure &&
+    pkgfile libexpat -- make install SUBDIRS=lib &&
 
-    make &&
-
-    library expat \
-            include expat_config.h lib/expat.h lib/expat_external.h \
-            lib     lib/.libs/libexpat.{a,la} \
-            lib/pkgconfig expat.pc
+    cmdlet ./xmlwf/xmlwf
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

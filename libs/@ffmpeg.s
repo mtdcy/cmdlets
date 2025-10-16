@@ -7,7 +7,7 @@ libs_dep=(
     # basic libs
     zlib bzip2 xz libiconv
     # audio libs
-    soxr lame ogg vorbis opus
+    soxr lame libogg vorbis opus
     # image libs
     libpng giflib libjpeg-turbo libtiff webp openjpeg
     # video libs

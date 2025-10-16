@@ -646,7 +646,7 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
-        test -e "$x" || ulogf "$x not exists"
+        test -e "$x" || slogf "$x not exists"
         case "$x" in
             *.a)
                 echocmd "$STRIP" --strip-unneeded "$x"
@@ -925,7 +925,7 @@ _fetch() {
         slogi ".FILE" "$(sha256sum "$zip")"
         return 0
     else
-        sloge ".CURL" "$* failed"
+        sloge ".CURL" "$1 < $3 failed"
         return 1
     fi
 }
@@ -1272,7 +1272,7 @@ search() {
         find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # pkg-config?
-        slogi "Search pkgconfig ..."
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
@@ -1281,13 +1281,33 @@ search() {
             # TODO: add a sanity check here
         fi
 
+        [[ "$x" =~ ^lib ]] && continue
+
         x=lib$x
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
             echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
             echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
             # TODO: add a sanity check here
+        fi
+    done
+}
+
+# find out dependencies of library
+info() {
+    slogi "$1: $(_deps_get "$1")"
+
+    for lib in libs/*.s; do
+        IFS='/.' read -r _ ulib _ <<< "$pkg"
+        
+        [[ "$libs" =~ ^[\.@_] ]] && continue
+
+        IFS=' ' read -r -a deps <<< "$(bash libs.sh _load_deps "$lib")"
+
+        if [[ "${deps[*]}" == *"$1"* ]]; then
+            slogi "$lib => $1"
         fi
     done
 }
