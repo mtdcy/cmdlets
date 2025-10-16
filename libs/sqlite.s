@@ -50,6 +50,11 @@ libs_build() {
 
     configure && make || return 1
 
+    pkgfile libsqlite -- make install-lib install-headers install-pc
+
+    cmdlet ./sqlite3 && 
+
+    check sqlite3 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
