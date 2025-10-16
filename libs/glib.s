@@ -21,6 +21,7 @@ libs_args=(
     -Dintrospection=disabled
 
     -Dnls=disabled
+    -Dsysprof=disabled
     -Dman-pages=disabled
     -Dtests=False
 )
