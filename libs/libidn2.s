@@ -46,12 +46,7 @@ libs_build() {
     # check & install
     make check &&
 
-    #make install
-    library libidn2                       \
-            include         lib/idn2.h    \
-            lib             lib/.libs/*.a \
-            lib/pkgconfig   libidn2.pc    \
-            &&
+    pkgfile libidn2 -- make install SUBDIRS=lib &&
 
     cmdlet  src/idn2 &&
 
