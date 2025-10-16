@@ -8,21 +8,12 @@ libs_ver=6.0
 libs_url=(
     https://downloads.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%20$libs_ver/unzip${libs_ver//\./}.tar.gz
 )
-
-
-libs_sha=(
-    036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37
-)
-
+libs_sha=036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37
 libs_dep=(libiconv bzip2)
 
-libs_patch_url=(
+libs_resources=(
     # patches from ubuntu: https://packages.ubuntu.com/kinetic/unzip
-    http://archive.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu6.debian.tar.xz
-)
-
-libs_patch_sha=(
-    7b124db7b04823549413ac8d5fadb9465f38530bebc24363e313351b7e1071fb
+    "http://archive.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu6.debian.tar.xz|7b124db7b04823549413ac8d5fadb9465f38530bebc24363e313351b7e1071fb"
 )
 
 libs_patches=(

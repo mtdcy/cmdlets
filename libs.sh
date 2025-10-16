@@ -643,7 +643,6 @@ pkgfile() {
     pushd "$PREFIX" && mkdir -pv "$libs_name"
     
     IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
-    slogi ".Pack" "$1 < ${files[@]}"
 
     # preprocessing installed files
     for x in "${files[@]}"; do
@@ -676,6 +675,8 @@ pkgfile() {
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
+
+    slogi ".Pack" "$pkgfile < ${files[@]}"
 
     echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
 
@@ -879,6 +880,10 @@ _curl() {
     fi
 }
 
+_packages() {
+    echo "$ROOT/packages/$libs_name/$(basename "$1")"
+}
+
 # fetch url to packages/ or return error
 # _fetch <zip> <sha> <urls...>
 _fetch() {
@@ -903,7 +908,7 @@ _fetch() {
 
     #2. try mirror
     if test -n "$CL_MIRRORS"; then
-        mirror="$CL_MIRRORS/packages/$(basename "$zip")"
+        mirror="$CL_MIRRORS/packages/$libs_name/$(basename "$zip")"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip"
     fi
@@ -922,20 +927,6 @@ _fetch() {
     else
         sloge ".CURL" "$* failed"
         return 1
-    fi
-}
-
-# _fetch git_url#branch_or_tag_name [path]
-_fetch_git() {
-    local url branch
-
-    slogi "..GIT" "$1 => $2"
-
-    IFS='#' read -r url branch <<< "$1"
-    if test -d "${2%.git}/.git"; then
-        true
-    else
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "${2%.git}"
     fi
 }
 
@@ -1008,43 +999,61 @@ _unzip() {
     esac
 }
 
-# prepare source code or return error
-_prepare() {
-    if test -n "$libs_git"; then
-        _fetch_git "$libs_git" . || return 1
+# clone git repo
+#  input: git_url#branch_or_tag_name [path]
+_git() {
+    local url branch 
+    local path="${2%.git*}"
 
-        for submodule in "${libs_git_submodules[@]}"; do
-            _fetch_git "$submodule" "$(basename "${submodule%#*}")" || return 2
-        done
+    slogi "..GIT" "$1 => $path"
 
-        return 0
+    IFS='#' read -r url branch <<< "$1"
+    test -n "$branch" || branch="main"
+
+    # reuse local repo
+    if ! test -d "$path/.git"; then
+        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path"
+    fi
+}
+
+# fetch package and unzip to current workdir
+#  input: sha url [mirrors...]
+_prepare_one() {
+    # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
+    if [[ "${2%#*}" =~ \.git$ ]]; then
+        _git "${@:2}" "$(basename "$2")" || return $?
     else
-        # use the first url to construct zip file name local zip="$ROOT/packages/$libs_zip"
-        local zip="$ROOT/packages/$libs_zip"
+        # assemble zip name from url
+        local zip="$(_packages "$2")"
 
         # download zip file
-        _fetch "$zip" "$libs_sha" "${libs_url[@]}" || return 1
+        _fetch "$zip" "$1" "${@:2}" &&
         # unzip to current fold
-        _unzip "$zip" || return 2
+        _unzip "$zip" || return $?
     fi
+}
 
-    # patch urls
-    if test -n "${libs_patch_url[*]}"; then
-        for i in "${!libs_patch_url[@]}"; do
-            local zip="$ROOT/packages/${libs_patch_zip[i]:-$(basename "${libs_patch_url[i]}")}"
+# prepare source code or return error
+_prepare() {
+    # libs_url: support mirrors
+    _prepare_one "$libs_sha" "${libs_url[@]}" || return $?
 
-            # download files
-            _fetch "$zip" "${libs_patch_sha[i]}" "${libs_patch_url[i]}" || return 3
-            # unzip to current fold
-            _unzip "$zip" || return 4
+    # libs_resources: no mirrors
+    if test -n "${libs_resources[*]}"; then
+        local url sha
+        for x in "${libs_resources[@]}"; do
+            IFS=';|' read -r url sha <<< "$x"
+            _prepare_one "$sha" "$url" || return $?
         done
     fi
 
-    # apply patches
+    # libs_patches: web ready
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                slogcmd "_curl $patch | $PATCH -p1 -N"
+                local file="$(_packages "$patch")"
+                test -f "$file" || _curl "$patch" "$file"
+                slogcmd "$PATCH -p1 -N < $file"
                 ;;
             *)
                 slogcmd "$PATCH -p1 -N < $patch"
@@ -1062,16 +1071,11 @@ _load() {
     # default values:
     [ -n "$libs_name" ] || libs_name="$(basename "${1%.s}")"
 
-    libs_zip="$libs_name-$libs_ver${libs_url##*/*$libs_ver}"
-
     [ "$libs_type" = ".PHONY" ] && return 0
 
-    # git
-    [ -n "$libs_git" ] && return 0
-
     # sanity checks: always exit program|subshell here
-    if test -z "$libs_url" || test -z "$libs_sha"; then
-        _on_failure "$libs_name: missing libs_url or libs_sha"
+    if test -z "$libs_url"; then
+        _on_failure "$libs_name: missing libs_url"
     fi
 }
 
@@ -1110,7 +1114,7 @@ compile() {(
     slogi ".Load" "$1"
     _load "$1"
 
-    if test -z "$libs_url" && test -z "$libs_git"; then
+    if test -z "$libs_url"; then
         slogw "<<<<<" "skip dummy target $libs_name"
         return 0
     fi
@@ -1297,7 +1301,7 @@ load() {
 fetch() {
     _load "$1"
 
-    _fetch "$ROOT/packages/$libs_zip" "$libs_sha" "$libs_url"
+    _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
 }
 
 arch() {

@@ -8,12 +8,9 @@ libs_sha=a3f6af3d9e80ec6217e92675d4253db85f006d788943b8ccacf18bde23d2b816
 libs_dep=( )
 
 # cmake
-libs_patch_url=(
-    https://github.com/llvm/llvm-project/releases/download/llvmorg-$libs_ver/cmake-$libs_ver.src.tar.xz
+libs_resources=(
+    "https://github.com/llvm/llvm-project/releases/download/llvmorg-$libs_ver/cmake-$libs_ver.src.tar.xz;4db6f028b6fe360f0aeae6e921b2bd2613400364985450a6d3e6749b74bf733a"
 )
-libs_patch_sha=(
-    4db6f028b6fe360f0aeae6e921b2bd2613400364985450a6d3e6749b74bf733a
- )
 
 # configure args
 libs_args=(
