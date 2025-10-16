@@ -606,6 +606,21 @@ TAR="$(which gtar 2>/dev/null || which tar)"
 
 # pkgfile name <file or directories list>
 pkgfile() {
+    local files
+    if [ "$2" = "--" ]; then
+        # install with DESTDIR to get file list
+        eval -- "${@:3}" DESTDIR=$(pwd -P)/DESTDIR || return 1
+        IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
+        rm -rf DESTDIR
+
+        # do a real install
+        eval -- "${@:3}"
+    else
+        IFS=' ' read -r -a files <<< "${@:2}"
+    fi
+        
+    slogi ".Pack" "$1 < ${files[@]}"
+    
     pushd "$PREFIX"
 
     mkdir -pv "$libs_name"
@@ -623,14 +638,7 @@ pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    slogi ".Pack" "$pkgfile < ${*:2}"
-
-    local files
-
-    # shellcheck disable=SC2001
-    IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
-
-    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
+    echocmd "$TAR" -czvf "$pkgfile" $(sed -e "s%$PWD/%%g" <<< "${files[@]}")
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
