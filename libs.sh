@@ -642,8 +642,8 @@ pkgfile() {
     for x in "${files[@]}"; do
         case "$x" in
             *.a)
-                "$STRIP" --strip-unneeded "$x"
-                "$RANLIB" "$x"
+                echocmd "$STRIP" --strip-unneeded "$x"
+                echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
                 sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
@@ -651,7 +651,7 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                "$STRIP" -strip-all "$x"
+                echocmd "$STRIP" -strip-all "$x"
                 ;;
         esac
     done
