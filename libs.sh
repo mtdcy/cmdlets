@@ -621,7 +621,11 @@ pkgfile() {
     if [ "$2" = "--" ]; then
         # install with DESTDIR to get file list
         export DESTDIR=$(pwd -P)/DESTDIR
-        eval -- "${@:3}" || return 1
+        mkdir -p "$DESTDIR"
+        case "$3" in
+            make)   eval -- "${@:3}" DESTDIR="$DESTDIR" ;;
+            *)      eval -- DESTDIR="$DESTDIR" "${@:3}" ;;
+        esac || return
         # no libtool *.la files
         find DESTDIR -name "*.la" -exec rm -f {} \;
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
@@ -633,6 +637,8 @@ pkgfile() {
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
+
+    test -n "${files[*]}" || slogf "pkgfile() without inputs"
     
     pushd "$PREFIX" && mkdir -pv "$libs_name"
     
