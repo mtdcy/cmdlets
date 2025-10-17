@@ -12,6 +12,8 @@ libs_dep=()
 libs_args=(
     -DREQUIRE_SIMD=TRUE
     -DWITH_JPEG8=1
+
+    # static only
     -DENABLE_SHARED=FALSE
     -DENABLE_STATIC=TRUE
 )
@@ -25,24 +27,25 @@ libs_build() {
         )
     fi
 
-    cmake . && make || return 1
+    # set binaries' component as Runtime
+    sed -i CMakeLists.txt                                         \
+        -e '/install(/s/PROGRAMS.*/& COMPONENT Runtime/g'         \
+        -e '/install(/s/rdjpgcom wrjpgcom /& COMPONENT Runtime/g'
+    
+    mkdir -p build
 
-    inspect make install &&
+    cmake -S . -B build &&
 
-    pkgfile libturbojpeg                                   \
-        include/turbojpeg.h                                \
-        include/{jpeglib.sh,jerror.h,jconfig.h,jmorecfg.h} \
-        lib/{libturbojpeg.a,libjpeg.a}                     \
-        lib/pkgconfig/{libturbojpeg.pc,libjpeg.pc}         \
-        lib/cmake/libjpeg-turbo                            \
-        &&
+    cmake --build build &&
 
-    cmdlet  cjpeg-static cjpeg       &&
-    cmdlet  djpeg-static djpeg       &&
-    cmdlet  jpegtran-static jpegtran &&
-    cmdlet  tjbench-static tjbench   &&
-    cmdlet  wrjpgcom                 &&
-    cmdlet  rdjpgcom                 &&
+    pkgfile libturbojpeg -- cmake --install build --component Unspecified &&
+
+    cmdlet  ./build/cjpeg-static cjpeg       &&
+    cmdlet  ./build/djpeg-static djpeg       &&
+    cmdlet  ./build/jpegtran-static jpegtran &&
+    cmdlet  ./build/tjbench-static tjbench   &&
+    cmdlet  ./build/wrjpgcom                 &&
+    cmdlet  ./build/rdjpgcom                 &&
 
     check   cjpeg -version
 }
