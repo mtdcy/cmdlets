@@ -34,7 +34,7 @@ libs_build() {
 
     meson compile -C build --verbose || return 1
 
-    pkgfile libglib -- meson install -C build
+    pkgfile libglib -- meson install -C build --tags devel
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
