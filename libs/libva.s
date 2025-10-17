@@ -5,7 +5,7 @@ libs_lic="MIT"
 libs_ver=2.22.0
 libs_url=https://github.com/intel/libva/releases/download/$libs_ver/libva-$libs_ver.tar.bz2
 libs_sha=e3da2250654c8d52b3f59f8cb3f3d8e7fb1a2ee64378dbc400fbc5663de7edb8
-libs_dep=(libdrm)
+libs_dep=(libdrm wayland)
 
 libs_args+=(
     --disable-dependency-tracking
