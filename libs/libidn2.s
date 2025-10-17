@@ -29,15 +29,14 @@ libs_build() {
     # https://github.com/spack/spack/issues/23964
     export GTKDOCIZE=echo
 
-    # Fixed: strip static libraries with -x|--discard-all
     # hack gnulib error() function
     #  Fix: multiple definition of `error' when building git
-    #sed -i 's/^error (/_hack_gl_error (/' gl/error.c
-    #sed -i gl/error.in.h \
-    #    -e 's/_GL_FUNCDECL_SYS (error,/_GL_FUNCDECL_SYS (_hack_gl_error,/g' \
-    #    -e 's/_GL_CXXALIAS_SYS (error,/_GL_CXXALIAS_SYS (_hack_gl_error,/g'  \
-    #    -e 's/return error (/return _hack_gl_error (/g' \
-    #    -e '/_GL_CXXALIAS_SYS (_hack_gl_error/i #define error(...) _hack_gl_error(__VA_ARGS__)'
+    sed -i 's/^error (/_hack_gl_error (/' gl/error.c
+    sed -i gl/error.in.h \
+        -e 's/_GL_FUNCDECL_SYS (error,/_GL_FUNCDECL_SYS (_hack_gl_error,/g' \
+        -e 's/_GL_CXXALIAS_SYS (error,/_GL_CXXALIAS_SYS (_hack_gl_error,/g'  \
+        -e 's/return error (/return _hack_gl_error (/g' \
+        -e '/_GL_CXXALIAS_SYS (_hack_gl_error/i #define error(...) _hack_gl_error(__VA_ARGS__)'
 
     configure &&
 
