@@ -24,7 +24,7 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
+    configure && make && make check || return $?
 
     pkgfile libgmp -- make install
 }
