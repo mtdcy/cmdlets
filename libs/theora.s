@@ -9,11 +9,20 @@ libs_sha=b6ae1ee2fa3d42ac489287d3ec34c5885730b1296f0801ae577a35193d3affbc
 libs_dep=(libogg vorbis)
 
 libs_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --with-pic
+    --with-ogg=$PREFIX
+    --with-vorbis=$PREFIX
+    
     --disable-examples
     --disable-oggtest
     --disable-vorbistest
-    --with-ogg=$PREFIX
-    --with-vorbis=$PREFIX
+    --disable-spec
+
+    # static only
     --disable-shared
     --enable-static
     )
@@ -22,16 +31,11 @@ libs_args=(
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 libs_build() {
-    configure && 
+    configure && make && make check || return $?
 
-    make && 
+    sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
-    make check &&
-    
-    library theora \
-        include/theora include/theora/*.h \
-        lib lib/.libs/*.a \
-        lib/pkgconfig theora*.pc
+    pkgfile libtheora -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
