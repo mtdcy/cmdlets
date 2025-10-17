@@ -38,7 +38,6 @@ libs_args=(
     --without-fish-functions-dir
 
     --disable-nls
-    --disable-rpath
 
     --disable-docs
     --disable-manual

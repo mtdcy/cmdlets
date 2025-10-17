@@ -16,7 +16,6 @@ libs_args=(
     --enable-openssl-compatibility
 
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-manpages

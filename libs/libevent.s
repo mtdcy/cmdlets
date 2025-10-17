@@ -12,24 +12,21 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
-    --disable-debug-mode
+    --enable-pic
+    --enable-openssl
 
+    --disable-samples
+    --disable-debug-mode
+    --disable-doxygen-html
+
+    # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure && make || return 1
+    configure && make || return $?
 
-    inspect make install &&
-
-    pkgfile libevent                \
-            include/evrpc.h         \
-            include/event.h         \
-            include/evutil.h        \
-            include/evdns.h         \
-            include/event2/         \
-            lib/libevent*.a         \
-            lib/pkgconfig/libevent*.pc
+    pkgfile libevent -- make install
 }
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

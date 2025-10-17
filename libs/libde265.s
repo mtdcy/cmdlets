@@ -23,19 +23,15 @@ libs_args=(
 
 libs_build() {
 
-    mkdir -p build && cd build 
+    mkdir -p build
 
-    cmake .. &&
+    cmake -S . -B build &&
 
-    inspect make install &&
+    cmake --build build &&
 
-    pkgfile libde265                  \
-            include/libde265          \
-            lib/libde265.a            \
-            lib/pkgconfig/libde265.pc \
-            &&
+    pkgfile libde265 -- cmake --install build/libde265
 
-    cmdlet  ./dec265/dec265 &&
+    cmdlet  ./build/dec265/dec265 &&
 
     check dec265 --version
 }

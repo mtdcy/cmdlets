@@ -8,26 +8,29 @@ libs_url=https://github.com/webmproject/libvpx/archive/v$libs_ver.tar.gz
 libs_sha=26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa
 
 libs_args=(
+    --disable-dependency-tracking
+
     --enable-vp8
     --enable-vp9
+    --enable-vp9-highbitdepth
+
+    --disable-docs
+    --disable-tools
     --disable-examples
     --disable-unit-tests
-    --enable-vp9-highbitdepth
-    #--extra-cflags=\"$CFLAGS\"
-    #--extra-cxxflags=\"$CPPFLAGS\"
+
     --as=auto
+
+    # static only
     --disable-shared
     --enable-static
 )
     #--disable-libyuv
 
 libs_build() {
-    configure && make &&
-    
-    library vpx \
-        include/vpx vpx/vp*.h \
-        lib *.a \
-        lib/pkgconfig vpx.pc
+    configure && make || return $?
+
+    pkgfile libvpx -- make install
 }
 
 #if [[ "$OSTYPE" == "darwin"* ]]; then

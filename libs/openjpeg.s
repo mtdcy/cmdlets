@@ -18,15 +18,9 @@ libs_args=(
 )
 
 libs_build() {
-    cmake . && make || return 1
+    cmake . && make || return $?
 
-    inspect make install 
-
-    pkgfile libopenjp2                        \
-            include/openjpeg-${libs_ver%.*}   \
-            lib/libopenjp2.a                  \
-            lib/cmake/openjpeg-${libs_ver%.*} \
-            lib/pkgconfig/libopenjp2.pc
+    pkgfile libopenjp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

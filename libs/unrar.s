@@ -9,22 +9,21 @@ libs_sha=505c13f9e4c54c01546f2e29b2fcc2d7fabc856a060b81e5cdfe6012a9198326
 libs_dep=()
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    PREFIX="'$PREFIX'"
+
+    CXX="'$CXX'"
+    CXXFLAGS="'$CXXFLAGS'" 
+    CPPFLAGS="'$CPPFLAGS'"
+    LDFLAGS="'$LDFLAGS'"
+
+    AS="'$AS'"
+    STRIP="'$STRIP'"
 )
 
 libs_build() {
-    echocmd sed -i makefile           \
-        -e 's/^CXX=/CXX?=/'           \
-        -e 's/^AR=/AR?=/'             \
-        -e 's/^CXXFLAGS=/CXXFLAGS+=/' \
-        -e 's/^STRIP=/STRIP?=/'       \
-        -e 's/^LDFLAGS=/LDFLAGS+=/'   \
-
     is_clang || sed 's/-Wno-logical-op-parentheses/-Wno-parentheses/g' -i Makefile
 
-    make -f makefile &&
+    make -f makefile "${libs_args[@]}" &&
 
     # quick check
     ./unrar | grep "${libs_ver%.*}" &&

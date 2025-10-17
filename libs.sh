@@ -33,6 +33,13 @@ is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
+depends_on() {
+    "$@" || {
+        slogw "*****" "**** Not supported on $OSTYPE! ****"
+        exit 0 # exit shell
+    }
+}
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local lvl date message
@@ -185,6 +192,25 @@ EOF
     fi
 }
 
+# find out executables and export envs
+#  input: name:file ...
+#  ENV: COMMAND='xcrun --find'
+_init_tools() {
+    local cmd="${COMMAND:-which}"
+    local k v p
+    for x in "$@"; do
+        IFS=':' read -r k v <<< "$x"
+
+        for y in ${v//,/ }; do
+            p="$(eval "$cmd" "$y" 2>/dev/null)" && break
+        done
+
+        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
+
+        eval export "$k=$p"
+    done
+}
+
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
@@ -212,16 +238,10 @@ _init() {
 
     export ROOT PREFIX WORKDIR LOGFILES
 
-    # setup program envs
-    local _find=which
-    is_darwin && _find="xcrun --find" || true
-
     is_glibc || unset CL_TOOLCHAIN_PREFIX
 
-    local k v p E progs
-
     # shellcheck disable=SC2054,SC2206
-    progs=(
+    local toolchains=(
         CC:${CL_TOOLCHAIN_PREFIX}gcc
         CXX:${CL_TOOLCHAIN_PREFIX}g++
         AR:${CL_TOOLCHAIN_PREFIX}ar
@@ -230,6 +250,23 @@ _init() {
         NM:${CL_TOOLCHAIN_PREFIX}nm
         RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
         STRIP:${CL_TOOLCHAIN_PREFIX}strip
+    )
+    if is_darwin; then
+        COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
+    else
+        _init_tools "${toolchains[@]}"
+    fi
+
+    # STRIP
+    #  libraries: strip local symbols but keep debug
+    #  binaries: strip all and debug symbols
+    if "$STRIP" --version 2>/dev/null | grep -qFw Binutils; then
+        export BIN_STRIP="$STRIP --strip-all"
+    else
+        export BIN_STRIP="$STRIP"
+    fi
+
+    local host_tools=(
         MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
@@ -238,29 +275,20 @@ _init() {
         PATCH:patch
         INSTALL:install
     )
-    is_arm64 || progs+=(
+
+    is_arm64 || host_tools+=(
         NASM:nasm
         YASM:yasm
     )
 
     # MSYS2
-    is_msys && progs+=(
+    is_msys && host_tools+=(
         # we are using MSYS shell, but still setup mingw32-make
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    for x in "${progs[@]}"; do
-        IFS=':' read -r k v <<< "$x"
-        IFS=',' read -r -a v <<< "$v"
-
-        for y in "${v[@]}"; do
-            p="$($_find "$y" 2>/dev/null)" && break
-        done
-
-        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
-
-        eval export "$k=$p"
-    done
+    
+    _init_tools "${host_tools[@]}"
 
     # common flags for c/c++
     local FLAGS=(
@@ -319,7 +347,8 @@ _init() {
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
-        CCACHE_DIR="$WORKDIR/.ccache"
+        # make clean should not clear ccache
+        CCACHE_DIR="$ROOT/.ccache/$arch"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -397,6 +426,18 @@ make() {
     slogcmd "${cmdline[@]}"
 }
 
+_filter_out_cmake_defines() {
+    local _options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -D)     shift 2 ;;
+            -D*)    shift 1 ;;
+            *)      _options+=( "$1" ); shift ;;
+        esac
+    done
+    echo "${_options[@]}"
+}
+
 cmake() {
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
@@ -416,20 +457,33 @@ cmake() {
         export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     fi
 
-    # extend CMAKE with compile tools
-    local cmdline=(
-        "$CMAKE"
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-        -DCMAKE_PREFIX_PATH="'$PREFIX'"
-        -DCMAKE_MAKE_PROGRAM="'$MAKE'"
-        -DCMAKE_VERBOSE_MAKEFILE=ON
-    )
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$@" )
-    # cmake
+    local cmdline=( "$CMAKE" )
+
+    case "$(_filter_out_cmake_defines "$@")" in 
+        --build*)
+            export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+            cmdline+=( "$@" )
+            ;;
+        --install*)
+            export CMAKE_BUILD_PARALLEL_LEVEL=1
+            cmdline+=( "$@" )
+            ;;
+        *)
+            # extend CMAKE with compile tools
+            cmdline+=(
+                -DCMAKE_BUILD_TYPE=RelWithDebInfo
+                -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+                -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                -DCMAKE_MAKE_PROGRAM="'$MAKE'"
+                -DCMAKE_VERBOSE_MAKEFILE=ON
+            )
+            # cmake using a mixed path style with MSYS Makefiles, why???
+            is_msys && cmdline+=( -G"'MSYS Makefiles'" )
+            # append user args
+            cmdline+=( "${libs_args[@]}" "$@" )
+            ;;
+    esac
+
     slogcmd "${cmdline[@]}"
 }
 
@@ -615,6 +669,11 @@ _link() {
 
 TAR="$(which gtar 2>/dev/null || which tar)"
 
+# libtool archive hardcoded PREFIX which is bad for us
+_rm_libtool_archive() {
+    find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
+}
+
 # pkgfile name <file or directories list>
 pkgfile() {
     local files
@@ -623,17 +682,17 @@ pkgfile() {
         export DESTDIR=$(pwd -P)/DESTDIR
         mkdir -p "$DESTDIR"
         case "$3" in
-            make)   eval -- "${@:3}" DESTDIR="$DESTDIR" ;;
-            *)      eval -- DESTDIR="$DESTDIR" "${@:3}" ;;
+            make)   "${@:3}" DESTDIR="$DESTDIR" ;;
+            *)      DESTDIR="$DESTDIR" "${@:3}" ;;
         esac || return
-        # no libtool *.la files
-        find DESTDIR -name "*.la" -exec rm -f {} \;
+        _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
         unset DESTDIR
 
         # do a real install
-        eval -- "${@:3}"
+        "${@:3}"
+        _rm_libtool_archive
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
@@ -646,10 +705,11 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
-        test -e "$x" || slogf "$x not exists"
+        # test won't work as file glob exists
+        #test -e "$x" || slogf "$x not exists"
         case "$x" in
             *.a)
-                echocmd "$STRIP" --strip-unneeded "$x"
+                echocmd "$STRIP" -x "$x"
                 echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
@@ -658,7 +718,9 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                test -f "$x" && echocmd "$STRIP" --strip-all "$x" || true
+                if test -f "$x"; then
+                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
+                fi
                 ;;
         esac
     done
@@ -717,9 +779,8 @@ inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || return $?
-
-    # remove libtool *.la files
-    find "$PREFIX/lib" -name "*.la" -exec rm -f {} \;
+    
+    _rm_libtool_archive
 
     find "$PREFIX" > "$libs_name.pack.post"
 
@@ -834,9 +895,11 @@ library() {
 check() {
     slogi "..Run" "check $*"
 
-    local bin="$1"
+    # try prebuilts first
+    local bin="$PREFIX/bin/$1"
 
-    test -f "$bin" || bin="$PREFIX/bin/$1"
+    # try local file again
+    test -f "$bin" || bin="$1"
 
     test -f "$bin" || {
         slogf "CHECK" "cann't find $1"
@@ -925,7 +988,7 @@ _fetch() {
         slogi ".FILE" "$(sha256sum "$zip")"
         return 0
     else
-        sloge ".CURL" "$1 < $3 failed"
+        sloge ".CURL" "$1 failed"
         return 1
     fi
 }
@@ -1167,6 +1230,8 @@ _check_deps() {
         IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
 
         for x in "${_deps[@]}"; do
+            # dependencies in targets
+            [[ "$*" == *"$x"* ]] && continue
             # already exists?
             [[ "${deps[*]}" == *"$x"* ]] && continue
 
@@ -1208,6 +1273,8 @@ build() {
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
         done
+
+        _rm_libtool_archive
     fi
 
     # append targets

@@ -13,28 +13,15 @@ libs_args=(
 )
 
 libs_build() {
-    is_darwin && {
-        slogw "*****" "**** Not supported on $OSTYPE! ****"
-        exit 0
-    }
+    depends_on is_linux
 
-    mkdir -pv build && cd build &&
-    meson setup .. &&
-    ninja &&
+    mkdir -p build
 
-    cd - &&
+    meson setup build && 
 
-    library libdrm                                                \
-            include         libsync.h xf86drm.h xf86drmMode.h     \
-            include/libdrm  include/drm/*.h radeon/*.h amdgpu/*.h \
-            include/libdrm/nouveau nouveau/*.h                    \
-            include/libdrm/nouveau/nvif nouveau/nvif/*.h          \
-            lib             build/libdrm.a                        \
-                            build/nouveau/libdrm_nouveau.a        \
-                            build/radeon/libdrm_radeon.a          \
-                            build/amdgpu/libdrm_amdgpu.a          \
-            lib/pkgconfig   build/meson-private/*.pc              \
-            share/libdrm    data/amdgpu.ids
+    meson compile -C build --verbose &&
+
+    pkgfile libdrm -- meson install -C build --tags devel
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

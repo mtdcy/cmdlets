@@ -16,12 +16,11 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
-    --with-gmp="$PREFIX"
+    --with-gmp="'$PREFIX'"
 
     --disable-docs
-)
 
-is_darwin || libs_args+=(
+    # static only
     --disable-shared
     --enable-static
 )
@@ -29,18 +28,10 @@ is_darwin || libs_args+=(
 libs_build() {
     is_darwin || export CXXFLAGS+=" --static-libquadmath"
 
-    configure &&
+    configure && make && make check || return $?
 
-    make V=1 &&
-
-    # compile checks failed
-    # make check &&
-
-    #make install
-    library libmpfr \
-            include         src/{mpfr.h,mpf2mpfr.h} \
-            lib             src/.libs/libmpfr.a     \
-            lib/pkgconfig   mpfr.pc
+    # nobase_dist_doc_DATA: no examples
+    pkgfile libmpfr -- make install nobase_dist_doc_DATA=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -29,16 +29,9 @@ libs_build() {
 
     make tests &&
 
-    library libzstd \
-            ../../lib/*.h \
-            lib/libzstd.a \
-            lib/libzstd.pc &&
+    pkgfile libzstd -- make install -C lib && 
 
-    cmdlet programs/zstd zstd unzstd zstdcat zstdmt &&
-
-    cmdlet ../../programs/zstdgrep &&
-
-    cmdlet ../../programs/zstdless &&
+    pkgfile zstd    -- make install -C programs &&
 
     check zstd --version
 }

@@ -16,7 +16,6 @@ libs_args=(
     --with-libunistring-prefix="'$PREFIX'"
 
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-gtk-doc

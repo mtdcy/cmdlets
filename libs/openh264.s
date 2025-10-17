@@ -6,24 +6,28 @@ libs_ver=1.8.0
 libs_url=https://github.com/cisco/openh264/archive/v$libs_ver.tar.gz
 libs_sha=08670017fd0bb36594f14197f60bebea27b895511251c7c64df6cd33fc667d34
 
+libs_args=(
+    PREFIX="'$PREFIX'"
+
+    CC="'$CC'"
+    CXX="'$CXX'"
+    CFLAGS="'$CFLAGS'" 
+    CXXFLAGS="'$CXXFLAGS'" 
+    CPPFLAGS="'$CPPFLAGS'"
+    LDFLAGS="'$LDFLAGS'"
+
+    AS="'$AS'"
+)
+
 libs_build() {
-    # remove default value, using env instead
-    sed -i '/^PREFIX=*/d' Makefile
+    make "${libs_args[@]}" &&
 
-    is_msys && {
-        sed -i '/^CC =/d' build/platform-mingw_nt.mk
-        sed -i '/^CXX =/d' build/platform-mingw_nt.mk
-        sed -i '/^AR =/d' build/platform-mingw_nt.mk
-    }
-
-    make libopenh264.a openh264-static.pc &&
-
-    cp openh264-static.pc openh264.pc &&
+    pkgfile libopenh264 -- make install-static "${libs_args[@]}" &&
     
-    library openh264 \
-        include/wels codec/api/svc/*.h \
-        lib *.a \
-        lib/pkgconfig openh264.pc
+    cmdlet ./h264dec &&
+    cmdlet ./h264enc &&
+
+    check h264dec
 }
 
 

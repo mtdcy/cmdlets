@@ -16,7 +16,6 @@ libs_args=(
     --without-libintl-prefix
 
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-man

@@ -21,7 +21,6 @@ libs_build() {
         --with-readline-ldflags="'$($PKG_CONFIG --libs readline)'"
     
         --disable-nls
-        --disable-rpath
 
         # static
         --disable-shared

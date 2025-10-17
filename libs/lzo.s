@@ -14,22 +14,17 @@ libs_args=(
     --disable-dependency-tracking
     --enable-silent-rules
 
+    --enable-pic
+
+    # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    # force use configure
-    rm -f CMakeLists.txt || true
+    configure && make && make check || return $?
 
-    configure &&
-
-    make V=1 &&
-
-    # check & install
-    make check &&
-
-    library liblzo2 include/lzo include/lzo/*.h src/.libs/liblzo2.a lzo2.pc
+    pkgfile liblzo2 -- make install install-data
 }
 
 

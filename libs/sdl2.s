@@ -15,19 +15,9 @@ libs_args=(
 )
 
 libs_build() {
-    rm CMakeLists.txt
+    configure && make || return $?
 
-    configure && 
-
-    make && 
-
-    library SDL2                             \
-        include/SDL2    include/SDL*.h       \
-                        include/begin_code.h \
-                        include/close_code.h \
-        lib             build/.libs/*.a      \
-        lib/pkgconfig   sdl2.pc              \
-        lib/cmake/SDL2  sdl2*.cmake &&
+    pkgfile libSDL2 -- make install INSTALL_SDL2_CONFIG=FALSE &&
 
     cmdlet sdl2-config
 }

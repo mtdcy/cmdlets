@@ -9,24 +9,24 @@ libs_sha=537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
 libs_dep=()
 
 libs_args=(
+    PREFIX="'$PREFIX'"
+
+    CC="'$CC'"
+    USERCFLAGS="'$CFLAGS'"
+    LDFLAGS="'$LDFLAGS'"
+
+    BUILD_SHARED=no
+    BUILD_STATIC=yes
 )
 
 libs_build() {
-    sed -e 's/^BUILD_SHARED.*:=.*$/BUILD_SHARED:=no/' \
-        -i lib/Makefile &&
+    make "${libs_args[@]}" &&
 
-    make &&
+    pkgfile liblz4 -- make install -C lib "${libs_args[@]}" &&
 
-    make -C lib liblz4.pc &&
+    cmdlet ./programs/lz4 lz4 unlz4 lz4c lz4cat &&
 
-    library liblz4 \
-            include lib/*.h \
-            lib     lib/liblz4.a \
-            lib/pkgconfig lib/liblz4.pc &&
-
-    cmdlet  ./lz4 lz4 lz4c lz4cat &&
-
-    check lz4
+    check lz4 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
