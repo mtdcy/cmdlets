@@ -25,31 +25,18 @@ libs_args=(
 )
 
 libs_build() {
-    rm CMakeLists.txt # force use configure
+    configure && make && make check || return $?
 
-    configure &&
+    # libraries
+    pkgfile liblzma  -- make install -C src/liblzma  &&
 
-    make V=1 &&
+    # binaries and links
+    pkgfile lzmainfo -- make install -C src/lzmainfo &&
+    pkgfile xz       -- make install -C src/xz       &&
+    pkgfile xzdec    -- make install -C src/xzdec    &&
 
-    # check & install
-    make check &&
-
-    # make install
-    library liblzma \
-        include         src/liblzma/api/lzma.h \
-        include/lzma    $(ls src/liblzma/api/lzma/*.h | xargs) \
-        lib             src/liblzma/.libs/liblzma.{a,la} \
-        lib/pkgconfig   src/liblzma/liblzma.pc \
-        &&
-
-    cmdlet src/xz/xz xz xzcat lzcat lzma &&
-    cmdlet src/xzdec/xzdec &&
-    cmdlet src/xzdec/lzmadec &&
-    cmdlet src/lzmainfo/lzmainfo &&
-    cmdlet src/scripts/xzdiff xzdiff lzdiff  &&
-    cmdlet src/scripts/xzgrep xzgrep xzegrep xzfgrep &&
-    cmdlet src/scripts/xzmore xzmore lzmore &&
-    cmdlet src/scripts/xzless xzless lzless &&
+    # scripts and links
+    pkgfile scripts  -- make install -C src/scripts  &&
 
     # visual verify
     check xz --version
