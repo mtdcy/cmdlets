@@ -6,7 +6,7 @@ libs_lic="BSD-3-Clause"
 libs_ver=1.1.1
 libs_url=https://downloads.xiph.org/releases/theora/libtheora-$libs_ver.tar.bz2
 libs_sha=b6ae1ee2fa3d42ac489287d3ec34c5885730b1296f0801ae577a35193d3affbc
-libs_dep=(libogg vorbis)
+libs_dep=(libogg libvorbis)
 
 libs_args=(
     --disable-option-checking

@@ -8,18 +8,16 @@ libs_url=https://downloads.xiph.org/releases/vorbis/libvorbis-$libs_ver.tar.xz
 libs_sha=b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b
 libs_dep=(libogg)
 
-libs_args=()
+libs_args=(
+    -DBUILD_SHARED_LIBS=OFF
+)
 
 libs_build() {
     cmake -S . -B build &&
 
-    make -C build &&
+    cmake --build build &&
 
-    library vorbis \
-            include/vorbis  include/vorbis/*.h \
-            lib             build/lib/*.a \
-            lib/pkgconfig   build/*.pc
-
+    pkgfile libvorbis -- cmake --install build 
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
