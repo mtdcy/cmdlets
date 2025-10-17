@@ -397,6 +397,18 @@ make() {
     slogcmd "${cmdline[@]}"
 }
 
+_filter_out_cmake_defines() {
+    local _options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -D)     shift 2 ;;
+            -D*)    shift 1 ;;
+            *)      _options+=( "$1" ); shift ;;
+        esac
+    done
+    echo "${_options[@]}"
+}
+
 cmake() {
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
@@ -416,20 +428,28 @@ cmake() {
         export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     fi
 
-    # extend CMAKE with compile tools
-    local cmdline=(
-        "$CMAKE"
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-        -DCMAKE_PREFIX_PATH="'$PREFIX'"
-        -DCMAKE_MAKE_PROGRAM="'$MAKE'"
-        -DCMAKE_VERBOSE_MAKEFILE=ON
-    )
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$@" )
-    # cmake
+    local cmdline=( "$CMAKE" )
+
+    case "$(_filter_out_cmake_defines "$@")" in 
+        --build*|--install*)
+            cmdline+=( "$@" )
+            ;;
+        *)
+            # extend CMAKE with compile tools
+            cmdline+=(
+                -DCMAKE_BUILD_TYPE=RelWithDebInfo
+                -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+                -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                -DCMAKE_MAKE_PROGRAM="'$MAKE'"
+                -DCMAKE_VERBOSE_MAKEFILE=ON
+            )
+            # cmake using a mixed path style with MSYS Makefiles, why???
+            is_msys && cmdline+=( -G"'MSYS Makefiles'" )
+            # append user args
+            cmdline+=( "${libs_args[@]}" "$@" )
+            ;;
+    esac
+
     slogcmd "${cmdline[@]}"
 }
 
@@ -925,7 +945,7 @@ _fetch() {
         slogi ".FILE" "$(sha256sum "$zip")"
         return 0
     else
-        sloge ".CURL" "$1 < $3 failed"
+        sloge ".CURL" "$1 failed"
         return 1
     fi
 }
