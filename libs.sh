@@ -431,7 +431,12 @@ cmake() {
     local cmdline=( "$CMAKE" )
 
     case "$(_filter_out_cmake_defines "$@")" in 
-        --build*|--install*)
+        --build*)
+            export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+            cmdline+=( "$@" )
+            ;;
+        --install*)
+            export CMAKE_BUILD_PARALLEL_LEVEL=1
             cmdline+=( "$@" )
             ;;
         *)
