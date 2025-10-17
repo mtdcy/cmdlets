@@ -1228,6 +1228,8 @@ _check_deps() {
         IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
 
         for x in "${_deps[@]}"; do
+            # dependencies in targets
+            [[ "$*" == *"$x"* ]] && continue
             # already exists?
             [[ "${deps[*]}" == *"$x"* ]] && continue
 
