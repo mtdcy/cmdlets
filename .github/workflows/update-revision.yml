@@ -49,6 +49,9 @@ jobs:
 
               [ -n "$libs_ver" ] || exit
 
+              # version in url?
+              echo "$libs_url" | grep -Fw "$libs_ver" || exit
+
               trap "git checkout 'libs/$ulib.s'" EXIT
 
               IFS='=.' read -r m n r _ <<< "$libs_ver"
