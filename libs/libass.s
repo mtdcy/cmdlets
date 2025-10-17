@@ -11,24 +11,21 @@ libs_args=(
     --enable-silent-rules
     --disable-option-checking
     --disable-dependency-tracking
+
     --disable-require-system-font-provider
+
+    # static only
     --disable-shared
     --enable-static
 )
 
+# libass uses coretext on macOS, fontconfig on Linux
 is_darwin && libs_args+=(--disable-fontconfig)
 
 libs_build() {
-    # use coretext on mac
+    configure && make || return $?
 
-    configure &&
-
-    make &&
-
-    library ass \
-        include/ass libass/*.h \
-        lib libass/.libs/*.a \
-        lib/pkgconfig libass.pc
+    pkgfile libass -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
