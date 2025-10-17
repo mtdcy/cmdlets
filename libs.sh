@@ -688,6 +688,8 @@ pkgfile() {
 
         # do a real install
         "${@:3}"
+        # no libtool archive files
+        find "$PREFIX" -name "*.la" -exec rm -f {} \;
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
