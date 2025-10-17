@@ -185,6 +185,25 @@ EOF
     fi
 }
 
+# find out executables and export envs
+#  input: name:file ...
+#  ENV: COMMAND='xcrun --find'
+_init_tools() {
+    local cmd="${COMMAND:-which}"
+    local k v p
+    for x in "$@"; do
+        IFS=':' read -r k v <<< "$x"
+
+        for y in ${v//,/ }; do
+            p="$(eval "$cmd" "$y" 2>/dev/null)" && break
+        done
+
+        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
+
+        eval export "$k=$p"
+    done
+}
+
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
@@ -212,16 +231,10 @@ _init() {
 
     export ROOT PREFIX WORKDIR LOGFILES
 
-    # setup program envs
-    local _find=which
-    is_darwin && _find="xcrun --find" || true
-
     is_glibc || unset CL_TOOLCHAIN_PREFIX
 
-    local k v p E progs
-
     # shellcheck disable=SC2054,SC2206
-    progs=(
+    local toolchains=(
         CC:${CL_TOOLCHAIN_PREFIX}gcc
         CXX:${CL_TOOLCHAIN_PREFIX}g++
         AR:${CL_TOOLCHAIN_PREFIX}ar
@@ -230,6 +243,23 @@ _init() {
         NM:${CL_TOOLCHAIN_PREFIX}nm
         RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
         STRIP:${CL_TOOLCHAIN_PREFIX}strip
+    )
+    if is_darwin; then
+        COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
+    else
+        _init_tools "${toolchains[@]}"
+    fi
+
+    # STRIP
+    #  libraries: strip local symbols but keep debug
+    #  binaries: strip all and debug symbols
+    if "$STRIP" --version 2>/dev/null | grep -qFw Binutils; then
+        export BIN_STRIP="$STRIP --strip-all"
+    else
+        export BIN_STRIP="$STRIP"
+    fi
+
+    local host_tools=(
         MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
@@ -238,29 +268,20 @@ _init() {
         PATCH:patch
         INSTALL:install
     )
-    is_arm64 || progs+=(
+
+    is_arm64 || host_tools+=(
         NASM:nasm
         YASM:yasm
     )
 
     # MSYS2
-    is_msys && progs+=(
+    is_msys && host_tools+=(
         # we are using MSYS shell, but still setup mingw32-make
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    for x in "${progs[@]}"; do
-        IFS=':' read -r k v <<< "$x"
-        IFS=',' read -r -a v <<< "$v"
-
-        for y in "${v[@]}"; do
-            p="$($_find "$y" 2>/dev/null)" && break
-        done
-
-        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
-
-        eval export "$k=$p"
-    done
+    
+    _init_tools "${host_tools[@]}"
 
     # common flags for c/c++
     local FLAGS=(
