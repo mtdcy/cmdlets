@@ -890,9 +890,11 @@ library() {
 check() {
     slogi "..Run" "check $*"
 
-    local bin="$1"
+    # try prebuilts first
+    local bin="$PREFIX/bin/$1"
 
-    test -f "$bin" || bin="$PREFIX/bin/$1"
+    # try local file again
+    test -f "$bin" || bin="$1"
 
     test -f "$bin" || {
         slogf "CHECK" "cann't find $1"
