@@ -15,9 +15,11 @@ libs_args=(
     --with-libiconv
     --with-libiconv-prefix="'$PREFIX'"
 
-    --disable-nls
+    --with-pic
+
     --disable-rpath
 
+    # static only
     --disable-shared
     --enable-static
 )
@@ -39,13 +41,9 @@ common_headers=(
 )
 
 libs_build() {
-    configure &&
+    configure && make || return $?
 
-    make &&
-
-    library liunistring "${common_headers[@]}"           \
-            include/unistring   lib/unistring/*.h        \
-            lib                 lib/.libs/libunistring.a
+    pkgfile libunistring -- make install SUBDIRS=lib
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
