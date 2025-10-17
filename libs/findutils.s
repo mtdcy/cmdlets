@@ -4,9 +4,9 @@
 libs_desc="Rust implementation of findutils"
 
 libs_lic='MIT'
-libs_ver=0.8.4
+libs_ver=0.8.3
 libs_url=https://github.com/uutils/findutils/archive/refs/tags/0.8.0.tar.gz
-libs_sha=
+libs_sha=932f153d256f7a4cf40255a948689bf59a10f14c8804151817ab50fa1b46429a
 libs_dep=()
 
 libs_args=(
