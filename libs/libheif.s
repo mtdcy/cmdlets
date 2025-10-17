@@ -46,18 +46,13 @@ libs_args=(
 )
 
 libs_build() {
-    rm -f static || true
-    mkdir -p static && cd static
+    mkdir -p static
 
-    cmake .. && make || return 1
+    cmake -S . -B static &&
 
-    inspect make install &&
+    cmake --build static &&
 
-    pkgfile libheif                  \
-            include/libheif          \
-            lib/libheif.a            \
-            lib/pkgconfig/libheif.pc \
-            lib/cmake/libheif
+    pkgfile libheif -- cmake --install static/libheif
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
