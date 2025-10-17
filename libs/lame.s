@@ -15,7 +15,6 @@ libs_args=(
     --with-pic
 
     --disable-frontend
-    --disable-rpath
 
     --disable-shared
     --enable-static

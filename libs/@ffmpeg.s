@@ -41,7 +41,6 @@ libs_args=(
 
     #--disable-stripping        # result in larger size
     #--enable-shared
-    #--enable-rpath
     --enable-zlib
     --enable-bzlib
     --enable-lzma

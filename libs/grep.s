@@ -17,7 +17,6 @@ libs_args=(
 
     --without-selinux
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-man

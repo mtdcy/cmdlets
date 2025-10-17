@@ -18,7 +18,7 @@ libs_args=(
     --disable-dependency-tracking
 
     # no these for single static executables.
-    --disable-nls --disable-rpath
+    --disable-nls
 
     --disable-shared
     --enable-static

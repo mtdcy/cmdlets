@@ -17,7 +17,6 @@ libs_args=(
     --with-included-gettext
 
     --disable-nls
-    --disable-rpath
 
     # https://github.com/robxu9/bash-static/blob/master/build.sh
     --without-bash-malloc

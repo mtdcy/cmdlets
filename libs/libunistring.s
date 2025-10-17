@@ -17,7 +17,6 @@ libs_args=(
 
     --with-pic
 
-    --disable-rpath
 
     # static only
     --disable-shared

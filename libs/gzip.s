@@ -24,8 +24,6 @@ libs_args=(
     # always disable nls for single static executable, or
     #  => PREFIX/share/locale will hardcoded into executable
     --disable-nls
-    # disable rpath for single static executable
-    --disable-rpath
 
 )
 

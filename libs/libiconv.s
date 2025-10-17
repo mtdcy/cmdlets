@@ -24,7 +24,6 @@ libs_args=(
 
     # no these for single static executables
     --disable-nls
-    --disable-rpath
 
     # static only
     --disable-shared
