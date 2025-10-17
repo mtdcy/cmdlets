@@ -17,20 +17,9 @@ libs_args=(
 )
 
 libs_build() {
-    # force use configure
-    rm -f CMakeLists.txt || true
+    configure && make && make check || return $?
 
-    configure &&
-
-    make V=1 &&
-
-    make check &&
-
-    cmdlet src/lzop &&
-
-    # visual verify
-    check lzop --version
+    cmdlet ./src/lzop && check lzop --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

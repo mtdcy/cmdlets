@@ -11,24 +11,21 @@ libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
+
+    # static only
     --disable-shared
     --enable-static
     )
 
 libs_build() {
-    configure && make &&
+    configure && make || return $?
+ 
+    # bin/kvazaar also been installed
+    pkgfile libkvazaar -- make install SUBDIRS=src &&
 
-    # fix kvazaar.pc
-    sed -e "s@^prefix=.*@prefix=$PREFIX@" \
-        -e "s@^Version:.*@Version: $libs_ver@" \
-        -i src/kvazaar.pc &&
+    cmdlet src/kvazaar && 
     
-    library kvazaar \
-        include src/kvazaar.h \
-        lib src/.libs/*.a \
-        lib/pkgconfig src/kvazaar.pc &&
-
-    cmdlet src/kvazaar
+    check kvazaar --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -26,7 +26,6 @@ libs_args=(
     --disable-termcap
 
     --disable-nls
-    --disable-rpath
 
     # from homebrew:ncurses.rb
     --enable-sigwinch

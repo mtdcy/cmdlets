@@ -6,7 +6,7 @@ libs_url=https://www.libraw.org/data/LibRaw-$libs_ver.tar.gz
 libs_sha=6be43f19397e43214ff56aab056bf3ff4925ca14012ce5a1538a172406a09e63
 libs_dep=( zlib libjpeg-turbo lcms2 )
 
-# configure args
+# configure args: RAW <=> JPEG
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
@@ -14,11 +14,11 @@ libs_args=(
 
     --enable-jpeg
     --enable-zlib
-    --enable-lcms      # color management
-    --enable-openmp
+    --enable-lcms       # color management
+    --enable-openmp     # only gcc
 
     # prefer openjpeg
-    --disable-jasper     # JPEG-2000
+    --disable-jasper    # JPEG-2000
 
     --disable-examples
     --disable-docs
@@ -41,12 +41,7 @@ libs_build() {
 
     configure && make || return 2
 
-    inspect make install &&
-
-    pkgfile libraw                   \
-            include/libraw           \
-            lib/libraw*.a            \
-            lib/pkgconfig/libraw*.pc
+    pkgfile libraw -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

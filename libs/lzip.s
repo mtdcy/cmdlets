@@ -9,20 +9,18 @@ libs_url=http://download.savannah.gnu.org/releases/lzip/lzip-$libs_ver.tar.gz
 libs_sha=30c9cb6a0605f479c496c376eb629a48b0a1696d167e3c1e090c5defa481b162
 libs_dep=()
 
+# non-standard configure
 libs_args=(
+    PREFIX="'$PREFIX'"
+
+    CXX="'$CXX'"
+    CXXFLAGS="'$CXXFLAGS'" 
+    CPPFLAGS="'$CPPFLAGS'"
+    LDFLAGS="'$LDFLAGS'"
 )
 
 libs_build() {
-    # non-standard configure
-    configure \
-        CXX=\"$CXX\" \
-        CXXFLAGS=\"$CXXFLAGS\" \
-        CPPFLAGS=\"$CPPFLAGS\" \
-        LDFLAGS=\"$LDFLAGS\" &&
-
-    make &&
-
-    make check &&
+    configure && make && make check || return $?
 
     cmdlet lzip &&
 

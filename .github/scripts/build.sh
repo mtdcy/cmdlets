@@ -30,16 +30,15 @@ fi
 echo $PATH
 env | grep "^CL_" | grep -v TOKEN
 
+cmdlets=()
 if test -n "$*"; then
     IFS=', ' read -r -a cmdlets <<< "$@"
 else
     while read -r line; do
         # file been deleted or renamed
         test -f "$line" || continue
-
-        IFS='/.' read -r _ libs _ <<< "$line"
-
-        [[ "$libs" =~ ^[\.@_] ]] || cmdlets+=( "$libs" )
+        libs="$(basename "$line")"
+        [[ "$libs" =~ ^[.@_] ]] || cmdlets+=( "${libs%.s}" )
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
 fi
 

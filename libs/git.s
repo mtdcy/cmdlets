@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034,SC2154
 libs_lic="GPL-2.0-only"
-libs_ver=2.51.0
+libs_ver=2.51.1
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
-libs_sha=60a7c2251cc2e588d5cd87bae567260617c6de0c22dca9cdbfc4c7d2b8990b62
+libs_sha=a83fd9ffaed7eee679ed92ceb06f75b4615ebf66d3ac4fbdbfbc9567dc533f4a
 libs_dep=( zlib pcre2 libiconv expat curl )
 
 is_darwin || libs_dep+=( openssl )
@@ -37,9 +37,6 @@ libs_args=(
     # curl & expat for git-http-*
     EXPATDIR="'$PREFIX'"
     CURLDIR="'$PREFIX'"
-    CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
-    CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
-
     # iconv is required except for glibc
     NEEDS_LIBICONV=1
     ICONVDIR="'$PREFIX'"
@@ -65,7 +62,10 @@ is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
-    #make configure && configure || return 1
+    libs_args+=(
+        CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
+        CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
+    )
 
     # git build system prefer hard link, disable it
     sed -i '/ln \$< \$@/d' Makefile || true

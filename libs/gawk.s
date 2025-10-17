@@ -16,7 +16,6 @@ libs_args=(
 
     # disable these for single static executables.
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-man

@@ -13,21 +13,16 @@ libs_args=(
 )
 
 libs_build() {
-    cmake . &&
-
-    make &&
+    cmake . && make && make test || return $?
 
 #   # fix pc for static link
 #   if is_linux; then
 #       echo "Libs.private: -lm" >> libbrotlicommon.pc
 #   fi &&
-
-    make test &&
-
-    library libbrotli \
-            include/brotli  c/include/brotli/*.h \
-            lib             libbrotli*.a \
-            lib/pkgconfig   libbrotli*.pc &&
+    
+    # bin/brotli been installed
+    #  cmake: is there a option control install targets?
+    pkgfile libbrotli -- make install &&
 
     cmdlet brotli &&
 

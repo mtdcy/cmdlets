@@ -12,11 +12,15 @@ libs_dep=(
     # utils
     coreutils gsed gawk findutils grep gmake
     # shell
-    bash ctags shfmt ripgrep
+    bash ctags shfmt ripgrep tmux
     # net
     wget curl iperf3
     # multimedia
-    ffmpeg
+    ffmpeg imagemagick exiv2
+    # database
+    sqlite
+    # vcs
+    git
     # misc
     lazygit act htop
 )

@@ -14,26 +14,17 @@ libs_args=(
 
     --enable-lib-only
 
-    --disable-nls
-    --disable-rpath
-
-    --disable-doc
     --disable-man
 
+    # static
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure  &&
+    configure  && make -C lib V=1 || return $?
 
-    make -C lib V=1 &&
-
-    #make -C lib install
-    library libnghttp2 \
-            include/nghttp2 lib/includes/nghttp2/*.h \
-            lib             lib/.libs/libnghttp2.{a,la} \
-            lib/pkgconfig   lib/libnghttp2.pc
+    pkgfile libnghttp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

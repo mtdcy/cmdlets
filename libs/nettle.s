@@ -8,26 +8,25 @@ libs_dep=(gmp)
 
 libs_args=(
     --libdir=$PREFIX/lib    # default install to lib64
+
+    # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure && make &&
+    # fix build with musl-gcc
+    sed -i '/CC_FOR_BUILD/s/\$</$(CFLAGS) $(LDFLAGS) &/' Makefile.in
 
-    #make install
-    make config.h &&
+    configure && make && make check || return $?
 
-    library nettle                               \
-        include/nettle  *.h                      \
-        lib             libnettle.a libhogweed.a \
-        lib/pkgconfig   nettle.pc hogweed.pc &&
+    pkgfile libnettle -- make install-static install-headers install-pkgconfig &&
 
-    cmdlet tools/pkcs1-conv           &&
-    cmdlet tools/sexp-conv            &&
-    cmdlet tools/nettle-hash          &&
-    cmdlet tools/nettle-pbkdf2        &&
-    cmdlet tools/nettle-lfib-stream
+    cmdlet ./tools/pkcs1-conv           &&
+    cmdlet ./tools/sexp-conv            &&
+    cmdlet ./tools/nettle-hash          &&
+    cmdlet ./tools/nettle-pbkdf2        &&
+    cmdlet ./tools/nettle-lfib-stream
 }
 
 

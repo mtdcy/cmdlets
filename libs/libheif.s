@@ -4,7 +4,7 @@
 libs_ver=1.20.2
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
 libs_sha=68ac9084243004e0ef3633f184eeae85d615fe7e4444373a0a21cebccae9d12a
-libs_dep=( libjpeg-turbo openjpeg libpng libtiff webp x265 libde265 )
+libs_dep=( libjpeg-turbo openjpeg libpng libtiff libwebp x265 libde265 )
 
 # configure args
 libs_args=(
@@ -46,18 +46,13 @@ libs_args=(
 )
 
 libs_build() {
-    rm -f static || true
-    mkdir -p static && cd static
+    mkdir -p static
 
-    cmake .. && make || return 1
+    cmake -S . -B static &&
 
-    inspect make install &&
+    cmake --build static &&
 
-    pkgfile libheif                  \
-            include/libheif          \
-            lib/libheif.a            \
-            lib/pkgconfig/libheif.pc \
-            lib/cmake/libheif
+    pkgfile libheif -- cmake --install static/libheif
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

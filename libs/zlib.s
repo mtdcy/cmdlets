@@ -20,11 +20,8 @@ libs_type=cmdlet
 # configure args
 libs_args=()
 
-# patch zip
-libs_patch_url=
-libs_patch_sha=
-libs_patch_zip=
-libs_patch_strip=
+# resources: "url;sha"
+libs_resources=
 
 # patches
 libs_patches=()

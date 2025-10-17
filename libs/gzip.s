@@ -24,34 +24,26 @@ libs_args=(
     # always disable nls for single static executable, or
     #  => PREFIX/share/locale will hardcoded into executable
     --disable-nls
-    # disable rpath for single static executable
-    --disable-rpath
 
 )
 
 libs_build() {
-    configure &&
+    configure && make &&  make check || return $?
 
-    make &&
+    library libgzip gzip.h lzw.h lib/libgzip.a &&
 
-    {
-        is_linux && make check || true
-    } &&
-
-    library gzip.h lzw.h lib/libgzip.a &&
-
-    cmdlet gzip &&
+    cmdlet gzip   &&
     cmdlet gunzip &&
-    cmdlet gzexe &&
-    cmdlet zcat &&
-    cmdlet zcmp &&
-    cmdlet zdiff &&
-    cmdlet zgrep &&
+    cmdlet gzexe  &&
+    cmdlet zcat   &&
+    cmdlet zcmp   &&
+    cmdlet zdiff  &&
+    cmdlet zgrep  &&
     cmdlet zegrep &&
     cmdlet zfgrep &&
-    cmdlet zmore &&
-    cmdlet zless &&
-    cmdlet znew &&
+    cmdlet zmore  &&
+    cmdlet zless  &&
+    cmdlet znew   &&
 
     check gzip
 }
