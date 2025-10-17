@@ -63,8 +63,8 @@ libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
     libs_args+=(
-        CURL_CFLAGS="'$($PKG_CONFIG --cflags curl)'"
-        CURL_LDFLAGS="'$($PKG_CONFIG --libs curl)'"
+        CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
+        CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
     )
 
     # git build system prefer hard link, disable it
