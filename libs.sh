@@ -669,6 +669,11 @@ _link() {
 
 TAR="$(which gtar 2>/dev/null || which tar)"
 
+# libtool archive hardcoded PREFIX which is bad for us
+_rm_libtool_archive() {
+    find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
+}
+
 # pkgfile name <file or directories list>
 pkgfile() {
     local files
@@ -680,16 +685,14 @@ pkgfile() {
             make)   "${@:3}" DESTDIR="$DESTDIR" ;;
             *)      DESTDIR="$DESTDIR" "${@:3}" ;;
         esac || return
-        # no libtool *.la files
-        find DESTDIR -name "*.la" -exec rm -f {} \;
+        _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
         unset DESTDIR
 
         # do a real install
         "${@:3}"
-        # no libtool archive files
-        find "$PREFIX" -name "*.la" -exec rm -f {} \;
+        _rm_libtool_archive
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
@@ -776,9 +779,8 @@ inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || return $?
-
-    # remove libtool *.la files
-    find "$PREFIX/lib" -name "*.la" -exec rm -f {} \;
+    
+    _rm_libtool_archive
 
     find "$PREFIX" > "$libs_name.pack.post"
 
@@ -1271,6 +1273,8 @@ build() {
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
         done
+
+        _rm_libtool_archive
     fi
 
     # append targets
