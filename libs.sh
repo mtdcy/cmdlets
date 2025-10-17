@@ -692,10 +692,11 @@ pkgfile() {
 
     # preprocessing installed files
     for x in "${files[@]}"; do
-        test -e "$x" || slogf "$x not exists"
+        # test won't work as file glob exists
+        #test -e "$x" || slogf "$x not exists"
         case "$x" in
             *.a)
-                echocmd "$STRIP" --strip-unneeded "$x"
+                echocmd "$STRIP" -x "$x"
                 echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
@@ -704,7 +705,9 @@ pkgfile() {
                     -i "$x"
                 ;;
             bin/*)
-                test -f "$x" && echocmd "$STRIP" --strip-all "$x" || true
+                if test -f "$x"; then
+                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
+                fi
                 ;;
         esac
     done
