@@ -13,10 +13,7 @@ libs_args=(
 )
 
 libs_build() {
-    is_darwin && {
-        slogw "*****" "**** Not supported on $OSTYPE! ****"
-        exit 0
-    }
+    depends_on is_linux
 
     mkdir -p build
 

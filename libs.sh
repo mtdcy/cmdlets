@@ -33,6 +33,13 @@ is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
+depends_on() {
+    eval -- "$@" || {
+        slogw "*****" "**** Not supported on $OSTYPE! ****"
+        exit 0 # exit shell
+    }
+}
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local lvl date message
