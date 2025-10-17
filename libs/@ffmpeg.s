@@ -12,7 +12,7 @@ libs_dep=(
     libpng giflib libjpeg-turbo libtiff webp openjpeg
     # video libs
     #zimg 
-    theora vpx
+    theora libvpx
     openh264 kvazaar
     # text libs
     fribidi libass
