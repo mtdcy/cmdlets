@@ -34,7 +34,7 @@ is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
 depends_on() {
-    eval -- "$@" || {
+    "$@" || {
         slogw "*****" "**** Not supported on $OSTYPE! ****"
         exit 0 # exit shell
     }
@@ -676,8 +676,8 @@ pkgfile() {
         export DESTDIR=$(pwd -P)/DESTDIR
         mkdir -p "$DESTDIR"
         case "$3" in
-            make)   eval -- "${@:3}" DESTDIR="$DESTDIR" ;;
-            *)      eval -- DESTDIR="$DESTDIR" "${@:3}" ;;
+            make)   "${@:3}" DESTDIR="$DESTDIR" ;;
+            *)      DESTDIR="$DESTDIR" "${@:3}" ;;
         esac || return
         # no libtool *.la files
         find DESTDIR -name "*.la" -exec rm -f {} \;
@@ -686,7 +686,7 @@ pkgfile() {
         unset DESTDIR
 
         # do a real install
-        eval -- "${@:3}"
+        "${@:3}"
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
