@@ -24,7 +24,7 @@ libs_args=(
 libs_build() {
     configure && make && make check || return $?
 
-    pkgfile liblzo2 -- make install
+    pkgfile liblzo2 -- make install install-data
 }
 
 
