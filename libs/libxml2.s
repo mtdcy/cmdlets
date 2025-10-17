@@ -5,52 +5,42 @@ libs_lic="MIT"
 libs_ver=2.13.9
 libs_url=https://download.gnome.org/sources/libxml2/2.13/libxml2-${libs_ver}.tar.xz
 libs_sha=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
-libs_dep=(zlib libiconv readline)
+libs_dep=(zlib xz libiconv readline)
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    # avoid hardcode PREFIX
+    -Dsysconfdir=/etc/
+    -Dlocalstatedir=/var
 
-    --with-history # shell mode
-    --without-http
-    --without-lzma
+    -Dzlib=enabled
+    -Dlzma=enabled
+    -Diconv=enabled
+    -Dreadline=true
+    -Dhtml=true
+    -Dhttp=true
+    -Dhistory=true          # history support for shell
 
-    # python ?
-    --without-python
+    -Ddebuging=false
+    -Dpython=false          # python bindings
 
-    # icu4c ?
-    --without-icu
+    # icu: no i18n for static linked executables
+    -Dicu=disabled
 
     # https://gitlab.gnome.org/GNOME/libxml2/-/issues/751#note_2157870
-    --with-legacy
-
-    --disable-shared
-    --enable-static
-    )
+    -Dlegacy=true   # ISO-8859-X support if no iconv
+)
 
 libs_build() {
+    mkdir -p build
+    
+    meson setup build                                      &&
 
-    configure &&
+    meson compile -C build --verbose                       &&
 
-    make &&
+    pkgfile libxml2 -- meson install -C build --tags devel &&
 
-    # 'Failed to open module' after update
-#   {
-#       # fixme: test fails in MSYS2
-#       is_msys || make check V=1
-#   } &&
-
-    library libxml2                                      \
-            include/libxml2/libxml  include/libxml/*.h   \
-            lib                     .libs/*.a            \
-            lib/cmake               libxml2-config.cmake \
-            lib/pkgconfig           libxml-2.0.pc        \
-            &&
-
-    cmdlet  xmllint &&
-
-    #inspect_install make install
+    cmdlet ./build/xmllint                                 &&
+    cmdlet ./build/xmlcatalog                              &&
 
     check xmllint --version
 }
