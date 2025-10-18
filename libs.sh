@@ -469,11 +469,14 @@ cmake() {
             cmdline+=( "$@" )
             ;;
         *)
+            local search="$PREFIX"
+            test -z "$CMAKE_PREFIX_PATH" || search="$search:$CMAKE_PREFIX_PATH"
+
             # extend CMAKE with compile tools
             cmdline+=(
                 -DCMAKE_BUILD_TYPE=RelWithDebInfo
                 -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-                -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                -DCMAKE_PREFIX_PATH="'$search'"
                 -DCMAKE_MAKE_PROGRAM="'$MAKE'"
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
@@ -674,12 +677,12 @@ _rm_libtool_archive() {
     find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
-# pkgfile name <file or directories list>
+# create a pkgfile with given files
 pkgfile() {
     local files
     if [ "$2" = "--" ]; then
         # install with DESTDIR to get file list
-        export DESTDIR=$(pwd -P)/DESTDIR
+        local DESTDIR=$(pwd -P)/DESTDIR
         mkdir -p "$DESTDIR"
         case "$3" in
             make)   "${@:3}" DESTDIR="$DESTDIR" ;;
@@ -688,7 +691,6 @@ pkgfile() {
         _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
-        unset DESTDIR
 
         # do a real install
         "${@:3}"
@@ -772,6 +774,53 @@ pkgfile() {
     echo "$1 $pkgfile $sha" >> cmdlets.manifest
 
     popd
+}
+
+# install files and create a pkgfile
+#  input: name                     \
+#         [include]       header.h \
+#         include/xxx     xxx.h    \
+#         [lib]           libxxx.a \
+#         [lib/pkgconfig] xxx.pc   \
+#         share           yyy      \
+#         share/man       zzz
+pkginst() {
+    local name="$1"; shift
+
+    slogi ".Inst" "$name < $*"
+
+    local sub installed
+    while [ $# -ne 0 ]; do
+        local file="$1"; shift
+        local mode=( -m644 )
+        case "$file" in
+            # no libtool archive files
+            # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
+            *.la)               continue ;;
+            *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"      ;;
+            *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"    ;;
+            *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"
+                _fix_pc "$file"
+                ;;
+            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"        
+                mode+=( -s )
+                ;;
+            include*|lib*|share*|bin)
+                sub="$file"
+                echocmd "$INSTALL" -d -m755 "$PREFIX/$sub"
+                continue
+                ;;
+        esac
+
+        case "$sub" in
+            bin*|libexec*)  mode=( -m755 -s ) ;;
+        esac
+
+        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || return $?
+        installed+=( "$sub/${file##*/}" )
+    done
+
+    pkgfile "$name" "${installed[@]}"
 }
 
 # find out which files are installed by `make install'
