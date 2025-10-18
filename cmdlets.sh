@@ -315,7 +315,7 @@ fetch() {
                             printf "%${width}s -> %s\n" "$(basename "$file")" "$file"
                             ln -sf "$file" .
                         fi
-                    done < <(cat "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%")
+                    done < <(cat "$TEMPDIR/files" | grep "^bin/" | sed "s%^%$PREBUILTS/%")
                 fi
 
                 shift 1
