@@ -15,9 +15,12 @@ libs_args=(
    
     # static
     -DBUILD_SHARED_LIBS=OFF
+
+    # fix soxr.pc later
+    -DWITH_OPENMP=OFF
 )
 
-is_linux && libs_args+=( -DWITH_OPENMP=ON ) || libs_args+=( -DWITH_OPENMP=OFF )
+#is_linux && libs_args+=( -DWITH_OPENMP=ON ) || libs_args+=( -DWITH_OPENMP=OFF )
 
 libs_build() {
     cmake . && make || return $?
