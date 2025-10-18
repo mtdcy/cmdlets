@@ -23,10 +23,11 @@ Libs: -L\${libdir} -lgif
 Cflags: -I\${includedir}
 EOF
 
-    library gif \
+    pkginst libgif                    \
             include         gif_lib.h \
-            lib             libgif.a \
-            lib/pkgconfig   gif.pc &&
+            lib             libgif.a  \
+            lib/pkgconfig   gif.pc    \
+            &&
 
     cmdlet gifecho &&
 

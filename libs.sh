@@ -469,11 +469,14 @@ cmake() {
             cmdline+=( "$@" )
             ;;
         *)
+            local search="$PREFIX"
+            test -z "$CMAKE_PREFIX_PATH" || search="$search:$CMAKE_PREFIX_PATH"
+
             # extend CMAKE with compile tools
             cmdline+=(
                 -DCMAKE_BUILD_TYPE=RelWithDebInfo
                 -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-                -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                -DCMAKE_PREFIX_PATH="'$search'"
                 -DCMAKE_MAKE_PROGRAM="'$MAKE'"
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
@@ -674,12 +677,12 @@ _rm_libtool_archive() {
     find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
-# pkgfile name <file or directories list>
+# create a pkgfile with given files
 pkgfile() {
     local files
     if [ "$2" = "--" ]; then
         # install with DESTDIR to get file list
-        export DESTDIR=$(pwd -P)/DESTDIR
+        local DESTDIR=$(pwd -P)/DESTDIR
         mkdir -p "$DESTDIR"
         case "$3" in
             make)   "${@:3}" DESTDIR="$DESTDIR" ;;
@@ -688,7 +691,6 @@ pkgfile() {
         _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
-        unset DESTDIR
 
         # do a real install
         "${@:3}"
@@ -774,6 +776,51 @@ pkgfile() {
     popd
 }
 
+# install files and create a pkgfile
+#  input: name                     \
+#         [include]       header.h \
+#         include/xxx     xxx.h    \
+#         [lib]           libxxx.a \
+#         [lib/pkgconfig] xxx.pc   \
+#         share           yyy      \
+#         share/man       zzz
+pkginst() {
+    local name="$1"; shift
+
+    slogi ".Inst" "$name < $*"
+
+    local sub installed
+    while [ $# -ne 0 ]; do
+        local file="$1"; shift
+        local mode=( -m644 )
+        case "$file" in
+            # no libtool archive files
+            # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
+            *.la)               continue ;;
+            *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"      ;;
+            *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"    ;;
+            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"          ;;
+            *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"
+                _fix_pc "$file"
+                ;;
+            include*|lib*|share*|bin)
+                sub="$file"
+                echocmd "$INSTALL" -d -m755 "$PREFIX/$sub"
+                continue
+                ;;
+        esac
+
+        case "$sub" in
+            bin*|libexec*)  mode=( -m755 -s ) ;;
+        esac
+
+        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || return $?
+        installed+=( "$sub/${file##*/}" )
+    done
+
+    pkgfile "$name" "${installed[@]}"
+}
+
 # find out which files are installed by `make install'
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
@@ -813,82 +860,6 @@ _fix_pc() {
             -e "s%$PREFIX%\${prefix}%g" \
             -i "$1"
     fi
-}
-
-# install library
-#  input: name[:alias:...]         \
-#         [include]       header.h \
-#         include/xxx     xxx.h    \
-#         [lib]           libxxx.a \
-#         [lib/pkgconfig] xxx.pc   \
-#         share           yyy      \
-#         share/man       zzz
-library() {
-    echo "WARNING: library() is deprecated, please use pkgfile() instead" > $(_logfile)
-    slogi ".Inst" "$1 < ${*:2}"
-
-    local name alias subdir installed
-    IFS=':' read -r name alias <<< "$1"
-    shift # skip name and alias
-    
-    [[ "$name" =~ ^lib ]] || name="lib$name"
-
-    while [ $# -ne 0 ]; do
-        local file
-
-        file="$1"; shift
-        case "$file" in
-            # no libtool archive files
-            # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
-            *.la) ;;
-            *.h|*.hxx|*.hpp)    [[ "$subdir" =~ ^include        ]] || subdir="include"      ;;
-            *.a|*.so|*.so.*)    [[ "$subdir" =~ ^lib            ]] || subdir="lib"          ;;
-            *.cmake)            [[ "$subdir" =~ ^lib/cmake      ]] || subdir="lib/cmake"    ;;
-            *.pc)               [[ "$subdir" =~ ^lib/pkgconfig  ]] || subdir="lib/pkgconfig"
-                _fix_pc "$file"
-                ;;
-            include*|lib*|bin*|share*)
-                subdir="$file"
-                echocmd "$INSTALL" -d -m755 "$PREFIX/$subdir"
-                continue
-                ;;
-        esac
-
-        local target symlink
-
-        # install file to target
-        target="$PREFIX/$subdir/$(basename "$file")"
-
-        echocmd "$INSTALL" -m644 "$file" "$target" || return 1
-
-        # override existing symlink?
-        [[ "${installed[*]}" == *"$target"* ]] || installed+=( "$target" )
-
-        # install alias(links)
-        #1. match file name with pkg name
-        #2. match file name with pkg name without lib prefix
-        #  e.g: library libncursesw:libncurses:libcurses include/ncursesw.h
-
-        for x in ${alias//:/ }; do
-            if [[ "${file%.*}" =~ "$name"$ ]]; then
-                symlink="$PREFIX/$subdir/$x.${file##*.}"
-            elif [[ "${file%.*}" =~ "${name#lib}"$ ]]; then
-                symlink="$PREFIX/$subdir/${x#lib}.${file##*.}"
-            fi
-
-            # no match
-            test -n "$symlink" || continue
-
-            # already installed?
-            [[ "${installed[*]}" == *"$symlink"* ]] && continue
-
-            _link "$target" "$symlink"
-
-            installed+=( "$symlink" )
-        done
-    done
-
-    pkgfile "$name" "${installed[@]}"
 }
 
 # perform visual check on cmdlet

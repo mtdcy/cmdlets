@@ -30,7 +30,7 @@ libs_args=(
 libs_build() {
     configure && make &&  make check || return $?
 
-    library libgzip gzip.h lzw.h lib/libgzip.a &&
+    pkginst libgzip gzip.h lzw.h lib/libgzip.a &&
 
     cmdlet gzip   &&
     cmdlet gunzip &&

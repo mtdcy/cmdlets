@@ -47,7 +47,7 @@ EOF
 
     cmdlet minigzip &&
 
-    library libz \
+    pkginst libz \
             include zlib.h zconf.h \
             lib libz.a \
             lib/pkgconfig zlib.pc &&

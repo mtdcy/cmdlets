@@ -17,14 +17,14 @@ libs_args=(
 libs_build() {
     configure && make &&
 
-    library opencore-amrnb \
+    pkginst libopencore-amrnb            \
         include/opencore-amrnb amrnb/*.h \
-        lib amrnb/.libs/*.a \
+        lib amrnb/.libs/*.a              \
         lib/pkgconfig amrnb/*.pc &&
-    
-    library opencore-amrwb \
+
+    pkginst libopencore-amrwb            \
         include/opencore-amrwb amrwb/*.h \
-        lib amrwb/.libs/*.a \
+        lib amrwb/.libs/*.a              \
         lib/pkgconfig amrwb/*.pc
 }
 
