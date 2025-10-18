@@ -2,8 +2,8 @@
 
 # shellcheck disable=SC2034
 libs_ver=0.21.4
-libs_url=https://www.libraw.org/data/LibRaw-$libs_ver.tar.gz
-libs_sha=6be43f19397e43214ff56aab056bf3ff4925ca14012ce5a1538a172406a09e63
+libs_url=https://github.com/LibRaw/LibRaw/archive/refs/tags/$libs_ver.tar.gz
+libs_sha=8baeb5253c746441fadad62e9c5c43ff4e414e41b0c45d6dcabccb542b2dff4b
 libs_dep=( zlib libjpeg-turbo lcms2 )
 
 # configure args: RAW <=> JPEG
