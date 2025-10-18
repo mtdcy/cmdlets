@@ -944,14 +944,15 @@ _fetch() {
     if test -n "$CL_MIRRORS"; then
         mirror="$CL_MIRRORS/packages/$libs_name/$(basename "$zip")"
         slogi ".CURL" "$mirror"
-        _curl "$mirror" "$zip"
+        _curl "$mirror" "$zip" ||
+        rm -f "$zip"
     fi
 
     #3. try originals
     if ! test -f "$zip"; then
         for url in "${@:3}"; do
             slogi ".CURL" "$url"
-            _curl "$url" "$zip" && break
+            _curl "$url" "$zip" && break || rm -f "$zip"
         done
     fi
 
