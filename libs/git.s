@@ -70,36 +70,31 @@ libs_build() {
     # standalone cmds: binaries and bash scripts
     local cmds=(
         # basic
-        git git-shell 
+        git git-daemon git-shell git-submodule git-svn
         # core utils
         git-receive-pack git-upload-pack git-upload-archive
         # http & https
         git-http-backend git-http-fetch git-http-push 
-        # submodule
-        git-submodule
-        # mail
-        git-imap-send
-        # import
-        git-quiltimport git-request-pull
+        # merge
+        git-mergetool git-merge-octopus git-merge-one-file git-merge-resolve
+        # misc
+        git-imap-send git-quiltimport git-request-pull git-difftool--helper git-web--browse
     )
 
     make -C contrib/subtree "${libs_args[@]}" &&
     cmds+=( contrib/subtree/git-subtree ) &&
 
     if is_darwin; then
-        cd contrib/credential/osxkeychain &&
-        make "${libs_args[@]}"  &&
-        cd - || return 2
+        make -C contrib/credential/osxkeychain "${libs_args[@]}"  &&
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
-    fi
+    fi &&
 
     for x in "${cmds[@]}"; do
         cmdlet "./$x" || return 3
     done
 
     # specials
-    cmdlet ./git-remote-http git-remote-http git-remote-https &&
-    cmdlet ./git-remote-ftp  git-remote-ftp  git-remote-ftps  &&
+    cmdlet ./git-remote-http git-remote-http git-remote-https git-remote-ftp  git-remote-ftps  &&
 
     # bug fix: NO_GETTEXT
     sed -i git-sh-setup                     \
@@ -109,10 +104,18 @@ libs_build() {
         -e 's/gettextln/echo/g'             \
         &&
 
-    cmdlet ./git-sh-setup                                     &&
+    cmdlet ./git-sh-setup &&
 
     # pack all git tools into one pkgfile
-    pkgfile git bin/git bin/git-*                             &&
+    pkgfile git bin/git bin/git-* &&
+
+    # install git-core with more links
+    links=()
+    md5sum="$(md5sum git | cut -d' ' -f1)"
+    for x in git-*; do
+        [ "$(md5sum "$x" | cut -d' ' -f1)" != "$md5sum" ] || links+=( "$x" )
+    done
+    cmdlet ./git git-core "${links[@]}" &&
 
     check git --version
 }
