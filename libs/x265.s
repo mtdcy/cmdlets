@@ -112,7 +112,7 @@ EOF
     # bugfix
     sed -i 's/-lgcc_s//g' x265.pc &&
 
-    library libx265 x265_config.h ../source/x265.h libx265.a x265.pc
+    pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
 
     inspect make install
 

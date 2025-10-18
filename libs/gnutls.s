@@ -36,7 +36,7 @@ libs_build() {
 
     make check &&
 
-    library gnutls                                    \
+    pkginst libgnutls                                 \
         include/gnutls  lib/includes/gnutls/gnutls*.h \
         lib             lib/.libs/libgnutls*.a        \
         lib/pkgconfig   lib/gnutls.pc

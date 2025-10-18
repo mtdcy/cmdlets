@@ -1,4 +1,4 @@
-# GLib is a general-purpose, portable utility library, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
+# GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
 
 # shellcheck disable=SC2034
 libs_lic="LGPL-2.1-or-later"

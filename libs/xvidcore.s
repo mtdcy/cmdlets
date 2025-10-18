@@ -13,7 +13,7 @@ libs_build() {
 
     make all
 
-    library xvidcore \
+    pkginst xvidcore \
         include ../../src/xvid.h \
         lib =build/libxvidcore.a
 }
