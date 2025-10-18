@@ -126,11 +126,8 @@ libs_build() {
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-* &&
 
-    # misc: install all files
-    make install "${libs_args[@]}" gitexecdir="$PREFIX/libexec/git-core" &&
-
     # mergetools: env MERGE_TOOLS_DIR
-    pkgfile mergetools libexec/git-core/mergetools &&
+    pkginst mergetools share/mergetools mergetools/* &&
 
     check git --version
 }
