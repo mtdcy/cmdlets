@@ -19,7 +19,7 @@ libs_build() {
     make all test &&
 
     # install lib and headers
-    library libbz2 bzlib.h libbz2.a &&
+    pkginst libbz2 bzlib.h libbz2.a &&
 
     # install cmdlets and symlinks
     cmdlet bzip2 bzip2 bunzip2 bzcat &&

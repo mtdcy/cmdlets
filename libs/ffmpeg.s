@@ -11,7 +11,7 @@ FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 . libs/@ffmpeg.s
 
 install_ffmpeg_libs() {
-    library $1                         \
+    pkginst lib$1                      \
         include/lib$1   lib$1/*.h      \
         lib             lib$1/lib$1.a  \
         lib/pkgconfig   lib$1/lib$1.pc

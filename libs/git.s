@@ -11,7 +11,9 @@ is_darwin || libs_dep+=( openssl )
 
 libs_args=(
     prefix="'$PREFIX'"
-    sysconfdir=/etc
+
+    # no /etc/gitconfig
+    ETC_GITCONFIG=/no-etc-gitconfig
 
     CC="'$CC'"
     CFLAGS="'$CFLAGS $CPPFLAGS'"
@@ -70,15 +72,17 @@ libs_build() {
     # standalone cmds: binaries and bash scripts
     local cmds=(
         # basic
-        git git-daemon git-shell git-submodule git-svn
+        git git-daemon git-shell git-submodule git-sh-setup
         # core utils
         git-receive-pack git-upload-pack git-upload-archive
-        # http & https
-        git-http-backend git-http-fetch git-http-push 
-        # merge
-        git-mergetool git-merge-octopus git-merge-one-file git-merge-resolve
+        # http
+        git-http-backend git-http-fetch git-http-push
+        # merge & difftool
+        git-mergetool git-difftool--helper
+        # https
+        "git-remote-http:git-remote-https:git-remote-ftp:git-remote-ftps"
         # misc
-        git-imap-send git-quiltimport git-request-pull git-difftool--helper git-web--browse
+        git-request-pull
     )
 
     make -C contrib/subtree "${libs_args[@]}" &&
@@ -87,35 +91,45 @@ libs_build() {
     if is_darwin; then
         make -C contrib/credential/osxkeychain "${libs_args[@]}"  &&
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
+    else
+        make -C contrib/credential/netrc "${libs_args[@]}"  &&
+        cmds+=( contrib/credential/netrc/git-credential-netrc )
     fi &&
 
-    for x in "${cmds[@]}"; do
-        cmdlet "./$x" || return 3
-    done
-
-    # specials
-    cmdlet ./git-remote-http git-remote-http git-remote-https git-remote-ftp  git-remote-ftps  &&
-
-    # bug fix: NO_GETTEXT
-    sed -i git-sh-setup                     \
-        -e '/git-sh-i18n/d'                 \
-        -e 's/eval_gettextln/eval echo/g'   \
-        -e 's/eval_gettext/eval echo/g'     \
-        -e 's/gettextln/echo/g'             \
+    # git-sh-setup: NO_GETTEXT
+    sed -i git-sh-setup                                 \
+        -e '/git-sh-i18n/d'                             \
+        -e 's/eval_gettextln/eval echo/g'               \
+        -e 's/eval_gettext/eval echo/g'                 \
+        -e 's/gettextln/echo/g'                         \
         &&
 
-    cmdlet ./git-sh-setup &&
+    # git-mergetool:
+    sed -i git-mergetool                                \
+        -e 's/git-sh-setup/$(which git-sh-setup)/'      \
+        -e '/git-mergetool--lib/r git-mergetool--lib'   \
+        -e '/git-mergetool--lib/d'                      \
+        &&
+
+    # git-difftool--helper:
+    #  #1. GIT_EXTERNAL_DIFF=echo git diff
+    #  #2. git difftool --extcmd echo
+    #  #3. git difftool --tool vscode
+    sed -i git-difftool--helper                         \
+        -e '/git-mergetool--lib/r git-mergetool--lib'   \
+        -e '/git-mergetool--lib/d'                      \
+        &&
+
+    for x in "${cmds[@]}"; do
+        IFS=':' read -r bin links <<< "$x"
+        cmdlet "./$bin" "$bin" ${links//:/ } || return 3
+    done
 
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-* &&
 
-    # install git-core with more links
-    links=()
-    md5sum="$(md5sum git | cut -d' ' -f1)"
-    for x in git-*; do
-        [ "$(md5sum "$x" | cut -d' ' -f1)" != "$md5sum" ] || links+=( "$x" )
-    done
-    cmdlet ./git git-core "${links[@]}" &&
+    # mergetools: env MERGE_TOOLS_DIR
+    pkginst mergetools share/mergetools mergetools/* &&
 
     check git --version
 }

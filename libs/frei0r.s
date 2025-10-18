@@ -20,8 +20,8 @@ libs_build() {
 
     make &&
 
-    library frei0r \
-        include ../include/frei0r.h \
+    pkginst libfrei0r                             \
+        include ../include/frei0r.h               \
         lib/frei0r $(find . -name "*.so" | xargs) \
         lib/pkgconfig frei0r.pc
 }
