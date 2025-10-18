@@ -29,7 +29,6 @@ libs_args=(
 
     --with-modules
     --with-zip
-    --enable-openmp     # openmp is not ready for macOS
     
     #--with-gs-font-dir=#{HOMEBREW_PREFIX}/share/ghostscript/fonts
 
@@ -51,16 +50,9 @@ libs_args=(
     --enable-static
 )
 
-if is_darwin; then
-    libs_args+=(
-        --enable-osx-universal-binary=no
-
-        ## Work around checking for clang option to support OpenMP... unsupported
-        #ac_cv_prog_c_openmp="'-Xpreprocessor -fopenmp'"
-        #ac_cv_prog_cxx_openmp="'-Xpreprocessor -fopenmp'"
-    )
-    #export LDFLAGS+=" -lomp -lz"
-fi
+is_darwin && libs_args+=(
+    --enable-osx-universal-binary=no
+)
 
 libs_build() {
     configure && make &&

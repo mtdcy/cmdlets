@@ -16,7 +16,7 @@ libs_args=(
     # static
     -DBUILD_SHARED_LIBS=OFF
 
-    # fix soxr.pc later
+    # no openmp
     -DWITH_OPENMP=OFF
 )
 

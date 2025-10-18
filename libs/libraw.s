@@ -15,7 +15,6 @@ libs_args=(
     --enable-jpeg
     --enable-zlib
     --enable-lcms       # color management
-    --enable-openmp     # only gcc
 
     # prefer openjpeg
     --disable-jasper    # JPEG-2000
@@ -26,15 +25,6 @@ libs_args=(
     --disable-shared
     --enable-static
 )
-
-#if is_darwin; then
-#    #libs_args+=(
-#    #    ## Work around checking for clang option to support OpenMP... unsupported
-#    #    #ac_cv_prog_c_openmp="'-Xpreprocessor -fopenmp'"
-#    #    #ac_cv_prog_cxx_openmp="'-Xpreprocessor -fopenmp'"
-#    #)
-#    #export LDFLAGS+=" -lomp -lz"
-#fi
 
 libs_build() {
     slogcmd autoreconf -fiv || return 1
