@@ -14,11 +14,8 @@ libs_args=(
     sysconfdir=/etc
 
     CC="'$CC'"
-    CFLAGS="'$CFLAGS'"
+    CFLAGS="'$CFLAGS $CPPFLAGS'"
     LDFLAGS="'$LDFLAGS'"
-
-    # use system config dir
-    sysconfdir=/etc
 
     NO_GETTEXT=1 # no translation
     NO_PERL=1
@@ -28,18 +25,12 @@ libs_args=(
     NO_FINK=1
     NO_DARWIN_PORTS=1
 
-    # 
+    # pcre2
     USE_LIBPCRE2=1
-    LIBPCREDIR="'$PREFIX'"
+    # use our libiconv both for Linux and macOS
+    NEEDS_LIBICONV=1
     
     INSTALL_SYMLINKS=1
-
-    # curl & expat for git-http-*
-    EXPATDIR="'$PREFIX'"
-    CURLDIR="'$PREFIX'"
-    # iconv is required except for glibc
-    NEEDS_LIBICONV=1
-    ICONVDIR="'$PREFIX'"
 )
 
 is_darwin && libs_args+=(
@@ -62,9 +53,13 @@ is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
 libs_args+=( gitexecdir='/no-git-libexec' )
 
 libs_build() {
+    # no pkg-config outside libs_build
+
+    # curl & expat for git-http-*
     libs_args+=(
         CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
         CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
+        EXPAT_LIBEXPAT="'$($PKG_CONFIG --libs expat)'"
     )
 
     # git build system prefer hard link, disable it
@@ -72,25 +67,28 @@ libs_build() {
 
     make "${libs_args[@]}" || return 1
 
-    # standalone cmds
+    # standalone cmds: binaries and bash scripts
     local cmds=(
         # basic
-        git git-shell
+        git git-shell 
         # core utils
-        git-cvsserver git-receive-pack git-upload-pack git-upload-archive
+        git-receive-pack git-upload-pack git-upload-archive
         # http & https
         git-http-backend git-http-fetch git-http-push 
         # submodule
         git-submodule
         # mail
-        git-imap-send git-send-email
+        git-imap-send
         # import
-        git-archimport git-cvsimport git-quiltimport git-request-pull
+        git-quiltimport git-request-pull
     )
+
+    make -C contrib/subtree "${libs_args[@]}" &&
+    cmds+=( contrib/subtree/git-subtree ) &&
 
     if is_darwin; then
         cd contrib/credential/osxkeychain &&
-        make CC="'$CC'" CFLAGS="'$CFLAGS'" LDFLAGS="'$LDFLAGS'"  &&
+        make "${libs_args[@]}"  &&
         cd - || return 2
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
     fi

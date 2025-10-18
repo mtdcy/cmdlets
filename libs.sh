@@ -1123,16 +1123,28 @@ _prepare() {
                 ;;
         esac
     done
+
+    if test -s "$TEMPDIR/$libs_name.patch"; then
+        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch"
+    fi
 }
 
 # _load library
 _load() {
     unset "${!libs_@}"
 
-    [ -f "$1" ] && source "$1" || source "libs/$1.s"
+    local file="$1"
+    test -f "$file" || file="libs/$1.s"
+
+    mkdir -p "$TEMPDIR/${file%/*}"
+    # sed: delete all lines after a match
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$file"
+    . "$TEMPDIR/$file"
 
     # default values:
-    [ -n "$libs_name" ] || libs_name="$(basename "${1%.s}")"
+    [ -n "$libs_name" ] || libs_name="$(basename "${file%.s}")"
+
+    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     [ "$libs_type" = ".PHONY" ] && return 0
 
@@ -1445,6 +1457,9 @@ prerequisites() {
         rm prerequisites.tar.gz
     fi
 }
+
+# shellcheck disable=SC2064
+TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
 _init || exit 110
 
