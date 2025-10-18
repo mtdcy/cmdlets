@@ -78,7 +78,7 @@ libs_build() {
         # merge & difftool
         git-mergetool git-difftool--helper
         # https
-        "git-remote-http:git-remote-http:git-remote-https:git-remote-ftp:git-remote-ftps"
+        "git-remote-http:git-remote-https:git-remote-ftp:git-remote-ftps"
         # misc
         git-request-pull
     )
