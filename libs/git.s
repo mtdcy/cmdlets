@@ -91,7 +91,7 @@ libs_build() {
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
     else
         make -C contrib/credential/netrc "${libs_args[@]}"  &&
-        cmds+=( contrib/credential/osxkeychain/git-credential-netrc )
+        cmds+=( contrib/credential/netrc/git-credential-netrc )
     fi &&
 
     # git-sh-setup: NO_GETTEXT
