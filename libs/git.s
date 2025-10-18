@@ -70,11 +70,15 @@ libs_build() {
     # standalone cmds: binaries and bash scripts
     local cmds=(
         # basic
-        git git-daemon git-shell git-submodule
+        git git-daemon git-shell git-submodule git-sh-setup
         # core utils
         git-receive-pack git-upload-pack git-upload-archive
-        # http & https
-        git-http-backend git-http-fetch git-http-push 
+        # http
+        git-http-backend git-http-fetch git-http-push
+        # merge & difftool
+        git-mergetool git-difftool--helper
+        # https
+        "git-remote-http:git-remote-http:git-remote-https:git-remote-ftp:git-remote-ftps"
         # misc
         git-request-pull
     )
@@ -87,25 +91,43 @@ libs_build() {
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
     fi &&
 
-    for x in "${cmds[@]}"; do
-        cmdlet "./$x" || return 3
-    done
-
-    # specials
-    cmdlet ./git-remote-http git-remote-http git-remote-https git-remote-ftp  git-remote-ftps  &&
-
-    # NO_GETTEXT
-    sed -i git-sh-setup                     \
-        -e '/git-sh-i18n/d'                 \
-        -e 's/eval_gettextln/eval echo/g'   \
-        -e 's/eval_gettext/eval echo/g'     \
-        -e 's/gettextln/echo/g'             \
+    # git-sh-setup: NO_GETTEXT
+    sed -i git-sh-setup                                 \
+        -e '/git-sh-i18n/d'                             \
+        -e 's/eval_gettextln/eval echo/g'               \
+        -e 's/eval_gettext/eval echo/g'                 \
+        -e 's/gettextln/echo/g'                         \
         &&
 
-    cmdlet ./git-sh-setup &&
+    # git-mergetool:
+    sed -i git-mergetool                                \
+        -e 's/git-sh-setup/$(which git-sh-setup)/'      \
+        -e '/git-mergetool--lib/r git-mergetool--lib'   \
+        -e '/git-mergetool--lib/d'                      \
+        &&
+
+    # git-difftool--helper:
+    #  #1. GIT_EXTERNAL_DIFF=echo git diff
+    #  #2. git difftool --extcmd echo
+    #  #3. git difftool --tool vscode
+    sed -i git-difftool--helper                         \
+        -e '/git-mergetool--lib/r git-mergetool--lib'   \
+        -e '/git-mergetool--lib/d'                      \
+        &&
+
+    for x in "${cmds[@]}"; do
+        IFS=':' read -r bin links <<< "$x"
+        cmdlet "./$bin" "$bin" ${links//:/ } || return 3
+    done
 
     # pack all git tools into one pkgfile
     pkgfile git bin/git bin/git-* &&
+
+    # misc: install all files
+    make install "${libs_args[@]}" gitexecdir="$PREFIX/libexec/git-core" &&
+
+    # mergetools: env MERGE_TOOLS_DIR
+    pkgfile mergetools libexec/git-core/mergetools &&
 
     check git --version
 }
