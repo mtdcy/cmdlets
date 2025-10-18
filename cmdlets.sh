@@ -118,9 +118,13 @@ _curl() (
 
 # save package to PREBUILTS
 _unzip() (
-    test -f "$1" || _curl "$1" || return 1
-    
-    tar -C "$PREBUILTS" -xvf "$TEMPDIR/$1" | tee -a "$TEMPDIR/files" | _details
+    local zip="$1"
+    if ! test -f "$zip"; then
+        _curl "$1" || return 1
+        zip="$TEMPDIR/$1"
+    fi
+
+    tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
 )
 
 # cmdlet v1
@@ -273,7 +277,10 @@ fetch() {
 
     true > "$TEMPDIR/files"
 
-    if _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
+    if test -f "$1" && [[ "$*" == *" --local"* ]]; then
+        info "## Fetch < $1"
+        _unzip "$1"
+    elif _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
         error "<< Fetch $1/$ARCH failed"
@@ -303,6 +310,7 @@ fetch() {
                         printf "%${width}s -> %s\n" "$link" "$target"
                         ln -sf "$target" "$link"
                     done
+                    shift 1
                 elif test -s "$TEMPDIR/files"; then
                     info "== Install target(s)"
                     local width=$(wc -L < "$TEMPDIR/files")
@@ -317,8 +325,8 @@ fetch() {
                         fi
                     done < <(cat "$TEMPDIR/files" | grep "^bin/" | sed "s%^%$PREBUILTS/%")
                 fi
-
-                shift 1
+                ;;
+            *)
                 ;;
         esac
         shift 1
@@ -471,6 +479,10 @@ invoke() {
             search "${@:2}"
             ;;
         install)
+            if [[ "${*:2}" == *" --"* ]]; then
+                fetch "${@:2}"
+                exit $?
+            fi
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 fetch "$bin" --install "$alias" || ret=$?
