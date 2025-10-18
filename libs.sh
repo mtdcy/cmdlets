@@ -931,6 +931,10 @@ _fetch() {
     #1. try local file first
     if [ -f "$zip" ]; then
         slogi ".FILE" "$zip"
+
+        # verify sha only if it exists
+        test -n "$2" || return 0
+
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
             return 0
