@@ -29,12 +29,26 @@ libs_args=(
     --enable-static
 )
 
-#  Linux glibc/musl provides iconv.h 
+#  Linux glibc/musl provides iconv.h, but we want universal static binaries, 
+#  so always link libiconv for both Linux and macOS
 libs_build() {
+    deparallelize
+
     # Reported at https://savannah.gnu.org/bugs/index.php?66170
     is_darwin && export CFLAGS+=" -Wno-incompatible-function-pointer-types"
 
-    configure && make && make check || return $?
+    sed -i '/utf8.h/a utf8mac.h \\' lib/Makefile.in
+
+    configure && 
+
+    make -f Makefile.devel                    \
+        CC="'$CC'"                            \
+        CFLAGS="'$CFLAGS $CPPFLAGS $LDFLAGS'" \
+        ACLOCAL=aclocal                       \
+        AUTOMAKE=automake                     \
+        &&
+
+    make && make check || return $?
 
     pkgfile libiconv -- make install &&
 
@@ -46,6 +60,8 @@ libs_build() {
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 
+# not necessary, make -f Makefile.devel will update lib/flags.h
+# keep it here for inline patch example
 __END__
 diff --git a/lib/flags.h b/lib/flags.h
 index d7cda21..4cabcac 100644
