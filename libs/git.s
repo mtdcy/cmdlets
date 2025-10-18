@@ -11,7 +11,9 @@ is_darwin || libs_dep+=( openssl )
 
 libs_args=(
     prefix="'$PREFIX'"
-    sysconfdir=/etc
+
+    # no /etc/gitconfig
+    ETC_GITCONFIG=/no-etc-gitconfig
 
     CC="'$CC'"
     CFLAGS="'$CFLAGS $CPPFLAGS'"
