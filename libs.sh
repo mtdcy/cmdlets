@@ -799,11 +799,9 @@ pkginst() {
             *.la)               continue ;;
             *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"      ;;
             *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"    ;;
+            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"          ;;
             *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"
                 _fix_pc "$file"
-                ;;
-            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"        
-                mode+=( -s )
                 ;;
             include*|lib*|share*|bin)
                 sub="$file"
