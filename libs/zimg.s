@@ -21,18 +21,15 @@ libs_args=(
 )
 
 libs_build() {
-    ./autogen.sh &&
-    configure &&
-    make && {
+    configure && make || return $?
+
+    {
         if is_linux; then
             sed -i 's/^Libs.private:.*$/& -lm/' zimg.pc
         fi
-    } &&
+    }
 
-    library zimg \
-        include  src/zimg/api/zimg.h src/zimg/api/zimg++.hpp \
-        lib      .libs/libzimg.a \
-        lib/pkgconfig zimg.pc
+    pkgfile libzimg -- make install dist_example_DATA= dist_examplemisc_DATA=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

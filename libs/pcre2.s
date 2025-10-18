@@ -19,22 +19,27 @@ libs_args=(
     --enable-pcre2grep-libbz2
     --enable-jit
 
+    # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure  &&
+    configure  && make || return $?
 
-    make &&
+    # no prograns or docs
+    pkgfile libpcre2 -- make install \
+        bin_PROGRAMS=                \
+        bin_SCRIPTS=                 \
+        dist_man_MANS=               \
+        dist_doc_DATA=               \
+        dist_html_DATA=              \
+        &&
 
-    library libpcre2        \
-            include         src/pcre2.h src/pcre2posix.h \
-            lib             .libs/libpcre2-8.{a,la}  \
-                            .libs/libpcre2-16.{a,la}  \
-                            .libs/libpcre2-32.{a,la} \
-                            .libs/libpcre2-posix.{a,la} \
-            lib/pkgconfig   libpcre2-8.pc libpcre2-16.pc libpcre2-32.pc libpcre2-posix.pc
+    cmdlet ./pcre2grep &&
+    cmdlet ./pcre2test &&
+
+    check pcre2grep --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -17,13 +17,15 @@ libs_args=(
 
     --enable-pc-files
     --with-pkg-config-libdir="$PKG_CONFIG_PATH"
-    --enable-widec # => ncursesw
+
+    # libncurses with widec support
+    --enable-widec 
+    --disable-lib-suffixes
+
+    # no old termcap and tinfo
+    --disable-termcap
 
     --disable-nls
-    --disable-rpath
-
-    # no termcap and tinfo
-    --disable-termcap
 
     # from homebrew:ncurses.rb
     --enable-sigwinch
@@ -50,50 +52,15 @@ libs_args=(
 )
 
 libs_build() {
-    configure &&
+    configure && make || return 1
 
-    make &&
+    pkgfile libncurses  -- make install.libs &&
 
-    # make alias works better
-    cp include/curses*.h include/ncursesw.h &&
-
-    # install libraries
-    library libncursesw:libncurses:libcurses     \
-            include         include/ncurses*.h   \
-                            include/curses*.h    \
-                            include/term.h       \
-                            include/eti.h        \
-                            include/unctrl.h     \
-                            include/term_entry.h \
-            lib             lib/libncursesw*.a   \
-            lib/pkgconfig   misc/ncursesw.pc     \
-            &&
-
-    library libncurses++w                        \
-            include         c++/curses*.h        \
-                            c++/etip.h           \
-                            c++/cursslk.h        \
-            lib             lib/libncurses++w*.a \
-            lib/pkgconfig   misc/ncurses++w.pc   \
-            &&
-
-    library libformw:libform                     \
-            include         include/form.h       \
-            lib             lib/libform*.a       \
-            lib/pkgconfig   misc/form*.pc        \
-            &&
-
-    library libpanelw:libpanel                   \
-            include         include/panel.h      \
-            lib             lib/libpanel*.a      \
-            lib/pkgconfig   misc/panel*.pc       \
-            &&
-
-    library libmenuw:libmenu                     \
-            include         include/menu.h       \
-                            menu/eti.h           \
-            lib             lib/libmenu*.a       \
-            lib/pkgconfig   misc/menu*.pc        \
+    # make and install terminfo database
+    pkgfile terminfo    -- make install.data    \
+            datarootdir="$PREFIX/share"         \
+            datadir="$PREFIX/share"             \
+            ticdir="$PREFIX/share/terminfo"     \
             &&
 
     cmdlet  ./progs/tic     tic infotocap captoinfo &&
@@ -103,21 +70,6 @@ libs_build() {
     cmdlet  ./progs/tabs                            &&
     cmdlet  ./progs/tput                            &&
     cmdlet  ./progs/toe                             &&
-
-    # ncurses-config --terminfo-dirs
-    cmdlet  ./misc/ncurses-config ncursesw-config ncurses-config &&
-
-    #inspect_install make install
-
-    # make and install terminfo database
-    make install.data                   \
-        datarootdir="$PREFIX/share"     \
-        datadir="$PREFIX/share"         \
-        ticdir="$PREFIX/share/terminfo" \
-        &&
-
-    pkgfile terminfo share/tabset share/terminfo    &&
-
 
     # verify
     check tput

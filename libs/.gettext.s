@@ -20,7 +20,6 @@ libs_args=(
     --disable-csharp
 
     --disable-nls
-    --disable-rpath
 
     # static only
     --disable-shared

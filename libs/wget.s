@@ -34,7 +34,6 @@ libs_args=(
     #--enable-ntlm       # NTLM
 
     --disable-nls
-    --disable-rpath
 
     --disable-doc
     --disable-man

@@ -7,12 +7,12 @@ libs_dep=(
     # basic libs
     zlib bzip2 xz libiconv
     # audio libs
-    soxr lame ogg vorbis opus
+    soxr lame libogg libvorbis opus
     # image libs
-    png giflib turbojpeg tiff webp openjpeg
+    libpng giflib libjpeg-turbo libtiff libwebp openjpeg
     # video libs
     #zimg 
-    theora vpx
+    theora libvpx
     openh264 kvazaar
     # text libs
     fribidi libass
@@ -41,7 +41,6 @@ libs_args=(
 
     #--disable-stripping        # result in larger size
     #--enable-shared
-    #--enable-rpath
     --enable-zlib
     --enable-bzlib
     --enable-lzma

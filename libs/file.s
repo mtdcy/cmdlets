@@ -10,8 +10,9 @@ libs_lic="BSD-2-Clause"
 libs_dep=( zlib bzip2 xz )
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
-libs_patch_url=https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.46-5build1.debian.tar.xz
-libs_patch_sha=d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb
+libs_resources=(
+    "https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.46-5build1.debian.tar.xz|d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb"
+)
 
 libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order

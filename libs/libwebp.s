@@ -4,24 +4,23 @@
 
 libs_lic="BSD-3-Clause"
 libs_ver=1.5.0
-libs_url=https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-$libs_ver.tar.gz
-libs_sha=7d6fab70cf844bf6769077bd5d7a74893f8ffd4dfb42861745750c63c2a5c92c
-libs_dep=(png giflib tiff turbojpeg)
+libs_url=https://github.com/webmproject/libwebp/archive/refs/tags/v$libs_ver.tar.gz
+libs_sha=668c9aba45565e24c27e17f7aaf7060a399f7f31dba6c97a044e1feacb930f37
+libs_dep=(libpng giflib libtiff libjpeg-turbo)
 
 libs_args=(
+    -DWEBP_BUILD_CWEBP=ON 
+    -DWEBP_BUILD_DWEBP=ON
+    
     -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
     cmake -S . -B build &&
 
-    make -C build &&
+    cmake --build build || return 1
 
-    library webp \
-            include/webp            src/webp/*.h build/src/webp/*.h \
-            include/webp/sharpyuv   sharpyuv/*.h \
-            lib                     build/*.a \
-            lib/pkgconfig           $(find build -name "*.pc") &&
+    pkgfile libwebp -- cmake --install build &&
 
     cmdlet ./build/cwebp &&
     cmdlet ./build/dwebp &&

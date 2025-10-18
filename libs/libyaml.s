@@ -12,18 +12,16 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
+    --enable-pic
+
+    --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure &&
+    configure && make || return 1
 
-    make &&
-
-    library libyaml \
-        include         include/yaml.h \
-        lib             src/.libs/libyaml.a \
-        lib/pkgconfig   yaml-0.1.pc
+    pkgfile libyaml -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

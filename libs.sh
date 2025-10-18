@@ -33,6 +33,13 @@ is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
+depends_on() {
+    "$@" || {
+        slogw "*****" "**** Not supported on $OSTYPE! ****"
+        exit 0 # exit shell
+    }
+}
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local lvl date message
@@ -185,6 +192,25 @@ EOF
     fi
 }
 
+# find out executables and export envs
+#  input: name:file ...
+#  ENV: COMMAND='xcrun --find'
+_init_tools() {
+    local cmd="${COMMAND:-which}"
+    local k v p
+    for x in "$@"; do
+        IFS=':' read -r k v <<< "$x"
+
+        for y in ${v//,/ }; do
+            p="$(eval "$cmd" "$y" 2>/dev/null)" && break
+        done
+
+        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
+
+        eval export "$k=$p"
+    done
+}
+
 _init() {
     [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
 
@@ -212,16 +238,10 @@ _init() {
 
     export ROOT PREFIX WORKDIR LOGFILES
 
-    # setup program envs
-    local _find=which
-    is_darwin && _find="xcrun --find" || true
-
     is_glibc || unset CL_TOOLCHAIN_PREFIX
 
-    local k v p E progs
-
     # shellcheck disable=SC2054,SC2206
-    progs=(
+    local toolchains=(
         CC:${CL_TOOLCHAIN_PREFIX}gcc
         CXX:${CL_TOOLCHAIN_PREFIX}g++
         AR:${CL_TOOLCHAIN_PREFIX}ar
@@ -230,6 +250,23 @@ _init() {
         NM:${CL_TOOLCHAIN_PREFIX}nm
         RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
         STRIP:${CL_TOOLCHAIN_PREFIX}strip
+    )
+    if is_darwin; then
+        COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
+    else
+        _init_tools "${toolchains[@]}"
+    fi
+
+    # STRIP
+    #  libraries: strip local symbols but keep debug
+    #  binaries: strip all and debug symbols
+    if "$STRIP" --version 2>/dev/null | grep -qFw Binutils; then
+        export BIN_STRIP="$STRIP --strip-all"
+    else
+        export BIN_STRIP="$STRIP"
+    fi
+
+    local host_tools=(
         MAKE:gmake,make
         CMAKE:cmake
         MESON:meson
@@ -238,29 +275,20 @@ _init() {
         PATCH:patch
         INSTALL:install
     )
-    is_arm64 || progs+=(
+
+    is_arm64 || host_tools+=(
         NASM:nasm
         YASM:yasm
     )
 
     # MSYS2
-    is_msys && progs+=(
+    is_msys && host_tools+=(
         # we are using MSYS shell, but still setup mingw32-make
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    for x in "${progs[@]}"; do
-        IFS=':' read -r k v <<< "$x"
-        IFS=',' read -r -a v <<< "$v"
-
-        for y in "${v[@]}"; do
-            p="$($_find "$y" 2>/dev/null)" && break
-        done
-
-        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
-
-        eval export "$k=$p"
-    done
+    
+    _init_tools "${host_tools[@]}"
 
     # common flags for c/c++
     local FLAGS=(
@@ -282,7 +310,7 @@ _init() {
             -fdata-sections
         )
 
-        LDFLAGS="-L$PREFIX/lib -static"
+        LDFLAGS="-L$PREFIX/lib -static -static-libstdc++ -static-libgcc"
 
         # remove unused sections, need -ffunction-sections and -fdata-sections
         LDFLAGS+=" -Wl,-gc-sections"
@@ -319,7 +347,8 @@ _init() {
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
-        CCACHE_DIR="$WORKDIR/.ccache"
+        # make clean should not clear ccache
+        CCACHE_DIR="$ROOT/.ccache/$arch"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -397,6 +426,18 @@ make() {
     slogcmd "${cmdline[@]}"
 }
 
+_filter_out_cmake_defines() {
+    local _options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -D)     shift 2 ;;
+            -D*)    shift 1 ;;
+            *)      _options+=( "$1" ); shift ;;
+        esac
+    done
+    echo "${_options[@]}"
+}
+
 cmake() {
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
@@ -416,42 +457,66 @@ cmake() {
         export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     fi
 
-    # extend CMAKE with compile tools
-    local cmdline=(
-        "$CMAKE"
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-        -DCMAKE_PREFIX_PATH="'$PREFIX'"
-        -DCMAKE_MAKE_PROGRAM="'$MAKE'"
-    )
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && cmdline+=( -G"'MSYS Makefiles'" )
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$@" )
-    # cmake
+    local cmdline=( "$CMAKE" )
+
+    case "$(_filter_out_cmake_defines "$@")" in 
+        --build*)
+            export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+            cmdline+=( "$@" )
+            ;;
+        --install*)
+            export CMAKE_BUILD_PARALLEL_LEVEL=1
+            cmdline+=( "$@" )
+            ;;
+        *)
+            # extend CMAKE with compile tools
+            cmdline+=(
+                -DCMAKE_BUILD_TYPE=RelWithDebInfo
+                -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+                -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                -DCMAKE_MAKE_PROGRAM="'$MAKE'"
+                -DCMAKE_VERBOSE_MAKEFILE=ON
+            )
+            # cmake using a mixed path style with MSYS Makefiles, why???
+            is_msys && cmdline+=( -G"'MSYS Makefiles'" )
+            # append user args
+            cmdline+=( "${libs_args[@]}" "$@" )
+            ;;
+    esac
+
     slogcmd "${cmdline[@]}"
 }
 
 meson() {
-    local cmdline=( "$MESON" "$(_filter_targets "$@")" )
+    local cmdline=( "$MESON" )
 
-    # meson
-    # builtin options: https://mesonbuild.com/Builtin-options.html
-    #  libdir: some package prefer install to lib/<machine>/
-    cmdline+=(
-        -Dprefix="'$PREFIX'"
-        -Dlibdir=lib
-        -Dbuildtype=release
-        -Ddefault_library=static
-        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+    # global args < meson configure
+    args=(
     )
 
-    ## meson >= 0.37.0
-    #IFS='.' read -r _ ver _ < <($MESON --version)
-    #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+    case "$1" in
+        setup)
+            # meson builtin options: https://mesonbuild.com/Builtin-options.html
+            #  libdir: some package prefer install to lib/<machine>/
+            args+=(
+                -Dprefix="'$PREFIX'"
+                -Dlibdir=lib
+                -Dbuildtype=release
+                -Ddefault_library=static
+                -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+            )
 
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$(_filter_options "$@")" )
+            ## meson >= 0.37.0
+            #IFS='.' read -r _ ver _ < <($MESON --version)
+            #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+
+            # append user args
+            cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            ;;
+        *)
+            cmdline+=( "$1" "${args[@]}" "${@:2}" )
+            ;;
+    esac
 
     slogcmd "${cmdline[@]}"
 }
@@ -604,11 +669,61 @@ _link() {
 
 TAR="$(which gtar 2>/dev/null || which tar)"
 
+# libtool archive hardcoded PREFIX which is bad for us
+_rm_libtool_archive() {
+    find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
+}
+
 # pkgfile name <file or directories list>
 pkgfile() {
-    pushd "$PREFIX"
+    local files
+    if [ "$2" = "--" ]; then
+        # install with DESTDIR to get file list
+        export DESTDIR=$(pwd -P)/DESTDIR
+        mkdir -p "$DESTDIR"
+        case "$3" in
+            make)   "${@:3}" DESTDIR="$DESTDIR" ;;
+            *)      DESTDIR="$DESTDIR" "${@:3}" ;;
+        esac || return
+        _rm_libtool_archive "$DESTDIR"
+        IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
+        rm -rf DESTDIR
+        unset DESTDIR
 
-    mkdir -pv "$libs_name"
+        # do a real install
+        "${@:3}"
+        _rm_libtool_archive
+    else
+        IFS=' ' read -r -a files <<< "${@:2}"
+    fi
+
+    test -n "${files[*]}" || slogf "pkgfile() without inputs"
+    
+    pushd "$PREFIX" && mkdir -pv "$libs_name"
+    
+    IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
+
+    # preprocessing installed files
+    for x in "${files[@]}"; do
+        # test won't work as file glob exists
+        #test -e "$x" || slogf "$x not exists"
+        case "$x" in
+            *.a)
+                echocmd "$STRIP" -x "$x"
+                echocmd "$RANLIB" "$x"
+                ;;
+            *.pc)
+                sed -e 's%^prefix=.*$%prefix=\${PREFIX}%'   \
+                    -e "s%$PREFIX%\${prefix}%g"             \
+                    -i "$x"
+                ;;
+            bin/*)
+                if test -f "$x"; then
+                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
+                fi
+                ;;
+        esac
+    done
 
     # name contains version code?
     local name version
@@ -623,12 +738,7 @@ pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    slogi ".Pack" "$pkgfile < ${*:2}"
-
-    local files
-
-    # shellcheck disable=SC2001
-    IFS=' ' read -r -a files <<< "$(sed -e "s%$PWD/%%g" <<< "${@:2}")"
+    slogi ".Pack" "$pkgfile < ${files[@]}"
 
     echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
 
@@ -656,9 +766,6 @@ pkgfile() {
     fi
 
     # v3/manifest: name pkgfile sha
-    touch "cmdlets.manifest"
-    # clear full versioned records
-    sed -i "\#^$name $libs_name/$name@$libs_ver\.#d" cmdlets.manifest
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
@@ -672,6 +779,8 @@ inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || return $?
+    
+    _rm_libtool_archive
 
     find "$PREFIX" > "$libs_name.pack.post"
 
@@ -683,13 +792,9 @@ inspect() {
 cmdlet() {
     slogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
 
-    # strip or not ?
-    local args=( -v )
-    file "$1" | grep -qFw 'not stripped' && args+=( -s )
-
     local target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    echocmd "$INSTALL" "${args[@]}" -m755 "$1" "$target" || return 1
+    echocmd "$INSTALL" -v -m755 "$1" "$target" || return 1
 
     local alias=()
     for x in "${@:3}"; do
@@ -719,6 +824,7 @@ _fix_pc() {
 #         share           yyy      \
 #         share/man       zzz
 library() {
+    echo "WARNING: library() is deprecated, please use pkgfile() instead" > $(_logfile)
     slogi ".Inst" "$1 < ${*:2}"
 
     local name alias subdir installed
@@ -789,11 +895,13 @@ library() {
 check() {
     slogi "..Run" "check $*"
 
-    local bin="$1"
+    # try prebuilts first
+    local bin="$PREFIX/bin/$1"
 
-    test -x "$bin" || bin="$PREFIX/bin/$1"
+    # try local file again
+    test -f "$bin" || bin="$1"
 
-    test -x "$bin" || {
+    test -f "$bin" || {
         slogf "CHECK" "cann't find $1"
     }
 
@@ -808,13 +916,13 @@ check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            ldd "$bin"
+            echocmd ldd "$bin"
             slogf "CHECK" "$bin is dynamically linked"
         } || true
     elif is_darwin; then
-        otool -L "$bin" # | grep -v "libSystem.*"
+        echocmd otool -L "$bin" # | grep -v "libSystem.*"
     elif is_msys; then
-        ntldd "$bin"
+        echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
     fi
@@ -833,6 +941,10 @@ _curl() {
         # silent curl output for stdout
         curl -fsSL "${@:3}" "$source"
     fi
+}
+
+_packages() {
+    echo "$ROOT/packages/$libs_name/$(basename "$1")"
 }
 
 # fetch url to packages/ or return error
@@ -859,7 +971,7 @@ _fetch() {
 
     #2. try mirror
     if test -n "$CL_MIRRORS"; then
-        mirror="$CL_MIRRORS/packages/$(basename "$zip")"
+        mirror="$CL_MIRRORS/packages/$libs_name/$(basename "$zip")"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip"
     fi
@@ -876,22 +988,8 @@ _fetch() {
         slogi ".FILE" "$(sha256sum "$zip")"
         return 0
     else
-        sloge ".CURL" "$* failed"
+        sloge ".CURL" "$1 failed"
         return 1
-    fi
-}
-
-# _fetch git_url#branch_or_tag_name [path]
-_fetch_git() {
-    local url branch
-
-    slogi "..GIT" "$1 => $2"
-
-    IFS='#' read -r url branch <<< "$1"
-    if test -d "${2%.git}/.git"; then
-        true
-    else
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "${2%.git}"
     fi
 }
 
@@ -964,70 +1062,95 @@ _unzip() {
     esac
 }
 
-# prepare source code or return error
-_prepare() {
-    if test -n "$libs_git"; then
-        _fetch_git "$libs_git" . || return 1
+# clone git repo
+#  input: git_url#branch_or_tag_name [path]
+_git() {
+    local url branch 
+    local path="${2%.git*}"
 
-        for submodule in "${libs_git_submodules[@]}"; do
-            _fetch_git "$submodule" "$(basename "${submodule%#*}")" || return 2
-        done
+    slogi "..GIT" "$1 => $path"
 
-        return 0
+    IFS='#' read -r url branch <<< "$1"
+    test -n "$branch" || branch="main"
+
+    # reuse local repo
+    if ! test -d "$path/.git"; then
+        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path"
+    fi
+}
+
+# fetch package and unzip to current workdir
+#  input: sha url [mirrors...]
+_prepare_one() {
+    # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
+    if [[ "${2%#*}" =~ \.git$ ]]; then
+        _git "${@:2}" "$(basename "$2")" || return $?
     else
-        # use the first url to construct zip file name local zip="$ROOT/packages/$libs_zip"
-        local zip="$ROOT/packages/$libs_zip"
+        # assemble zip name from url
+        local zip="$(_packages "$2")"
 
         # download zip file
-        _fetch "$zip" "$libs_sha" "${libs_url[@]}" || return 1
+        _fetch "$zip" "$1" "${@:2}" &&
         # unzip to current fold
-        _unzip "$zip" || return 2
+        _unzip "$zip" || return $?
     fi
+}
 
-    # patch urls
-    if test -n "${libs_patch_url[*]}"; then
-        for i in "${!libs_patch_url[@]}"; do
-            local zip="$ROOT/packages/${libs_patch_zip[i]:-$(basename "${libs_patch_url[i]}")}"
+# prepare source code or return error
+_prepare() {
+    # libs_url: support mirrors
+    _prepare_one "$libs_sha" "${libs_url[@]}" || return $?
 
-            # download files
-            _fetch "$zip" "${libs_patch_sha[i]}" "${libs_patch_url[i]}" || return 3
-            # unzip to current fold
-            _unzip "$zip" || return 4
+    # libs_resources: no mirrors
+    if test -n "${libs_resources[*]}"; then
+        local url sha
+        for x in "${libs_resources[@]}"; do
+            IFS=';|' read -r url sha <<< "$x"
+            _prepare_one "$sha" "$url" || return $?
         done
     fi
 
-    # apply patches
+    # libs_patches: web ready
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                slogcmd "_curl $patch | $PATCH -p1 -N"
+                local file="$(_packages "$patch")"
+                test -f "$file" || _curl "$patch" "$file"
+                slogcmd "$PATCH -p1 -N < $file"
                 ;;
             *)
                 slogcmd "$PATCH -p1 -N < $patch"
                 ;;
         esac
     done
+
+    if test -s "$TEMPDIR/$libs_name.patch"; then
+        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch"
+    fi
 }
 
 # _load library
 _load() {
     unset "${!libs_@}"
 
-    [ -f "$1" ] && source "$1" || source "libs/$1.s"
+    local file="$1"
+    test -f "$file" || file="libs/$1.s"
+
+    mkdir -p "$TEMPDIR/${file%/*}"
+    # sed: delete all lines after a match
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$file"
+    . "$TEMPDIR/$file"
 
     # default values:
-    [ -n "$libs_name" ] || libs_name="$(basename "${1%.s}")"
+    [ -n "$libs_name" ] || libs_name="$(basename "${file%.s}")"
 
-    libs_zip="$libs_name-$libs_ver${libs_url##*/*$libs_ver}"
+    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     [ "$libs_type" = ".PHONY" ] && return 0
 
-    # git
-    [ -n "$libs_git" ] && return 0
-
     # sanity checks: always exit program|subshell here
-    if test -z "$libs_url" || test -z "$libs_sha"; then
-        _on_failure "$libs_name: missing libs_url or libs_sha"
+    if test -z "$libs_url"; then
+        _on_failure "$libs_name: missing libs_url"
     fi
 }
 
@@ -1066,13 +1189,10 @@ compile() {(
     slogi ".Load" "$1"
     _load "$1"
 
-    if test -z "$libs_url" && test -z "$libs_git"; then
+    if test -z "$libs_url"; then
         slogw "<<<<<" "skip dummy target $libs_name"
         return 0
     fi
-
-    # clear
-    find "$PREFIX/$libs_name" -name "pkginfo*" -exec rm -f {} \; 2>/dev/null || true
 
     # prepare work dir
     mkdir -p "$PREFIX"
@@ -1089,8 +1209,17 @@ compile() {(
 
     slogi ".Path" "$PWD"
 
+    _prepare || exit $?
+
+    # clear pkginfo
+    rm -rf "$PREFIX/$libs_name"
+
+    # clear manifest
+    touch "$PREFIX/cmdlets.manifest"
+    sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+
     # build library
-    _prepare && libs_build || {
+    libs_build || {
         sleep 1 # let _capture() finish
 
         local logfile="$(_logfile)"
@@ -1113,6 +1242,8 @@ _check_deps() {
         IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
 
         for x in "${_deps[@]}"; do
+            # dependencies in targets
+            [[ "$*" == *"$x"* ]] && continue
             # already exists?
             [[ "${deps[*]}" == *"$x"* ]] && continue
 
@@ -1154,6 +1285,8 @@ build() {
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
         done
+
+        _rm_libtool_archive
     fi
 
     # append targets
@@ -1218,22 +1351,42 @@ search() {
         find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
 
         # pkg-config?
-        slogi "Search pkgconfig ..."
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
             # TODO: add a sanity check here
         fi
 
+        [[ "$x" =~ ^lib ]] && continue
+
         x=lib$x
+        slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
-            echo "CFLAGS : $($PKG_CONFIG --static --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
             # TODO: add a sanity check here
+        fi
+    done
+}
+
+# find out dependencies of library
+info() {
+    slogi "$1: $(_deps_get "$1")"
+
+    for lib in libs/*.s; do
+        IFS='/.' read -r _ ulib _ <<< "$pkg"
+        
+        [[ "$libs" =~ ^[\.@_] ]] && continue
+
+        IFS=' ' read -r -a deps <<< "$(bash libs.sh _load_deps "$lib")"
+
+        if [[ "${deps[*]}" == *"$1"* ]]; then
+            slogi "$lib => $1"
         fi
     done
 }
@@ -1247,7 +1400,7 @@ load() {
 fetch() {
     _load "$1"
 
-    _fetch "$ROOT/packages/$libs_zip" "$libs_sha" "$libs_url"
+    _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
 }
 
 arch() {
@@ -1304,6 +1457,9 @@ prerequisites() {
         rm prerequisites.tar.gz
     fi
 }
+
+# shellcheck disable=SC2064
+TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
 
 _init || exit 110
 

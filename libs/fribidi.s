@@ -15,14 +15,9 @@ libs_args=(
 )
 
 libs_build() {
-    configure &&
+    configure && make || return $?
 
-    make &&
-
-    library fribidi \
-       include/fribidi lib/fribidi*.h \
-       lib lib/.libs/*.a \
-       lib/pkgconfig *.pc &&
+    pkgfile libfribidi -- make install SUBDIRS=lib &&
 
     cmdlet bin/fribidi &&
 

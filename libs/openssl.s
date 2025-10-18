@@ -55,21 +55,9 @@ libs_build() {
 
     make V=1 || return 2
 
-    # don't install engines and modules
-    #make install_dev install_runtime &&
-    library libopenssl                       \
-        include/openssl include/openssl/*.h  \
-        lib             libssl.a             \
-        lib/pkgconfig   openssl.pc libssl.pc \
-        &&
+    pkgfile libopenssl -- make install_dev &&
 
-    library libcrypto                        \
-        include/crypto  include/crypto/*.h   \
-        lib             libcrypto.a          \
-        lib/pkgconfig   libcrypto.pc         \
-        &&
-
-    cmdlet apps/openssl openssl &&
+    cmdlet ./apps/openssl openssl &&
 
     # verify
     check openssl version

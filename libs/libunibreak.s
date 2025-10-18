@@ -8,20 +8,21 @@ libs_sha=cc4de0099cf7ff05005ceabff4afed4c582a736abc38033e70fdac86335ce93f
 libs_dep=()
 
 libs_args=(
-    --disable-silent-rules
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    --with-pic
+
+    # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure && 
+    configure && make || return $?
 
-    make && 
-
-    library unibreak \
-       include src/unibreak*.h src/linebreak.h \
-       lib src/.libs/*.a \
-       lib/pkgconfig *.pc
+    pkgfile libunibreak -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

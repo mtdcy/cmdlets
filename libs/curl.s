@@ -38,10 +38,9 @@ libs_args=(
     --without-fish-functions-dir
 
     --disable-nls
-    --disable-rpath
 
-    --disable-doc
-    --disable-man
+    --disable-docs
+    --disable-manual
 
     --disable-shared
     --enable-static
@@ -61,12 +60,10 @@ libs_build() {
 
     make V=1 &&
 
-    #make install &&
-    library libcurl                             \
-            include/curl    include/curl/*.h    \
-            lib             lib/.libs/libcurl.a \
-            lib/pkgconfig   libcurl.pc          \
-            &&
+    # install library only
+    sed -i 's/^DIST_SUBDIRS = .*/DIST_SUBDIRS = lib include/' Makefile 
+
+    pkgfile libcurl -- make install
 
     cmdlet  ./src/curl  &&
 

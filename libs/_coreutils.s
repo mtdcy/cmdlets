@@ -15,7 +15,6 @@ libs_args=(
     --without-selinux
 
     --disable-nls
-    --disable-rpath
 
     --enable-no-install-program=groups,hostname,su,kill,uptime
     --enable-install-program=ln

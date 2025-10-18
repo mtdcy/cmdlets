@@ -8,24 +8,22 @@ libs_sha=31d7a4853df4c548bf91c13d3b690d19663d4c06ae952b62606c8225d0b410ad
 libs_dep=()
 
 libs_args=(
+    PREFIX="'$PREFIX'"
+
+    CC="'$CC'"
+    CFLAGS="'$CFLAGS'"
+    LDFLAGS="'$LDFLAGS'"
+
+    BUILDMODE=static
 )
 
 libs_build() {
-    sed -e "s%/usr/local%$PREFIX%" \
-        -i Makefile &&
+    make "${libs_args[@]}" &&
 
-    sed -e "/^CC=/d" \
-        -e 's/^BUILDMODE=.*$/BUILDMODE=static/' \
-        -i src/Makefile &&
+    pkgfile libluajit -- make install "${libs_args[@]}" &&
 
-    make &&
-
-    library lua:lua-$libs_ver \
-            include/lua     src/{lauxlib.h,lua.h,lua.hpp,luaconf.h,luajit.h,lualib.h} \
-            lib             src/libluajit.a \
-            lib/pkgconfig   etc/luajit.pc &&
-
-    cmdlet  ./src/luajit    luajit luajit-$libs_ver &&
+    # install as versioned and link to luajit
+    cmdlet ./src/luajit luajit-$libs_ver luajit &&
 
     check luajit -v
 }
