@@ -54,3 +54,27 @@ libs_build() (
 )
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+
+# patch: load plugins from executable path
+__END__
+diff -ruN a/cli-plugins/manager/manager.go b/cli-plugins/manager/manager.go
+--- a/cli-plugins/manager/manager.go	2025-10-08 10:50:32
++++ b/cli-plugins/manager/manager.go	2025-10-19 11:05:52
+@@ -59,12 +59,18 @@
+ func getPluginDirs(cfg *configfile.ConfigFile) []string {
+ 	var pluginDirs []string
+
++	ex, err := os.Executable()
++	if err != nil {
++		panic(err)
++	}
++
+ 	if cfg != nil {
+ 		pluginDirs = append(pluginDirs, cfg.CLIPluginsExtraDirs...)
+ 	}
+ 	pluginDir := filepath.Join(config.Dir(), "cli-plugins")
+ 	pluginDirs = append(pluginDirs, pluginDir)
+ 	pluginDirs = append(pluginDirs, defaultSystemPluginDirs...)
++	pluginDirs = append(pluginDirs, filepath.Dir(ex))
+ 	return pluginDirs
+ }
