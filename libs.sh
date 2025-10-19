@@ -475,6 +475,10 @@ cmake() {
                 -DCMAKE_MAKE_PROGRAM="'$MAKE'"
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
+            # sysroot
+            is_darwin || cmdline+=(
+                -DCMAKE_SYSROOT="'$($CC -print-sysroot)'"
+            )
             # cmake using a mixed path style with MSYS Makefiles, why???
             is_msys && cmdline+=( -G"'MSYS Makefiles'" )
             # append user args
