@@ -19,11 +19,8 @@ libs_args=(
     --with-pkg-config-libdir="$PKG_CONFIG_PATH"
 
     # libncurses with widec support
-    --enable-widec 
+    --enable-widec
     --disable-lib-suffixes
-
-    # no old termcap and tinfo
-    --disable-termcap
 
     --disable-nls
 
@@ -36,13 +33,20 @@ libs_args=(
     # from macports:ncurses
     --enable-overwrite  # overwrite curses
 
-    # terminfo search dirs: `infocmp -D' or set TERMINFO
-    #  => we are building static executable, cann't ship hardcoded prebuilts path into executables.
+    # we are building static executable, cann't ship hardcoded prebuilts path into executables.
+    #
+    # terminfo search dirs
+    #  check with `infocmp -D'
+    #  override with env TERMINFO
     #
     # from debian:/etc/terminfo/README
     --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
     # /usr/share/terminfo is a common path for both Linux and macOS
     --with-default-terminfo-dir="/usr/share/terminfo"
+
+    # --with-fallbacks
+    --without-database
+    --enable-termcap # for fallbacks support
 
     # static without debug
     --without-shared
@@ -52,24 +56,32 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return 1
+    # install tic & infocmp first for fallbacks support
+    #  https://stackoverflow.com/questions/76290814/compile-ncurses-disable-database-why-nc-fallback-undefined
+    #  https://invisible-island.net/ncurses/INSTALL.html#CONFIGURING-FALLBACK-ENTRIES
+    configure && make PROGS="'tic infocmp'"
 
-    pkgfile libncurses  -- make install.libs &&
+    # prepare fallbacks
+    slogcmd ./ncurses/tinfo/MKfallback.sh \
+        "$TERMINFO"                       \
+        ./misc/terminfo.src               \
+        ./progs/tic                       \
+        ./progs/infocmp                   \
+        linux xterm                       \
+        > ncurses/fallback.c
 
-    # make and install terminfo database
-    pkgfile terminfo    -- make install.data    \
-            datarootdir="$PREFIX/share"         \
-            datadir="$PREFIX/share"             \
-            ticdir="$PREFIX/share/terminfo"     \
-            &&
+    make
 
-    cmdlet  ./progs/tic     tic infotocap captoinfo &&
-    cmdlet  ./progs/tset    tset reset              &&
-    cmdlet  ./progs/infocmp                         &&
-    cmdlet  ./progs/clear                           &&
-    cmdlet  ./progs/tabs                            &&
-    cmdlet  ./progs/tput                            &&
-    cmdlet  ./progs/toe                             &&
+    pkgfile libncurses  -- make install.libs
+
+    #       source          target  links...
+    cmdlet  ./progs/tic     tic     infotocap captoinfo
+    cmdlet  ./progs/infocmp
+    cmdlet  ./progs/tset    tset    reset
+    cmdlet  ./progs/clear
+    cmdlet  ./progs/tabs
+    cmdlet  ./progs/tput
+    cmdlet  ./progs/toe
 
     # verify
     check tput
