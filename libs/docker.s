@@ -73,8 +73,8 @@ diff -ruN a/cli-plugins/manager/manager.go b/cli-plugins/manager/manager.go
  		pluginDirs = append(pluginDirs, cfg.CLIPluginsExtraDirs...)
  	}
  	pluginDir := filepath.Join(config.Dir(), "cli-plugins")
++	pluginDirs = append(pluginDirs, filepath.Dir(ex))
  	pluginDirs = append(pluginDirs, pluginDir)
  	pluginDirs = append(pluginDirs, defaultSystemPluginDirs...)
-+	pluginDirs = append(pluginDirs, filepath.Dir(ex))
  	return pluginDirs
  }
