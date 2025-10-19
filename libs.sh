@@ -911,10 +911,6 @@ _curl() {
     fi
 }
 
-_packages() {
-    echo "$ROOT/packages/$libs_name/${1##*/}"
-}
-
 # fetch url to packages/ or return error
 # _fetch <zip> <sha> <urls...>
 _fetch() {
@@ -1049,6 +1045,17 @@ _git() {
     # reuse local repo
     if ! test -d "$path/.git"; then
         git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path"
+    fi
+}
+
+_packages() {
+    # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
+    if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
+        local path
+        IFS=':/' read -r _ _ _ _ path <<< "$1"
+        echo "$ROOT/packages/$libs_name/${path//\//_}"
+    else
+        echo "$ROOT/packages/$libs_name/${1##*/}"
     fi
 }
 
