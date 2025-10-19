@@ -82,6 +82,8 @@ info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
 info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
 info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
+die() { echo -e "\\033[31m$*\\033[39m" 1>&2; exit 1; }
+
 # prepend each line with '=> '
 _details() {
     sed 's/^/=> /'
