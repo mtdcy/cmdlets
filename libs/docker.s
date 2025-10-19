@@ -5,9 +5,12 @@ libs_ver=28.5.1
 libs_url=https://github.com/docker/cli/archive/refs/tags/v$libs_ver.tar.gz
 libs_sha=3872f03dd3d1e2769ecad57c8744743e72ad619f72f1897f4886fd44746337cd
 
+compose_ver=v2.40.1
+buildx_ver=v0.29.1
+
 libs_resources=(
-    "https://github.com/docker/compose/archive/refs/tags/v2.40.1.tar.gz;1f6a066533f25ae61fac7b196c030d10693b8669f21f3798e738d70cea158853"
-    "https://github.com/docker/buildx/archive/refs/tags/v0.29.1.tar.gz;20f62461257d3f20ac98c6e6d3f22ca676710644d9e4688c2e4c082bfba9b619"
+    "https://github.com/docker/compose/archive/refs/tags/$compose_ver.tar.gz;1f6a066533f25ae61fac7b196c030d10693b8669f21f3798e738d70cea158853"
+    "https://github.com/docker/buildx/archive/refs/tags/$buildx_ver.tar.gz;20f62461257d3f20ac98c6e6d3f22ca676710644d9e4688c2e4c082bfba9b619"
 )
 
 libs_build() (
@@ -31,14 +34,14 @@ libs_build() (
         # docker compose
         pushd compose-*
 
-        go_build -ldflags="'-X github.com/docker/compose/v2/internal.Version=$(git_version)'" -o ../docker-compose ./cmd
+        go_build -ldflags="'-X github.com/docker/compose/v2/internal.Version=$compose_ver'" -o ../docker-compose ./cmd
     ) &&
 
     (
         # docker buildx
         pushd buildx-*
 
-        go_build -ldflags="'-X github.com/docker/buildx/version.Version=$(git_version)'" -o ../docker-buildx ./cmd/buildx
+        go_build -ldflags="'-X github.com/docker/buildx/version.Version=$buildx_ver'" -o ../docker-buildx ./cmd/buildx
     ) &&
 
     # install tools
