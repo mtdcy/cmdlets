@@ -68,10 +68,6 @@ sloge() { _slog error "$@" >&2; return 1;   }
 
 die()   { _slog error "$@" >&2; exit 1;     } # exit shell
 
-_logfile() {
-    echo "$LOGFILES/$libs_name.log"
-}
-
 # for subshell
 # write error message to .ERR_MSG on failure
 _on_failure() {
@@ -86,7 +82,7 @@ _exit_on_failure() {
 
 _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
-        cat >> "$(_logfile)"
+        cat >> "$_LOGFILE"
     elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput dim                        # dim on
         tput rmam                       # line break off
@@ -99,13 +95,13 @@ _capture() {
             tput sc                     # save cursor position
             printf "#$i: %s" "$line"
             tput rc                     # restore cursor position
-        done < <(tee -a "$(_logfile)")
+        done < <(tee -a "$_LOGFILE")
 
         tput ed                         # clear to end of screen
         tput smam                       # line break on
         tput sgr0                       # reset colors
     else
-        tee -a "$(_logfile)"
+        tee -a "$_LOGFILE"
     fi
 }
 
@@ -422,7 +418,7 @@ make() {
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "make $* failed."
 }
 
 _filter_out_cmake_defines() {
@@ -486,7 +482,7 @@ cmake() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "cmake $* failed."
 }
 
 meson() {
@@ -520,7 +516,7 @@ meson() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "meson $* failed."
 }
 
 ninja() {
@@ -529,7 +525,7 @@ ninja() {
     # append user args
     cmdline="$NINJA -j $CL_NJOBS -v $*"
 
-    slogcmd "$cmdline"
+    slogcmd "$cmdline" || die "ninja $* failed."
 }
 
 cargo() {
@@ -550,7 +546,7 @@ cargo() {
             ;;
     esac
 
-    slogcmd "$cmdline"
+    slogcmd "$cmdline" || die "cargo $* failed."
 }
 
 _init_go() {
@@ -650,7 +646,7 @@ go() {
             ;;
     esac
 
-    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}"
+    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}" || die "go $* failed."
 }
 
 # easy command for go project
@@ -686,19 +682,19 @@ pkgfile() {
         case "$3" in
             make)   "${@:3}" DESTDIR="$DESTDIR" ;;
             *)      DESTDIR="$DESTDIR" "${@:3}" ;;
-        esac || return
+        esac || die "${*:3} failed."
         _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
 
         # do a real install
-        "${@:3}"
+        "${@:3}" || die "${*:3} failed."
         _rm_libtool_archive
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
 
-    test -n "${files[*]}" || die "pkgfile() without inputs."
+    test -n "${files[*]}" || die "call pkgfile() without inputs."
 
     pushd "$PREFIX" && mkdir -pv "$libs_name"
 
@@ -741,7 +737,7 @@ pkgfile() {
 
     slogi ".Pack" "$pkgfile < ${files[@]}"
 
-    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
+    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}" || die "create pkgfile failed."
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -813,7 +809,7 @@ pkginst() {
             bin*|libexec*)  mode=( -m755 -s ) ;;
         esac
 
-        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || return $?
+        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 
@@ -824,7 +820,7 @@ pkginst() {
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
-    slogcmd "$@" || return $?
+    slogcmd "$@" || die "${@:2} failed."
 
     _rm_libtool_archive
 
@@ -840,7 +836,7 @@ cmdlet() {
 
     local target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    echocmd "$INSTALL" -v -m755 "$1" "$target" || return 1
+    echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
 
     local alias=()
     for x in "${@:3}"; do
@@ -900,19 +896,14 @@ check() {
 _curl() {
     local source="$1"
 
-    curl -fsI "${@:3}" "$source" -o /dev/null || return 1
-
     if test -n "$2"; then
+        curl -fsI "${@:3}" "$source" -o /dev/null &&
         # show errors
         echocmd curl -fvSL "${@:3}" "$source" -o "$2"
     else
         # silent curl output for stdout
         curl -fsSL "${@:3}" "$source"
     fi
-}
-
-_packages() {
-    echo "$ROOT/packages/$libs_name/${1##*/}"
 }
 
 # fetch url to packages/ or return error
@@ -957,13 +948,10 @@ _fetch() {
         done
     fi
 
-    if test -f "$zip"; then
-        slogi ".FILE" "$(sha256sum "$zip")"
-        return 0
-    else
-        sloge ".CURL" "$1 failed"
-        return 1
-    fi
+    test -f "$zip" || die "curl $1 failed."
+
+    slogi ".FILE" "$(sha256sum "$zip")"
+    return 0
 }
 
 # show git tag > branch > commit
@@ -1048,7 +1036,18 @@ _git() {
 
     # reuse local repo
     if ! test -d "$path/.git"; then
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path"
+        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
+    fi
+}
+
+_packages() {
+    # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
+    if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
+        local path
+        IFS=':/' read -r _ _ _ _ path <<< "$1"
+        echo "$ROOT/packages/$libs_name/${path//\//_}"
+    else
+        echo "$ROOT/packages/$libs_name/${1##*/}"
     fi
 }
 
@@ -1057,22 +1056,22 @@ _git() {
 _prepare_one() {
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _git "${@:2}" "$(basename "$2")" || return $?
+        _git "${@:2}" "$(basename "$2")"
     else
         # assemble zip name from url
         local zip="$(_packages "$2")"
 
         # download zip file
-        _fetch "$zip" "$1" "${@:2}" &&
+        _fetch "$zip" "$1" "${@:2}"
         # unzip to current fold
-        _unzip "$zip" "${ZIP_SKIP:-}" || return $?
+        _unzip "$zip" "${ZIP_SKIP:-}"
     fi
 }
 
-# prepare source code or return error
+# prepare source code or die
 _prepare() {
     # libs_url: support mirrors
-    _prepare_one "$libs_sha" "${libs_url[@]}" || return $?
+    _prepare_one "$libs_sha" "${libs_url[@]}"
 
     # libs_resources: no mirrors
     if test -n "${libs_resources[*]}"; then
@@ -1080,7 +1079,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _prepare_one "$sha" "$url" || return $?
+            ZIP_SKIP=0 _prepare_one "$sha" "$url"
         done
     fi
 
@@ -1090,16 +1089,16 @@ _prepare() {
             http://*|https://*)
                 local file="$(_packages "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
-                slogcmd "$PATCH -p1 -N < $file"
+                slogcmd "$PATCH -p1 -N < $file" || die "patch < $file failed."
                 ;;
             *)
-                slogcmd "$PATCH -p1 -N < $patch"
+                slogcmd "$PATCH -p1 -N < $patch" || die "patch < $patch failed."
                 ;;
         esac
     done
 
     if test -s "$TEMPDIR/$libs_name.patch"; then
-        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch"
+        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch" || die "patch inlined failed."
     fi
 }
 
@@ -1156,57 +1155,61 @@ _deps_get() {
 }
 
 # compile target
-compile() {(
-    # start subshell before source
-    set -eo pipefail
+compile() {
+    export _LOGFILE="$LOGFILES/${1##*/}.log"
 
-    slogi ".Load" "$1"
-    _load "$1"
+    # always start subshell before _load()
+    (
+        set -eo pipefail
 
-    if test -z "$libs_url"; then
-        slogw "<<<<<" "skip dummy target $libs_name"
-        return 0
-    fi
+        slogi ".Load" "$1"
+        _load "$1"
 
-    # prepare work dir
-    mkdir -p "$PREFIX"
-    mkdir -p "$(dirname "$(_logfile)")"
+        if test -z "$libs_url"; then
+            slogw "<<<<<" "skip dummy target $libs_name"
+            return 0
+        fi
 
-    local workdir="$WORKDIR/$libs_name-$libs_ver"
+        # prepare work dir
+        mkdir -p "$PREFIX"
+        mkdir -p "${_LOGFILE%/*}"
 
-    # strict mode: clean before compile
-    [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
+        local workdir="$WORKDIR/$libs_name-$libs_ver"
 
-    mkdir -p "$workdir" && cd "$workdir"
+        # strict mode: clean before compile
+        [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
 
-    echo -e "**** start build $libs_name ****\n$(date)\n" > "$(_logfile)"
+        mkdir -p "$workdir" && cd "$workdir"
 
-    slogi ".Path" "$PWD"
+        # clear logfile
+        echo -e "**** start build $libs_name ****\n$(date)\n" > "$_LOGFILE"
 
-    _prepare || exit $?
+        slogi ".Path" "$PWD"
 
-    # clear pkginfo
-    rm -rf "$PREFIX/$libs_name"
+        _prepare # or die
 
-    # clear manifest
-    touch "$PREFIX/cmdlets.manifest"
-    sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+        # clear pkginfo
+        rm -rf "$PREFIX/$libs_name"
 
-    # build library
-    libs_build || {
+        # clear manifest
+        touch "$PREFIX/cmdlets.manifest"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+
+        # build library
+        libs_build || die "build $libs_name@$libs_ver failed"
+
+        # update tracking file
+        touch "$PREFIX/.$libs_name.d"
+
+        slogi "<<<<<" "$libs_name@$libs_ver"
+    ) || {
         sleep 1 # let _capture() finish
 
-        local logfile="$(_logfile)"
-        mv "$logfile" "$logfile.fail"
-        tail -v "$logfile.fail"
+        mv "$_LOGFILE" "$_LOGFILE.fail"
+        tail -v "$_LOGFILE.fail"
         exit 127
     }
-
-    # update tracking file
-    touch "$PREFIX/.$libs_name.d"
-
-    slogi "<<<<<" "$libs_name@$libs_ver"
-)}
+}
 
 # check dependencies for libraries
 _check_deps() {
@@ -1233,6 +1236,32 @@ _check_deps() {
     done
 
     [ "${#deps[@]}" -gt 1 ] && _sort_by_depends "${deps[@]}" || echo "${deps[@]}"
+}
+
+_sort_by_depends() {
+    local head=()
+    local tail=()
+    for ulib in "$@"; do
+        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
+
+        for x in "${_deps[@]}"; do
+            # have dependencies => append
+            if [[ "$*" == *"$x"* ]]; then
+                tail+=( "$ulib" )
+                break
+            fi
+        done
+
+        # OR prepend
+        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
+    done
+
+    # sort tail again: be careful with circular dependencies
+    if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
+        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
+    fi
+
+    echo "${head[@]}" "${tail[@]}"
 }
 
 # build targets and its dependencies
@@ -1279,32 +1308,6 @@ build() {
 
         time compile "${targets[i]}" || die "build ${targets[i]} failed."
     done
-}
-
-_sort_by_depends() {
-    local head=()
-    local tail=()
-    for ulib in "$@"; do
-        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
-
-        for x in "${_deps[@]}"; do
-            # have dependencies => append
-            if [[ "$*" == *"$x"* ]]; then
-                tail+=( "$ulib" )
-                break
-            fi
-        done
-
-        # OR prepend
-        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
-    done
-
-    # sort tail again: be careful with circular dependencies
-    if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
-    fi
-
-    echo "${head[@]}" "${tail[@]}"
 }
 
 search() {
