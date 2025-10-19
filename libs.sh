@@ -1238,6 +1238,32 @@ _check_deps() {
     [ "${#deps[@]}" -gt 1 ] && _sort_by_depends "${deps[@]}" || echo "${deps[@]}"
 }
 
+_sort_by_depends() {
+    local head=()
+    local tail=()
+    for ulib in "$@"; do
+        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
+
+        for x in "${_deps[@]}"; do
+            # have dependencies => append
+            if [[ "$*" == *"$x"* ]]; then
+                tail+=( "$ulib" )
+                break
+            fi
+        done
+
+        # OR prepend
+        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
+    done
+
+    # sort tail again: be careful with circular dependencies
+    if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
+        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
+    fi
+
+    echo "${head[@]}" "${tail[@]}"
+}
+
 # build targets and its dependencies
 # build <lib list>
 build() {
@@ -1282,32 +1308,6 @@ build() {
 
         time compile "${targets[i]}" || die "build ${targets[i]} failed."
     done
-}
-
-_sort_by_depends() {
-    local head=()
-    local tail=()
-    for ulib in "$@"; do
-        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
-
-        for x in "${_deps[@]}"; do
-            # have dependencies => append
-            if [[ "$*" == *"$x"* ]]; then
-                tail+=( "$ulib" )
-                break
-            fi
-        done
-
-        # OR prepend
-        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
-    done
-
-    # sort tail again: be careful with circular dependencies
-    if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
-    fi
-
-    echo "${head[@]}" "${tail[@]}"
 }
 
 search() {
