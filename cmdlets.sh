@@ -335,6 +335,33 @@ fetch() {
     done
 }
 
+# link prebuilts to other place
+#  input: <targets ...> <destination>
+link() {
+    local targets=( "${@:1:$(($#-1))}" )
+    local to="${@:$#}"
+
+    [[ "$to" =~ ^/ ]] || to="$OLDPWD/$to"
+
+    info "== Link ${targets[*]} => $to"
+
+    if [ ${#targets[@]} -gt 1 ]; then
+        mkdir -pv "$to" | _details
+    else
+        mkdir -pv "${to%/*}" | _details
+    fi
+
+    for x in "${targets[@]}"; do
+        test -e "$x" || x="$PREBUILTS/$x"
+
+        test -e "$x" || die "<< $x not exists"
+
+        # relative path: avoid using ln -srfv
+        x="$(realpath "$x" --relative-to="${to%/*}")"
+        ln -sfv "$x" "$to" | _details_escape
+    done
+}
+
 # remove cmdlets
 #  input: name
 remove() {
@@ -476,6 +503,9 @@ invoke() {
             ;;
         ls|list)
             list
+            ;;
+        ln|link)
+            link "${@:2}"
             ;;
         search)
             search "${@:2}"
