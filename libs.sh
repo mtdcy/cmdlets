@@ -900,9 +900,8 @@ check() {
 _curl() {
     local source="$1"
 
-    curl -fsI "${@:3}" "$source" -o /dev/null || return 1
-
     if test -n "$2"; then
+        curl -fsI "${@:3}" "$source" -o /dev/null &&
         # show errors
         echocmd curl -fvSL "${@:3}" "$source" -o "$2"
     else
