@@ -68,10 +68,6 @@ sloge() { _slog error "$@" >&2; return 1;   }
 
 die()   { _slog error "$@" >&2; exit 1;     } # exit shell
 
-_logfile() {
-    echo "$LOGFILES/$libs_name.log"
-}
-
 # for subshell
 # write error message to .ERR_MSG on failure
 _on_failure() {
@@ -86,7 +82,7 @@ _exit_on_failure() {
 
 _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
-        cat >> "$(_logfile)"
+        cat >> "$_LOGFILE"
     elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput dim                        # dim on
         tput rmam                       # line break off
@@ -99,13 +95,13 @@ _capture() {
             tput sc                     # save cursor position
             printf "#$i: %s" "$line"
             tput rc                     # restore cursor position
-        done < <(tee -a "$(_logfile)")
+        done < <(tee -a "$_LOGFILE")
 
         tput ed                         # clear to end of screen
         tput smam                       # line break on
         tput sgr0                       # reset colors
     else
-        tee -a "$(_logfile)"
+        tee -a "$_LOGFILE"
     fi
 }
 
@@ -1159,57 +1155,61 @@ _deps_get() {
 }
 
 # compile target
-compile() {(
-    # start subshell before source
-    set -eo pipefail
+compile() {
+    export _LOGFILE="$LOGFILES/${1##*/}.log"
 
-    slogi ".Load" "$1"
-    _load "$1"
+    # always start subshell before _load()
+    (
+        set -eo pipefail
 
-    if test -z "$libs_url"; then
-        slogw "<<<<<" "skip dummy target $libs_name"
-        return 0
-    fi
+        slogi ".Load" "$1"
+        _load "$1"
 
-    # prepare work dir
-    mkdir -p "$PREFIX"
-    mkdir -p "$(dirname "$(_logfile)")"
+        if test -z "$libs_url"; then
+            slogw "<<<<<" "skip dummy target $libs_name"
+            return 0
+        fi
 
-    local workdir="$WORKDIR/$libs_name-$libs_ver"
+        # prepare work dir
+        mkdir -p "$PREFIX"
+        mkdir -p "${_LOGFILE%/*}"
 
-    # strict mode: clean before compile
-    [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
+        local workdir="$WORKDIR/$libs_name-$libs_ver"
 
-    mkdir -p "$workdir" && cd "$workdir"
+        # strict mode: clean before compile
+        [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
 
-    echo -e "**** start build $libs_name ****\n$(date)\n" > "$(_logfile)"
+        mkdir -p "$workdir" && cd "$workdir"
 
-    slogi ".Path" "$PWD"
+        # clear logfile
+        echo -e "**** start build $libs_name ****\n$(date)\n" > "$_LOGFILE"
 
-    _prepare # or die
+        slogi ".Path" "$PWD"
 
-    # clear pkginfo
-    rm -rf "$PREFIX/$libs_name"
+        _prepare # or die
 
-    # clear manifest
-    touch "$PREFIX/cmdlets.manifest"
-    sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+        # clear pkginfo
+        rm -rf "$PREFIX/$libs_name"
 
-    # build library
-    libs_build || {
+        # clear manifest
+        touch "$PREFIX/cmdlets.manifest"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+
+        # build library
+        libs_build || die "build $libs_name@$libs_ver failed"
+
+        # update tracking file
+        touch "$PREFIX/.$libs_name.d"
+
+        slogi "<<<<<" "$libs_name@$libs_ver"
+    ) || {
         sleep 1 # let _capture() finish
 
-        local logfile="$(_logfile)"
-        mv "$logfile" "$logfile.fail"
-        tail -v "$logfile.fail"
+        mv "$_LOGFILE" "$_LOGFILE.fail"
+        tail -v "$_LOGFILE.fail"
         exit 127
     }
-
-    # update tracking file
-    touch "$PREFIX/.$libs_name.d"
-
-    slogi "<<<<<" "$libs_name@$libs_ver"
-)}
+}
 
 # check dependencies for libraries
 _check_deps() {
