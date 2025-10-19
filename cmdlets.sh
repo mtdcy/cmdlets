@@ -79,7 +79,6 @@ Examples:
 EOF
 }
 
-error() { echo -e "\\033[31m$*\\033[39m" 1>&2; }
 info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
 warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
 info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
@@ -289,8 +288,7 @@ fetch() {
     elif _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
-        error "<< Fetch $1/$ARCH failed"
-        return 1
+        die "<< Fetch $1/$ARCH failed"
     fi
 
     # target with or without version
@@ -395,22 +393,16 @@ package() {
     if [ "$API" = "v3" ]; then
         IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
 
-        if test -n "${pkgfile[*]}"; then
-            info3 "#3 Fetch package $1 < ${pkgfile[*]}"
+        test -n "${pkgfile[*]}" || die "<< Fetch package $1/$ARCH failed"
 
-            for file in "${pkgfile[@]}"; do
-                _v3 "$file" "$pkgname" --pkgfile || {
-                    error "<< Fetch package $file/$ARCH failed"
-                    return 1
-                }
-            done
+        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
-            touch "$PREBUILTS/.$pkgname.d" # mark as ready
-            return 0
-        else
-            error "<< Fetch package $1/$ARCH failed"
-            return 1
-        fi
+        for file in "${pkgfile[@]}"; do
+            _v3 "$file" "$pkgname" --pkgfile || die "<< Fetch package $file/$ARCH failed"
+        done
+
+        touch "$PREBUILTS/.$pkgname.d" # mark as ready
+        return 0
     fi
 
     info2 "#2 Fetch package $1"
@@ -419,10 +411,7 @@ package() {
 
     pkginfo="$pkgname/pkginfo@$pkgver"
 
-    if ! _curl "$pkginfo"; then
-        error "<< Fetch $pkginfo failed"
-        return 1
-    fi
+    _curl "$pkginfo" || die "<< Fetch $pkginfo failed"
 
     cat "$TEMPDIR/$pkginfo" | _details
 
@@ -434,10 +423,7 @@ package() {
 
         info2 "#2 Fetch $pkgfile"
 
-        _unzip "$pkgfile" || {
-            error "<< Fetch package $pkgfile/$ARCH failed"
-            return 1
-        }
+        _unzip "$pkgfile" || die "<< Fetch package $pkgfile/$ARCH failed"
     done < "$TEMPDIR/$pkginfo"
 
     # no v1 package()
@@ -457,10 +443,7 @@ update() {
 
     info "## Install $NAME => $target"
 
-    if ! mkdir -pv "$(dirname "$target")" | _details; then
-        error "<< Permission Denied?"
-        return 1
-    fi
+    mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
 
     for base in "${BASE[@]}"; do
         if _curl "$base" "$TEMPDIR/$NAME"; then
@@ -472,8 +455,7 @@ update() {
         fi
     done
 
-    error "<< Update $(basename "$0") failed"
-    return 127
+    die "<< Update $(basename "$0") failed"
 }
 
 # list installed cmdlets
@@ -481,13 +463,13 @@ list() {
     local width link real
     info "== List installed cmdlets"
 
-    width="$(find . -type l -maxdepth 1 | wc -L)"
+    width="$(find . -maxdepth 1 -type l | wc -L)"
 
     while read -r link; do
         real="$(readlink "$link")"
         [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
         printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -type l -maxdepth 1)
+    done < <(find . -maxdepth 1 -type l)
 }
 
 # invoke cmd [args...]
