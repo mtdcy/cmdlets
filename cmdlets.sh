@@ -52,35 +52,40 @@ Copyright (c) 2025, mtdcy.chen@gmail.com
 Usage: $NAME cmd [args ...]
 
 Options:
-    update                  - update $NAME
-    update  <cmdlet>        - update cmdlet
+    update                      - update $NAME
+    update  <cmdlet>            - update cmdlet
 
-    list                    - list installed cmdlets
-    search  <name>          - search for cmdlet, library or package
-    install <cmdlet>        - fetch and install cmdlet
-    remove  <cmdlet>        - remove cmdlet
+    list                        - list installed cmdlets
+    search  <name>              - search for cmdlet, library or package
+    install <cmdlet>            - fetch and install cmdlet
+    remove  <cmdlet>            - remove cmdlet
 
-    help                    - show this help message
+    help                        - show this help message
 
     (for developers)
-    fetch   <cmdlet ...>    - fetch cmdlet(s)
-    package <pkgname ...>   - fetch package(s) (cmdlets & libraries)
+    fetch   <cmdlet ...>        - fetch cmdlet(s)
+    package <pkgname ...>       - fetch package(s) (cmdlets & libraries)
 
 Examples:
-    $NAME install minigzip                  # install the latest version
-    $NAME install zlib/minigzip@1.3.1       # install the specific version
+    $NAME install minigzip                          # install the latest version
+    $NAME install zlib/minigzip@1.3.1               # install the specific version
 
-    $NAME package zlib                      # install the latest package
-    $NAME package zlib@1.3.1                # install the specific version
+    $NAME package zlib                              # install the latest package
+    $NAME package zlib@1.3.1                        # install the specific version
+
+    # create resource link
+    $NAME install mergetools                        # install git mergetools
+    $NAME link    share/mergetools ~/.mergetools    # link mergetools to \$HOME
 EOF
 }
 
-error() { echo -e "\\033[31m$*\\033[39m" 1>&2; }
 info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
 warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
 info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
 info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
 info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
+
+die() { echo -e "\\033[31m$*\\033[39m" 1>&2; exit 1; }
 
 # prepend each line with '=> '
 _details() {
@@ -154,7 +159,7 @@ _v1() {
 _v2() {
     [ "$API" != "v1" ] || return 127
 
-    local pkgfile pkgver pkginfo 
+    local pkgfile pkgver pkginfo
 
     # zlib
     # zlib@1.3.1
@@ -255,8 +260,8 @@ _v3() {
     info3 "#3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
-    _unzip "$pkgfile" || 
-    _unzip "$(basename "$pkgfile")" || 
+    _unzip "$pkgfile" ||
+    _unzip "$(basename "$pkgfile")" ||
     return 1
 }
 
@@ -283,8 +288,7 @@ fetch() {
     elif _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
-        error "<< Fetch $1/$ARCH failed"
-        return 1
+        die "<< Fetch $1/$ARCH failed"
     fi
 
     # target with or without version
@@ -333,6 +337,33 @@ fetch() {
     done
 }
 
+# link prebuilts to other place
+#  input: <targets ...> <destination>
+link() {
+    local targets=( "${@:1:$(($#-1))}" )
+    local to="${@:$#}"
+
+    [[ "$to" =~ ^/ ]] || to="$OLDPWD/$to"
+
+    info "== Link ${targets[*]} => $to"
+
+    if [ ${#targets[@]} -gt 1 ]; then
+        mkdir -pv "$to" | _details
+    else
+        mkdir -pv "${to%/*}" | _details
+    fi
+
+    for x in "${targets[@]}"; do
+        test -e "$x" || x="$PREBUILTS/$x"
+
+        test -e "$x" || die "<< $x not exists"
+
+        # relative path: avoid using ln -srfv
+        x="$(realpath "$x" --relative-to="${to%/*}")"
+        ln -sfv "$x" "$to" | _details_escape
+    done
+}
+
 # remove cmdlets
 #  input: name
 remove() {
@@ -362,22 +393,16 @@ package() {
     if [ "$API" = "v3" ]; then
         IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
 
-        if test -n "${pkgfile[*]}"; then
-            info3 "#3 Fetch package $1 < ${pkgfile[*]}"
+        test -n "${pkgfile[*]}" || die "<< Fetch package $1/$ARCH failed"
 
-            for file in "${pkgfile[@]}"; do 
-                _v3 "$file" "$pkgname" --pkgfile || {
-                    error "<< Fetch package $file/$ARCH failed"
-                    return 1
-                }
-            done
+        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
-            touch "$PREBUILTS/.$pkgname.d" # mark as ready
-            return 0
-        else
-            error "<< Fetch package $1/$ARCH failed"
-            return 1
-        fi
+        for file in "${pkgfile[@]}"; do
+            _v3 "$file" "$pkgname" --pkgfile || die "<< Fetch package $file/$ARCH failed"
+        done
+
+        touch "$PREBUILTS/.$pkgname.d" # mark as ready
+        return 0
     fi
 
     info2 "#2 Fetch package $1"
@@ -386,10 +411,7 @@ package() {
 
     pkginfo="$pkgname/pkginfo@$pkgver"
 
-    if ! _curl "$pkginfo"; then
-        error "<< Fetch $pkginfo failed"
-        return 1
-    fi
+    _curl "$pkginfo" || die "<< Fetch $pkginfo failed"
 
     cat "$TEMPDIR/$pkginfo" | _details
 
@@ -401,10 +423,7 @@ package() {
 
         info2 "#2 Fetch $pkgfile"
 
-        _unzip "$pkgfile" || {
-            error "<< Fetch package $pkgfile/$ARCH failed"
-            return 1
-        }
+        _unzip "$pkgfile" || die "<< Fetch package $pkgfile/$ARCH failed"
     done < "$TEMPDIR/$pkginfo"
 
     # no v1 package()
@@ -418,16 +437,13 @@ update() {
         target="$HOME/.bin/$NAME"
     elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
         target="$HOME/.local/bin/$NAME"
-    else 
+    else
         target="/usr/local/bin/$NAME"
     fi
 
     info "## Install $NAME => $target"
 
-    if ! mkdir -pv "$(dirname "$target")" | _details; then
-        error "<< Permission Denied?"
-        return 1
-    fi
+    mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
 
     for base in "${BASE[@]}"; do
         if _curl "$base" "$TEMPDIR/$NAME"; then
@@ -439,8 +455,7 @@ update() {
         fi
     done
 
-    error "<< Update $(basename "$0") failed"
-    return 127
+    die "<< Update $(basename "$0") failed"
 }
 
 # list installed cmdlets
@@ -448,13 +463,13 @@ list() {
     local width link real
     info "== List installed cmdlets"
 
-    width="$(find . -type l -maxdepth 1 | wc -L)"
+    width="$(find . -maxdepth 1 -type l | wc -L)"
 
     while read -r link; do
         real="$(readlink "$link")"
         [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
         printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -type l -maxdepth 1)
+    done < <(find . -maxdepth 1 -type l)
 }
 
 # invoke cmd [args...]
@@ -474,6 +489,9 @@ invoke() {
             ;;
         ls|list)
             list
+            ;;
+        ln|link)
+            link "${@:2}"
             ;;
         search)
             search "${@:2}"
