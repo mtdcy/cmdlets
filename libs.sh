@@ -287,7 +287,7 @@ _init() {
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    
+
     _init_tools "${host_tools[@]}"
 
     # common flags for c/c++
@@ -459,7 +459,7 @@ cmake() {
 
     local cmdline=( "$CMAKE" )
 
-    case "$(_filter_out_cmake_defines "$@")" in 
+    case "$(_filter_out_cmake_defines "$@")" in
         --build*)
             export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
             cmdline+=( "$@" )
@@ -700,9 +700,9 @@ pkgfile() {
     fi
 
     test -n "${files[*]}" || slogf "pkgfile() without inputs"
-    
+
     pushd "$PREFIX" && mkdir -pv "$libs_name"
-    
+
     IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
 
     # preprocessing installed files
@@ -826,7 +826,7 @@ inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || return $?
-    
+
     _rm_libtool_archive
 
     find "$PREFIX" > "$libs_name.pack.post"
@@ -915,7 +915,7 @@ _curl() {
 }
 
 _packages() {
-    echo "$ROOT/packages/$libs_name/$(basename "$1")"
+    echo "$ROOT/packages/$libs_name/${1##*/}"
 }
 
 # fetch url to packages/ or return error
@@ -1041,7 +1041,7 @@ _unzip() {
 # clone git repo
 #  input: git_url#branch_or_tag_name [path]
 _git() {
-    local url branch 
+    local url branch
     local path="${2%.git*}"
 
     slogi "..GIT" "$1 => $path"
@@ -1068,7 +1068,7 @@ _prepare_one() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}" &&
         # unzip to current fold
-        _unzip "$zip" || return $?
+        _unzip "$zip" "${ZIP_SKIP:-}" || return $?
     fi
 }
 
@@ -1082,7 +1082,8 @@ _prepare() {
         local url sha
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
-            _prepare_one "$sha" "$url" || return $?
+            # never strip component of resources zip
+            ZIP_SKIP=0 _prepare_one "$sha" "$url" || return $?
         done
     fi
 
@@ -1356,7 +1357,7 @@ info() {
 
     for lib in libs/*.s; do
         IFS='/.' read -r _ ulib _ <<< "$pkg"
-        
+
         [[ "$libs" =~ ^[\.@_] ]] && continue
 
         IFS=' ' read -r -a deps <<< "$(bash libs.sh _load_deps "$lib")"
