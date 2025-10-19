@@ -52,26 +52,30 @@ Copyright (c) 2025, mtdcy.chen@gmail.com
 Usage: $NAME cmd [args ...]
 
 Options:
-    update                  - update $NAME
-    update  <cmdlet>        - update cmdlet
+    update                      - update $NAME
+    update  <cmdlet>            - update cmdlet
 
-    list                    - list installed cmdlets
-    search  <name>          - search for cmdlet, library or package
-    install <cmdlet>        - fetch and install cmdlet
-    remove  <cmdlet>        - remove cmdlet
+    list                        - list installed cmdlets
+    search  <name>              - search for cmdlet, library or package
+    install <cmdlet>            - fetch and install cmdlet
+    remove  <cmdlet>            - remove cmdlet
 
-    help                    - show this help message
+    help                        - show this help message
 
     (for developers)
-    fetch   <cmdlet ...>    - fetch cmdlet(s)
-    package <pkgname ...>   - fetch package(s) (cmdlets & libraries)
+    fetch   <cmdlet ...>        - fetch cmdlet(s)
+    package <pkgname ...>       - fetch package(s) (cmdlets & libraries)
 
 Examples:
-    $NAME install minigzip                  # install the latest version
-    $NAME install zlib/minigzip@1.3.1       # install the specific version
+    $NAME install minigzip                          # install the latest version
+    $NAME install zlib/minigzip@1.3.1               # install the specific version
 
-    $NAME package zlib                      # install the latest package
-    $NAME package zlib@1.3.1                # install the specific version
+    $NAME package zlib                              # install the latest package
+    $NAME package zlib@1.3.1                        # install the specific version
+
+    # create resource link
+    $NAME install mergetools                        # install git mergetools
+    $NAME link    share/mergetools ~/.mergetools    # link mergetools to \$HOME
 EOF
 }
 
@@ -156,7 +160,7 @@ _v1() {
 _v2() {
     [ "$API" != "v1" ] || return 127
 
-    local pkgfile pkgver pkginfo 
+    local pkgfile pkgver pkginfo
 
     # zlib
     # zlib@1.3.1
@@ -257,8 +261,8 @@ _v3() {
     info3 "#3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
-    _unzip "$pkgfile" || 
-    _unzip "$(basename "$pkgfile")" || 
+    _unzip "$pkgfile" ||
+    _unzip "$(basename "$pkgfile")" ||
     return 1
 }
 
@@ -394,7 +398,7 @@ package() {
         if test -n "${pkgfile[*]}"; then
             info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
-            for file in "${pkgfile[@]}"; do 
+            for file in "${pkgfile[@]}"; do
                 _v3 "$file" "$pkgname" --pkgfile || {
                     error "<< Fetch package $file/$ARCH failed"
                     return 1
@@ -447,7 +451,7 @@ update() {
         target="$HOME/.bin/$NAME"
     elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
         target="$HOME/.local/bin/$NAME"
-    else 
+    else
         target="/usr/local/bin/$NAME"
     fi
 
