@@ -452,6 +452,9 @@ cmake() {
         export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     fi
 
+    # this env depends on generator, set MAKE or others instead
+    #export CMAKE_MAKE_PROGRAM="$MAKE"
+
     local cmdline=( "$CMAKE" )
 
     case "$(_filter_out_cmake_defines "$@")" in
@@ -464,15 +467,11 @@ cmake() {
             cmdline+=( "$@" )
             ;;
         *)
-            local search="$PREFIX"
-            test -z "$CMAKE_PREFIX_PATH" || search="$search:$CMAKE_PREFIX_PATH"
-
             # extend CMAKE with compile tools
             cmdline+=(
                 -DCMAKE_BUILD_TYPE=RelWithDebInfo
                 -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-                -DCMAKE_PREFIX_PATH="'$search'"
-                -DCMAKE_MAKE_PROGRAM="'$MAKE'"
+                -DCMAKE_PREFIX_PATH="'$PREFIX'"
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
             # sysroot
