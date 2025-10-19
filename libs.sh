@@ -65,7 +65,8 @@ _slog() {
 slogi() { _slog info  "$@" >&2;             }
 slogw() { _slog warn  "$@" >&2;             }
 sloge() { _slog error "$@" >&2; return 1;   }
-slogf() { _slog error "$@" >&2; exit 1;     } # exit shell
+
+die()   { _slog error "$@" >&2; exit 1;     } # exit shell
 
 _logfile() {
     echo "$LOGFILES/$libs_name.log"
@@ -80,9 +81,7 @@ _on_failure() {
 
 # for main shell
 _exit_on_failure() {
-    if test -s "$PREFIX/.ERR_MSG"; then
-        slogf "Error" "$(cat "$PREFIX/.ERR_MSG" | xargs)"
-    fi
+    test -s "$PREFIX/.ERR_MSG" && die "$(cat "$PREFIX/.ERR_MSG" | xargs)"
 }
 
 _capture() {
@@ -287,7 +286,7 @@ _init() {
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
-    
+
     _init_tools "${host_tools[@]}"
 
     # common flags for c/c++
@@ -459,7 +458,7 @@ cmake() {
 
     local cmdline=( "$CMAKE" )
 
-    case "$(_filter_out_cmake_defines "$@")" in 
+    case "$(_filter_out_cmake_defines "$@")" in
         --build*)
             export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
             cmdline+=( "$@" )
@@ -699,16 +698,16 @@ pkgfile() {
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
 
-    test -n "${files[*]}" || slogf "pkgfile() without inputs"
-    
+    test -n "${files[*]}" || die "pkgfile() without inputs."
+
     pushd "$PREFIX" && mkdir -pv "$libs_name"
-    
+
     IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
 
     # preprocessing installed files
     for x in "${files[@]}"; do
         # test won't work as file glob exists
-        #test -e "$x" || slogf "$x not exists"
+        #test -e "$x" || die "$x not exists."
         case "$x" in
             *.a)
                 echocmd "$STRIP" -x "$x"
@@ -826,7 +825,7 @@ inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || return $?
-    
+
     _rm_libtool_archive
 
     find "$PREFIX" > "$libs_name.pack.post"
@@ -872,9 +871,7 @@ check() {
     # try local file again
     test -f "$bin" || bin="$1"
 
-    test -f "$bin" || {
-        slogf "CHECK" "cann't find $1"
-    }
+    test -f "$bin" || die "check $* failed, $bin not found."
 
     # print to tty instead of capture it
     file "$bin"
@@ -888,7 +885,7 @@ check() {
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
             echocmd ldd "$bin"
-            slogf "CHECK" "$bin is dynamically linked"
+            die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
         echocmd otool -L "$bin" # | grep -v "libSystem.*"
@@ -915,7 +912,7 @@ _curl() {
 }
 
 _packages() {
-    echo "$ROOT/packages/$libs_name/$(basename "$1")"
+    echo "$ROOT/packages/$libs_name/${1##*/}"
 }
 
 # fetch url to packages/ or return error
@@ -981,7 +978,7 @@ git_version() {
 _unzip() {
     slogi ".Zipx" "$1 => $(pwd)"
 
-    [ -r "$1" ] || slogf ".Zipx" "$1 read failed, permission denied?"
+    [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
     # XXX: bsdtar --strip-components fails with some files like *.tar.xz
     #  ==> install gnu-tar with brew on macOS
@@ -1022,7 +1019,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || slogf ".Zipx" "$1 failed."
+    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
 
     # post strip
     case "${cmd[0]}" in
@@ -1041,7 +1038,7 @@ _unzip() {
 # clone git repo
 #  input: git_url#branch_or_tag_name [path]
 _git() {
-    local url branch 
+    local url branch
     local path="${2%.git*}"
 
     slogi "..GIT" "$1 => $path"
@@ -1068,7 +1065,7 @@ _prepare_one() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}" &&
         # unzip to current fold
-        _unzip "$zip" || return $?
+        _unzip "$zip" "${ZIP_SKIP:-}" || return $?
     fi
 }
 
@@ -1082,7 +1079,8 @@ _prepare() {
         local url sha
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
-            _prepare_one "$sha" "$url" || return $?
+            # never strip component of resources zip
+            ZIP_SKIP=0 _prepare_one "$sha" "$url" || return $?
         done
     fi
 
@@ -1279,9 +1277,7 @@ build() {
     for i in "${!targets[@]}"; do
         slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
 
-        time compile "${targets[i]}" || {
-            slogf "Error" "build ${targets[i]} failed"
-        }
+        time compile "${targets[i]}" || die "build ${targets[i]} failed."
     done
 }
 
@@ -1356,7 +1352,7 @@ info() {
 
     for lib in libs/*.s; do
         IFS='/.' read -r _ ulib _ <<< "$pkg"
-        
+
         [[ "$libs" =~ ^[\.@_] ]] && continue
 
         IFS=' ' read -r -a deps <<< "$(bash libs.sh _load_deps "$lib")"
