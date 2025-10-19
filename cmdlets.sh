@@ -503,22 +503,22 @@ invoke() {
             fi
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
-                fetch "$bin" --install "$alias" || ret=$?
+                ( fetch "$bin" --install "$alias" ) || ret=$?
             done
             ;;
         rm|remove|uninstall)
             for x in "${@:2}"; do
-                remove "$x" || ret=$?
+                ( remove "$x" ) || ret=$?
             done
             ;;
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
-                fetch "$x" || ret=$?
+                ( fetch "$x" ) || ret=$?
             done
             ;;
         package)    # fetch package files
             for x in "${@:2}"; do
-                package "$x" || ret=$?
+                ( package "$x" ) || ret=$?
             done
             find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
                 sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
