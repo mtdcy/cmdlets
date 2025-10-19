@@ -418,7 +418,7 @@ make() {
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "make $* failed."
 }
 
 _filter_out_cmake_defines() {
@@ -482,7 +482,7 @@ cmake() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "cmake $* failed."
 }
 
 meson() {
@@ -516,7 +516,7 @@ meson() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}"
+    slogcmd "${cmdline[@]}" || die "meson $* failed."
 }
 
 ninja() {
@@ -525,7 +525,7 @@ ninja() {
     # append user args
     cmdline="$NINJA -j $CL_NJOBS -v $*"
 
-    slogcmd "$cmdline"
+    slogcmd "$cmdline" || die "ninja $* failed."
 }
 
 cargo() {
@@ -546,7 +546,7 @@ cargo() {
             ;;
     esac
 
-    slogcmd "$cmdline"
+    slogcmd "$cmdline" || die "cargo $* failed."
 }
 
 _init_go() {
@@ -646,7 +646,7 @@ go() {
             ;;
     esac
 
-    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}"
+    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}" || die "go $* failed."
 }
 
 # easy command for go project
