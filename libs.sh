@@ -686,19 +686,19 @@ pkgfile() {
         case "$3" in
             make)   "${@:3}" DESTDIR="$DESTDIR" ;;
             *)      DESTDIR="$DESTDIR" "${@:3}" ;;
-        esac || return
+        esac || die "${*:3} failed."
         _rm_libtool_archive "$DESTDIR"
         IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
         rm -rf DESTDIR
 
         # do a real install
-        "${@:3}"
+        "${@:3}" || die "${*:3} failed."
         _rm_libtool_archive
     else
         IFS=' ' read -r -a files <<< "${@:2}"
     fi
 
-    test -n "${files[*]}" || die "pkgfile() without inputs."
+    test -n "${files[*]}" || die "call pkgfile() without inputs."
 
     pushd "$PREFIX" && mkdir -pv "$libs_name"
 
@@ -741,7 +741,7 @@ pkgfile() {
 
     slogi ".Pack" "$pkgfile < ${files[@]}"
 
-    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}"
+    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}" || die "create pkgfile failed."
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -813,7 +813,7 @@ pkginst() {
             bin*|libexec*)  mode=( -m755 -s ) ;;
         esac
 
-        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || return $?
+        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 
@@ -824,7 +824,7 @@ pkginst() {
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
-    slogcmd "$@" || return $?
+    slogcmd "$@" || die "${@:2} failed."
 
     _rm_libtool_archive
 
@@ -840,7 +840,7 @@ cmdlet() {
 
     local target="$PREFIX/bin/$(basename "${2:-$1}")"
 
-    echocmd "$INSTALL" -v -m755 "$1" "$target" || return 1
+    echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
 
     local alias=()
     for x in "${@:3}"; do
@@ -952,13 +952,10 @@ _fetch() {
         done
     fi
 
-    if test -f "$zip"; then
-        slogi ".FILE" "$(sha256sum "$zip")"
-        return 0
-    else
-        sloge ".CURL" "$1 failed"
-        return 1
-    fi
+    test -f "$zip" || die "curl $1 failed."
+
+    slogi ".FILE" "$(sha256sum "$zip")"
+    return 0
 }
 
 # show git tag > branch > commit
@@ -1043,7 +1040,7 @@ _git() {
 
     # reuse local repo
     if ! test -d "$path/.git"; then
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path"
+        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
     fi
 }
 
@@ -1063,22 +1060,22 @@ _packages() {
 _prepare_one() {
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _git "${@:2}" "$(basename "$2")" || return $?
+        _git "${@:2}" "$(basename "$2")"
     else
         # assemble zip name from url
         local zip="$(_packages "$2")"
 
         # download zip file
-        _fetch "$zip" "$1" "${@:2}" &&
+        _fetch "$zip" "$1" "${@:2}"
         # unzip to current fold
-        _unzip "$zip" "${ZIP_SKIP:-}" || return $?
+        _unzip "$zip" "${ZIP_SKIP:-}"
     fi
 }
 
-# prepare source code or return error
+# prepare source code or die
 _prepare() {
     # libs_url: support mirrors
-    _prepare_one "$libs_sha" "${libs_url[@]}" || return $?
+    _prepare_one "$libs_sha" "${libs_url[@]}"
 
     # libs_resources: no mirrors
     if test -n "${libs_resources[*]}"; then
@@ -1086,7 +1083,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _prepare_one "$sha" "$url" || return $?
+            ZIP_SKIP=0 _prepare_one "$sha" "$url"
         done
     fi
 
@@ -1096,16 +1093,16 @@ _prepare() {
             http://*|https://*)
                 local file="$(_packages "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
-                slogcmd "$PATCH -p1 -N < $file"
+                slogcmd "$PATCH -p1 -N < $file" || die "patch < $file failed."
                 ;;
             *)
-                slogcmd "$PATCH -p1 -N < $patch"
+                slogcmd "$PATCH -p1 -N < $patch" || die "patch < $patch failed."
                 ;;
         esac
     done
 
     if test -s "$TEMPDIR/$libs_name.patch"; then
-        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch"
+        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch" || die "patch inlined failed."
     fi
 }
 
@@ -1189,7 +1186,7 @@ compile() {(
 
     slogi ".Path" "$PWD"
 
-    _prepare || exit $?
+    _prepare # or die
 
     # clear pkginfo
     rm -rf "$PREFIX/$libs_name"
