@@ -277,6 +277,7 @@ _init() {
     fi
 
     # cmdlets
+    export CMDLETS_PREBUILTS="$PREBUILTS"
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
@@ -635,7 +636,7 @@ _deps_sort() {
 build() {
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
 
-    CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
+    ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()
@@ -643,7 +644,7 @@ build() {
         slogi "Force rebuild dependencies"
         targets=( "${deps[@]}" )
     else
-        CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
+        ./cmdlets.sh package "${deps[@]}"
 
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
