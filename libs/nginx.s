@@ -112,7 +112,10 @@ libs_build() {
     STATIC_LIBS+=" $($PKG_CONFIG --libs gdlib)"
 
     libs_args+=(
+        # for NGX_CC_OPT
         --with-cc-opt="'$CFLAGS $CPPFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
+        # for NGX_LD_OPT
+        --with-ld-opt="'$LDFLAGS $STATIC_LIBS'"
     )
 
     # Fix configure for musl-gcc
@@ -122,7 +125,7 @@ libs_build() {
 
     configure
 
-    make LINK="'$CC $LDFLAGS $STATIC_LIBS'"
+    make
 
     cmdlet ./objs/nginx
 
