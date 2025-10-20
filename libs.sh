@@ -61,18 +61,6 @@ sloge() { _slog error "$@" >&2; return 1;   }
 
 die()   { _slog error "$@" >&2; exit 1;     } # exit shell
 
-# for subshell
-# write error message to .ERR_MSG on failure
-_on_failure() {
-    echo "$*" >> "$PREFIX/.ERR_MSG"
-    exit 1 # exit subshell
-}
-
-# for main shell
-_exit_on_failure() {
-    test -s "$PREFIX/.ERR_MSG" && die "$(cat "$PREFIX/.ERR_MSG" | xargs)"
-}
-
 _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
         cat >> "$_LOGFILE"
@@ -164,7 +152,7 @@ _init() {
 
     export ROOT PREFIX WORKDIR LOGFILES
 
-    is_glibc || unset CL_TOOLCHAIN_PREFIX
+    is_linux || unset CL_TOOLCHAIN_PREFIX
 
     # shellcheck disable=SC2054,SC2206
     local toolchains=(
@@ -658,8 +646,6 @@ build() {
 
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
 
-    _exit_on_failure
-
     slogi "dependencies: ${deps[*]}"
 
     CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
@@ -683,8 +669,6 @@ build() {
     if [ "${#targets[@]}" -gt 1 ]; then
         IFS=' ' read -r -a targets <<< "$(_deps_sort "${targets[@]}")"
     fi
-
-    _exit_on_failure
 
     slogi "Build" "${targets[*]}"
 
