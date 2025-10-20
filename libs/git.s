@@ -122,7 +122,7 @@ libs_build() {
 
     for x in "${cmds[@]}"; do
         IFS=':' read -r bin links <<< "$x"
-        cmdlet "./$bin" "$bin" ${links//:/ } || return 3
+        cmdlet "./$bin" "${bin##*/}" ${links//:/ } || return 3
     done
 
     # pack all git tools into one pkgfile
