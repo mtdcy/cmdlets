@@ -462,11 +462,10 @@ pkgfile() {
 
     # name contains version code?
     IFS='@' read -r name version <<< "$1"
-    shift
 
     test -n "$version" || version="$libs_ver"
 
-    _make_install "$@"
+    _make_install "${@:2}"
 
     IFS=' ' read -r -a files < <(xargs < .pkgfile)
 
@@ -625,6 +624,22 @@ check() {
         echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
+    fi
+}
+
+caveats() {
+    # no version for caveats file
+    pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
+
+    true > "$pkgfile"
+
+    slogi "Caveats:"
+    if test -n "$*"; then
+        echo "$*" | tee -a "$pkgfile"
+    else
+        while IFS= read -r line; do
+            echo "$line" | tee -a "$pkgfile"
+        done
     fi
 }
 

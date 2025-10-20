@@ -130,6 +130,19 @@ libs_build() {
     cmdlet ./objs/nginx
 
     check nginx -version
+
+    caveats << EOF
+static built nginx @ $libs_ver with fancyindex
+
+defaults:
+  config:   /etc/nginx/nginx.conf
+  rutine:   /var/run/nginx.pid
+            /var/run/nginx.lock
+            /var/run/nginx/*
+  logfile:  /var/log/nginx/access.log
+            /var/log/nginx/error.log
+
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
