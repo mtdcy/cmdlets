@@ -1,3 +1,5 @@
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+#
 # GNU libiconv is a conversion library
 
 # shellcheck disable=SC2034
@@ -29,7 +31,7 @@ libs_args=(
     --enable-static
 )
 
-#  Linux glibc/musl provides iconv.h, but we want universal static binaries, 
+#  Linux glibc/musl provides iconv.h, but we want universal static binaries,
 #  so always link libiconv for both Linux and macOS
 libs_build() {
     deparallelize
@@ -39,7 +41,7 @@ libs_build() {
 
     sed -i '/utf8.h/a utf8mac.h \\' lib/Makefile.in
 
-    configure && 
+    configure &&
 
     make -f Makefile.devel                    \
         CC="'$CC'"                            \
@@ -57,8 +59,6 @@ libs_build() {
     # visual check
     check iconv --version
 }
-
-# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 
 # not necessary, make -f Makefile.devel will update lib/flags.h
 # keep it here for inline patch example
