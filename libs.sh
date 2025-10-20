@@ -105,16 +105,23 @@ _capture() {
     fi
 }
 
+# why eval as string?
+#  Pros:
+#   slogcmd "$PATCH -p1 -N < $file"     # redirect evals well
+#   pkgfile git bin/git bin/git-*       # glob works fine
+#
+#  Cons:
+#   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
     {
-        echo "$*"
+        echo "$@"
         eval -- "$*"
     } 2>&1 | CL_LOGGING=${CL_LOGGING:-silent} _capture
 }
 
 # slogcmd <command>
 slogcmd() {
-    slogi "..Run" "$(tr -s ' ' <<< "$*")"
+    slogi "..Run" "$@"
     echocmd "$@"
 }
 
@@ -396,18 +403,12 @@ configure() {
 
     local cmdline
 
-    cmdline="./configure --prefix=$PREFIX"
+    cmdline=( ./configure --prefix="$PREFIX" )
 
     # append user args
-    cmdline+=" ${libs_args[*]} $*"
+    cmdline+=( "${libs_args[@]}" "$@" )
 
-    # suffix options, override user's
-    cmdline=$(sed                       \
-        -e 's/ --enable-shared//g'      \
-        -e 's/ --disable-static//g'     \
-        <<<"$cmdline")
-
-    slogcmd "$cmdline"
+    slogcmd "${cmdline[@]}" || die "configure $* failed."
 }
 
 make() {
@@ -526,9 +527,9 @@ ninja() {
     local cmdline
 
     # append user args
-    cmdline="$NINJA -j $CL_NJOBS -v $*"
+    cmdline=( "$NINJA" -j "$CL_NJOBS" -v "$@" )
 
-    slogcmd "$cmdline" || die "ninja $* failed."
+    slogcmd "${cmdline[@]}" || die "ninja $* failed."
 }
 
 cargo() {
@@ -540,16 +541,16 @@ cargo() {
         export ZLIB_STATIC=1
     }
 
-    local cmdline="$CARGO $* ${libs_args[*]}"
+    local cmdline=( "$CARGO" "$@" "${libs_args[@]}" )
 
     # cargo always download and rebuild targets
     case "$1" in
         build)
-            is_darwin || cmdline+=" --target $(uname -m)-unknown-linux-musl"
+            is_darwin || cmdline+=( --target "$(uname -m)-unknown-linux-musl" )
             ;;
     esac
 
-    slogcmd "$cmdline" || die "cargo $* failed."
+    slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
 _init_go() {
