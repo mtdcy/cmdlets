@@ -111,8 +111,11 @@ libs_build() {
     CFLAGS+=" $($PKG_CONFIG --cflags gdlib)"
     STATIC_LIBS+=" $($PKG_CONFIG --libs gdlib)"
 
-    libs_args=(
+    libs_args+=(
+        # for NGX_CC_OPT
         --with-cc-opt="'$CFLAGS $CPPFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
+        # for NGX_LD_OPT
+        --with-ld-opt="'$LDFLAGS $STATIC_LIBS'"
     )
 
     # Fix configure for musl-gcc
@@ -122,11 +125,24 @@ libs_build() {
 
     configure
 
-    make LINK="'$CC $LDFLAGS $STATIC_LIBS'"
+    make
 
     cmdlet ./objs/nginx
 
     check nginx -version
+
+    caveats << EOF
+static built nginx @ $libs_ver with fancyindex
+
+defaults:
+  config:   /etc/nginx/nginx.conf
+  rutine:   /var/run/nginx.pid
+            /var/run/nginx.lock
+            /var/run/nginx/*
+  logfile:  /var/log/nginx/access.log
+            /var/log/nginx/error.log
+
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -62,12 +62,12 @@ libs_build() {
     configure && make PROGS="'tic infocmp'"
 
     # prepare fallbacks
-    slogcmd ./ncurses/tinfo/MKfallback.sh \
-        "$TERMINFO"                       \
-        ./misc/terminfo.src               \
-        ./progs/tic                       \
-        ./progs/infocmp                   \
-        linux xterm                       \
+    ./ncurses/tinfo/MKfallback.sh \
+        "$TERMINFO"               \
+        ./misc/terminfo.src       \
+        ./progs/tic               \
+        ./progs/infocmp           \
+        linux xterm               \
         > ncurses/fallback.c
 
     make
