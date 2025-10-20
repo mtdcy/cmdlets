@@ -111,7 +111,7 @@ libs_build() {
     CFLAGS+=" $($PKG_CONFIG --cflags gdlib)"
     STATIC_LIBS+=" $($PKG_CONFIG --libs gdlib)"
 
-    libs_args=(
+    libs_args+=(
         --with-cc-opt="'$CFLAGS $CPPFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
     )
 
