@@ -40,16 +40,6 @@ depends_on() {
     }
 }
 
-# fix_pc path/to/xxx.pc
-fix_pc() {
-    if grep -qFw "$PREFIX" "$*"; then
-        # shellcheck disable=SC2016
-        sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
-            -e "s%$PREFIX%\${prefix}%g" \
-            -i "$*"
-    fi
-}
-
 configure() {
     if ! test -f configure; then
         if test -f autogen.sh; then
@@ -363,40 +353,61 @@ go_build() {
 
 # libtool archive hardcoded PREFIX which is bad for us
 _rm_libtool_archive() {
-    find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
+    echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
-# create a pkgfile with given files
-pkgfile() {
-    local files
-    if [ "$2" = "--" ]; then
-        # install with DESTDIR to get file list
-        local DESTDIR=$(pwd -P)/DESTDIR
-        mkdir -p "$DESTDIR"
-        case "$3" in
-            make)   "${@:3}" DESTDIR="$DESTDIR" ;;
-            *)      DESTDIR="$DESTDIR" "${@:3}" ;;
-        esac || die "${*:3} failed."
-        _rm_libtool_archive "$DESTDIR"
-        IFS=' ' read -r -a files < <(find DESTDIR ! -type d | sed 's/DESTDIR//' | xargs)
+# make install to DESTDIR to get file list
+#
+# Note: make install must support both DESTDIR and PREFIX
+_make_install() {
+    true > .pkgfile
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --) break                   ;;
+            *)  echo "$1" >> .pkgfile   ;;
+        esac
+        shift
+    done
+
+    if [ "$1" = "--" ]; then
+        shift
+
+        # prepare DESTDIR
         rm -rf DESTDIR
+        mkdir DESTDIR
 
-        # do a real install
-        "${@:3}" || die "${*:3} failed."
-        _rm_libtool_archive
-    else
-        IFS=' ' read -r -a files <<< "${@:2}"
+        # DESTDIR must be absolute path
+        local DESTDIR="$PWD/DESTDIR"
+        case "$1" in
+            make)   "$@" DESTDIR="$DESTDIR" ;;
+            *)      DESTDIR="$DESTDIR" "$@" ;;
+        esac || die "$* failed."
+
+        _rm_libtool_archive DESTDIR
+
+        # copy files to PREFIX
+        local dest
+        while read -r file; do
+            dest="${file#DESTDIR}"      # remove leading DESTDIR
+            dest="${dest#"$PREFIX"}"    # remove leading $PREFIX
+            dest="${dest#/}"            # remove leading /
+
+            mkdir -pv "$PREFIX/$(dirname "$dest")"
+
+            echocmd cp -fv "$file" "$PREFIX/$dest"
+
+            echo "$dest" >> .pkgfile
+        done < <(find DESTDIR ! -type d)
     fi
+}
 
-    test -n "${files[*]}" || die "call pkgfile() without inputs."
-
-    pushd "$PREFIX" && mkdir -pv "$libs_name"
-
-    # shellcheck disable=SC2001
-    IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
+# create pkgfile
+_pack() {
+    slogi ".Pack" "$1 < ${@:2}"
 
     # preprocessing installed files
-    for x in "${files[@]}"; do
+    for x in "${@:2}"; do
         # test won't work as file glob exists
         #test -e "$x" || die "$x not exists."
         case "$x" in
@@ -405,7 +416,10 @@ pkgfile() {
                 echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
-                fix_pc "$x"
+                # shellcheck disable=SC2016
+                sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
+                    -e "s%$PREFIX%\${prefix}%g" \
+                    -i "$x"
                 ;;
             bin/*)
                 if test -f "$x"; then
@@ -415,11 +429,30 @@ pkgfile() {
         esac
     done
 
+    echocmd "$TAR" -czvf "$1" "${@:2}" || die "create $1 failed."
+}
+
+# create a pkgfile with given files
+pkgfile() {
+    local name version files
+
     # name contains version code?
-    local name version
     IFS='@' read -r name version <<< "$1"
+    shift
 
     test -n "$version" || version="$libs_ver"
+
+    _make_install "$@"
+
+    IFS=' ' read -r -a files < <(xargs < .pkgfile)
+
+    test -n "${files[*]}" || die "call pkgfile() without inputs."
+
+    pushd "$PREFIX" && mkdir -pv "$libs_name"
+
+    # remove file prefix paths
+    # shellcheck disable=SC2001
+    IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
 
     # pkgfile with full version
     local pkgfile="$libs_name/$name@$libs_ver.tar.gz"
@@ -428,9 +461,7 @@ pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    slogi ".Pack" "$pkgfile < ${files[@]}"
-
-    echocmd "$TAR" -czvf "$pkgfile" "${files[@]}" || die "create pkgfile failed."
+    _pack "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -461,7 +492,7 @@ pkgfile() {
     # new records
     echo "$1 $pkgfile $sha" >> cmdlets.manifest
 
-    popd
+    popd || die "popd failed."
 }
 
 # install files and create a pkgfile
@@ -480,29 +511,28 @@ pkginst() {
     local sub installed
     while [ $# -ne 0 ]; do
         local file="$1"; shift
-        local mode=( -m644 )
         case "$file" in
             # no libtool archive files
             # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
             *.la)               continue ;;
-            *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"      ;;
-            *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"    ;;
-            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"          ;;
-            *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"
-                fix_pc "$file"
-                ;;
-            include*|lib*|share*|bin)
+
+            # set default path for specified files
+            *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"        ;;
+            *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"      ;;
+            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"            ;;
+            *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
+
+            # set sub dir for known directories
+            include|include/*|lib|lib/*|share|share/*|bin|bin/*)
                 sub="$file"
-                echocmd "$INSTALL" -d -m755 "$PREFIX/$sub"
+                mkdir -pv "$PREFIX/$sub"
                 continue
                 ;;
+
+            # reuse previous sub dir for other files
         esac
 
-        case "$sub" in
-            bin*|libexec*)  mode=( -m755 -s ) ;;
-        esac
-
-        echocmd "$INSTALL" "${mode[@]}" "$file" "$PREFIX/$sub" || die "install $file failed."
+        echocmd cp -fv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 
