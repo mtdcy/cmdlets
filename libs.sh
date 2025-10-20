@@ -280,16 +280,6 @@ _init() {
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
-# link source target
-_link() {
-    #echo "link: $1 => $2" >&2
-    if is_msys; then
-        echocmd cp -v "$1" "$2"
-    else
-        echocmd ln -srvf "$1" "$2"
-    fi
-}
-
 # _curl source destination [options]
 _curl() {
     local source="$1"

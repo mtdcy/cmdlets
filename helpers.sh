@@ -438,6 +438,16 @@ _pack() {
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
 
+# link source target
+_ln() {
+    #echo "link: $1 => $2" >&2
+    if is_msys; then
+        echocmd cp -vf "$1" "$2"
+    else
+        echocmd ln -srvf "$1" "$2"
+    fi
+}
+
 # create a pkgfile with given files
 pkgfile() {
     local name version files
@@ -478,18 +488,18 @@ pkgfile() {
     grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
     # v2/pkginfo
-    _link "$pkgvern" "$libs_name/$name@latest"
-    _link "$pkginfo" "$libs_name/pkginfo@latest"
+    _ln "$pkgvern" "$libs_name/$name@latest"
+    _ln "$pkginfo" "$libs_name/pkginfo@latest"
 
     if [ "$version" != "$libs_ver" ]; then
-        _link "$pkgvern" "$libs_name/$name@$version"
-        _link "$pkginfo" "$libs_name/pkginfo@$version"
+        _ln "$pkgvern" "$libs_name/$name@$version"
+        _ln "$pkginfo" "$libs_name/pkginfo@$version"
     fi
 
     if [ "$version" != "$libs_ver" ]; then
-        _link "$libs_name/$name@$version" "$name@$version"
+        _ln "$libs_name/$name@$version" "$name@$version"
     else
-        _link "$libs_name/$name@latest"   "$name@latest"
+        _ln "$libs_name/$name@latest"   "$name@latest"
     fi
 
     # v3/manifest: name pkgfile sha
@@ -568,7 +578,7 @@ cmdlet() {
 
     local alias=()
     for x in "${@:3}"; do
-        _link "$target" "$PREFIX/bin/$x"
+        _ln "$target" "$PREFIX/bin/$x"
         alias+=( "$PREFIX/bin/$x" )
     done
 
