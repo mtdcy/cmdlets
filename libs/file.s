@@ -81,6 +81,17 @@ libs_build() {
     cmdlet ./src/file &&
 
     check file --version
+
+    caveats << EOF
+file @ $libs_ver
+
+magic file from ~/.magic.mgc:.magic.mgc only
+
+file needs magic.mgc to work properly:
+
+cmdlets.sh install magic.mgc
+cmdlets.sh link $MAGIC_PATH/magic.mgc ~/.magic.mgc
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
