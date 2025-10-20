@@ -628,6 +628,22 @@ check() {
     fi
 }
 
+caveats() {
+    # no version for caveats file
+    pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
+
+    true > "$pkgfile"
+
+    slogi "Caveats:"
+    if test -n "$*"; then
+        echo "$*" | tee -a "$pkgfile"
+    else
+        while IFS= read -r line; do
+            echo "$line" | tee -a "$pkgfile"
+        done
+    fi
+}
+
 _rm_libtool_archive 2>&1
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
