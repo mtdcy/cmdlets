@@ -72,19 +72,10 @@ make() {
     slogcmd "${cmdline[@]}" || die "make $* failed."
 }
 
-_filter_out_cmake_defines() {
-    local _options=()
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -D)     shift 2 ;;
-            -D*)    shift 1 ;;
-            *)      _options+=( "$1" ); shift ;;
-        esac
-    done
-    echo "${_options[@]}"
-}
+# setup cmake environments
+_cmake_init() {
+    test -z "$CMAKE_READY" || return 0
 
-cmake() {
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
     export CXX="${CXX/ccache\ /}"
@@ -106,9 +97,26 @@ cmake() {
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
-    local cmdline=( "$CMAKE" )
+    export CMAKE_READY=1
+}
 
-    case "$(_filter_out_cmake_defines "$@")" in
+_cmake_filter_out_defines() {
+    local _options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -D)     shift 2 ;;
+            -D*)    shift 1 ;;
+            *)      _options+=( "$1" ); shift ;;
+        esac
+    done
+    echo "${_options[@]}"
+}
+
+cmake() {
+    _cmake_init
+
+    local cmdline=( "$CMAKE" )
+    case "$(_cmake_filter_out_defines "$@")" in
         --build*)
             export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
             cmdline+=( "$@" )
@@ -183,8 +191,8 @@ ninja() {
 }
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
-_init_rust() {
-    test -z "$RUST_READY" || return 0
+_cargo_init() {
+    test -z "$CARGO_READY" || return 0
 
     if which rustup &>/dev/null; then
         CARGO="$(rustup which cargo)"
@@ -232,18 +240,18 @@ EOF
         #export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
     fi
 
-    export RUST_READY=1
+    export CARGO_READY=1
 }
 
 cargo() {
-    _init_rust
+    _cargo_init
 
     local cmdline=( "$CARGO" "$@" "${libs_args[@]}" )
 
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
-_init_go() {
+_go_init() {
     test -z "$GO_READY" || return 0
 
     GO="$(which go)"
@@ -268,7 +276,7 @@ _init_go() {
 }
 
 # go can not amend `-ldflags='
-_filter_go_ldflags() {
+_go_filter_ldflags() {
     local _ldflags=()
     while [ $# -gt 0 ]; do
         local args
@@ -289,7 +297,7 @@ _filter_go_ldflags() {
     echo "${_ldflags[@]}"
 }
 
-_filter_go_options() {
+_go_filter_options() {
     local _options=()
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -304,7 +312,7 @@ _filter_go_options() {
 
 # shellcheck disable=SC2207
 go() {
-    _init_go
+    _go_init
 
     local cmdline=("$GO" "$1" )
     case "$1" in
@@ -329,13 +337,13 @@ go() {
             [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
 
             # merge user ldflags
-            ldflags+=( $(_filter_go_ldflags "${@:2}") )
+            ldflags+=( $(_go_filter_ldflags "${@:2}") )
 
             # set ldflags
             cmdline+=( -ldflags="'${ldflags[*]}'" )
 
             # append user options
-            cmdline+=( $(_filter_go_options "${@:2}") )
+            cmdline+=( $(_go_filter_options "${@:2}") )
             ;;
         *)
             cmdline+=( "${@:2}" )
