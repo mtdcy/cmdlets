@@ -1,3 +1,5 @@
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+#
 # Docker clients
 
 # shellcheck disable=SC2034,SC2248
@@ -54,9 +56,21 @@ libs_build() (
     check docker-compose version           &&
     check docker-buildx version            &&
     check docker --version
-)
 
-# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+    caveats << EOF
+static prebuilt docker client @ $libs_ver
+
+Plugins:
+    docker-compose @ $compose_ver
+    docker-buildx  @ $buildx_ver
+
+    plugins in executable path will be loaded first.
+
+Install docker client with plusins:
+
+    cmdlets.sh install docker
+EOF
+)
 
 # patch: load plugins from executable path
 __END__
