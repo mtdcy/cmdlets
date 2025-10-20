@@ -353,7 +353,8 @@ go_build() {
 
 # libtool archive hardcoded PREFIX which is bad for us
 _rm_libtool_archive() {
-    echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
+    CL_LOGGING=silent \
+        echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
 # make install to DESTDIR to get file list
@@ -404,13 +405,15 @@ _make_install() {
 
 # create pkgfile
 _pack() {
-    slogi ".Pack" "$1 < ${@:2}"
+    local files=()
 
     # preprocessing installed files
     for x in "${@:2}"; do
         # test won't work as file glob exists
         #test -e "$x" || die "$x not exists."
         case "$x" in
+            # no libtool archive files
+            *.la) continue ;;
             *.a)
                 echocmd "$STRIP" -x "$x"
                 echocmd "$RANLIB" "$x"
@@ -427,9 +430,12 @@ _pack() {
                 fi
                 ;;
         esac
+        files+=( "$x" )
     done
 
-    echocmd "$TAR" -czvf "$1" "${@:2}" || die "create $1 failed."
+    slogi ".Pack" "$1 < ${files[*]}"
+
+    echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
 
 # create a pkgfile with given files
@@ -513,8 +519,7 @@ pkginst() {
         local file="$1"; shift
         case "$file" in
             # no libtool archive files
-            # https://www.linuxfromscratch.org/blfs/view/svn/introduction/la-files.html
-            *.la)               continue ;;
+            *.la) continue ;;
 
             # set default path for specified files
             *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"        ;;
@@ -604,5 +609,7 @@ check() {
         slogw "FIXME: $OSTYPE"
     fi
 }
+
+_rm_libtool_archive 2>&1
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

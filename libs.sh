@@ -2,6 +2,7 @@
 
 # shellcheck shell=bash
 # shellcheck disable=SC2154
+# shellcheck disable=SC2031
 
 set -e -o pipefail
 
@@ -674,8 +675,6 @@ build() {
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
         done
-
-        _rm_libtool_archive
     fi
 
     # append targets
