@@ -16,22 +16,16 @@ libs_resources=(
 
 libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order
-    patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
-    patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
-    patches/1741021322.FILE5_46-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
-    patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
-    patches/1742492756.FILE5_46-69-g280e121f.remove-superfluous-christoph-biedl.patch
-    patches/1742492810.FILE5_46-70-g4e2c7d3d.fix-msdosdate-endianess.patch
+    debian/patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
+    debian/patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
+    debian/patches/1741021322.FILE5_46-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
+    debian/patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
+    debian/patches/1742492756.FILE5_46-69-g280e121f.remove-superfluous-christoph-biedl.patch
+    debian/patches/1742492810.FILE5_46-70-g4e2c7d3d.fix-msdosdate-endianess.patch
 
     # patches that should go upstream
-    patches/upstream.disable.att3b.patch
-    patches/upstream.stricter-postscript-magic.patch
-
-    # ubuntu local modifications
-    #patches/local.support-local-definitions-in-etc-magic.patch
-    patches/local.don-t-include-libs-in-build.patch
-    #patches/local.extra-magic.patch
-    #patches/local.manpage-seccomp-is-disabled.patch
+    debian/patches/upstream.disable.att3b.patch
+    debian/patches/upstream.stricter-postscript-magic.patch
 )
 
 libs_args=(
