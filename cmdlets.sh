@@ -244,25 +244,30 @@ _search() {
 }
 
 # cmdlet v3/manifest
-#  input: pkgfile [pkgname] [options]
+#  input: pkgfile [options]
 #  output: return 0 on success
 _v3() {
     [ "$API" = "v3" ] || return 127
 
+    local pkgname
     local pkgfile="$1"
-    test -z "$2" || pkgfile="$2/$pkgfile"
 
-    # name file sha
-    IFS=' ' read -r _ pkgfile _ < <( _search "$pkgfile" "${@:3}" | tail -n 1 )
+    IFS=' /' read -r _ pkgname pkgfile _ < <( _search "$pkgfile" "${@:2}" | tail -n 1 )
 
     test -n "$pkgfile" || return 1
 
     info3 "#3 Fetch $1 < $pkgfile"
 
     # v3 git repo do not have file hierarchy
+    _unzip "$pkgname/$pkgfile" ||
     _unzip "$pkgfile" ||
-    _unzip "$(basename "$pkgfile")" ||
     return 1
+
+    # caveats
+    true > "$TEMPDIR/caveats"
+    if _exists "$pkgname/$pkgname.caveats"; then
+        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
+    fi
 }
 
 # v3 only
@@ -285,7 +290,7 @@ fetch() {
     if test -f "$1" && [[ "$*" == *" --local"* ]]; then
         info "## Fetch < $1"
         _unzip "$1"
-    elif _v3 "$1" "" --pkgfile || _v2 "$1" || _v1 "$1"; then
+    elif _v3 "$1" --pkgfile || _v2 "$1" || _v1 "$1"; then
         true
     else
         die "<< Fetch $1/$ARCH failed"
@@ -328,6 +333,12 @@ fetch() {
                             ln -sf "$file" .
                         fi
                     done < <(cat "$TEMPDIR/files" | grep "^bin/" | sed "s%^%$PREBUILTS/%")
+                fi
+
+                # caveats
+                if test -s "$TEMPDIR/caveats"; then
+                    info "== Caveats:"
+                    cat "$TEMPDIR/caveats"
                 fi
                 ;;
             *)
@@ -398,7 +409,7 @@ package() {
         info3 "#3 Fetch package $1 < ${pkgfile[*]}"
 
         for file in "${pkgfile[@]}"; do
-            _v3 "$file" "$pkgname" --pkgfile || die "<< Fetch package $file/$ARCH failed"
+            _v3 "$pkgname/$file" --pkgfile || die "<< Fetch package $file/$ARCH failed"
         done
 
         touch "$PREBUILTS/.$pkgname.d" # mark as ready
