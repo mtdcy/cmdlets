@@ -263,8 +263,6 @@ _go_init() {
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
 
-    # CGO_ENABLED=0 is necessary for build static binaries
-    export CGO_ENABLED=0
     export CGO_CFLAGS="$CFLAGS"
     export CGO_CXXFLAGS="$CXXFLAGS"
     export CGO_CPPFLAGS="$CPPFLAGS"
@@ -350,7 +348,8 @@ go() {
             ;;
     esac
 
-    slogcmd CGO_ENABLED="$CGO_ENABLED" "${cmdline[@]}" || die "go $* failed."
+    # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    slogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}" || die "go $* failed."
 }
 
 # easy command for go project
