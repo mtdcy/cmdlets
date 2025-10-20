@@ -747,7 +747,7 @@ fetch() {
 }
 
 arch() {
-    "${PREFIX##*/}"
+    echo "${PREFIX##*/}"
 }
 
 # zip files for release actions
