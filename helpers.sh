@@ -462,11 +462,10 @@ pkgfile() {
 
     # name contains version code?
     IFS='@' read -r name version <<< "$1"
-    shift
 
     test -n "$version" || version="$libs_ver"
 
-    _make_install "$@"
+    _make_install "${@:2}"
 
     IFS=' ' read -r -a files < <(xargs < .pkgfile)
 
