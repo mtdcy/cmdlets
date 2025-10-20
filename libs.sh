@@ -11,7 +11,6 @@ export LANG=C
 # options           =
 export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
 export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
-export     CL_STRICT=${CL_STRICT:-0}        # check on file changes on libs.sh
 export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
@@ -548,9 +547,6 @@ compile() {
 
         local workdir="$WORKDIR/$libs_name-$libs_ver"
 
-        # strict mode: clean before compile
-        [ "$CL_STRICT" -eq 0 ] || rm -rf "$workdir"
-
         mkdir -p "$workdir" && cd "$workdir"
 
         # clear logfile
@@ -583,81 +579,72 @@ compile() {
     }
 }
 
-_load_deps() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
+# load libs_deps
+_deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 
-# _deps_get libname
+# get all dependencies
+#  input: name [...]
 _deps_get() {
     local list=()
 
-    IFS=' ' read -r -a deps <<< "$(_load_deps "$1")"
+    for lib in "$@"; do
+        for dep in $(_deps_load "$lib"); do
+            # sanity check: self depends?
+            [[ "$*" == *"$dep"* ]] && continue
+            # already exists?
+            [[ "${list[*]}" == *"$dep"* ]] && continue
 
-    [[ "${deps[*]}" == *"$1"* ]] && {
-        _on_failure "bad self-depends: $1 @ ${deps[*]}"
-    }
+            for x in $(_deps_get "$dep"); do
+                [[ "${list[*]}" == *"$x"* ]] || list+=( "$x" )
+            done
 
-    for dep in "${deps[@]}"; do
-        # already exists?
-        [[ "${list[*]}" == *"$dep"* ]] && continue
-
-        IFS=' ' read -r -a _deps <<< "$(_deps_get "$dep")"
-
-        for x in "${_deps[@]}"; do
-            [[ "${list[*]}" == *"$x"* ]] || list+=( "$x" )
+            [[ "${list[*]}" == *"$dep"* ]] || list+=( "$dep" )
         done
-
-        list+=( "$dep" )
     done
     echo "${list[@]}"
 }
 
 # check dependencies for libraries
-_check_deps() {
-    local deps=()
+_deps_check() {
+    local list=()
 
-    for ulib in "$@"; do
-        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
+    for x in $(_deps_get "$@"); do
+        # dependencies in targets
+        [[ "$*" == *"$x"* ]] && continue
+        # already exists?
+        [[ "${list[*]}" == *"$x"* ]] && continue
 
-        for x in "${_deps[@]}"; do
-            # dependencies in targets
-            [[ "$*" == *"$x"* ]] && continue
-            # already exists?
-            [[ "${deps[*]}" == *"$x"* ]] && continue
-
-            #1. dep not installed
-            #2. dep.s been updated
-            #3. libs.sh been updated (CL_STRICT)
-            if [ ! -e "$PREFIX/.$x.d" ] || [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
-                deps+=( "$x" )
-            #elif [ "$CL_STRICT" -ne 0 ] && [ "libs.sh" -nt "$PREFIX/.$x.d" ]; then
-            #    deps+=( "$x" )
-            fi
-        done
+        #1. dep not installed
+        #2. dep.s been updated
+        if ! test -e "$PREFIX/.$x.d"; then
+            list+=( "$x" )
+        elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
+            list+=( "$x" )
+        fi
     done
 
-    [ "${#deps[@]}" -gt 1 ] && _sort_by_depends "${deps[@]}" || echo "${deps[@]}"
+    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
 }
 
-_sort_by_depends() {
+_deps_sort() {
     local head=()
     local tail=()
-    for ulib in "$@"; do
-        IFS=' ' read -r -a _deps <<< "$(_deps_get "$ulib")"
-
-        for x in "${_deps[@]}"; do
-            # have dependencies => append
+    for dep in "$@"; do
+        for x in $(_deps_load "$dep"); do
+            # have dependencies => tail
             if [[ "$*" == *"$x"* ]]; then
-                tail+=( "$ulib" )
+                tail+=( "$dep" )
                 break
             fi
         done
 
-        # OR prepend
-        [[ "${tail[*]}" == *"$ulib"* ]] || head+=( "$ulib" )
+        # OR append to head
+        [[ "${tail[*]}" == *"$dep"* ]] || head+=( "$dep" )
     done
 
     # sort tail again: be careful with circular dependencies
     if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a tail <<< "$(_sort_by_depends "${tail[@]}")"
+        IFS=' ' read -r -a tail <<< "$(_deps_sort "${tail[@]}")"
     fi
 
     echo "${head[@]}" "${tail[@]}"
@@ -668,7 +655,7 @@ _sort_by_depends() {
 build() {
     slogi "$*"
 
-    IFS=' ' read -r -a deps <<< "$(_check_deps "$@")"
+    IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
 
     _exit_on_failure
 
@@ -695,7 +682,7 @@ build() {
     targets+=( "$@" )
 
     if [ "${#targets[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a targets <<< "$(_sort_by_depends "${targets[@]}")"
+        IFS=' ' read -r -a targets <<< "$(_deps_sort "${targets[@]}")"
     fi
 
     _exit_on_failure
@@ -707,6 +694,18 @@ build() {
 
         time compile "${targets[i]}" || die "build ${targets[i]} failed."
     done
+}
+
+# print info of a library
+info() {
+    _load "$1"
+
+    slogi "$libs_name:"
+
+    slogi "  libs_ver: $libs_ver"
+    slogi "  libs_url: $libs_url"
+    slogi "  libs_dep: ${libs_dep[*]}"
+    slogi "         => $(_deps_get "$1")"
 }
 
 search() {
@@ -748,22 +747,22 @@ search() {
     done
 }
 
-# find out dependencies of library
-info() {
-    slogi "$1: $(_deps_get "$1")"
-
-    for lib in libs/*.s; do
-        IFS='/.' read -r _ ulib _ <<< "$pkg"
-
-        [[ "$libs" =~ ^[\.@_] ]] && continue
-
-        IFS=' ' read -r -a deps <<< "$(bash libs.sh _load_deps "$lib")"
-
-        if [[ "${deps[*]}" == *"$1"* ]]; then
-            slogi "$lib => $1"
-        fi
-    done
-}
+## find out dependencies of library
+#info() {
+#    slogi "$1: $(_deps_get "$1")"
+#
+#    for lib in libs/*.s; do
+#        IFS='/.' read -r _ lib _ <<< "$lib"
+#
+#        [[ "$libs" =~ ^[.@_] ]] && continue
+#
+#        IFS=' ' read -r -a deps <<< "$(bash libs.sh _deps_load "$lib")"
+#
+#        if [[ "${deps[*]}" == *"$1"* ]]; then
+#            slogi "$lib => $1"
+#        fi
+#    done
+#}
 
 # load libname
 load() {
