@@ -543,7 +543,7 @@ pkginst() {
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
-    slogcmd "$@" || die "${@:2} failed."
+    slogcmd "$@" || die "${*:2} failed."
 
     _rm_libtool_archive
 
@@ -555,9 +555,9 @@ inspect() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet() {
-    slogi ".Inst" "install cmdlet $1 => ${2:-$(basename "$1")} (alias ${*:3})"
+    slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
-    local target="$PREFIX/bin/$(basename "${2:-$1}")"
+    local target="$PREFIX/bin/${2:-"${1##*/}"}"
 
     echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
 
@@ -567,7 +567,7 @@ cmdlet() {
         alias+=( "$PREFIX/bin/$x" )
     done
 
-    pkgfile "$(basename "$target")" "$target" "${alias[@]}"
+    pkgfile "${target##*/}" "$target" "${alias[@]}"
 }
 
 # perform visual check on cmdlet

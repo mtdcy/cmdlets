@@ -344,7 +344,7 @@ _fetch() {
 
     #2. try mirror
     if test -n "$CL_MIRRORS"; then
-        mirror="$CL_MIRRORS/packages/$libs_name/$(basename "$zip")"
+        mirror="$CL_MIRRORS/packages/$libs_name/${zip##*/}"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip" ||
         rm -f "$zip"
@@ -459,7 +459,7 @@ _packages() {
 _fetch_unzip() {
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _git "${@:2}" "$(basename "$2")"
+        _git "${@:2}" "${2##*/}"
     else
         # assemble zip name from url
         local zip="$(_packages "$2")"
@@ -509,25 +509,17 @@ _prepare() {
 _load() {
     unset "${!libs_@}"
 
-    local file="$1"
-    test -f "$file" || file="libs/$1.s"
+    local file="libs/$1.s"
 
-    mkdir -p "$TEMPDIR/${file%/*}"
-    # sed: delete all lines after a match
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$file"
-    . "$TEMPDIR/$file"
+    # sed: delete all lines after __END__
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
+
+    . "$TEMPDIR/$1.s"
 
     # default values:
-    [ -n "$libs_name" ] || libs_name="$(basename "${file%.s}")"
+    [ -n "$libs_name" ] || libs_name="$1"
 
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
-
-    [ "$libs_type" = ".PHONY" ] && return 0
-
-    # sanity checks: always exit program|subshell here
-    if test -z "$libs_url"; then
-        _on_failure "$libs_name: missing libs_url"
-    fi
 }
 
 # compile target
@@ -543,10 +535,12 @@ compile() {
         slogi ".Load" "$1"
         _load "$1"
 
-        if test -z "$libs_url"; then
+        if [ "$libs_type" = ".PHONY" ]; then
             slogw "<<<<<" "skip dummy target $libs_name"
             return 0
         fi
+
+        test -n "$libs_url" || die "missing libs_url"
 
         # prepare work dir
         mkdir -p "$PREFIX"
@@ -784,7 +778,7 @@ fetch() {
 }
 
 arch() {
-    basename "$PREFIX"
+    "${PREFIX##*/}"
 }
 
 # zip files for release actions
@@ -824,7 +818,7 @@ prerequisites() {
     cd "$PREFIX"
     if test -n "$1"; then
         for i in {0..9}; do
-            _curl "$1/$(basename "$PREFIX")/prerequisites-$i" "prerequisites-$i" || break
+            _curl "$1/${PREFIX##*/}/prerequisites-$i" "prerequisites-$i" || break
         done
 
         if test -f prerequisites-0; then
