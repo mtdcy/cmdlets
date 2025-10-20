@@ -497,6 +497,8 @@ _prepare() {
 _load() {
     unset "${!libs_@}"
 
+    slogi ".Load" "libs/$1.s"
+
     local file="libs/$1.s"
 
     # sed: delete all lines after __END__
@@ -520,7 +522,6 @@ compile() {
 
         . helpers.sh
 
-        slogi ".Load" "$1"
         _load "$1"
 
         if [ "$libs_type" = ".PHONY" ]; then
@@ -642,11 +643,7 @@ _deps_sort() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    slogi "$*"
-
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
-
-    slogi "dependencies: ${deps[*]}"
 
     CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
 
@@ -663,14 +660,14 @@ build() {
         done
     fi
 
+    slogi "Build" "$* (depends: ${deps[*]})"
+
     # append targets
     targets+=( "$@" )
 
     if [ "${#targets[@]}" -gt 1 ]; then
         IFS=' ' read -r -a targets <<< "$(_deps_sort "${targets[@]}")"
     fi
-
-    slogi "Build" "${targets[*]}"
 
     for i in "${!targets[@]}"; do
         slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
