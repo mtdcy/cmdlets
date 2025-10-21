@@ -118,13 +118,11 @@ APK_PACKAGES 	= wget curl git                                   \
 prepare-host-homebrew:
 	brew update
 	brew install $(BREW_PACKAGES)
-	$(MAKE) prepare-rust
 
 prepare-host-debian:
 	sudo apt-get update
 	sudo apt-get install -y $(DEB_PACKAGES)
 	which go || sudo add-apt-repository -y ppa:longsleep/golang-backports && sudo apt-get update && sudo apt-get install golang-go
-	$(MAKE) prepare-rust
 
 prepare-host-alpine:
 	sudo apk update
@@ -132,11 +130,6 @@ prepare-host-alpine:
 	which go || sudo apk add --no-cache go
 
 RUSTUP_INIT_OPTS := -y --no-modify-path --profile minimal --default-toolchain stable
-
-prepare-rust:
-	which rustup-init && rustup-init $(RUSTUP_INIT_OPTS) || true
-	which rustup || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- $(RUSTUP_INIT_OPTS)
-	which xcode-select || rustup target add $(shell uname -m)-unknown-linux-musl
 
 ifneq (,$(shell which apt-get))
 prepare-host: prepare-host-debian

@@ -198,13 +198,37 @@ ninja() {
 _cargo_init() {
     test -z "$CARGO_READY" || return 0
 
-    if which rustup &>/dev/null; then
-        CARGO="$(rustup which cargo)"
-        RUSTC="$(rustup which rustc)"
-    else
-        CARGO="$(which cargo)"
-        RUSTC="$(which rustc)"
+    # set project RUSTUP_HOME/CARGO_HOME if not set
+    test -n "$RUSTUP_HOME" || {
+        export RUSTUP_HOME="$ROOT/.rustup"
+        export PATH="$RUSTUP_HOME/bin:$PATH"
+    }
+
+    test -n "$CARGO_HOME" || {
+        export CARGO_HOME="$ROOT/.cargo"
+        export PATH="$CARGO_HOME/bin:$PATH"
+    }
+
+    # we need rustup to add target
+    if ! which rustup &>/dev/null; then
+        if test -n "$CL_MIRRORS"; then
+            export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
+            export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+        fi
+
+        RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
+        if which rustup-init; then
+            rustup-init "${RUSTUP_INIT_OPTS[@]}"
+        else
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
+        fi
+
     fi
+
+    is_linux && rustup target add "$(uname -m)-unknown-linux-musl" || true
+
+    CARGO="$(rustup which cargo)"
+    RUSTC="$(rustup which rustc)"
 
     test -n "$CARGO" || die "missing host tool rustup/cargo."
 
@@ -240,8 +264,6 @@ replace-with = 'crates-io-mirrors'
 [source.crates-io-mirrors]
 registry = "$registry/crates.io-index/"
 EOF
-        #export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
-        #export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
     fi
 
     export CARGO_READY=1
