@@ -487,6 +487,8 @@ list() {
 }
 
 _update_installed() {
+    test -f "$PREBUILTS/.installed" || return
+
     local pkgfile pkgver pkgbuild
     while IFS=' ' read -r pkgfile pkgver pkgbuild; do
         info "\n🚀 Update $pkgfile ..."
