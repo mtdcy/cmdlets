@@ -54,9 +54,7 @@ jobs:
 
           # make prepare-host fails on macos-15-intel
           test -n "${{ matrix.builder }}" || {
-              bash libs.sh prerequisites https://github.com/mtdcy/cmdlets/releases/download
               make prepare-host
-              bash libs.sh prerequisites
           } || true
 
           pwd -P

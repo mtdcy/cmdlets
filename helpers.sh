@@ -198,13 +198,36 @@ ninja() {
 _cargo_init() {
     test -z "$CARGO_READY" || return 0
 
-    if which rustup &>/dev/null; then
-        CARGO="$(rustup which cargo)"
-        RUSTC="$(rustup which rustc)"
-    else
-        CARGO="$(which cargo)"
-        RUSTC="$(which rustc)"
+    # set project RUSTUP_HOME/CARGO_HOME if not set
+    if test -z "$RUSTUP_HOME"; then
+        export RUSTUP_HOME="$ROOT/.rustup"
+        export PATH="$RUSTUP_HOME/bin:$PATH"
     fi
+
+    if test -z "$CARGO_HOME"; then
+        export CARGO_HOME="$ROOT/.cargo"
+        export PATH="$CARGO_HOME/bin:$PATH"
+    fi
+
+    # we need rustup to add target
+    if which rustup; then
+        rustup default stable
+    else
+        if test -n "$CL_MIRRORS"; then
+            export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
+            export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+        fi
+
+        RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
+        if which rustup-init; then
+            rustup-init "${RUSTUP_INIT_OPTS[@]}"
+        else
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
+        fi
+    fi
+
+    CARGO="$(rustup which cargo)"
+    RUSTC="$(rustup which rustc)"
 
     test -n "$CARGO" || die "missing host tool rustup/cargo."
 
@@ -220,6 +243,8 @@ _cargo_init() {
 
     # static linked target
     if is_linux; then
+        rustup target add "$(uname -m)-unknown-linux-musl"
+
         export CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
         export CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
 
@@ -240,8 +265,6 @@ replace-with = 'crates-io-mirrors'
 [source.crates-io-mirrors]
 registry = "$registry/crates.io-index/"
 EOF
-        #export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
-        #export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
     fi
 
     export CARGO_READY=1
@@ -257,6 +280,22 @@ cargo() {
 
 _go_init() {
     test -z "$GO_READY" || return 0
+
+    # set GOROOT only when go not exists
+    if ! which go && test -z "$GOROOT"; then
+        export GOROOT="$ROOT/.go"
+        export PATH="$GOROOT/bin:$PATH"
+    fi
+
+    if ! which go; then
+        local system arch version
+        is_darwin && system=darwin  || system=linux
+        is_arm64  && arch=arm64     || arch=amd64
+        version="$(curl https://go.dev/VERSION?m=text | head -n1)"
+
+        mkdir -pv "$GOROOT"
+        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | tar -C "$GOROOT" -xz --strip-component 1
+    fi
 
     GO="$(which go)"
 
@@ -316,6 +355,9 @@ _go_filter_options() {
 go() {
     _go_init
 
+    # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    export CGO_ENABLED="${CGO_ENABLED:-0}"
+
     local cmdline=("$GO" "$1" )
     case "$1" in
         build)
@@ -352,8 +394,7 @@ go() {
             ;;
     esac
 
-    # CGO_ENABLED=0 is necessary for build static binaries except macOS
-    slogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}" || die "go $* failed."
+    slogcmd "${cmdline[@]}" || die "go $* failed."
 }
 
 # easy command for go project
