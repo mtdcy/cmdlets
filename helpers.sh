@@ -239,16 +239,21 @@ _cargo_init() {
 
     export CARGO_HOME CARGO_BUILD_JOBS
 
-    # static linked target
+    # search for libraries in PREFIX
+    CARGO_BUILD_RUSTFLAGS="-L$PREFIX/lib"
+
     if is_linux; then
-        rustup target add "$(uname -m)-unknown-linux-musl"
+        # static linked C runtime
+        CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
 
-        export CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
-        export CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
-
-        # https://docs.rs/pkg-config/latest/pkg_config/
-        export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
+        CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
+        rustup target add "$CARGO_BUILD_TARGET"
     fi
+
+    export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
+
+    # https://docs.rs/pkg-config/latest/pkg_config/
+    export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
 
     if [ -n "$CL_MIRRORS" ]; then
         # cargo
