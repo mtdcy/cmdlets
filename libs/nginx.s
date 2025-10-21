@@ -96,20 +96,25 @@ libs_build() {
     STATIC_LIBS=
 
     # fix libxml2/libxslt
-    CFLAGS+=" $($PKG_CONFIG --cflags libxslt)"
-    STATIC_LIBS+=" $($PKG_CONFIG --libs libxslt)"
+    CFLAGS+=" $(pkg-config --cflags libxslt)"
+    STATIC_LIBS+=" $(pkg-config --libs libxslt)"
     sed -i auto/lib/libxslt/conf \
         -e "s%ngx_feature_path=.*$%ngx_feature_path=\"$PREFIX\"%"  \
-        -e "s%ngx_feature_libs=.*$%ngx_feature_libs=\"$CFLAGS $STATIC_LIBS\"%" \
         &&
+        #-e "s%ngx_feature_libs=.*$%ngx_feature_libs=\"$CFLAGS $STATIC_LIBS\"%" \
+
+    # append libexslt: try fix xsltApplyStylesheet() failed
+    #  => exsltRegisterAll()
+    CFLAGS+=" $(pkg-config --cflags libexslt)"
+    STATIC_LIBS+=" $(pkg-config --libs libexslt)"
 
     # openssl
-    CFLAGS+=" $($PKG_CONFIG --cflags openssl)"
-    STATIC_LIBS+=" $($PKG_CONFIG --libs openssl)"
+    CFLAGS+=" $(pkg-config --cflags openssl)"
+    STATIC_LIBS+=" $(pkg-config --libs openssl)"
 
     # libgd
-    CFLAGS+=" $($PKG_CONFIG --cflags gdlib)"
-    STATIC_LIBS+=" $($PKG_CONFIG --libs gdlib)"
+    CFLAGS+=" $(pkg-config --cflags gdlib)"
+    STATIC_LIBS+=" $(pkg-config --libs gdlib)"
 
     libs_args+=(
         # for NGX_CC_OPT

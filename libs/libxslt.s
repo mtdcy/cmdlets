@@ -21,7 +21,9 @@ libs_args=(
     # add crypto to exslt
     --with-crypto
 
-    --disable-debug
+    # debug: xsltApplyStylesheet() failed
+    --enable-debug
+
     --without-python # python bindings
     --without-debugger
     --without-profiler
