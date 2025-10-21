@@ -305,9 +305,10 @@ _go_init() {
     export GO
 
     # no GOROOT or GOPATH here
-    export GOMODCACHE="$ROOT/.go/pkg/mod"
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
+    export GOCACHE="$ROOT/.go/go-build"
+    export GOMODCACHE="$ROOT/.go/pkg/mod"
 
     export CGO_CFLAGS="$CFLAGS"
     export CGO_CXXFLAGS="$CXXFLAGS"
