@@ -394,7 +394,8 @@ go() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "go $* failed." }
+    slogcmd "${cmdline[@]}" || die "go $* failed."
+}
 
 # easy command for go project
 go_build() {
