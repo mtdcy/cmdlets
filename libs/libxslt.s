@@ -21,9 +21,7 @@ libs_args=(
     # add crypto to exslt
     --with-crypto
 
-    # debug: xsltApplyStylesheet() failed
-    --enable-debug
-
+    --disable-debug
     --without-python # python bindings
     --without-debugger
     --without-profiler
@@ -38,6 +36,9 @@ libs_build() {
     LIBXML_LIBS="$(pkg-config --libs libxml-2.0)"
 
     export LIBXML_CFLAGS LIBXML_LIBS
+
+    # link static libexslt by default
+    sed -i '/Libs.private/s/$/ -lexslt/' libxslt.pc.in
 
     configure
 
