@@ -14,7 +14,17 @@ libs_args=(
 
     --with-pic
 
+    # our libxml2 has no xml2-config
+    #  set libxml2 prefix explicitly to avoid call host xml2-config
+    --with-libxml-prefix="'$PREFIX'"
+
+    # add crypto to exslt
+    --with-crypto
+
+    --disable-debug
     --without-python # python bindings
+    --without-debugger
+    --without-profiler
 
     # static only
     --disable-shared
@@ -22,6 +32,11 @@ libs_args=(
 )
 
 libs_build() {
+    LIBXML_CFLAGS="$(pkg-config --cflags libxml-2.0)"
+    LIBXML_LIBS="$(pkg-config --libs libxml-2.0)"
+
+    export LIBXML_CFLAGS LIBXML_LIBS
+
     configure
 
     make
