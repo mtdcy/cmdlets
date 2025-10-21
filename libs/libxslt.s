@@ -37,6 +37,9 @@ libs_build() {
 
     export LIBXML_CFLAGS LIBXML_LIBS
 
+    # link static libexslt by default
+    sed -i '/Libs.private/s/$/ -lexslt/' libxslt.pc.in
+
     configure
 
     make
