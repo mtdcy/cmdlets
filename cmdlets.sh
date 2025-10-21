@@ -260,7 +260,7 @@ _v3() {
     # v3 git releases do not have file hierarchy
     _unzip "$pkgfile" || _unzip "${pkgfile##*/}" || return 1
 
-    IFS='/@' read -r pkgname _ pkgver <<< "${pkgfile%.tar.*}"
+    IFS='/@' read -r pkgname pkgfile pkgver <<< "${pkgfile%.tar.*}"
 
     # caveats
     true > "$TEMPDIR/caveats"
@@ -268,9 +268,40 @@ _v3() {
         _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
     fi
 
-    # update installed: use $1 instead of $pkgfile
-    sed -i "\#^$1 #d" "$PREBUILTS/.installed"
-    echo "$1 $pkgver $pkgbuild" >> "$PREBUILTS/.installed"
+    # update installed
+    sed -i "\#^$pkgfile #d" "$PREBUILTS/.installed"
+    echo "$pkgfile $pkgver $pkgbuild" >> "$PREBUILTS/.installed"
+}
+
+_v3_update() {
+    test -f "$PREBUILTS/.installed" || return 0
+
+    local pkgfile pkgver pkgbuild
+    while IFS=' ' read -r pkgfile pkgver pkgbuild; do
+        info "\n🚀 Update $pkgfile ..."
+
+        if test -z "$pkgbuild"; then
+            info ">> no pkgbuild, always update"
+            fetch "$pkgfile" --install
+        else
+            local _pkgfile _pkgver _pkgbuild
+
+            # name pkgfile sha build
+            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
+
+            if test -z "$_pkgfile"; then
+                warn ">> update not found"
+            elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
+                info ">> version updated"
+                fetch "$pkgfile" --install
+            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
+                info ">> build updated"
+                fetch "$pkgfile" --install
+            else
+                info ">> no update"
+            fi
+        fi
+    done < "$PREBUILTS/.installed"
 }
 
 # v3 only
@@ -279,7 +310,7 @@ search() {
 
     info3 "#3 Search $*"
 
-    _search "$@" | _details
+    _search "$@" | sort -u | _details
 }
 
 # fetch cmdlet: name [options]
@@ -381,17 +412,19 @@ link() {
 # remove cmdlets
 #  input: name
 remove() {
-    local target="$1"
-
-    info "== remove $target"
+    info "== remove $1"
 
     while read -r link; do
         rm -fv "$link" | _details_escape
-    done < <( find . -type l -lname "$target" -printf '%P\n' )
+    done < <( find . -type l -lname "$1" -printf '%P\n' )
 
     while read -r file; do
         rm -fv "$file" | _details_escape
-    done < <( find . -name "$target" -printf '%P\n' )
+    done < <( find . -name "$1" -printf '%P\n' )
+
+    test -f "$PREBUILTS/.installed" || return 0
+
+    sed -i "\#^$1 #d" "$PREBUILTS/.installed"
 }
 
 # fetch package
@@ -486,32 +519,6 @@ list() {
     done < <(find . -maxdepth 1 -type l)
 }
 
-_update_installed() {
-    test -f "$PREBUILTS/.installed" || return 0
-
-    local pkgfile pkgver pkgbuild
-    while IFS=' ' read -r pkgfile pkgver pkgbuild; do
-        info "\n🚀 Update $pkgfile ..."
-
-        if test -z "$pkgbuild"; then
-            fetch "$pkgfile" --install
-        else
-            local _pkgfile _pkgver _pkgbuild
-
-            # name pkgfile sha build
-            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
-
-            if test -z "$_pkgfile"; then
-                info ">> $pkgfile not found"
-            elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
-                fetch "$pkgfile" --install
-            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                fetch "$pkgfile" --install
-            fi
-        fi
-    done < "$PREBUILTS/.installed"
-}
-
 # invoke cmd [args...]
 invoke() {
     local ret=0
@@ -521,7 +528,7 @@ invoke() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            _update_installed
+            _v3_update
             ;;
         update)
             if test -n "$2"; then

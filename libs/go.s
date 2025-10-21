@@ -1,0 +1,41 @@
+# Build simple, secure, scalable systems with Go
+
+# shellcheck disable=SC2034
+libs_lic="BSD-3-Clause"
+libs_ver=1.25.3
+libs_url=https://go.dev/dl/go$libs_ver.src.tar.gz
+libs_sha=a81a4ba593d0015e10c51e267de3ff07c7ac914dfca037d9517d029517097795
+
+libs_build() {
+    _go_init
+
+    # build go
+    cd src &&
+    slogcmd CC="$CC" CXX="$CXX" ./make.bash &&
+    # test fails
+    # slogcmd GO_TEST_SHORT=1 ./run.bash --no-rebuild &&
+    cd - || die "build go failed"
+
+    # Remove useless files. <= homebrew
+    # Breaks patchelf because folder contains weird debug/test files
+    rm -rf src/debug/elf/testdata
+    # Binaries built for an incompatible architecture
+    rm -rf src/runtime/pprof/testdata
+    # Remove testdata with binaries for non-native architectures.
+    rm -rf src/debug/dwarf/testdata
+
+    # install files manually
+    mkdir -pv "$PREFIX/libexec"     &&
+    cp -rf ./ "$PREFIX/libexec/go"  &&
+
+    for x in bin/*; do
+        ln -sfv "../libexec/go/$x" "$PREFIX/$x"
+    done || die "install go files failed"
+
+    # pack files
+    pkgfile go bin/go* libexec/go
+
+    check go version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
