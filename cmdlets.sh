@@ -571,8 +571,16 @@ invoke() {
     exit $?
 }
 
-# shellcheck disable=SC2064
-TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
+LOCKFILE="/tmp/${0//\//_}.lock"
+test -f "$LOCKFILE" && die "cmdlets is locked."
+
+true > "$LOCKFILE"
+
+_on_exit() {
+    rm -rf "$LOCKFILE"
+    rm -rf "$TEMPDIR"
+}
+TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
