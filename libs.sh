@@ -277,6 +277,8 @@ _init() {
     fi
 
     # cmdlets
+    export CMDLETS_PREBUILTS="$PREFIX"
+
     [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
@@ -536,11 +538,16 @@ compile() {
 
         _prepare # or die
 
-        # clear pkginfo
+        # v2: clear pkginfo
         rm -rf "$PREFIX/$libs_name"
 
-        # clear manifest
+        # v3/manifest: name pkgfile sha build
         touch "$PREFIX/cmdlets.manifest"
+
+        # read pkgbuild before clear
+        IFS=' ' read -r _ _ _ PKGBUILD < <(grep " $libs_name/.*@$libs_ver" "$PREFIX/cmdlets.manifest" | tail -n1)
+
+        # v3: clear manifest
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
 
         # build library
@@ -635,7 +642,7 @@ _deps_sort() {
 build() {
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
 
-    CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh manifest &>/dev/null || true
+    ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()
@@ -643,7 +650,7 @@ build() {
         slogi "Force rebuild dependencies"
         targets=( "${deps[@]}" )
     else
-        CMDLETS_PREBUILTS=$PREFIX ./cmdlets.sh package "${deps[@]}"
+        ./cmdlets.sh package "${deps[@]}"
 
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )

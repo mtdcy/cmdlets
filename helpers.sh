@@ -512,11 +512,13 @@ pkgfile() {
         _ln "$libs_name/$name@latest"   "$name@latest"
     fi
 
-    # v3/manifest: name pkgfile sha
+    test -n "$PKGBUILD" || PKGBUILD="build=0"
+
+    # v3/manifest: name pkgfile sha build
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
     # new records
-    echo "$1 $pkgfile $sha" >> cmdlets.manifest
+    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> cmdlets.manifest
 
     popd || die "popd failed."
 }

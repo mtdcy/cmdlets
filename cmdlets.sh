@@ -249,25 +249,28 @@ _search() {
 _v3() {
     [ "$API" = "v3" ] || return 127
 
-    local pkgname
-    local pkgfile="$1"
+    local pkgname pkgfile pkgver
 
-    IFS=' /' read -r _ pkgname pkgfile _ < <( _search "$pkgfile" "${@:2}" | tail -n 1 )
+    IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" "${@:2}" | tail -n 1 )
 
     test -n "$pkgfile" || return 1
 
     info3 "#3 Fetch $1 < $pkgfile"
 
-    # v3 git repo do not have file hierarchy
-    _unzip "$pkgname/$pkgfile" ||
-    _unzip "$pkgfile" ||
-    return 1
+    # v3 git releases do not have file hierarchy
+    _unzip "$pkgfile" || _unzip "${pkgfile##*/}" || return 1
+
+    IFS='/@' read -r pkgname _ pkgver <<< "${pkgfile%.tar.*}"
 
     # caveats
     true > "$TEMPDIR/caveats"
     if _exists "$pkgname/$pkgname.caveats"; then
         _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
     fi
+
+    # update installed: use $1 instead of $pkgfile
+    sed -i "\#^$1 #d" "$PREBUILTS/.installed"
+    echo "$1 $pkgver $pkgbuild" >> "$PREBUILTS/.installed"
 }
 
 # v3 only
@@ -462,7 +465,7 @@ update() {
             chmod -v a+x "$target" | _details
 
             # test target and exit
-            "$target" help && exit 0
+            "$target" --update && exit 0
         fi
     done
 
@@ -483,6 +486,32 @@ list() {
     done < <(find . -maxdepth 1 -type l)
 }
 
+_update_installed() {
+    test -f "$PREBUILTS/.installed" || return
+
+    local pkgfile pkgver pkgbuild
+    while IFS=' ' read -r pkgfile pkgver pkgbuild; do
+        info "\n🚀 Update $pkgfile ..."
+
+        if test -z "$pkgbuild"; then
+            fetch "$pkgfile" --install
+        else
+            local _pkgfile _pkgver _pkgbuild
+
+            # name pkgfile sha build
+            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
+
+            if test -z "$_pkgfile"; then
+                info ">> $pkgfile not found"
+            elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
+                fetch "$pkgfile" --install
+            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
+                fetch "$pkgfile" --install
+            fi
+        fi
+    done < "$PREBUILTS/.installed"
+}
+
 # invoke cmd [args...]
 invoke() {
     local ret=0
@@ -490,6 +519,9 @@ invoke() {
         manifest)
             _manifest
             cat "$MANIFEST"
+            ;;
+        --update) # internel cmd
+            _update_installed
             ;;
         update)
             if test -n "$2"; then
@@ -541,8 +573,16 @@ invoke() {
     exit $?
 }
 
-# shellcheck disable=SC2064
-TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
+LOCKFILE="/tmp/${0//\//_}.lock"
+test -f "$LOCKFILE" && die "cmdlets is locked."
+
+true > "$LOCKFILE"
+
+_on_exit() {
+    rm -rf "$LOCKFILE"
+    rm -rf "$TEMPDIR"
+}
+TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
