@@ -801,8 +801,16 @@ prerequisites() {
     fi
 }
 
-# shellcheck disable=SC2064
-TEMPDIR="$(mktemp -d)" && trap "rm -rf $TEMPDIR" EXIT
+_on_exit() {
+    # show ccache statistics
+    if test -z "$CCACHE_DISABLE"; then
+        ccache -d "$CCACHE_DIR" -s
+    fi
+
+    rm -rf "$TEMPDIR"
+}
+
+TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 _init || exit 110
 
