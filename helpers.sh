@@ -40,6 +40,10 @@ depends_on() {
     }
 }
 
+pkg-config() {
+    eval "$PKG_CONFIG" "$@"
+}
+
 configure() {
     if ! test -f configure; then
         if test -f autogen.sh; then

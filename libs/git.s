@@ -31,7 +31,7 @@ libs_args=(
     USE_LIBPCRE2=1
     # use our libiconv both for Linux and macOS
     NEEDS_LIBICONV=1
-    
+
     INSTALL_SYMLINKS=1
 )
 
@@ -132,6 +132,20 @@ libs_build() {
     pkginst mergetools share/mergetools mergetools/* &&
 
     check git --version
+
+    caveats << EOF
+static built $(./git --version) without libexec or i18n
+
+all tools are installed in and loaded from executable path
+
+git difftool and mergetool need mergetools from \$HOME/.mergetools:
+
+cmdlet.sh install git
+cmdlet.sh install mergetools
+cmdlet.sh link share/mergetools ~/.mergetools
+
+OR you can set MERGE_TOOLS_DIR env to where mergetools is.
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
