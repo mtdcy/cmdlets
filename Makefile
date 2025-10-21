@@ -96,7 +96,7 @@ BREW_PACKAGES 	= coreutils grep gnu-sed findutils 				   \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo   		   \
 				  luajit perl 									   \
-				  ccache rustup golang
+				  ccache
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -122,12 +122,10 @@ prepare-host-homebrew:
 prepare-host-debian:
 	sudo apt-get update
 	sudo apt-get install -y $(DEB_PACKAGES)
-	which go || sudo add-apt-repository -y ppa:longsleep/golang-backports && sudo apt-get update && sudo apt-get install golang-go
 
 prepare-host-alpine:
 	sudo apk update
 	sudo apk add --no-cache $(APK_PACKAGES)
-	which go || sudo apk add --no-cache go
 
 RUSTUP_INIT_OPTS := -y --no-modify-path --profile minimal --default-toolchain stable
 

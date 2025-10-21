@@ -280,6 +280,20 @@ cargo() {
 _go_init() {
     test -z "$GO_READY" || return 0
 
+    # set GOROOT only when go not exists
+    if ! which go && test -z "$GOROOT"; then
+        export GOROOT="$ROOT/.go"
+        export PATH="$GOROOT/bin:$PATH"
+    fi
+
+    if ! which go; then
+        local system arch version
+        is_darwin && system=darwin  || system=linux
+        is_arm64  && arch=arm64     || arch=amd64
+        version="$(curl https://go.dev/VERSION?m=text | head -n1)"
+        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | tar -C "$GOROOT" -xz --strip-component 1
+    fi
+
     GO="$(which go)"
 
     test -n "$GO" || die "missing host tool go."
