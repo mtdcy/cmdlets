@@ -356,10 +356,10 @@ fetch() {
                     shift 1
                 elif test -s "$TEMPDIR/files"; then
                     info "== Install target(s)"
-                    local width=$(wc -L < "$TEMPDIR/files")
+                    local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
 
                     while read -r file; do
-                        if test -L "$file"; then
+                        if test -L "$file" && test -e "$(readlink "$file")"; then
                             printf "%${width}s -> %s\n" "$(basename "$file")" "$(readlink "$file")"
                             mv -f "$file" .
                         else
@@ -516,7 +516,7 @@ list() {
         real="$(readlink "$link")"
         [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
         printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -maxdepth 1 -type l)
+    done < <(find . -maxdepth 1 -type l | sort -h)
 }
 
 # invoke cmd [args...]
