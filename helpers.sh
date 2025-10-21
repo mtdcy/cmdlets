@@ -291,6 +291,8 @@ _go_init() {
         is_darwin && system=darwin  || system=linux
         is_arm64  && arch=arm64     || arch=amd64
         version="$(curl https://go.dev/VERSION?m=text | head -n1)"
+
+        mkdir -pv "$GOROOT"
         curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | tar -C "$GOROOT" -xz --strip-component 1
     fi
 
@@ -352,6 +354,9 @@ _go_filter_options() {
 go() {
     _go_init
 
+    # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    export CGO_ENABLED="${CGO_ENABLED:-0}"
+
     local cmdline=("$GO" "$1" )
     case "$1" in
         build)
@@ -388,9 +393,7 @@ go() {
             ;;
     esac
 
-    # CGO_ENABLED=0 is necessary for build static binaries except macOS
-    slogcmd CGO_ENABLED="${CGO_ENABLED:-0}" "${cmdline[@]}" || die "go $* failed."
-}
+    slogcmd "${cmdline[@]}" || die "go $* failed." }
 
 # easy command for go project
 go_build() {
