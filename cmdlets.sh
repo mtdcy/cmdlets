@@ -465,7 +465,7 @@ update() {
             chmod -v a+x "$target" | _details
 
             # test target and exit
-            "$target" --update && exit 0
+            _on_exit && exec "$target" --update
         fi
     done
 
