@@ -310,7 +310,7 @@ search() {
 
     info3 "#3 Search $*"
 
-    _search "$@" | _details
+    _search "$@" | sort -u | _details
 }
 
 # fetch cmdlet: name [options]
