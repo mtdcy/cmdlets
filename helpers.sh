@@ -211,7 +211,7 @@ _cargo_init() {
 
     # we need rustup to add target
     if which rustup; then
-        rustup default stable
+        rustup default || rustup default stable
     else
         if test -n "$CL_MIRRORS"; then
             export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
@@ -226,10 +226,8 @@ _cargo_init() {
         fi
     fi
 
-    CARGO="$(rustup which cargo)"
-    RUSTC="$(rustup which rustc)"
-
-    test -n "$CARGO" || die "missing host tool rustup/cargo."
+    CARGO="$(rustup which cargo)" || die "missing host tool cargo"
+    RUSTC="$(rustup which rustc)" || die "missing host tool rustc"
 
     export CARGO RUSTC
 
@@ -294,12 +292,12 @@ _go_init() {
         version="$(curl https://go.dev/VERSION?m=text | head -n1)"
 
         mkdir -pv "$GOROOT"
-        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | tar -C "$GOROOT" -xz --strip-component 1
+        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -C "$GOROOT" -xz --strip-component 1
     fi
 
-    GO="$(which go)"
+    GO="$(which go)" || die "missing host tool go."
 
-    test -n "$GO" || die "missing host tool go."
+    export GO
 
     # no GOROOT or GOPATH here
     export GOMODCACHE="$ROOT/.go/pkg/mod"
