@@ -1,3 +1,5 @@
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+
 # GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
 
 # shellcheck disable=SC2034
@@ -23,6 +25,7 @@ libs_args=(
     -Dnls=disabled
     -Dsysprof=disabled
     -Dman-pages=disabled
+    -Dglib_debug=disabled
     -Dtests=False
 )
 
@@ -30,11 +33,25 @@ libs_build() {
     rm -rf subprojects/gvdb
     mkdir -pv build
 
-    meson setup build && 
+    meson setup build &&
 
     meson compile -C build --verbose || return 1
 
     pkgfile libglib -- meson install -C build --tags devel
 }
 
-# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+# patch: fix meson install with DESTDIR and PREFIX
+
+__END__
+diff -ruN a/glib/meson.build b/glib/meson.build
+--- a/glib/meson.build    2025-10-21 08:12:59
++++ b/glib/meson.build    2025-10-21 08:13:56
+@@ -561,7 +561,7 @@
+
+ # XXX: We add a leading './' because glib_libdir is an absolute path and we
+ # need it to be a relative path so that join_paths appends it to the end.
+-gdb_install_dir = join_paths(glib_datadir, 'gdb', 'auto-load', './' + glib_libdir)
++gdb_install_dir = join_paths(glib_datadir, 'gdb', 'auto-load')
+
+ configure_file(
+   input: 'libglib-gdb.py.in',
