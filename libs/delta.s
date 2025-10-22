@@ -33,6 +33,17 @@ libs_build() {
     cmdlet "$(find target -name delta)"
 
     check delta --version
+
+    caveats <<EOF
+delta @ $libs_ver
+
+Usage:
+
+git config --global core.pager delta
+git config --global interactive.diffFilter 'delta --color-only'
+git config --global delta.navigate true
+git config --global merge.conflictStyle zdiff3
+EOF
 }
 
 
