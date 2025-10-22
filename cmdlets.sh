@@ -49,7 +49,7 @@ Copyright (c) 2025, mtdcy.chen@gmail.com
 Usage: $NAME cmd [args ...]
 
 Options:
-    update                      - update $NAME
+    update                      - update $NAME and cmdlets
     update  <cmdlet>            - update cmdlet
 
     list                        - list installed cmdlets
@@ -306,7 +306,7 @@ fetch() {
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
     # ln helper
-    _ln_sf_fixed() {
+    _ln_println() {
         printf "%${1}s -> %s\n" "$3" "$2"
         ln -sf "$2" "$3"
     }
@@ -321,7 +321,7 @@ fetch() {
                 local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
 
                 while read -r file; do
-                    _ln_sf_fixed "$width" "$file" "${file##*/}"
+                    _ln_println "$width" "$file" "${file##*/}"
                     installed+=( "${file##*/}" )
                 done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
 
@@ -332,7 +332,7 @@ fetch() {
 
                     for link in "${links[@]//*\//}"; do
                         [ "$link" = "$target" ] && continue
-                        _ln_sf_fixed "$width" "$target" "$link"
+                        _ln_println "$width" "$target" "$link"
                         installed+=( "$link" )
                     done
                     shift 1
@@ -371,15 +371,15 @@ update() {
             IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
 
             if test -z "$_pkgfile"; then
-                warn ">> update not found"
+                warn "<< update not found"
             elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
-                info ">> version updated"
+                info ">> pkgvern updated"
                 fetch "$pkgfile" --install
             elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> build updated"
+                info ">> pkgbuild updated"
                 fetch "$pkgfile" --install
             else
-                info ">> no update"
+                info "<< no update"
             fi
         fi
     done < "$PREBUILTS/.cmdlets"
@@ -526,7 +526,7 @@ install() {
 
 # list installed cmdlets
 list() {
-    _println_fixed() {
+    _ls_println() {
         printf "   %${1}s - %s\n" "$2" "${*:3}"
     }
 
@@ -538,7 +538,7 @@ list() {
                     info "== List installed cmdlets"
                     width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | wc -L)"
                     while IFS=' ' read -r name info; do
-                        _println_fixed "$width" "$name" "$info"
+                        _ls_println "$width" "$name" "$info"
                     done < "$PREBUILTS/.cmdlets"
                     ;;
                 --installed)
@@ -567,7 +567,7 @@ list() {
         while read -r link; do
             real="$(readlink "$link")"
             [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
-            _println_fixed "$width" "${link##*/}" "$real"
+            _ls_println "$width" "${link##*/}" "$real"
         done < <( find . -maxdepth 1 -type l | sort -h )
     fi
 }
