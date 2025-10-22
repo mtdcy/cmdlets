@@ -576,8 +576,8 @@ list() {
 invoke() {
     # init directories and files
     mkdir -pv "$PREBUILTS"
-    true > "$PREBUILTS/.cmdlets"
-    true > "$PREBUILTS/.files"
+    touch "$PREBUILTS/.cmdlets"
+    touch "$PREBUILTS/.files"
 
     # handle commands
     local ret=0
