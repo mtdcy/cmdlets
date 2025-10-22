@@ -97,8 +97,7 @@ BREW_PACKAGES 	= coreutils grep gnu-sed findutils                 \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo             \
-				  luajit perl                                      \
-				  ccache
+				  luajit perl
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -106,7 +105,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  ccache musl-tools
+				  musl-tools
 
 APK_PACKAGES 	= wget curl git                                    \
 				  grep sed gawk coreutils                          \
@@ -114,8 +113,7 @@ APK_PACKAGES 	= wget curl git                                    \
 				  build-base gettext                               \
 				  automake autoconf libtool pkgconfig cmake meson  \
 				  nasm yasm bison flex texinfo                     \
-				  luajit perl perl-http-daemon                     \
-				  ccache
+				  luajit perl perl-http-daemon
 
 prepare-host-homebrew:
 	brew update
