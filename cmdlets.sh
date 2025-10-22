@@ -152,6 +152,10 @@ _v1() {
     chmod a+x "$PREBUILTS/$name"
 
     echo "$name" > "$TEMPDIR/files"
+
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 0.0 build=0" >> "$PREBUILTS/.cmdlets"
 }
 
 # cmdlet v2:
@@ -182,16 +186,20 @@ _v2() {
     info2 "#2 Fetch $1 < $pkgfile"
 
     _unzip "$pkgfile" || return 2
+
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 $pkgver build=0" >> "$PREBUILTS/.cmdlets"
 }
 
 _manifest() {
     [ -z "$MANIFEST" ] || return 0
 
-    export MANIFEST="$PREBUILTS/cmdlets.manifest"
+    export MANIFEST="$PREBUILTS/.manifest"
 
     # pull manifest first
     info3 "== Fetch manifest"
-    _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
+    _curl cmdlets.manifest "$MANIFEST" || {
         warn "<< Fetch manifest failed"
         touch "$MANIFEST"
     }
@@ -268,40 +276,9 @@ _v3() {
         _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
     fi
 
-    # update installed
-    sed -i "\#^$pkgfile #d" "$PREBUILTS/.installed"
-    echo "$pkgfile $pkgver $pkgbuild" >> "$PREBUILTS/.installed"
-}
-
-_v3_update() {
-    test -f "$PREBUILTS/.installed" || return 0
-
-    local pkgfile pkgver pkgbuild
-    while IFS=' ' read -r pkgfile pkgver pkgbuild; do
-        info "\n🚀 Update $pkgfile ..."
-
-        if test -z "$pkgbuild"; then
-            info ">> no pkgbuild, always update"
-            fetch "$pkgfile" --install
-        else
-            local _pkgfile _pkgver _pkgbuild
-
-            # name pkgfile sha build
-            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
-
-            if test -z "$_pkgfile"; then
-                warn ">> update not found"
-            elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
-                info ">> version updated"
-                fetch "$pkgfile" --install
-            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> build updated"
-                fetch "$pkgfile" --install
-            else
-                info ">> no update"
-            fi
-        fi
-    done < "$PREBUILTS/.installed"
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 $pkgver $pkgbuild" >> "$PREBUILTS/.cmdlets"
 }
 
 # v3 only
@@ -330,49 +307,45 @@ fetch() {
         die "<< Fetch $1/$ARCH failed"
     fi
 
+    # update files list: name files ...
+    sed -i "\#^$1 #d" "$PREBUILTS/.files"
+    echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+
     # target with or without version
-    target="$(basename "$1")"
+    target="${1##*/}"
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
+    # ln helper
+    _ln_sf_fixed() {
+        printf "%${1}s -> %s\n" "$3" "$2"
+        ln -sf "$2" "$3"
+    }
+
     shift 1
+    local installed=()
     while [ $# -gt 0 ]; do
         case "$1" in
             --install)
-                if test -n "$2"; then
-                    # cmdlets.sh install bash@3.2:bash@3.2:bash
-                    info "== Install target and link(s)"
+                info "== Install target and link(s)"
 
+                local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
+
+                while read -r file; do
+                    _ln_sf_fixed "$width" "$file" "${file##*/}"
+                    installed+=( "${file##*/}" )
+                done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
+
+                # cmdlets.sh install bash@3.2:bash
+                if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
+                    # shellcheck disable=SC2206
                     local links=( ${2//:/ } )
-                    local width=$( printf 'bin/%s\n' "$target" "${links[@]}" | wc -L )
-
-                    printf "%${width}s -> %s\n" "$target" "$PREBUILTS/bin/$target"
-                    ln -sf "$PREBUILTS/bin/$target" "$target"
 
                     for link in "${links[@]//*\//}"; do
                         [ "$link" = "$target" ] && continue
-                        printf "%${width}s -> %s\n" "$link" "$target"
-                        ln -sf "$target" "$link"
+                        _ln_sf_fixed "$width" "$target" "$link"
+                        installed+=( "$link" )
                     done
                     shift 1
-                elif test -s "$TEMPDIR/files"; then
-                    info "== Install target(s)"
-                    local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
-
-                    while read -r file; do
-                        if test -L "$file" && test -e "$(readlink "$file")"; then
-                            printf "%${width}s -> %s\n" "$(basename "$file")" "$(readlink "$file")"
-                            mv -f "$file" .
-                        else
-                            printf "%${width}s -> %s\n" "$(basename "$file")" "$file"
-                            ln -sf "$file" .
-                        fi
-                    done < <(cat "$TEMPDIR/files" | grep "^bin/" | sed "s%^%$PREBUILTS/%")
-                fi
-
-                # caveats
-                if test -s "$TEMPDIR/caveats"; then
-                    info "== Caveats:"
-                    cat "$TEMPDIR/caveats"
                 fi
                 ;;
             *)
@@ -380,7 +353,48 @@ fetch() {
         esac
         shift 1
     done
+
+    if test -n "${installed[*]}"; then
+        # append installed symlinks to last line
+        sed -i "$ s%$% ${installed[*]}%" "$PREBUILTS/.files"
+    fi
+
+    # caveats
+    if test -s "$TEMPDIR/caveats"; then
+        info "== Caveats:"
+        cat "$TEMPDIR/caveats"
+    fi
 }
+
+update() {
+    local pkgfile pkgver pkgbuild
+    while IFS=' ' read -r pkgfile pkgver pkgbuild; do
+        info "\n🚀 Update $pkgfile ..."
+
+        if test -z "$pkgbuild"; then
+            info ">> no pkgbuild, always update"
+            fetch "$pkgfile" --install
+        else
+            local _pkgfile _pkgver _pkgbuild
+
+            # name pkgfile sha build
+            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
+
+            if test -z "$_pkgfile"; then
+                warn ">> update not found"
+            elif [[ "$_pkgfile" != *"@$pkgver.tar."* ]]; then
+                info ">> version updated"
+                fetch "$pkgfile" --install
+            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
+                info ">> build updated"
+                fetch "$pkgfile" --install
+            else
+                info ">> no update"
+            fi
+        fi
+    done < "$PREBUILTS/.cmdlets"
+}
+
 
 # link prebuilts to other place
 #  input: <targets ...> <destination>
@@ -414,17 +428,32 @@ link() {
 remove() {
     info "== remove $1"
 
-    while read -r link; do
-        rm -fv "$link" | _details_escape
-    done < <( find . -type l -lname "$1" -printf '%P\n' )
+    if grep -q "^$1 " "$PREBUILTS/.files"; then
+        IFS=' ' read -r -a files < <( grep "^$1 " "$PREBUILTS/.files" | cut -d' ' -f2- )
 
-    while read -r file; do
-        rm -fv "$file" | _details_escape
-    done < <( find . -name "$1" -printf '%P\n' )
+        rm -rfv "${files[@]}" | _details
 
-    test -f "$PREBUILTS/.installed" || return 0
+        # clear recrods
+        sed -i "\#^$1 #d" "$PREBUILTS/.files"
+        sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    else
+        # remove links in PREBUILTS/bin
+        while read -r link; do
+            rm -rfv "$link" | _details
+        done < <( find "$PREBUILTS/bin" -type l -lname "$1" )
 
-    sed -i "\#^$1 #d" "$PREBUILTS/.installed"
+        # remove PREBUILTS/bin/target
+        rm -rfv "$PREBUILTS/bin/$1" | _details
+
+        # remove links in executable path
+        while read -r link; do
+            rm -rfv "$link" | _details
+        done < <( find . -maxdepth 1 -type l -lname "$1" )
+
+        # remove target
+        rm -rfv "$1" | _details
+    fi
+
 }
 
 # fetch package
@@ -476,7 +505,7 @@ package() {
     # no v1 package()
 }
 
-update() {
+install() {
     local target
     if [ -f "$0" ]; then
         target="$0"
@@ -521,6 +550,13 @@ list() {
 
 # invoke cmd [args...]
 invoke() {
+    # init directories and files
+    mkdir -pv "$PREBUILTS"
+    touch "$PREBUILTS/.manifest"
+    touch "$PREBUILTS/.cmdlets"
+    touch "$PREBUILTS/.files"
+
+    # handle commands
     local ret=0
     case "$1" in
         manifest)
@@ -528,13 +564,13 @@ invoke() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            _v3_update
+            update
             ;;
         update)
             if test -n "$2"; then
                 fetch "$2" || ret=$?
             else
-                update
+                install
             fi
             ;;
         ls|list)
@@ -568,7 +604,7 @@ invoke() {
             ;;
         package)    # fetch package files
             for x in "${@:2}"; do
-                ( package "$x" ) || ret=$?
+                ( package "$x" ) || true # ignore errors
             done
             find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
                 sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
@@ -577,7 +613,7 @@ invoke() {
             usage
             ;;
     esac
-    exit $?
+    exit "$ret"
 }
 
 LOCKFILE="/tmp/${0//\//_}.lock"
@@ -593,7 +629,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
-    update
+    install
 else
     cd "$(dirname "$0")" && invoke "$@" || exit $?
 fi
