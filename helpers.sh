@@ -198,21 +198,23 @@ ninja() {
 _cargo_init() {
     test -z "$CARGO_READY" || return 0
 
-    # set project RUSTUP_HOME/CARGO_HOME if not set
-    if test -z "$RUSTUP_HOME"; then
-        export RUSTUP_HOME="$ROOT/.rustup"
-        export PATH="$RUSTUP_HOME/bin:$PATH"
-    fi
+    # always use default value $HOME/.cargo, as
+    # host act runner won't inherit envs from host and
+    # $ROOT will be deleted when jobs finished.
 
-    if test -z "$CARGO_HOME"; then
-        export CARGO_HOME="$ROOT/.cargo"
-        export PATH="$CARGO_HOME/bin:$PATH"
-    fi
+    # local rustup, crates and cache
+    export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+
+    # always prepend cargo bin to PATH
+    export PATH="$CARGO_HOME/bin:$PATH"
 
     # we need rustup to add target
-    if which rustup; then
-        rustup default || rustup default stable
-    else
+    if ! which rustup; then
+        # RUSTUP_HOME: toolchain and configurations
+        export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
+
+        mkdir -p "$RUSTUP_HOME" "$CARGO_HOME"
+
         if test -n "$CL_MIRRORS"; then
             export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
             export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
@@ -224,6 +226,8 @@ _cargo_init() {
         else
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
         fi
+    else
+        rustup default || rustup default stable
     fi
 
     CARGO="$(rustup which cargo)" || die "missing host tool cargo"
@@ -231,13 +235,7 @@ _cargo_init() {
 
     export CARGO RUSTC
 
-    # cargo/rust
-    CARGO_HOME="$ROOT/.cargo"
-    CARGO_BUILD_JOBS="$CL_NJOBS"
-
-    mkdir -p "$CARGO_HOME"
-
-    export CARGO_HOME CARGO_BUILD_JOBS
+    export CARGO_BUILD_JOBS="$CL_NJOBS"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L$PREFIX/lib"
@@ -294,9 +292,11 @@ cargo() {
 _go_init() {
     test -z "$GO_READY" || return 0
 
-    # set GOROOT only when go not exists
-    if ! which go && test -z "$GOROOT"; then
-        export GOROOT="$ROOT/.go"
+    # see _cargo_init notes
+
+    # there is no predefined user level GOROOT
+    if ! which go; then
+        export GOROOT="${GOROOT:-$HOME/.goroot/current}"
         export PATH="$GOROOT/bin:$PATH"
     fi
 
@@ -306,19 +306,25 @@ _go_init() {
         is_arm64  && arch=arm64     || arch=amd64
         version="$(curl https://go.dev/VERSION?m=text | head -n1)"
 
-        mkdir -pv "$GOROOT"
-        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -C "$GOROOT" -xz --strip-component 1
+        mkdir -pv "${GOROOT%/*}" && pushd "${GOROOT%/*}" || die
+
+        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -xz
+
+        mv go "$version" && ln -sfv "$version" "$GOROOT"
+        popd || die
     fi
 
     GO="$(which go)" || die "missing host tool go."
 
     export GO
 
-    # no GOROOT or GOPATH here
+    # The GOPATH directory should not be set to, or contain, the GOROOT directory.
+    export GOPATH="${GOPATH:-$HOME/.go}"
+    #export GOCACHE="$ROOT/.go/go-build"
+    #export GOMODCACHE="$ROOT/.go/pkg/mod"
+
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
-    export GOCACHE="$ROOT/.go/go-build"
-    export GOMODCACHE="$ROOT/.go/pkg/mod"
 
     export CGO_CFLAGS="$CFLAGS"
     export CGO_CXXFLAGS="$CXXFLAGS"
