@@ -432,41 +432,43 @@ remove() {
 
 # fetch package
 package() {
-    local pkgname pkgver pkgfile pkginfo
+    local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package()
 
+    info "📦 Fetch package $1:"
+
     # zlib@1.3.1
-    IFS='@' read -r pkgname pkgver <<< "$1"
+    IFS='@' read -r pkgname pkgvern <<< "$1"
 
-    test -n "$pkgver" || pkgver=latest
+    # v3: latest tag
+    test -n "$pkgvern" || pkgvern=latest
 
-    pkginfo="$pkgname/pkginfo@$pkgver"
+    pkginfo="$pkgname/pkginfo@$pkgvern"
 
-    # v2 pkginfo is better than v3 manifest for developers
-    if _curl "$pkginfo"; then
+    true > "$TEMPDIR/pkginfo"
+
+    # prefer v2 pkginfo than v3 manifest for developers
+    if _curl "$pkginfo" "$TEMPDIR/pkginfo"; then
         # sha pkgfile ...
-        info2 "\n📦 Fetch package $1 < $(cut -d' ' -f 2 < "$TEMPDIR/$pkginfo" | xargs)"
-
-        while IFS=' ' read -r sha pkgfile _; do
-            test -n "$pkgfile" || continue
-
-            info2 "#2 Fetch $pkgfile - $sha"
-            _unzip "$pkgfile"               || die "<< Fetch package $pkgfile/$ARCH failed"
-        done < "$TEMPDIR/$pkginfo"
+        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo" | xargs )
     else
-        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
-
-        test -n "${pkgfile[*]}"             || die "<< Fetch package $1/$ARCH failed"
-
-        info3 "\n📦 Fetch package $1 < ${pkgfile[*]}"
-
-        for file in "${pkgfile[@]}"; do
-            _v3 "$pkgname/$file" --pkgfile  || die "<< Fetch package $file/$ARCH failed"
-        done
+        # name pkgfile sha ...
+        IFS=' ' read -r -a pkgfiles < <( _search "$1" --pkgname | cut -d' ' -f2 | xargs )
     fi
 
+    test -n "${pkgfiles[*]}"            || die "<< Fetch package $1/$ARCH failed"
+
+    info "=> ${pkgfiles[*]}"
+
+    for pkgfile in "${pkgfiles[@]}"; do
+        info "## Fetch $pkgfile"
+        _unzip "$pkgfile"               || die "<< Fetch package $pkgfile/$ARCH failed"
+    done
+
     touch "$PREBUILTS/.$pkgname.d" # mark as ready
+
+    echo ""
 }
 
 install() {
