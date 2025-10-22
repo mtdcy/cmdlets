@@ -536,16 +536,50 @@ install() {
 
 # list installed cmdlets
 list() {
-    local width link real
-    info "== List installed cmdlets"
+    _println_fixed() {
+        printf "   %${1}s - %s\n" "$2" "${*:3}"
+    }
 
-    width="$(find . -maxdepth 1 -type l | wc -L)"
+    if test -n "$*"; then
+        ### for developers ###
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --cmdlets)
+                    info "== List installed cmdlets"
+                    width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | wc -L)"
+                    while IFS=' ' read -r name info; do
+                        _println_fixed "$width" "$name" "$info"
+                    done < "$PREBUILTS/.cmdlets"
+                    ;;
+                --installed)
+                    if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
+                        info "== List installed files of $2"
+                        for x in $(grep "^$2 " "$PREBUILTS/.files" | tail -n1 | cut -d' ' -f2-); do
+                            printf "=> %s\n" "$x"
+                        done
+                        shift
+                    else
+                        info "== List all installed files"
+                        while IFS=' ' read -r _ files; do
+                            for x in $files; do
+                                printf "=> %s\n" "$x"
+                            done
+                        done < "$PREBUILTS/.files"
+                    fi
+                    ;;
+            esac
+            shift 1
+        done
+    else
+        info "== List installed cmdlets"
+        width="$(find . -maxdepth 1 -type l | wc -L)"
 
-    while read -r link; do
-        real="$(readlink "$link")"
-        [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
-        printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -maxdepth 1 -type l | sort -h)
+        while read -r link; do
+            real="$(readlink "$link")"
+            [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
+            _println_fixed "$width" "${link##*/}" "$real"
+        done < <( find . -maxdepth 1 -type l | sort -h )
+    fi
 }
 
 # invoke cmd [args...]
@@ -574,7 +608,7 @@ invoke() {
             fi
             ;;
         ls|list)
-            list
+            list "${@:2}"
             ;;
         ln|link)
             link "${@:2}"
