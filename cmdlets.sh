@@ -189,8 +189,6 @@ _v2() {
 #  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
 _search() {
-    _manifest &>/dev/null
-
     # cmdlets:
     #   minigzip
     #   minigzip@1.3.1
@@ -251,7 +249,7 @@ _v3() {
     IFS='/@' read -r pkgname pkgfile pkgver <<< "${pkgfile%.tar.*}"
 
     # caveats
-    _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" || true > "$TEMPDIR/caveats"
+    _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
 
     # update installed: name version build=n
     sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
@@ -436,47 +434,39 @@ remove() {
 package() {
     local pkgname pkgver pkgfile pkginfo
 
+    # priority: v2 > v3, no v1 package()
+
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgver <<< "$1"
 
-    # cmdlet v3/manifest
-    if [ "$API" = "v3" ]; then
-        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
-
-        test -n "${pkgfile[*]}" || die "<< Fetch package $1/$ARCH failed"
-
-        info3 "#3 Fetch package $1 < ${pkgfile[*]}"
-
-        for file in "${pkgfile[@]}"; do
-            _v3 "$pkgname/$file" --pkgfile || die "<< Fetch package $file/$ARCH failed"
-        done
-
-        touch "$PREBUILTS/.$pkgname.d" # mark as ready
-        return 0
-    fi
-
-    info2 "#2 Fetch package $1"
-
-    [ -n "$pkgver" ] || pkgver=latest
+    test -n "$pkgver" || pkgver=latest
 
     pkginfo="$pkgname/pkginfo@$pkgver"
 
-    _curl "$pkginfo" || die "<< Fetch $pkginfo failed"
+    # v2 pkginfo is better than v3 manifest for developers
+    if _curl "$pkginfo"; then
+        # sha pkgfile ...
+        info2 "\n📦 Fetch package $1 < $(cut -d' ' -f 2 < "$TEMPDIR/$pkginfo" | xargs)"
 
-    cat "$TEMPDIR/$pkginfo" | _details
+        while IFS=' ' read -r sha pkgfile _; do
+            test -n "$pkgfile" || continue
 
-    while read -r pkgfile; do
-        [ -n "$pkgfile" ] || continue
+            info2 "#2 Fetch $pkgfile - $sha"
+            _unzip "$pkgfile"               || die "<< Fetch package $pkgfile/$ARCH failed"
+        done < "$TEMPDIR/$pkginfo"
+    else
+        IFS=' ' read -r -a pkgfile < <( _search "$1" --pkgname | awk '{print $1}' | sort -u | xargs )
 
-        # sha pkgfile
-        IFS=' ' read -r _ pkgfile _ <<< "$pkgfile"
+        test -n "${pkgfile[*]}"             || die "<< Fetch package $1/$ARCH failed"
 
-        info2 "#2 Fetch $pkgfile"
+        info3 "\n📦 Fetch package $1 < ${pkgfile[*]}"
 
-        _unzip "$pkgfile" || die "<< Fetch package $pkgfile/$ARCH failed"
-    done < "$TEMPDIR/$pkginfo"
+        for file in "${pkgfile[@]}"; do
+            _v3 "$pkgname/$file" --pkgfile  || die "<< Fetch package $file/$ARCH failed"
+        done
+    fi
 
-    # no v1 package()
+    touch "$PREBUILTS/.$pkgname.d" # mark as ready
 }
 
 install() {
