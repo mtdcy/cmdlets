@@ -195,11 +195,11 @@ _v2() {
 _manifest() {
     [ -z "$MANIFEST" ] || return 0
 
-    export MANIFEST="$PREBUILTS/.manifest"
+    export MANIFEST="$PREBUILTS/cmdlets.manifest"
 
     # pull manifest first
     info3 "== Fetch manifest"
-    _curl cmdlets.manifest "$MANIFEST" || {
+    _curl "${MANIFEST##*/}" "$MANIFEST" || {
         warn "<< Fetch manifest failed"
         touch "$MANIFEST"
     }
@@ -283,7 +283,7 @@ _v3() {
 
 # v3 only
 search() {
-    _manifest &>/dev/null
+    _manifest
 
     info3 "#3 Search $*"
 
@@ -294,7 +294,7 @@ search() {
 #  input: name [--install [links...] ]
 #  output: return 0 on success
 fetch() {
-    _manifest &>/dev/null
+    _manifest
 
     true > "$TEMPDIR/files"
 
@@ -458,7 +458,7 @@ remove() {
 
 # fetch package
 package() {
-    _manifest &>/dev/null
+    _manifest
 
     local pkgname pkgver pkgfile pkginfo
 
@@ -586,9 +586,8 @@ list() {
 invoke() {
     # init directories and files
     mkdir -pv "$PREBUILTS"
-    touch "$PREBUILTS/.manifest"
-    touch "$PREBUILTS/.cmdlets"
-    touch "$PREBUILTS/.files"
+    true > "$PREBUILTS/.cmdlets"
+    true > "$PREBUILTS/.files"
 
     # handle commands
     local ret=0
