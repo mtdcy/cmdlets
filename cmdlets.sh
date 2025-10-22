@@ -185,19 +185,6 @@ _v2() {
     echo "$1 $pkgver build=0" >> "$PREBUILTS/.cmdlets"
 }
 
-_manifest() {
-    [ -z "$MANIFEST" ] || return 0
-
-    export MANIFEST="$PREBUILTS/cmdlets.manifest"
-
-    # pull manifest first
-    info3 "== Fetch manifest"
-    _curl "${MANIFEST##*/}" "$MANIFEST" || {
-        warn "<< Fetch manifest failed"
-        touch "$MANIFEST"
-    }
-}
-
 # search manifest for package
 #  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
@@ -273,8 +260,6 @@ _v3() {
 
 # v3 only
 search() {
-    _manifest
-
     info3 "#3 Search $*"
 
     _search "$@" | sort -u | _details
@@ -284,8 +269,6 @@ search() {
 #  input: name [--install [links...] ]
 #  output: return 0 on success
 fetch() {
-    _manifest
-
     true > "$TEMPDIR/files"
 
     if test -f "$1" && [[ "$*" == *" --local"* ]]; then
@@ -451,8 +434,6 @@ remove() {
 
 # fetch package
 package() {
-    _manifest
-
     local pkgname pkgver pkgfile pkginfo
 
     # zlib@1.3.1
@@ -582,11 +563,15 @@ invoke() {
     touch "$PREBUILTS/.cmdlets"
     touch "$PREBUILTS/.files"
 
+    export MANIFEST="$PREBUILTS/cmdlets.manifest"
+
+    touch "$MANIFEST"
+    _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+
     # handle commands
     local ret=0
     case "$1" in
         manifest)
-            _manifest
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
