@@ -253,7 +253,9 @@ _cargo_init() {
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
 
     # https://docs.rs/pkg-config/latest/pkg_config/
+    export PKG_CONFIG="$(which pkg-config)" # rust pkg-config do not support parameters
     export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
+    # FOO_STATIC - pass --static for the library foo
 
     if [ -n "$CL_MIRRORS" ]; then
         # cargo
@@ -276,7 +278,15 @@ EOF
 cargo() {
     _cargo_init
 
-    local cmdline=( "$CARGO" "$@" "${libs_args[@]}" )
+    local cmdline=( "$CARGO" "$1" )
+    case "$1" in
+        build)
+            cmdline+=( "${libs_args[@]}" "${@:2}" )
+            ;;
+        *)
+            cmdline+=( "${@:2}" )
+            ;;
+    esac
 
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
