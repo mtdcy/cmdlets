@@ -41,8 +41,13 @@ Usage:
 
 git config --global core.pager delta
 git config --global interactive.diffFilter 'delta --color-only'
-git config --global delta.navigate true
 git config --global merge.conflictStyle zdiff3
+
+# delta options
+git config --global dark true               # or light = true, or omit for auto
+git config --global delta.navigate true     # use n and N to move between diffs
+git config --global delta.side-by-side true
+git config --global line-numbers true
 EOF
 }
 
