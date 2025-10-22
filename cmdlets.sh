@@ -418,10 +418,14 @@ link() {
 remove() {
     info "== remove $1"
 
+    _rm_println() {
+        rm -rfv "$@" | _details
+    }
+
     if grep -q "^$1 " "$PREBUILTS/.files"; then
         IFS=' ' read -r -a files < <( grep "^$1 " "$PREBUILTS/.files" | cut -d' ' -f2- )
 
-        rm -rfv "${files[@]}" | _details
+        _rm_println "${files[@]}"
 
         # clear recrods
         sed -i "\#^$1 #d" "$PREBUILTS/.files"
@@ -429,21 +433,20 @@ remove() {
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
-            rm -rfv "$link" | _details
+            _rm_println "$link"
         done < <( find "$PREBUILTS/bin" -type l -lname "$1" )
 
         # remove PREBUILTS/bin/target
-        rm -rfv "$PREBUILTS/bin/$1" | _details
+        _rm_println "$PREBUILTS/bin/$1"
 
         # remove links in executable path
         while read -r link; do
-            rm -rfv "$link" | _details
+            _rm_println "$link"
         done < <( find . -maxdepth 1 -type l -lname "$1" )
 
         # remove target
-        rm -rfv "$1" | _details
+        _rm_println "$1"
     fi
-
 }
 
 # fetch package
