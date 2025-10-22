@@ -308,9 +308,12 @@ _go_init() {
 
         mkdir -pv "${GOROOT%/*}" && pushd "${GOROOT%/*}" || die
 
-        curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -xz
+        test -d "$version" || {
+            curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -xz
+            mv go "$version"
+        }
 
-        mv go "$version" && ln -sfv "$version" "$GOROOT"
+        ln -sfv "$version" "$GOROOT"
         popd || die
     fi
 
