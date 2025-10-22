@@ -286,9 +286,14 @@ fetch() {
     target="${1##*/}"
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
-    # ln helper
+    # ln helper: width from to
     _ln_println() {
-        printf "%${1}s -> %s\n" "$3" "$2"
+        local exist="$(readlink "$3")"
+        if test -n "$exist" && [ "$exist" != "$2" ]; then
+            printf "%${1}s -> %s (displace %s)\n" "$3" "$2" "$exist"
+        else
+            printf "%${1}s -> %s\n" "$3" "$2"
+        fi
         ln -sf "$2" "$3"
     }
 
