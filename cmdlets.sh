@@ -13,25 +13,22 @@ PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
 unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
 
-REPO=(
-    # v3 & v2 & v1
-    "${CMDLETS_MAIN_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
-    # v3/git
-    https://github.com/mtdcy/cmdlets/releases/download
-    # cmdlets is mainly for private use, so put the public repo at last.
-)
+LOCAL_REPO=http://pub.mtdcy.top/cmdlets/latest
 
-# remove duplicated repo url
-IFS=' ' read -r -a REPO <<< "$(printf "%s\n" "${REPO[@]}" | uniq | xargs)"
+# test private repo first
+if test -z "${CMDLETS_MAIN_REPO:-}" && curl -fsIL --connect-timeout 1 -o /dev/null "$LOCAL_REPO"; then
+    REPO="$LOCAL_REPO"
+else
+    # v3/git public repo
+    REPO="${CMDLETS_MAIN_REPO:-https://github.com/mtdcy/cmdlets/releases/download}"
+fi
 
-BASE=(
+INSTALLERS=(
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
 )
 
-NAME="$(basename "${BASE[0]}")"
-
-CURL_OPTS=( -L --fail --connect-timeout 1 --progress-bar --no-progress-meter )
+NAME="$(basename "${INSTALLERS[0]}")"
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
@@ -98,35 +95,33 @@ _details_escape() {
 
 # is file existing in repo
 _exists() (
-    local source
-    for repo in "${REPO[@]}"; do
-        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null && return 0 || true
-    done
-    return 1
+    if [[ "$1" =~ ^https?:// ]]; then
+        curl -fsIL -o /dev/null "$1"
+    else
+        curl -fsIL -o /dev/null "$REPO/$ARCH/$1"
+    fi
 )
 
 # curl file to destination or TEMPDIR
 _curl() (
-    local source dest
-    dest="${2:-$TEMPDIR/$1}"
-    mkdir -p "$(dirname "$dest")"
-    for repo in "${REPO[@]}"; do
-        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        info "== curl < $source"
-        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo ">> ${2:-$1}"
-        curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
-    done
-    return 1
+    local source
+    local dest="${2:-$TEMPDIR/$1}"
+
+    mkdir -p "${dest%/*}"
+
+    [[ "$1" =~ ^https?:// ]] && source="$1" || source="$REPO/$ARCH/$1"
+
+    info "== curl < $source"
+    curl -fsSL "$source" -o "$dest" || return $?
+    echo ">> ${dest##"$TEMPDIR/"}"
 )
 
 # save package to PREBUILTS
 _unzip() (
     local zip="$1"
     if ! test -f "$zip"; then
-        _curl "$1" || return 1
         zip="$TEMPDIR/$1"
+        _curl "$1" "$zip" || return $?
     fi
 
     tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
@@ -139,11 +134,9 @@ _v1() {
 
     [[ "$name" =~ / ]] || name="bin/$name"
 
-    _exists "$name" || return 1
-
     info1 "#1 Fetch $name"
 
-    _curl "$name" || return 2
+    _curl "$name" || return $?
 
     mkdir -p "$PREBUILTS/$(dirname "$name")"
 
@@ -271,10 +264,7 @@ _v3() {
     IFS='/@' read -r pkgname pkgfile pkgver <<< "${pkgfile%.tar.*}"
 
     # caveats
-    true > "$TEMPDIR/caveats"
-    if _exists "$pkgname/$pkgname.caveats"; then
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
-    fi
+    _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" || true > "$TEMPDIR/caveats"
 
     # update installed: name version build=n
     sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
@@ -521,9 +511,9 @@ install() {
 
     mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
 
-    for base in "${BASE[@]}"; do
-        if _curl "$base" "$TEMPDIR/$NAME"; then
-            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details | xargs
+    for inst in "${INSTALLERS[@]}"; do
+        if _curl "$inst" "$TEMPDIR/$NAME"; then
+            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
             chmod -v a+x "$target" | _details
 
             # test target and exit
