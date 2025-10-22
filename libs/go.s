@@ -12,17 +12,22 @@ libs_build() {
     # build go
     cd src &&
     slogcmd CC="$CC" CXX="$CXX" ./make.bash &&
-    # test fails
-    # slogcmd GO_TEST_SHORT=1 ./run.bash --no-rebuild &&
+    # FIXME: test fails
+    #slogcmd GO_TEST_SHORT=1 ./run.bash --no-rebuild &&
     cd - || die "build go failed"
 
     # Remove useless files. <= homebrew
     # Breaks patchelf because folder contains weird debug/test files
-    rm -rf src/debug/elf/testdata
+    slogcmd rm -rfv src/debug/elf/testdata
     # Binaries built for an incompatible architecture
-    rm -rf src/runtime/pprof/testdata
+    slogcmd rm -rfv src/runtime/pprof/testdata
     # Remove testdata with binaries for non-native architectures.
-    rm -rf src/debug/dwarf/testdata
+    slogcmd rm -rfv src/debug/dwarf/testdata
+
+    # Remove xxx.dir
+    slogcmd find . -type d -name "*.dir" -exec rm -frv {} \; || true
+    # Remove empty dirs
+    slogcmd find . -type d -empty -exec rm -frv {} \; || true
 
     # install files manually
     mkdir -pv "$PREFIX/libexec"     &&

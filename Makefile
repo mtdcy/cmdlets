@@ -15,6 +15,8 @@ CL_MIRRORS 	?= https://mirrors.mtdcy.top
 CL_LOGGING 	?= tty
 CL_CCACHE 	?= 1
 
+ARCH  		:= $(shell bash libs.sh arch)
+
 MAKEFLAGS 	+= --always-make
 
 ##############################################################################
@@ -83,19 +85,19 @@ prepare: prepare-host
 endif
 
 mrproper:
-	rm -rf out prebuilts logs packages registry
+	rm -rf out prebuilts logs packages .cargo .go .ccache
 
 .PHONY: clean distclean shell prepare runc test mrproper
 
 ##############################################################################
 # host
 
-BREW_PACKAGES 	= coreutils grep gnu-sed findutils 				   \
-				  bash wget curl git                     		   \
+BREW_PACKAGES 	= coreutils grep gnu-sed findutils                 \
+				  bash wget curl git                               \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
-				  nasm yasm bison flex gettext texinfo   		   \
-				  luajit perl 									   \
+				  nasm yasm bison flex gettext texinfo             \
+				  luajit perl                                      \
 				  ccache
 
 DEB_PACKAGES 	= wget curl git                                    \
@@ -106,13 +108,13 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  luajit perl libhttp-daemon-perl                  \
 				  ccache musl-tools
 
-APK_PACKAGES 	= wget curl git                                   \
-				  grep sed gawk coreutils                         \
-				  tar gzip xz lzip unzip zstd                     \
-				  build-base gettext                              \
-				  automake autoconf libtool pkgconfig cmake meson \
-				  nasm yasm bison flex texinfo                    \
-				  luajit perl perl-http-daemon                    \
+APK_PACKAGES 	= wget curl git                                    \
+				  grep sed gawk coreutils                          \
+				  tar gzip xz lzip unzip zstd                      \
+				  build-base gettext                               \
+				  automake autoconf libtool pkgconfig cmake meson  \
+				  nasm yasm bison flex texinfo                     \
+				  luajit perl perl-http-daemon                     \
 				  ccache
 
 prepare-host-homebrew:
@@ -126,8 +128,6 @@ prepare-host-debian:
 prepare-host-alpine:
 	sudo apk update
 	sudo apk add --no-cache $(APK_PACKAGES)
-
-RUSTUP_INIT_OPTS := -y --no-modify-path --profile minimal --default-toolchain stable
 
 ifneq (,$(shell which apt-get))
 prepare-host: prepare-host-debian
@@ -152,7 +152,6 @@ TIMEZONE = $(shell realpath --relative-to /usr/share/zoneinfo /etc/localtime)
 # internal variables
 USER  	= $(shell id -u)
 GROUP 	= $(shell id -g)
-ARCH  	= $(shell gcc -dumpmachine | sed 's/[0-9\.]\+$$//;s/-alpine//')
 WORKDIR = $(shell pwd)
 
 prepare-docker-image:

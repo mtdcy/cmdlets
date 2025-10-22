@@ -13,25 +13,22 @@ PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
 unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
 
-REPO=(
-    # v3 & v2 & v1
-    "${CMDLETS_MAIN_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
-    # v3/git
-    https://github.com/mtdcy/cmdlets/releases/download
-    # cmdlets is mainly for private use, so put the public repo at last.
-)
+LOCAL_REPO=http://pub.mtdcy.top/cmdlets/latest
 
-# remove duplicated repo url
-IFS=' ' read -r -a REPO <<< "$(printf "%s\n" "${REPO[@]}" | uniq | xargs)"
+# test private repo first
+if test -z "${CMDLETS_MAIN_REPO:-}" && curl -fsIL --connect-timeout 1 -o /dev/null "$LOCAL_REPO"; then
+    REPO="$LOCAL_REPO"
+else
+    # v3/git public repo
+    REPO="${CMDLETS_MAIN_REPO:-https://github.com/mtdcy/cmdlets/releases/download}"
+fi
 
-BASE=(
+INSTALLERS=(
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
 )
 
-NAME="$(basename "${BASE[0]}")"
-
-CURL_OPTS=( -L --fail --connect-timeout 1 --progress-bar --no-progress-meter )
+NAME="$(basename "${INSTALLERS[0]}")"
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
@@ -98,35 +95,33 @@ _details_escape() {
 
 # is file existing in repo
 _exists() (
-    local source
-    for repo in "${REPO[@]}"; do
-        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null && return 0 || true
-    done
-    return 1
+    if [[ "$1" =~ ^https?:// ]]; then
+        curl -fsIL -o /dev/null "$1"
+    else
+        curl -fsIL -o /dev/null "$REPO/$ARCH/$1"
+    fi
 )
 
 # curl file to destination or TEMPDIR
 _curl() (
-    local source dest
-    dest="${2:-$TEMPDIR/$1}"
-    mkdir -p "$(dirname "$dest")"
-    for repo in "${REPO[@]}"; do
-        [[ "$1" =~ ^https?:// ]] && source="$1" || source="$repo/$ARCH/$1"
-        info "== curl < $source"
-        curl -sI "${CURL_OPTS[@]}" "$source" -o /dev/null || continue
-        echo ">> ${2:-$1}"
-        curl -S  "${CURL_OPTS[@]}" "$source" -o "$dest" && return 0 || true
-    done
-    return 1
+    local source
+    local dest="${2:-$TEMPDIR/$1}"
+
+    mkdir -p "${dest%/*}"
+
+    [[ "$1" =~ ^https?:// ]] && source="$1" || source="$REPO/$ARCH/$1"
+
+    info "== curl < $source"
+    curl -fsSL "$source" -o "$dest" || return $?
+    echo ">> ${dest##"$TEMPDIR/"}"
 )
 
 # save package to PREBUILTS
 _unzip() (
     local zip="$1"
     if ! test -f "$zip"; then
-        _curl "$1" || return 1
         zip="$TEMPDIR/$1"
+        _curl "$1" "$zip" || return $?
     fi
 
     tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
@@ -139,11 +134,9 @@ _v1() {
 
     [[ "$name" =~ / ]] || name="bin/$name"
 
-    _exists "$name" || return 1
-
     info1 "#1 Fetch $name"
 
-    _curl "$name" || return 2
+    _curl "$name" || return $?
 
     mkdir -p "$PREBUILTS/$(dirname "$name")"
 
@@ -152,6 +145,10 @@ _v1() {
     chmod a+x "$PREBUILTS/$name"
 
     echo "$name" > "$TEMPDIR/files"
+
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 0.0 build=0" >> "$PREBUILTS/.cmdlets"
 }
 
 # cmdlet v2:
@@ -182,6 +179,10 @@ _v2() {
     info2 "#2 Fetch $1 < $pkgfile"
 
     _unzip "$pkgfile" || return 2
+
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 $pkgver build=0" >> "$PREBUILTS/.cmdlets"
 }
 
 _manifest() {
@@ -191,7 +192,7 @@ _manifest() {
 
     # pull manifest first
     info3 "== Fetch manifest"
-    _curl "$(basename "$MANIFEST")" "$MANIFEST" || {
+    _curl "${MANIFEST##*/}" "$MANIFEST" || {
         warn "<< Fetch manifest failed"
         touch "$MANIFEST"
     }
@@ -263,19 +264,99 @@ _v3() {
     IFS='/@' read -r pkgname pkgfile pkgver <<< "${pkgfile%.tar.*}"
 
     # caveats
-    true > "$TEMPDIR/caveats"
-    if _exists "$pkgname/$pkgname.caveats"; then
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats"
-    fi
+    _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" || true > "$TEMPDIR/caveats"
 
-    # update installed
-    sed -i "\#^$pkgfile #d" "$PREBUILTS/.installed"
-    echo "$pkgfile $pkgver $pkgbuild" >> "$PREBUILTS/.installed"
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    echo "$1 $pkgver $pkgbuild" >> "$PREBUILTS/.cmdlets"
 }
 
-_v3_update() {
-    test -f "$PREBUILTS/.installed" || return 0
+# v3 only
+search() {
+    _manifest
 
+    info3 "#3 Search $*"
+
+    _search "$@" | sort -u | _details
+}
+
+# fetch cmdlet: name [options]
+#  input: name [--install [links...] ]
+#  output: return 0 on success
+fetch() {
+    _manifest
+
+    true > "$TEMPDIR/files"
+
+    if test -f "$1" && [[ "$*" == *" --local"* ]]; then
+        info "## Fetch < $1"
+        _unzip "$1"
+    elif _v3 "$1" --pkgfile || _v2 "$1" || _v1 "$1"; then
+        true
+    else
+        die "<< Fetch $1/$ARCH failed"
+    fi
+
+    # update files list: name files ...
+    sed -i "\#^$1 #d" "$PREBUILTS/.files"
+    echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+
+    # target with or without version
+    target="${1##*/}"
+    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
+
+    # ln helper
+    _ln_sf_fixed() {
+        printf "%${1}s -> %s\n" "$3" "$2"
+        ln -sf "$2" "$3"
+    }
+
+    shift 1
+    local installed=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --install)
+                info "== Install target and link(s)"
+
+                local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
+
+                while read -r file; do
+                    _ln_sf_fixed "$width" "$file" "${file##*/}"
+                    installed+=( "${file##*/}" )
+                done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
+
+                # cmdlets.sh install bash@3.2:bash
+                if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
+                    # shellcheck disable=SC2206
+                    local links=( ${2//:/ } )
+
+                    for link in "${links[@]//*\//}"; do
+                        [ "$link" = "$target" ] && continue
+                        _ln_sf_fixed "$width" "$target" "$link"
+                        installed+=( "$link" )
+                    done
+                    shift 1
+                fi
+                ;;
+            *)
+                ;;
+        esac
+        shift 1
+    done
+
+    if test -n "${installed[*]}"; then
+        # append installed symlinks to last line
+        sed -i "$ s%$% ${installed[*]}%" "$PREBUILTS/.files"
+    fi
+
+    # caveats
+    if test -s "$TEMPDIR/caveats"; then
+        info "== Caveats:"
+        cat "$TEMPDIR/caveats"
+    fi
+}
+
+update() {
     local pkgfile pkgver pkgbuild
     while IFS=' ' read -r pkgfile pkgver pkgbuild; do
         info "\n🚀 Update $pkgfile ..."
@@ -301,86 +382,9 @@ _v3_update() {
                 info ">> no update"
             fi
         fi
-    done < "$PREBUILTS/.installed"
+    done < "$PREBUILTS/.cmdlets"
 }
 
-# v3 only
-search() {
-    _manifest &>/dev/null
-
-    info3 "#3 Search $*"
-
-    _search "$@" | sort -u | _details
-}
-
-# fetch cmdlet: name [options]
-#  input: name [--install [links...] ]
-#  output: return 0 on success
-fetch() {
-    _manifest &>/dev/null
-
-    true > "$TEMPDIR/files"
-
-    if test -f "$1" && [[ "$*" == *" --local"* ]]; then
-        info "## Fetch < $1"
-        _unzip "$1"
-    elif _v3 "$1" --pkgfile || _v2 "$1" || _v1 "$1"; then
-        true
-    else
-        die "<< Fetch $1/$ARCH failed"
-    fi
-
-    # target with or without version
-    target="$(basename "$1")"
-    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
-
-    shift 1
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --install)
-                if test -n "$2"; then
-                    # cmdlets.sh install bash@3.2:bash@3.2:bash
-                    info "== Install target and link(s)"
-
-                    local links=( ${2//:/ } )
-                    local width=$( printf 'bin/%s\n' "$target" "${links[@]}" | wc -L )
-
-                    printf "%${width}s -> %s\n" "$target" "$PREBUILTS/bin/$target"
-                    ln -sf "$PREBUILTS/bin/$target" "$target"
-
-                    for link in "${links[@]//*\//}"; do
-                        [ "$link" = "$target" ] && continue
-                        printf "%${width}s -> %s\n" "$link" "$target"
-                        ln -sf "$target" "$link"
-                    done
-                    shift 1
-                elif test -s "$TEMPDIR/files"; then
-                    info "== Install target(s)"
-                    local width=$(wc -L < "$TEMPDIR/files")
-
-                    while read -r file; do
-                        if test -L "$file"; then
-                            printf "%${width}s -> %s\n" "$(basename "$file")" "$(readlink "$file")"
-                            mv -f "$file" .
-                        else
-                            printf "%${width}s -> %s\n" "$(basename "$file")" "$file"
-                            ln -sf "$file" .
-                        fi
-                    done < <(cat "$TEMPDIR/files" | grep "^bin/" | sed "s%^%$PREBUILTS/%")
-                fi
-
-                # caveats
-                if test -s "$TEMPDIR/caveats"; then
-                    info "== Caveats:"
-                    cat "$TEMPDIR/caveats"
-                fi
-                ;;
-            *)
-                ;;
-        esac
-        shift 1
-    done
-}
 
 # link prebuilts to other place
 #  input: <targets ...> <destination>
@@ -414,22 +418,37 @@ link() {
 remove() {
     info "== remove $1"
 
-    while read -r link; do
-        rm -fv "$link" | _details_escape
-    done < <( find . -type l -lname "$1" -printf '%P\n' )
+    if grep -q "^$1 " "$PREBUILTS/.files"; then
+        IFS=' ' read -r -a files < <( grep "^$1 " "$PREBUILTS/.files" | cut -d' ' -f2- )
 
-    while read -r file; do
-        rm -fv "$file" | _details_escape
-    done < <( find . -name "$1" -printf '%P\n' )
+        rm -rfv "${files[@]}" | _details
 
-    test -f "$PREBUILTS/.installed" || return 0
+        # clear recrods
+        sed -i "\#^$1 #d" "$PREBUILTS/.files"
+        sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+    else
+        # remove links in PREBUILTS/bin
+        while read -r link; do
+            rm -rfv "$link" | _details
+        done < <( find "$PREBUILTS/bin" -type l -lname "$1" )
 
-    sed -i "\#^$1 #d" "$PREBUILTS/.installed"
+        # remove PREBUILTS/bin/target
+        rm -rfv "$PREBUILTS/bin/$1" | _details
+
+        # remove links in executable path
+        while read -r link; do
+            rm -rfv "$link" | _details
+        done < <( find . -maxdepth 1 -type l -lname "$1" )
+
+        # remove target
+        rm -rfv "$1" | _details
+    fi
+
 }
 
 # fetch package
 package() {
-    _manifest &>/dev/null
+    _manifest
 
     local pkgname pkgver pkgfile pkginfo
 
@@ -476,7 +495,7 @@ package() {
     # no v1 package()
 }
 
-update() {
+install() {
     local target
     if [ -f "$0" ]; then
         target="$0"
@@ -492,9 +511,9 @@ update() {
 
     mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
 
-    for base in "${BASE[@]}"; do
-        if _curl "$base" "$TEMPDIR/$NAME"; then
-            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details | xargs
+    for inst in "${INSTALLERS[@]}"; do
+        if _curl "$inst" "$TEMPDIR/$NAME"; then
+            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
             chmod -v a+x "$target" | _details
 
             # test target and exit
@@ -507,20 +526,60 @@ update() {
 
 # list installed cmdlets
 list() {
-    local width link real
-    info "== List installed cmdlets"
+    _println_fixed() {
+        printf "   %${1}s - %s\n" "$2" "${*:3}"
+    }
 
-    width="$(find . -maxdepth 1 -type l | wc -L)"
+    if test -n "$*"; then
+        ### for developers ###
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --cmdlets)
+                    info "== List installed cmdlets"
+                    width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | wc -L)"
+                    while IFS=' ' read -r name info; do
+                        _println_fixed "$width" "$name" "$info"
+                    done < "$PREBUILTS/.cmdlets"
+                    ;;
+                --installed)
+                    if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
+                        info "== List installed files of $2"
+                        for x in $(grep "^$2 " "$PREBUILTS/.files" | tail -n1 | cut -d' ' -f2-); do
+                            printf "=> %s\n" "$x"
+                        done
+                        shift
+                    else
+                        info "== List all installed files"
+                        while IFS=' ' read -r _ files; do
+                            for x in $files; do
+                                printf "=> %s\n" "$x"
+                            done
+                        done < "$PREBUILTS/.files"
+                    fi
+                    ;;
+            esac
+            shift 1
+        done
+    else
+        info "== List installed cmdlets"
+        width="$(find . -maxdepth 1 -type l | wc -L)"
 
-    while read -r link; do
-        real="$(readlink "$link")"
-        [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
-        printf "%${width}s => %s\n" "$(basename "$link")" "$real"
-    done < <(find . -maxdepth 1 -type l)
+        while read -r link; do
+            real="$(readlink "$link")"
+            [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
+            _println_fixed "$width" "${link##*/}" "$real"
+        done < <( find . -maxdepth 1 -type l | sort -h )
+    fi
 }
 
 # invoke cmd [args...]
 invoke() {
+    # init directories and files
+    mkdir -pv "$PREBUILTS"
+    true > "$PREBUILTS/.cmdlets"
+    true > "$PREBUILTS/.files"
+
+    # handle commands
     local ret=0
     case "$1" in
         manifest)
@@ -528,17 +587,17 @@ invoke() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            _v3_update
+            update
             ;;
         update)
             if test -n "$2"; then
                 fetch "$2" || ret=$?
             else
-                update
+                install
             fi
             ;;
         ls|list)
-            list
+            list "${@:2}"
             ;;
         ln|link)
             link "${@:2}"
@@ -568,7 +627,7 @@ invoke() {
             ;;
         package)    # fetch package files
             for x in "${@:2}"; do
-                ( package "$x" ) || ret=$?
+                ( package "$x" ) || true # ignore errors
             done
             find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
                 sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
@@ -577,7 +636,7 @@ invoke() {
             usage
             ;;
     esac
-    exit $?
+    exit "$ret"
 }
 
 LOCKFILE="/tmp/${0//\//_}.lock"
@@ -593,7 +652,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
-    update
+    install
 else
     cd "$(dirname "$0")" && invoke "$@" || exit $?
 fi
