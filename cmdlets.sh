@@ -7,7 +7,6 @@ export LANG="${LANG:-en_US.UTF-8}"
 
 VERSION=1.0-alpha
 
-API="${CMDLETS_API:-v3}"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
@@ -127,64 +126,6 @@ _unzip() (
     tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
 )
 
-# cmdlet v1
-#  input: path/to/file
-_v1() {
-    local name="$1"
-
-    [[ "$name" =~ / ]] || name="bin/$name"
-
-    info1 "#1 Fetch $name"
-
-    _curl "$name" || return $?
-
-    mkdir -p "$PREBUILTS/$(dirname "$name")"
-
-    cp -f "$TEMPDIR/$name" "$PREBUILTS/$name"
-
-    chmod a+x "$PREBUILTS/$name"
-
-    echo "$name" > "$TEMPDIR/files"
-
-    # update installed: name version build=n
-    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
-    echo "$1 0.0 build=0" >> "$PREBUILTS/.cmdlets"
-}
-
-# cmdlet v2:
-#  input: name
-_v2() {
-    [ "$API" != "v1" ] || return 127
-
-    local pkgfile pkgver pkginfo
-
-    # zlib
-    # zlib@1.3.1
-    # zlib/minigzip@1.3.1
-    IFS='@' read -r pkgfile pkgver <<< "$1"
-
-    test -n "$pkgver" || pkgver="latest"
-
-    pkginfo="$pkgfile@$pkgver"
-
-    info2 "#2 Fetch $1 < $pkginfo"
-
-    _curl "$pkginfo" || return 1
-
-    cat "$TEMPDIR/$pkginfo" | _details
-
-    # v2: sha pkgfile
-    IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
-
-    info2 "#2 Fetch $1 < $pkgfile"
-
-    _unzip "$pkgfile" || return 2
-
-    # update installed: name version build=n
-    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
-    echo "$1 $pkgver build=0" >> "$PREBUILTS/.cmdlets"
-}
-
 # search manifest for package
 #  input: name [--pkgname] [--pkgfile] [--any]
 #  output: multi-line match results
@@ -229,33 +170,6 @@ _search() {
     done | uniq
 }
 
-# cmdlet v3/manifest
-#  input: pkgfile [options]
-#  output: return 0 on success
-_v3() {
-    [ "$API" = "v3" ] || return 127
-
-    local pkgname pkgfile pkgver
-
-    IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" "${@:2}" | tail -n 1 )
-
-    test -n "$pkgfile" || return 1
-
-    info3 "#3 Fetch $1 < $pkgfile"
-
-    # v3 git releases do not have file hierarchy
-    _unzip "$pkgfile" || _unzip "${pkgfile##*/}" || return 1
-
-    IFS='/@' read -r pkgname pkgfile pkgver <<< "${pkgfile%.tar.*}"
-
-    # caveats
-    _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
-
-    # update installed: name version build=n
-    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
-    echo "$1 $pkgver $pkgbuild" >> "$PREBUILTS/.cmdlets"
-}
-
 # v3 only
 search() {
     info3 "#3 Search $*"
@@ -268,6 +182,62 @@ search() {
 #  output: return 0 on success
 fetch() {
     true > "$TEMPDIR/files"
+
+    # update installed: name version build=n
+    sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+
+    mkdir -p "$PREBUILTS/bin"
+    # cmdlet v1: path/to/file
+    _v1() {
+        info1 "#1 Fetch $1"
+        local name="bin/$1"
+        _curl "$name" "$PREBUILTS/$name" && chmod a+x "$PREBUILTS/$name" || return $?
+
+        echo "$name" > "$TEMPDIR/files"
+        echo "$1 0.0 build=0" >> "$PREBUILTS/.cmdlets"
+    }
+
+    # cmdlet v2: name
+    _v2() {
+        local pkgfile pkgver pkginfo
+
+        # zlib
+        # zlib@1.3.1
+        # zlib/minigzip@1.3.1
+        IFS='@' read -r pkgfile pkgver <<< "$1"
+        test -n "$pkgver" || pkgver="latest"
+        pkginfo="$pkgfile@$pkgver"
+
+        info2 "#2 Fetch $1 < $pkginfo"
+        _curl "$pkginfo" || return 1
+
+        # v2: sha pkgfile
+        IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
+
+        info2 "#2 Fetch $1 < $pkgfile"
+        _unzip "$pkgfile" || return 2   # updated files
+
+        echo "$1 $pkgver build=0" >> "$PREBUILTS/.cmdlets"
+    }
+
+    # cmdlet v3/manifest: pkgfile
+    _v3() {
+        local pkgname pkgfile pkgvern
+
+        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" "${@:2}" | tail -n 1 )
+        test -n "$pkgfile" || return 1
+
+        info3 "#3 Fetch $1 < $pkgfile"
+        # v3 git releases do not have file hierarchy
+        _unzip "$pkgfile" || _unzip "${pkgfile##*/}" || return 1
+
+        IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
+
+        # caveats
+        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
+
+        echo "$1 $pkgvern $pkgbuild" >> "$PREBUILTS/.cmdlets"
+    }
 
     if test -f "$1" && [[ "$*" == *" --local"* ]]; then
         info "## Fetch < $1"
