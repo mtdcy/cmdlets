@@ -250,7 +250,14 @@ fetch() {
 
     # update files list: name files ...
     sed -i "\#^$1 #d" "$PREBUILTS/.files"
-    echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+    # fails with a lot of files
+    #echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+    {
+        echo -en "$1 "
+        tr -s '\n' ' ' < "$TEMPDIR/files"
+        sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
+        echo -en "\n"
+    } >> "$PREBUILTS/.files"
 
     # target with or without version
     target="${1##*/}"
