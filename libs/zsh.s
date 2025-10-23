@@ -21,9 +21,7 @@ libs_args=(
 
     # avoid hardcode PREFIX
     --enable-etcdir=/etc
-    --enable-fndir=/usr/share/zsh/functions
     --enable-scriptdir=/usr/share/zsh/scripts
-    --enable-site-fndir=/usr/share/zsh/site-functions
     --enable-site-scriptdir=/usr/share/zsh/site-scripts
     --enable-runhelpdir=/usr/share/zsh/help
 
@@ -40,7 +38,11 @@ libs_args=(
     --disable-zshrc     # no global zshrc
     --disable-gdbm      # GDBM
 
+    # modules
     --enable-dynamic    # dynamic modules
+
+    # functions
+    --enable-fndir="'$PREFIX/share/zsh/functions'"
 
     --enable-static
 )
@@ -72,8 +74,14 @@ libs_build() {
     caveats << EOF
 static built zsh @ $libs_ver
 
-defaults modules are builtin
+default modules are builtin
 
+functions:
+
+    cmdlets.sh install zsh/functions
+    cmdlets.sh link share/zsh/functions ~/.zfunc
+
+    then, add 'fpath=(~/.zfunc)' to ~/.zshrc
 EOF
 }
 
