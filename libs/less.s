@@ -21,9 +21,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make less || return 1
+    configure
 
-    cmdlet ./less && check less --version
+    make less
+
+    cmdlet ./less
+
+    check less --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

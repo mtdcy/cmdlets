@@ -13,7 +13,7 @@ utils=(
     cp rm ls ln install
     readlink unlink realpath
     sort uniq wc
-    cat echo printf numfmt
+    cat echo more printf numfmt
 )
 
 libs_args=(
