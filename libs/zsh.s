@@ -52,11 +52,15 @@ libs_build() {
     # Ref: https://sourceforge.net/p/zsh/code/ci/ab4d62eb975a4c4c51dd35822665050e2ddc6918/
     export CFLAGS+=" -Wno-implicit-int"
 
+    # needs patch supoort
+    export PCRE_CONFIG="$PREFIX/bin/pcre2-config --prefix=$PREFIX"
+
     slogcmd ./Util/preconfig
 
     configure
 
     # static modules
+    sed -i '/pcre/s/link=no/link=static/g' config.modules && # enable-pcre not working
     sed -i 's/link=dynamic/link=static/g' config.modules &&
     sed -i 's/load=no/load=yes/g' config.modules &&
     make prep
@@ -66,6 +70,9 @@ libs_build() {
     pkgfile functions   -- make install.fns
 
     #pkgfile modules     -- make install.modules
+
+    # test zsh after install modules and functions
+    slogcmd ./Src/zsh -c "'zmodload zsh/pcre'" || die "build static zsh failed"
 
     cmdlet ./Src/zsh
 
