@@ -6,7 +6,7 @@ libs_lic="MIT"
 libs_ver=0.2.2
 libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=4a847a3aaf241d11f07fdc04ef36d73c722759675858665bc17e94f56c4fbfb3
-libs_dep=()
+libs_dep=( libiconv )
 
 utils=(
     arch base32 base64
@@ -25,9 +25,14 @@ libs_args=(
 )
 
 libs_build() {
-    cargo build &&
+    # libiconv has no pc file
+    export LIBICONV_NO_PKG_CONFIG=1
+    export LIBICONV_STATIC=1
 
-    cmdlet $(find target -name coreutils) coreutils "${utils[@]}" &&
+    cargo build
+
+    cmdlet "$(find target -name coreutils)" coreutils \
+        "${utils[@]}"
 
     check coreutils --version
 }
