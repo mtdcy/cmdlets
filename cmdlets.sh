@@ -247,7 +247,7 @@ fetch() {
         info2 "#2 Fetch $1 < $pkgfile"
         _unzip "$pkgfile" || return 2   # updated files
 
-        echo "${1##*/} $pkgvern build=0" >> "$PREBUILTS/.cmdlets"
+        echo "$1 $pkgvern build=0" >> "$PREBUILTS/.cmdlets"
     }
 
     # cmdlet v3/manifest: pkgfile
@@ -267,7 +267,7 @@ fetch() {
         _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
 
         # update installed
-        echo "${1##*/} $pkgvern $pkgbuild" >> "$PREBUILTS/.cmdlets"
+        echo "$1 $pkgvern $pkgbuild" >> "$PREBUILTS/.cmdlets"
     }
 
     if test -f "$1" && [[ "$*" == *" --local"* ]]; then
@@ -279,21 +279,15 @@ fetch() {
         die "<< Fetch $1/$ARCH failed"
     fi
 
-    # target: remove pkgname
-    target="${1##*/}"
-
     # update files list: name files ...
-    _edit "\#^$target #d" "$PREBUILTS/.files"
+    _edit "\#^$1 #d" "$PREBUILTS/.files"
     # fails with a lot of files
     #echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
     {
-        echo -en "$target "
+        echo -en "$1 "
         sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
         echo -en "\n"
     } >> "$PREBUILTS/.files"
-
-    # target with or without version
-    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"
 
     # ln helper: width from to
     _ln_println() {
@@ -306,7 +300,11 @@ fetch() {
         ln -sf "$2" "$3"
     }
 
+    target="${1##*/}"                                           # remove pkgname
+    test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
+    test -f "$PREBUILTS/bin/$target" || die "target $1 not exists"
     shift 1
+
     local links=()
     while [ $# -gt 0 ]; do
         case "$1" in
