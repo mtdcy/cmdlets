@@ -259,7 +259,7 @@ fetch() {
 
         info3 "#3 Fetch $1 < $pkgfile"
         # v3 git releases do not have file hierarchy
-        _unzip "$pkgfile" || _unzip "${pkgfile##*/}" || return 1
+        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || return 1
 
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
@@ -475,13 +475,13 @@ package() {
         IFS=' ' read -r -a pkgfiles < <( _search "$1" --pkgname | cut -d' ' -f2 | xargs )
     fi
 
-    test -n "${pkgfiles[*]}"            || die "<< Fetch package $1/$ARCH failed"
+    test -n "${pkgfiles[*]}"                        || die "<< Fetch package $1/$ARCH failed"
 
     info "=> ${pkgfiles[*]}"
 
     for pkgfile in "${pkgfiles[@]}"; do
         info "## Fetch $pkgfile"
-        _unzip "$pkgfile"               || die "<< Fetch package $pkgfile/$ARCH failed"
+        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || die "<< Fetch package $pkgfile/$ARCH failed"
     done
 
     touch "$PREBUILTS/.$pkgname.d" # mark as ready
