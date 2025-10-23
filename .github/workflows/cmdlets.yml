@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - cmdlets.sh
+      - .github/workflows/cmdlets.yml
     branches:
       - main
 
@@ -42,35 +43,40 @@ jobs:
           which cmdlets.sh
           pushd "$(which cmdlets.sh | xargs dirname)"
 
-          # cmdlet: 
+          # 1 - cmdlets
+          # 1.1
           cmdlets.sh install minigzip
           find prebuilts/bin/minigzip
           ls -l minigzip
+
+          cmdlets.sh ls | grep " minigzip -"
           rm -rf minigzip prebuilts
 
+          # 1.2
           cmdlets.sh install minigzip@1.3.1:minigzip
           find prebuilts/bin/minigzip
           ls -l minigzip
+
+          cmdlets.sh ls | grep " minigzip - 1.3.1"
           rm -rf minigzip prebuilts
 
+          # 1.3
           cmdlets.sh install zlib/minigzip@1.3.1:minigzip
           find prebuilts/bin/minigzip
           ls -l minigzip
+
+          cmdlets.sh ls | grep " minigzip - 1.3.1"
           rm -rf minigzip prebuilts
 
-          # library:
-          cmdlets.sh library libz
-          find . -name "prebuilts/lib/libz.a"
-          find . -name "prebuilts/include/zlib.h"
-          rm -rf prebuilts
-
-          # package: 
+          # 2 - package
+          # 2.1
           cmdlets.sh package zlib
           find prebuilts/bin/minigzip
           find prebuilts/lib/libz.a
           find prebuilts/include/zlib.h
           rm -rf prebuilts
 
+          # 2.2
           cmdlets.sh package zlib@1.3.1
           find prebuilts/bin/minigzip
           find prebuilts/lib/libz.a
