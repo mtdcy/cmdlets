@@ -35,10 +35,14 @@ libs_args=(
     --enable-zsh-secure-free
     --enable-unicode9
     --with-tcsetpgrp
+    --with-term-lib=ncurses
 
-    DL_EXT=bundle
+    --disable-zshrc     # no global zshrc
+    --disable-gdbm      # GDBM
 
-    #--disable-dynamic  # modules
+    --enable-dynamic    # dynamic modules
+
+    --enable-static
 )
 
 libs_build() {
@@ -46,17 +50,31 @@ libs_build() {
     # Ref: https://sourceforge.net/p/zsh/code/ci/ab4d62eb975a4c4c51dd35822665050e2ddc6918/
     export CFLAGS+=" -Wno-implicit-int"
 
+    slogcmd ./Util/preconfig
+
     configure
+
+    # static modules
+    sed -i 's/link=dynamic/link=static/g' config.modules &&
+    sed -i 's/load=no/load=yes/g' config.modules &&
+    make prep
 
     make
 
     pkgfile functions   -- make install.fns
 
-    pkgfile modules     -- make install.modules
+    #pkgfile modules     -- make install.modules
 
     cmdlet ./Src/zsh
 
     check zsh --version
+
+    caveats << EOF
+static built zsh @ $libs_ver
+
+defaults modules are builtin
+
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
