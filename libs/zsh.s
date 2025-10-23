@@ -21,7 +21,9 @@ libs_args=(
 
     # avoid hardcode PREFIX
     --enable-etcdir=/etc
+    --enable-fndir=/usr/share/zsh/functions
     --enable-scriptdir=/usr/share/zsh/scripts
+    --enable-site-fndir=/usr/share/zsh/site-functions
     --enable-site-scriptdir=/usr/share/zsh/site-scripts
     --enable-runhelpdir=/usr/share/zsh/help
 
@@ -40,9 +42,6 @@ libs_args=(
 
     # modules
     --enable-dynamic    # dynamic modules
-
-    # functions
-    --enable-fndir="'$PREFIX/share/zsh/functions'"
 
     --enable-static
 )
@@ -65,9 +64,12 @@ libs_build() {
     sed -i 's/load=no/load=yes/g' config.modules &&
     make prep
 
-    make
+    # no common path for macOS and Linux
+    make MODDIR=/no-zsh-modules
 
-    pkgfile functions   -- make install.fns
+    pkgfile functions   -- make install.fns \
+        datarootdir="$PREFIX/share/zsh"     \
+        fndir="$PREFIX/share/zsh/functions"
 
     #pkgfile modules     -- make install.modules
 
