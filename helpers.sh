@@ -326,7 +326,9 @@ _go_init() {
     export GO
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    export GOPATH="${GOPATH:-$HOME/.go}"
+    #  using ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  set GOPATH in host profile
+    export GOPATH="${GOPATH:-$ROOT/.go}"
     #export GOCACHE="$ROOT/.go/go-build"
     #export GOMODCACHE="$ROOT/.go/pkg/mod"
 
