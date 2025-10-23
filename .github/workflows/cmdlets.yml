@@ -12,21 +12,32 @@ on:
 
 jobs:
   install:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner:
+          - ubuntu-latest
+          - macos-latest
+
     steps:
       - name: Install cmdlets.sh
         shell: bash
         run: |
+          export PATH="$HOME/.local/bin:/usr/bin:/bin"
+
           if curl --fail --connect-timeout 3 -o /dev/null -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
             bash -ex -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
           else
             bash -ex -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
           fi
 
+          echo "$PATH" >> $GITHUB_PATH
+
       - name: Test cmdlets.sh
         shell: bash
         run: |
           set -ex
+          export PATH="$HOME/.local/bin:/usr/bin:/bin"
 
           which cmdlets.sh
           pushd "$(which cmdlets.sh | xargs dirname)"
