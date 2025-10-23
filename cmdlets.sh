@@ -115,6 +115,17 @@ _curl() (
     echo ">> ${dest##"$TEMPDIR/"}"
 )
 
+if tar --version | grep -qFw bsdtar; then
+    # bsdtar will output lines 'x path/to/file'
+    _tar() {
+        tar "$@" 2>&1 | sed 's/x //'
+    }
+else
+    _tar() {
+        tar "$@"
+    }
+fi
+
 # save package to PREBUILTS
 _unzip() (
     local zip="$1"
@@ -123,7 +134,7 @@ _unzip() (
         _curl "$1" "$zip" || return $?
     fi
 
-    tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
+    _tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
 )
 
 # search manifest for package
