@@ -345,7 +345,7 @@ update() {
                 info "<< no update"
             fi
         fi
-    done < "$PREBUILTS/.cmdlets"
+    done < <( sort "$PREBUILTS/.cmdlets" )
 }
 
 
@@ -517,7 +517,7 @@ list() {
                 width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | wc -L)"
                 while IFS=' ' read -r name info; do
                     _ls_println "$width" "$name" "$info"
-                done < "$PREBUILTS/.cmdlets"
+                done < <( sort "$PREBUILTS/.cmdlets" )
                 ;;
             --files)
                 for x in "${args[@]}"; do
