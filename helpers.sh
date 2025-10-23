@@ -202,7 +202,7 @@ _cargo_init() {
     # host act runner won't inherit envs from host and
     # $ROOT will be deleted when jobs finished.
 
-    # local rustup, crates and cache
+    # rustup and cargo
     export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
 
     # always prepend cargo bin to PATH
@@ -235,7 +235,11 @@ _cargo_init() {
 
     export CARGO RUSTC
 
+    # set CARGO_HOME again for local crates and cache
+    export CARGO_HOME="$ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CL_NJOBS"
+
+    mkdir -p "$CARGO_HOME"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L$PREFIX/lib"
@@ -322,7 +326,9 @@ _go_init() {
     export GO
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    export GOPATH="${GOPATH:-$HOME/.go}"
+    #  using ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  set GOPATH in host profile
+    export GOPATH="${GOPATH:-$ROOT/.go}"
     #export GOCACHE="$ROOT/.go/go-build"
     #export GOMODCACHE="$ROOT/.go/pkg/mod"
 

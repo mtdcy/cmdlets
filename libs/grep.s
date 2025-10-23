@@ -13,10 +13,14 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
-    --enable-perl-regexp
+    --enable-perl-regexp # pcre2
 
     --without-selinux
+    --disable-rpath
+
+    # no i18n or nls
     --disable-nls
+    --without-libintl-prefix
 
     --disable-doc
     --disable-man
@@ -26,16 +30,19 @@ libs_args=(
 
 libs_build() {
     # note: egrep & fgrep are obsolescent;
-    configure && 
-    make -C lib &&
-    make -C src grep &&
+    configure
+
+    make -C lib
+    make -C src grep
+
+    # check: grep with pcre
+    echo FOO | ./src/grep -P '(?i)foo' || die "check grep with pcre failed"
 
     # install grep
-    cmdlet ./src/grep &&
+    cmdlet ./src/grep
+
     # verify
-    check grep &&
-    # check: grep with pcre
-    echo FOO | grep -P '(?i)foo'
+    check grep
 }
 
 
