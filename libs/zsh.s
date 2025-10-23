@@ -20,12 +20,12 @@ libs_args=(
     --disable-silent-rules
 
     # avoid hardcode PREFIX
-    --enable-etcdir=/etc
-    --enable-fndir=/usr/share/zsh/functions
-    --enable-scriptdir=/usr/share/zsh/scripts
-    --enable-site-fndir=/usr/share/zsh/site-functions
-    --enable-site-scriptdir=/usr/share/zsh/site-scripts
-    --enable-runhelpdir=/usr/share/zsh/help
+    --enable-etcdir=/no-etc
+    --enable-fndir=/no-functions
+    --enable-scriptdir=/no-scripts
+    --enable-site-fndir=/no-site-functions
+    --enable-site-scriptdir=/no-site-scripts
+    --enable-runhelpdir=/no-help
 
     # features
     --enable-cap
