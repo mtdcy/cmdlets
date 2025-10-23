@@ -302,7 +302,6 @@ fetch() {
 
     target="${1##*/}"                                           # remove pkgname
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
-    test -f "$PREBUILTS/bin/$target" || die "target $1 not exists"
     shift 1
 
     local links=()
