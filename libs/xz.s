@@ -28,15 +28,15 @@ libs_build() {
     configure && make && make check || return $?
 
     # libraries
-    pkgfile liblzma  -- make install -C src/liblzma  &&
+    pkgfile liblzma  -- make install -C src/liblzma
 
     # binaries and links
-    pkgfile lzmainfo -- make install -C src/lzmainfo &&
-    pkgfile xz       -- make install -C src/xz       &&
-    pkgfile xzdec    -- make install -C src/xzdec    &&
+    pkgfile lzmainfo -- make install-exec -C src/lzmainfo
+    pkgfile xz       -- make install-exec -C src/xz
+    pkgfile xzdec    -- make install-exec -C src/xzdec
 
     # scripts and links
-    pkgfile scripts  -- make install -C src/scripts  &&
+    pkgfile scripts  -- make install-exec -C src/scripts
 
     # visual verify
     check xz --version
