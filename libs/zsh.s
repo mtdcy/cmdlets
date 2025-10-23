@@ -1,4 +1,4 @@
-# C XSLT library for GNOME
+# zsh shell
 #
 # shellcheck disable=SC2034
 libs_ver=5.9
