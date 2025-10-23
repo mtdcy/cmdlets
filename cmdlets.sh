@@ -383,7 +383,12 @@ remove() {
     info "== remove $name"
 
     _rm_println() {
-        rm -rfv "$@" | _details
+        if test -L "$1"; then
+            echo "=> removed '$1 -> $(readlink "$1")'"
+            rm -rf "$1"
+        else
+            rm -rfv "$1" | _details
+        fi
     }
 
     if grep -q "^$name " "$PREBUILTS/.files"; then
@@ -408,7 +413,7 @@ remove() {
 
         # remove links in executable path
         while read -r link; do
-            _rm_println "$link"
+            _rm_println "${link#./}"
         done < <( find . -maxdepth 1 -type l -lname "$name" )
 
         # remove target
