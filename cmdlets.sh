@@ -552,7 +552,12 @@ invoke() {
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
 
     touch "$MANIFEST"
-    _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+    case "$1" in
+        usage|help|ls|list|ln|link|rm|remove|uninstall) ;;
+        *)
+            _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+            ;;
+    esac
 
     # handle commands
     local ret=0
