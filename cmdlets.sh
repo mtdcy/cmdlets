@@ -503,7 +503,7 @@ install() {
             chmod -v a+x "$target" | _details
 
             # caveats about coretuils
-            slogi "\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹"
+            info "\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹"
 
             # test target and exit
             _on_exit && exec "$target" --update
