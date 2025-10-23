@@ -188,6 +188,11 @@ _edit() {
 }
 fi
 
+# replace 'wc -L' which is not availabe on macOS
+_width() {
+    awk '{ if ( length > x ) { x = length } } END { print x }'
+}
+
 # fetch cmdlet: name [options]
 #  input: name [--install [links...] ]
 #  output: return 0 on success
@@ -297,7 +302,7 @@ fetch() {
             --install)
                 info "== Install target and link(s)"
 
-                local width=$(grep "^bin/" "$TEMPDIR/files" | wc -L)
+                local width=$(grep "^bin/" "$TEMPDIR/files" | _width )
 
                 while read -r file; do
                     _ln_println "$width" "$file" "${file##*/}"
@@ -525,7 +530,7 @@ list() {
         case "$opt" in
             --cmdlets)
                 info "== List installed cmdlets"
-                width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | wc -L)"
+                width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | _width)"
                 while IFS=' ' read -r name info; do
                     _ls_println "$width" "$name" "$info"
                 done < <( sort "$PREBUILTS/.cmdlets" )
@@ -541,7 +546,7 @@ list() {
                 ;;
             --links)
                 info "== List installed links"
-                width="$(find . -maxdepth 1 -type l | wc -L)"
+                width="$(find . -maxdepth 1 -type l | _width)"
 
                 while read -r link; do
                     real="$(readlink "$link")"
