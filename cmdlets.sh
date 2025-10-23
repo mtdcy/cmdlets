@@ -522,7 +522,10 @@ list() {
             --files)
                 for x in "${args[@]}"; do
                     info "== List installed files of $x"
-                    grep "^$x " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' | _details
+                    grep "^$x " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' | _details || {
+                        # print link and target
+                        echo "=> $x -> $(readlink "$x")"
+                    }
                 done
                 ;;
             --links)
