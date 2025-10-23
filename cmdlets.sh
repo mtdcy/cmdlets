@@ -379,36 +379,40 @@ link() {
 # remove cmdlets
 #  input: name
 remove() {
-    info "== remove $1"
+    local name="${1##*/}" # formated name
+    info "== remove $name"
 
     _rm_println() {
         rm -rfv "$@" | _details
     }
 
-    if grep -q "^$1 " "$PREBUILTS/.files"; then
-        IFS=' ' read -r -a files < <( grep "^$1 " "$PREBUILTS/.files" | cut -d' ' -f2- )
-
-        _rm_println "${files[@]}"
+    if grep -q "^$name " "$PREBUILTS/.files"; then
+        # fails with `rm: Argument list too long'
+        #IFS=' ' read -r -a files < <( grep "^$name " "$PREBUILTS/.files" | cut -d' ' -f2- )
+        #_rm_println "${files[@]}"
+        while read -r file; do
+            _rm_println "$file"
+        done < <( grep "^$name " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' )
 
         # clear recrods
-        sed -i "\#^$1 #d" "$PREBUILTS/.files"
-        sed -i "\#^$1 #d" "$PREBUILTS/.cmdlets"
+        sed -i "\#^$name #d" "$PREBUILTS/.files"
+        sed -i "\#^$name #d" "$PREBUILTS/.cmdlets"
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
             _rm_println "$link"
-        done < <( find "$PREBUILTS/bin" -type l -lname "$1" )
+        done < <( find "$PREBUILTS/bin" -type l -lname "$name" )
 
         # remove PREBUILTS/bin/target
-        _rm_println "$PREBUILTS/bin/$1"
+        _rm_println "$PREBUILTS/bin/$name"
 
         # remove links in executable path
         while read -r link; do
             _rm_println "$link"
-        done < <( find . -maxdepth 1 -type l -lname "$1" )
+        done < <( find . -maxdepth 1 -type l -lname "$name" )
 
         # remove target
-        _rm_println "$1"
+        _rm_println "$name"
     fi
 }
 
