@@ -626,7 +626,7 @@ invoke() {
             done
             while read -r pc; do
                 _edit "s%^prefix=.*$%prefix=$PREBUILTS%g" "$pc"
-            done
+            done < <( find "$PREBUILTS/lib/pkgconfig" -name "*.pc" )
             ;;
         *)
             usage
