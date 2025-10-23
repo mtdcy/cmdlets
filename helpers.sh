@@ -202,7 +202,7 @@ _cargo_init() {
     # host act runner won't inherit envs from host and
     # $ROOT will be deleted when jobs finished.
 
-    # local rustup, crates and cache
+    # rustup and cargo
     export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
 
     # always prepend cargo bin to PATH
@@ -235,7 +235,11 @@ _cargo_init() {
 
     export CARGO RUSTC
 
+    # set CARGO_HOME again for local crates and cache
+    export CARGO_HOME="$ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CL_NJOBS"
+
+    mkdir -p "$CARGO_HOME"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L$PREFIX/lib"
