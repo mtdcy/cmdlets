@@ -348,9 +348,6 @@ fetch() {
 
 update() {
     local pkgfile pkgvern pkgbuild
-    info "\n🚀 Update coreutils ..."
-    fetch coreutils --install
-
     while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "\n🚀 Update $pkgfile ..."
 
@@ -514,7 +511,7 @@ install() {
             chmod -v a+x "$target" | _details
 
             # caveats about coretuils
-            info "\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹"
+            info "\n\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹\n"
 
             # test target and exit
             _on_exit && exec "$target" --update
