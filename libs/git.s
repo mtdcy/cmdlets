@@ -140,9 +140,9 @@ all tools are installed in and loaded from executable path
 
 git difftool and mergetool need mergetools from \$HOME/.mergetools:
 
-cmdlet.sh install git
-cmdlet.sh install mergetools
-cmdlet.sh link share/mergetools ~/.mergetools
+cmdlets.sh install git
+cmdlets.sh install mergetools
+cmdlets.sh link share/mergetools ~/.mergetools
 
 OR you can set MERGE_TOOLS_DIR env to where mergetools is.
 EOF
