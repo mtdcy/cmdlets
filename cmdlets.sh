@@ -177,6 +177,17 @@ search() {
     _search "$@" | sort -u | _details
 }
 
+# edit file in place
+if sed --version &>/dev/null; then
+_edit() {
+    sed -i "$1" "$2"
+}
+else
+_edit() {
+    sed -i '' "$1" "$2"
+}
+fi
+
 # fetch cmdlet: name [options]
 #  input: name [--install [links...] ]
 #  output: return 0 on success
@@ -190,7 +201,7 @@ fetch() {
     true > "$TEMPDIR/files"
 
     # clear installed: name version build=n
-    sed -i "\#^${1##*/} #d" "$PREBUILTS/.cmdlets"
+    _edit "\#^${1##*/} #d" "$PREBUILTS/.cmdlets"
 
     mkdir -p "$PREBUILTS/bin"
     # cmdlet v1: path/to/file
@@ -256,7 +267,7 @@ fetch() {
     target="${1##*/}"
 
     # update files list: name files ...
-    sed -i "\#^$target #d" "$PREBUILTS/.files"
+    _edit "\#^$target #d" "$PREBUILTS/.files"
     # fails with a lot of files
     #echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
     {
@@ -310,7 +321,7 @@ fetch() {
     done
 
     # append file symlinks to last line
-    test -z "${links[*]}" || sed -i "$ s%$% ${links[*]}%" "$PREBUILTS/.files"
+    test -z "${links[*]}" || _edit "$ s%$% ${links[*]}%" "$PREBUILTS/.files"
 
     # caveats
     if test -s "$TEMPDIR/caveats"; then
@@ -400,8 +411,8 @@ remove() {
         done < <( grep "^$name " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' )
 
         # clear recrods
-        sed -i "\#^$name #d" "$PREBUILTS/.files"
-        sed -i "\#^$name #d" "$PREBUILTS/.cmdlets"
+        _edit "\#^$name #d" "$PREBUILTS/.files"
+        _edit "\#^$name #d" "$PREBUILTS/.cmdlets"
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
@@ -608,8 +619,9 @@ invoke() {
             for x in "${@:2}"; do
                 ( package "$x" ) || true # ignore errors
             done
-            find "$PREBUILTS/lib/pkgconfig" -name "*.pc" -exec \
-                sed -i "s%^prefix=.*$%prefix=$PREBUILTS%g" {} \;
+            while read -r pc; do
+                _edit "s%^prefix=.*$%prefix=$PREBUILTS%g" "$pc"
+            done
             ;;
         *)
             usage
