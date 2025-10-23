@@ -337,6 +337,9 @@ fetch() {
 
 update() {
     local pkgfile pkgvern pkgbuild
+    info "\n🚀 Update coreutils ..."
+    fetch coreutils --install
+
     while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "\n🚀 Update $pkgfile ..."
 
@@ -498,6 +501,9 @@ install() {
         if _curl "$inst" "$TEMPDIR/$NAME"; then
             cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
             chmod -v a+x "$target" | _details
+
+            # caveats about coretuils
+            slogi "\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹"
 
             # test target and exit
             _on_exit && exec "$target" --update
