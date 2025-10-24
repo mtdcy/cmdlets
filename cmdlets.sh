@@ -96,6 +96,8 @@ _details_escape() {
 _exists() (
     if [[ "$1" =~ ^https?:// ]]; then
         curl -fsIL -o /dev/null "$1"
+    elif [[ "$REPO" =~ ^flat+ ]]; then
+        curl -fsIL -o /dev/null "${REPO#flat+}/$ARCH/${1##*/}"
     else
         curl -fsIL -o /dev/null "$REPO/$ARCH/$1"
     fi
