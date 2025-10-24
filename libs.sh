@@ -59,7 +59,11 @@ slogi() { _slog info  "$@" >&2;             }
 slogw() { _slog warn  "$@" >&2;             }
 sloge() { _slog error "$@" >&2; return 1;   }
 
-die()   { _slog error "$@" >&2; exit 1;     } # exit shell
+die()   {
+    _tty_reset # in case Ctrl-C happens
+    _slog error "$@"
+    exit 1 # exit shell
+}
 
 _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
@@ -78,11 +82,17 @@ _capture() {
             tput rc                     # restore cursor position
         done < <(tee -a "$_LOGFILE")
 
-        tput ed                         # clear to end of screen
-        tput smam                       # line break on
-        tput sgr0                       # reset colors
+        _tty_reset
     else
         tee -a "$_LOGFILE"
+    fi
+}
+
+_tty_reset() {
+    if which tput &>/dev/null; then
+        tput ed         # clear to end of screen
+        tput smam       # line break on
+        tput sgr0       # reset colors
     fi
 }
 
@@ -253,7 +263,10 @@ _init() {
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
-    export LD_LIBRARY_PATH=$PREFIX/lib
+    #export LD_LIBRARY_PATH=$PREFIX/lib
+    # rpath is meaningless for static libraries and executables, and
+    # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
+    # will help find out the mistakes.
 
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
@@ -493,15 +506,17 @@ _load() {
 
     local file="libs/$1.s"
 
+    # test -f: call _load in subshell may load libraries multiple times
+
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
+    test -f "$TEMPDIR/$1.s" || sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
 
     . "$TEMPDIR/$1.s"
 
     # default values:
     [ -n "$libs_name" ] || libs_name="$1"
 
-    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+    test -f "$TEMPDIR/$libs_name.patch" || sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 }
 
 # compile target
@@ -523,12 +538,11 @@ compile() {
 
         test -n "$libs_url" || die "missing libs_url"
 
-        # prepare work dir
-        mkdir -p "$PREFIX"
-        mkdir -p "${_LOGFILE%/*}"
-
+        # prepare work directories
         local workdir="$WORKDIR/$libs_name-$libs_ver"
 
+        mkdir -p "$PREFIX"
+        mkdir -p "${_LOGFILE%/*}"
         mkdir -p "$workdir" && cd "$workdir"
 
         # clear logfile
@@ -558,6 +572,8 @@ compile() {
 
         slogi "<<<<<" "$libs_name@$libs_ver"
     ) || {
+        _tty_reset
+
         sleep 1 # let _capture() finish
 
         mv "$_LOGFILE" "$_LOGFILE.fail"
@@ -610,7 +626,9 @@ _deps_check() {
         fi
     done
 
-    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    # sort is not needed as build() will sort before compile targets
+    #[ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    echo "${list[@]}"
 }
 
 _deps_sort() {
@@ -641,8 +659,6 @@ _deps_sort() {
 # build <lib list>
 build() {
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
-
-    ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()

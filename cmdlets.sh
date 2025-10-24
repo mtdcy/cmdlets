@@ -151,7 +151,7 @@ _search() {
 
     local pkgname pkgfile pkgvern
 
-    IFS='@' read -r pkgfile pkgvern  <<< "$1"
+    IFS='@' read -r pkgfile pkgvern  <<< "${1%.tar.*}"
 
     # v3: no latest support
     [ "$pkgvern" = "latest" ] && unset pkgvern || true
@@ -172,7 +172,14 @@ _search() {
                 fi
                 ;;
             --pkgname)
-                grep " ${pkgname:-$pkgfile}/.*@$pkgvern" "$MANIFEST" || true
+                : "${pkgname:=$pkgfile}"
+
+                # needs pkgvern when search for pkgname?
+                #if test -z "$pkgvern"; then
+                #    IFS=' '  read -r _ pkgfile _ < <( grep " $pkgname/" "$MANIFEST" | tail -n 1 )
+                #    IFS='/@' read -r _ _ pkgvern <<< "${pkgfile%.tar.*}"
+                #fi
+                grep " $pkgname/.*@$pkgvern" "$MANIFEST" || true
                 ;;
             --any)
                 grep -F "$1" "$MANIFEST" || true
@@ -456,8 +463,8 @@ package() {
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgvern <<< "$1"
 
-    # v3: latest tag
-    test -n "$pkgvern" || pkgvern=latest
+    # v2: latest version
+    : "${pkgvern:=latest}"
 
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
@@ -468,8 +475,14 @@ package() {
         # sha pkgfile ...
         IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo" | xargs )
     else
-        # name pkgfile sha ...
-        IFS=' ' read -r -a pkgfiles < <( _search "$1" --pkgname | cut -d' ' -f2 | xargs )
+        # v3/manifest: name pkgfile sha ...
+        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
+            IFS=' '  read -r _ pkginfo _ < <( _search "$1" --pkgname | tail -n 1 )
+            IFS='/@' read -r _ _ pkgvern <<< "${pkginfo%.tar.*}"
+        fi
+        test -n "$pkgvern"                          || die "<< failed to find pkgvern for $pkgname"
+
+        IFS=' ' read -r -a pkgfiles < <( _search "$pkgname@$pkgvern" --pkgname | cut -d' ' -f2 | xargs )
     fi
 
     test -n "${pkgfiles[*]}"                        || die "<< Fetch package $1/$ARCH failed"

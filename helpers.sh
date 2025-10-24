@@ -135,6 +135,8 @@ cmake() {
                 -DCMAKE_BUILD_TYPE=RelWithDebInfo
                 -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
                 -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                # rpath is meaningless for static libraries and executables
+                -DCMAKE_SKIP_RPATH=TRUE
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
             # sysroot
@@ -550,7 +552,7 @@ pkgfile() {
     # shellcheck disable=SC2001
     IFS=' ' read -r -a files < <(sed -e "s%$PWD/%%g" <<< "${files[@]}")
 
-    # pkgfile with full version
+    # pkgfile with full version and link as short version later
     local pkgfile="$libs_name/$name@$libs_ver.tar.gz"
     local pkgvern="$libs_name/$name@$libs_ver"
 
@@ -576,11 +578,13 @@ pkgfile() {
         _ln "$pkginfo" "$libs_name/pkginfo@$version"
     fi
 
-    if [ "$version" != "$libs_ver" ]; then
-        _ln "$libs_name/$name@$version" "$name@$version"
-    else
-        _ln "$libs_name/$name@latest"   "$name@latest"
-    fi
+    # v3/manifest is ready, keep v2/pkgfile package() only
+    #  => read cmdlete.sh:package() for more details
+    #if [ "$version" != "$libs_ver" ]; then
+    #    _ln "$libs_name/$name@$version" "$name@$version"
+    #else
+    #    _ln "$libs_name/$name@latest"   "$name@latest"
+    #fi
 
     test -n "$PKGBUILD" || PKGBUILD="build=0"
 

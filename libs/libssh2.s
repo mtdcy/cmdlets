@@ -15,7 +15,6 @@ libs_args=(
     --with-libz
     --with-openssl # no macos crypto support
 
-    --disable-rpath
     --disable-examples-build
 
     # static only
