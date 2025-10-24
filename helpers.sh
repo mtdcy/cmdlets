@@ -135,6 +135,8 @@ cmake() {
                 -DCMAKE_BUILD_TYPE=RelWithDebInfo
                 -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
                 -DCMAKE_PREFIX_PATH="'$PREFIX'"
+                # rpath is meaningless for static libraries and executables
+                -DCMAKE_SKIP_RPATH=TRUE
                 -DCMAKE_VERBOSE_MAKEFILE=ON
             )
             # sysroot
