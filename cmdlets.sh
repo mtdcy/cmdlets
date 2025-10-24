@@ -10,17 +10,18 @@ VERSION=1.0-alpha
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
-unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
+# user defined repo
+: "${REPO:=$CMDLETS_MAIN_REPO}"
+# local private repo
+: "${REPO:=http://pub.mtdcy.top/cmdlets/latest}"
 
-LOCAL_REPO=http://pub.mtdcy.top/cmdlets/latest
+# test repo connectivity
+curl -fsIL --connect-timeout 1 -o /dev/null "$REPO" || unset REPO
 
-# test private repo first
-if test -z "${CMDLETS_MAIN_REPO:-}" && curl -fsIL --connect-timeout 1 -o /dev/null "$LOCAL_REPO"; then
-    REPO="$LOCAL_REPO"
-else
-    # v3/git public repo
-    REPO="${CMDLETS_MAIN_REPO:-flat+https://github.com/mtdcy/cmdlets/releases/download}"
-fi
+# default public v3/git releases repo
+: "${REPO:=flat+https://github.com/mtdcy/cmdlets/releases/download}"
+
+unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
 
 INSTALLERS=(
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
