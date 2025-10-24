@@ -59,7 +59,11 @@ slogi() { _slog info  "$@" >&2;             }
 slogw() { _slog warn  "$@" >&2;             }
 sloge() { _slog error "$@" >&2; return 1;   }
 
-die()   { _slog error "$@" >&2; exit 1;     } # exit shell
+die()   {
+    _tty_reset # in case Ctrl-C happens
+    _slog error "$@"
+    exit 1 # exit shell
+}
 
 _capture() {
     if [ "$CL_LOGGING" = "silent" ]; then
@@ -78,11 +82,17 @@ _capture() {
             tput rc                     # restore cursor position
         done < <(tee -a "$_LOGFILE")
 
-        tput ed                         # clear to end of screen
-        tput smam                       # line break on
-        tput sgr0                       # reset colors
+        _tty_reset
     else
         tee -a "$_LOGFILE"
+    fi
+}
+
+_tty_reset() {
+    if which tput &>/dev/null; then
+        tput ed         # clear to end of screen
+        tput smam       # line break on
+        tput sgr0       # reset colors
     fi
 }
 
