@@ -93,11 +93,10 @@ fi
 libs_build() {
 
     # nginx config for shared only, we have to add static libraries manually
-    STATIC_LIBS=
+    STATIC_LIBS=( zlib libpcre2-8 libxcrypt openssl gdlib )
 
     # fix libxml2/libxslt
-    CFLAGS+=" $(pkg-config --cflags libxslt)"
-    STATIC_LIBS+=" $(pkg-config --libs libxslt)"
+    STATIC_LIBS+=( libxslt )
     sed -i auto/lib/libxslt/conf \
         -e "s%ngx_feature_path=.*$%ngx_feature_path=\"$PREFIX\"%"  \
         &&
@@ -105,26 +104,23 @@ libs_build() {
 
     # append libexslt: try fix xsltApplyStylesheet() failed
     #  => exsltRegisterAll()
-    CFLAGS+=" $(pkg-config --cflags libexslt)"
-    STATIC_LIBS+=" $(pkg-config --libs libexslt)"
+    STATIC_LIBS+=( libexslt )
 
-    # openssl
-    CFLAGS+=" $(pkg-config --cflags openssl)"
-    STATIC_LIBS+=" $(pkg-config --libs openssl)"
+    # CFLAGS
+    CFLAGS+=" $($PKG_CONFIG --cflags "${STATIC_LIBS[@]}")"
 
-    # libgd
-    CFLAGS+=" $(pkg-config --cflags gdlib)"
-    STATIC_LIBS+=" $(pkg-config --libs gdlib)"
+    # LDFLAGS
+    LDFLAGS+=" $($PKG_CONFIG --libs "${STATIC_LIBS[@]}")"
 
     libs_args+=(
         # for NGX_CC_OPT
-        --with-cc-opt="'$CFLAGS $CPPFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
+        --with-cc-opt="'$CFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
         # for NGX_LD_OPT
-        --with-ld-opt="'$LDFLAGS $STATIC_LIBS'"
+        --with-ld-opt="'$LDFLAGS'"
     )
 
     # Fix configure for musl-gcc
-    export CC_AUX_FLAGS="$CFLAGS $CPPFLAGS $LDFLAGS"
+    export CC_AUX_FLAGS="$CFLAGS $LDFLAGS"
     # configure all unknown toolchain as gcc
     sed -i '/gcc)/i unknown) . auto/cc/gcc;;' auto/cc/conf
 
@@ -141,7 +137,7 @@ static built nginx @ $libs_ver with fancyindex
 
 defaults:
   config:   /etc/nginx/nginx.conf
-  rutine:   /var/run/nginx.pid
+  runtime:  /var/run/nginx.pid
             /var/run/nginx.lock
             /var/run/nginx/*
   logfile:  /var/log/nginx/access.log
