@@ -138,14 +138,29 @@ static built $(./git --version) without libexec or i18n
 
 all tools are installed in and loaded from executable path
 
-git difftool and mergetool need mergetools from \$HOME/.mergetools:
+mergetools:
+    git difftool and mergetool need mergetools from \$HOME/.mergetools:
 
-cmdlets.sh install git
-cmdlets.sh install mergetools
-cmdlets.sh link share/mergetools ~/.mergetools
+    cmdlets.sh install mergetools
+    cmdlets.sh link share/mergetools ~/.mergetools
 
-OR you can set MERGE_TOOLS_DIR env to where mergetools is.
+    OR you can set MERGE_TOOLS_DIR env to where mergetools is.
 EOF
+
+    if is_darwin; then
+        caveats << EOF
+
+osxkeychain:
+    git config --global credential.helper osxkeychain
+EOF
+    else
+        caveats << EOF
+
+netrc:
+    git config --global credential.helper netrc
+    touch ~/.netrc
+EOF
+    fi
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
