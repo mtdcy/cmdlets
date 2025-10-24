@@ -47,7 +47,7 @@ jobs:
         run: |-
           set -ex
 
-          export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
+          export CMDLETS_MAIN_REPO=flat+https://github.com/mtdcy/cmdlets/releases/download
 
           arch="$(bash libs.sh arch)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"

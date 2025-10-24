@@ -10,17 +10,18 @@ VERSION=1.0-alpha
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
-unset CMDLETS_API CMDLETS_ARCH CMDLETS_PREBUILTS
+# user defined repo
+: "${REPO:=$CMDLETS_MAIN_REPO}"
+# local private repo
+: "${REPO:=http://pub.mtdcy.top/cmdlets/latest}"
 
-LOCAL_REPO=http://pub.mtdcy.top/cmdlets/latest
+# test repo connectivity
+curl -fsIL --connect-timeout 1 -o /dev/null "$REPO" || unset REPO
 
-# test private repo first
-if test -z "${CMDLETS_MAIN_REPO:-}" && curl -fsIL --connect-timeout 1 -o /dev/null "$LOCAL_REPO"; then
-    REPO="$LOCAL_REPO"
-else
-    # v3/git public repo
-    REPO="${CMDLETS_MAIN_REPO:-https://github.com/mtdcy/cmdlets/releases/download}"
-fi
+# default public v3/git releases repo
+: "${REPO:=flat+https://github.com/mtdcy/cmdlets/releases/download}"
+
+unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
 
 INSTALLERS=(
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
@@ -96,6 +97,8 @@ _details_escape() {
 _exists() (
     if [[ "$1" =~ ^https?:// ]]; then
         curl -fsIL -o /dev/null "$1"
+    elif [[ "$REPO" =~ ^flat+ ]]; then
+        curl -fsIL -o /dev/null "${REPO#flat+}/$ARCH/${1##*/}"
     else
         curl -fsIL -o /dev/null "$REPO/$ARCH/$1"
     fi
@@ -103,15 +106,20 @@ _exists() (
 
 # curl file to destination or TEMPDIR
 _curl() (
-    local source
     local dest="${2:-$TEMPDIR/$1}"
 
     mkdir -p "${dest%/*}"
 
-    [[ "$1" =~ ^https?:// ]] && source="$1" || source="$REPO/$ARCH/$1"
-
-    info "== curl < $source"
-    curl -fsSL "$source" -o "$dest" || return $?
+    if [[ "$1" =~ ^https?:// ]]; then
+        info "== curl < $1"
+        curl -fsL -o "$dest" "$1"
+    elif [[ "$REPO" =~ ^flat+ ]]; then
+        info "== curl < $REPO/$ARCH/${1##*/}"
+        curl -fsL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
+    else
+        info "== curl < $REPO/$ARCH/$1"
+        curl -fsL -o "$dest" "$REPO/$ARCH/$1"
+    fi || return $?
     echo ">> ${dest##"$TEMPDIR/"}"
 )
 
@@ -192,7 +200,9 @@ _search() {
 search() {
     info3 "#3 Search $*"
 
-    _search "$@" | sort -u | _details
+    while IFS=' ' read -r _ pkgfile _; do
+        printf '=> %s\n' "$pkgfile"
+    done < <( _search "$@" | sort -u )
 }
 
 # edit file in place
@@ -221,77 +231,78 @@ _width() {
 #       bash@3.2
 #       bash32/bash@3.2
 fetch() {
+    local target="$1"; shift 1
+    local pkgname pkgfile pkgvern pkgbuild
+
     true > "$TEMPDIR/files"
 
-    # clear installed: name version build=n
-    _edit "\#^${1##*/} #d" "$PREBUILTS/.cmdlets"
-
-    mkdir -p "$PREBUILTS/bin"
     # cmdlet v1: path/to/file
     _v1() {
         info1 "#1 Fetch $1"
-        local name="bin/$1"
-        _curl "$name" "$PREBUILTS/$name" && chmod a+x "$PREBUILTS/$name" || return $?
-
-        echo "$name" > "$TEMPDIR/files"
-        echo "$1 1.0 build=0" >> "$PREBUILTS/.cmdlets"
+        # curl directly to symlink will override the real file.
+        _curl "bin/$1" || return $?
+        mv -f "$TEMPDIR/bin/$1" "$PREBUILTS/bin/$1"
+        chmod a+x "$PREBUILTS/bin/$1"
+        echo "bin/$1" > "$TEMPDIR/files"
     }
 
     # cmdlet v2: name
     _v2() {
-        local pkgfile pkgvern pkginfo
-
-        IFS='@' read -r pkgfile pkgvern <<< "$1"
+        IFS='@' read -r pkgfile pkgvern <<< "${1%.tar.*}"
         test -n "$pkgvern" || pkgvern="latest"
-        pkginfo="$pkgfile@$pkgvern"
 
+        local pkginfo="$pkgfile@$pkgvern"
         info2 "#2 Fetch $1 < $pkginfo"
         _curl "$pkginfo" || return 1
 
         # v2: sha pkgfile
-        IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
-
+        IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo" )
         info2 "#2 Fetch $1 < $pkgfile"
         _unzip "$pkgfile" || return 2   # updated files
-
-        echo "$1 $pkgvern build=0" >> "$PREBUILTS/.cmdlets"
     }
 
-    # cmdlet v3/manifest: pkgfile
+    # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        local pkgname pkgfile pkgvern
-
-        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" "${@:2}" | tail -n 1 )
+        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
-        # v3 git releases do not have file hierarchy
-        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || return 1
+        _unzip "$pkgfile" || return 2
 
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
-        # caveats
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
-
-        # update installed
-        echo "$1 $pkgvern $pkgbuild" >> "$PREBUILTS/.cmdlets"
+        # caveats: v3 only
+        true > "$TEMPDIR/caveats"
+        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true
     }
 
-    if test -f "$1" && [[ "$*" == *" --local"* ]]; then
-        info "## Fetch < $1"
-        _unzip "$1"
-    elif _v3 "$1" --pkgfile || _v2 "$1" || _v1 "$1"; then
+    # install from local file.tar.gz
+    _local() {
+        # update target name and version
+        IFS='@' read -r target pkgvern < <( basename "${1%.tar.*}" )
+
+        info "## Fetch $target < $1"
+        _unzip "$1" || return 1
+    }
+
+    if test -f "$target" && [[ "$target" =~ \.tar\.gz$ ]]; then
+        _local "$target" || die "<< install from $target failed"
+    elif _v3 "$target" || _v2 "$target" || _v1 "$target"; then
         true
     else
-        die "<< Fetch $1/$ARCH failed"
+        die "<< Fetch $target/$ARCH failed"
     fi
 
+    # update installed: name pkgvern pkgbuild
+    _edit "\#^$target #d" "$PREBUILTS/.cmdlets"
+    echo "$target ${pkgvern:-1.0} ${pkgbuild:-build=0}" >> "$PREBUILTS/.cmdlets"
+
     # update files list: name files ...
-    _edit "\#^$1 #d" "$PREBUILTS/.files"
+    _edit "\#^$target #d" "$PREBUILTS/.files"
     # fails with a lot of files
-    #echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+    #echo "$target $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
     {
-        echo -en "$1 "
+        echo -en "$target "
         sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
         echo -en "\n"
     } >> "$PREBUILTS/.files"
@@ -307,9 +318,8 @@ fetch() {
         ln -sf "$2" "$3"
     }
 
-    target="${1##*/}"                                           # remove pkgname
+    target="${target##*/}"                                      # remove pkgname
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
-    shift 1
 
     local links=()
     while [ $# -gt 0 ]; do
@@ -410,7 +420,7 @@ link() {
 # remove cmdlets
 #  input: name
 remove() {
-    local name="${1##*/}" # formated name
+    local name="${1%.tar.*}" # formated name
     info "== remove $name"
 
     _rm_println() {
@@ -491,7 +501,7 @@ package() {
 
     for pkgfile in "${pkgfiles[@]}"; do
         info "## Fetch $pkgfile"
-        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || die "<< Fetch package $pkgfile/$ARCH failed"
+        _unzip "$pkgfile"                           || die "<< Fetch package $pkgfile/$ARCH failed"
     done
 
     touch "$PREBUILTS/.$pkgname.d" # mark as ready
@@ -625,10 +635,6 @@ invoke() {
             search "${@:2}"
             ;;
         install)
-            if [[ "${*:2}" == *" --"* ]]; then
-                fetch "${@:2}"
-                exit $?
-            fi
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 ( fetch "$bin" --install "$alias" ) || ret=$?
