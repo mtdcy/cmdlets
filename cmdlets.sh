@@ -112,14 +112,14 @@ _curl() (
 
     if [[ "$1" =~ ^https?:// ]]; then
         info "== curl < $1"
-        curl -fsSL -o "$dest" "$1"
+        curl -fsL -o "$dest" "$1"
     elif [[ "$REPO" =~ ^flat+ ]]; then
         info "== curl < $REPO/$ARCH/${1##*/}"
-        curl -fsSL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
+        curl -fsL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
     else
         info "== curl < $REPO/$ARCH/$1"
-        curl -fsSL -o "$dest" "$REPO/$ARCH/$1"
-    fi
+        curl -fsL -o "$dest" "$REPO/$ARCH/$1"
+    fi || return $?
     echo ">> ${dest##"$TEMPDIR/"}"
 )
 
@@ -239,15 +239,16 @@ fetch() {
     # cmdlet v1: path/to/file
     _v1() {
         info1 "#1 Fetch $1"
-        local name="bin/$1"
-        mkdir -p "$PREBUILTS/bin"
-        _curl "$name" "$PREBUILTS/$name" && chmod a+x "$PREBUILTS/$name" || return $?
-        echo "$name" > "$TEMPDIR/files"
+        # curl directly to symlink will override the real file.
+        _curl "bin/$1" || return $?
+        mv -f "$TEMPDIR/bin/$1" "$PREBUILTS/bin/$1"
+        chmod a+x "$PREBUILTS/bin/$1"
+        echo "bin/$1" > "$TEMPDIR/files"
     }
 
     # cmdlet v2: name
     _v2() {
-        IFS='@' read -r pkgfile pkgvern <<< "$1"
+        IFS='@' read -r pkgfile pkgvern <<< "${1%.tar.*}"
         test -n "$pkgvern" || pkgvern="latest"
 
         local pkginfo="$pkgfile@$pkgvern"
@@ -262,7 +263,7 @@ fetch() {
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" --pkgfile | tail -n 1 )
+        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
@@ -272,7 +273,7 @@ fetch() {
 
         # caveats: v3 only
         true > "$TEMPDIR/caveats"
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null
+        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true
     }
 
     # install from local file.tar.gz
@@ -419,7 +420,7 @@ link() {
 # remove cmdlets
 #  input: name
 remove() {
-    local name="${1##*/}" # formated name
+    local name="${1%.tar.*}" # formated name
     info "== remove $name"
 
     _rm_println() {
