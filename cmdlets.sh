@@ -200,7 +200,9 @@ _search() {
 search() {
     info3 "#3 Search $*"
 
-    _search "$@" | sort -u | _details
+    while IFS=' ' read -r _ pkgfile _; do
+        printf '=> %s\n' "$pkgfile"
+    done < <( _search "$@" | sort -u )
 }
 
 # edit file in place
