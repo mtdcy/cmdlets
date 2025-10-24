@@ -229,77 +229,77 @@ _width() {
 #       bash@3.2
 #       bash32/bash@3.2
 fetch() {
+    local target="$1"; shift 1
+    local pkgname pkgfile pkgvern pkgbuild
+
     true > "$TEMPDIR/files"
 
-    # clear installed: name version build=n
-    _edit "\#^${1##*/} #d" "$PREBUILTS/.cmdlets"
-
-    mkdir -p "$PREBUILTS/bin"
     # cmdlet v1: path/to/file
     _v1() {
         info1 "#1 Fetch $1"
         local name="bin/$1"
+        mkdir -p "$PREBUILTS/bin"
         _curl "$name" "$PREBUILTS/$name" && chmod a+x "$PREBUILTS/$name" || return $?
-
         echo "$name" > "$TEMPDIR/files"
-        echo "$1 1.0 build=0" >> "$PREBUILTS/.cmdlets"
     }
 
     # cmdlet v2: name
     _v2() {
-        local pkgfile pkgvern pkginfo
-
         IFS='@' read -r pkgfile pkgvern <<< "$1"
         test -n "$pkgvern" || pkgvern="latest"
-        pkginfo="$pkgfile@$pkgvern"
 
+        local pkginfo="$pkgfile@$pkgvern"
         info2 "#2 Fetch $1 < $pkginfo"
         _curl "$pkginfo" || return 1
 
         # v2: sha pkgfile
-        IFS=' ' read -r _ pkgfile _ < <(tail -n1 "$TEMPDIR/$pkginfo")
-
+        IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo" )
         info2 "#2 Fetch $1 < $pkgfile"
         _unzip "$pkgfile" || return 2   # updated files
-
-        echo "$1 $pkgvern build=0" >> "$PREBUILTS/.cmdlets"
     }
 
-    # cmdlet v3/manifest: pkgfile
+    # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        local pkgname pkgfile pkgvern
-
-        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" "${@:2}" | tail -n 1 )
+        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "$1" --pkgfile | tail -n 1 )
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
-        # v3 git releases do not have file hierarchy
         _unzip "$pkgfile" || return 2
 
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
-        # caveats
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true > "$TEMPDIR/caveats"
-
-        # update installed
-        echo "$1 $pkgvern $pkgbuild" >> "$PREBUILTS/.cmdlets"
+        # caveats: v3 only
+        true > "$TEMPDIR/caveats"
+        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null
     }
 
-    if test -f "$1" && [[ "$*" == *" --local"* ]]; then
-        info "## Fetch < $1"
-        _unzip "$1"
-    elif _v3 "$1" --pkgfile || _v2 "$1" || _v1 "$1"; then
+    # install from local file.tar.gz
+    _local() {
+        # update target name and version
+        IFS='@' read -r target pkgvern < <( basename "${1%.tar.*}" )
+
+        info "## Fetch $target < $1"
+        _unzip "$1" || return 1
+    }
+
+    if test -f "$target" && [[ "$target" =~ \.tar\.gz$ ]]; then
+        _local "$target" || die "<< install from $target failed"
+    elif _v3 "$target" || _v2 "$target" || _v1 "$target"; then
         true
     else
-        die "<< Fetch $1/$ARCH failed"
+        die "<< Fetch $target/$ARCH failed"
     fi
 
+    # update installed: name pkgvern pkgbuild
+    _edit "\#^$target #d" "$PREBUILTS/.cmdlets"
+    echo "$target ${pkgvern:-1.0} ${pkgbuild:-build=0}" >> "$PREBUILTS/.cmdlets"
+
     # update files list: name files ...
-    _edit "\#^$1 #d" "$PREBUILTS/.files"
+    _edit "\#^$target #d" "$PREBUILTS/.files"
     # fails with a lot of files
-    #echo "$1 $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+    #echo "$target $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
     {
-        echo -en "$1 "
+        echo -en "$target "
         sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
         echo -en "\n"
     } >> "$PREBUILTS/.files"
@@ -315,9 +315,8 @@ fetch() {
         ln -sf "$2" "$3"
     }
 
-    target="${1##*/}"                                           # remove pkgname
+    target="${target##*/}"                                      # remove pkgname
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
-    shift 1
 
     local links=()
     while [ $# -gt 0 ]; do
@@ -633,10 +632,6 @@ invoke() {
             search "${@:2}"
             ;;
         install)
-            if [[ "${*:2}" == *" --"* ]]; then
-                fetch "${@:2}"
-                exit $?
-            fi
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 ( fetch "$bin" --install "$alias" ) || ret=$?
