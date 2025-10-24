@@ -538,12 +538,11 @@ compile() {
 
         test -n "$libs_url" || die "missing libs_url"
 
-        # prepare work dir
-        mkdir -p "$PREFIX"
-        mkdir -p "${_LOGFILE%/*}"
-
+        # prepare work directories
         local workdir="$WORKDIR/$libs_name-$libs_ver"
 
+        mkdir -p "$PREFIX"
+        mkdir -p "${_LOGFILE%/*}"
         mkdir -p "$workdir" && cd "$workdir"
 
         # clear logfile
@@ -627,7 +626,9 @@ _deps_check() {
         fi
     done
 
-    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    # sort is not needed as build() will sort before compile targets
+    #[ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    echo "${list[@]}"
 }
 
 _deps_sort() {
@@ -658,8 +659,6 @@ _deps_sort() {
 # build <lib list>
 build() {
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
-
-    ./cmdlets.sh manifest &>/dev/null || true
 
     # pull dependencies
     local targets=()
