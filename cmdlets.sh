@@ -19,7 +19,7 @@ if test -z "${CMDLETS_MAIN_REPO:-}" && curl -fsIL --connect-timeout 1 -o /dev/nu
     REPO="$LOCAL_REPO"
 else
     # v3/git public repo
-    REPO="${CMDLETS_MAIN_REPO:-https://github.com/mtdcy/cmdlets/releases/download}"
+    REPO="${CMDLETS_MAIN_REPO:-flat+https://github.com/mtdcy/cmdlets/releases/download}"
 fi
 
 INSTALLERS=(
@@ -103,15 +103,20 @@ _exists() (
 
 # curl file to destination or TEMPDIR
 _curl() (
-    local source
     local dest="${2:-$TEMPDIR/$1}"
 
     mkdir -p "${dest%/*}"
 
-    [[ "$1" =~ ^https?:// ]] && source="$1" || source="$REPO/$ARCH/$1"
-
-    info "== curl < $source"
-    curl -fsSL "$source" -o "$dest" || return $?
+    if [[ "$1" =~ ^https?:// ]]; then
+        info "== curl < $1"
+        curl -fsSL -o "$dest" "$1"
+    elif [[ "$REPO" =~ ^flat+ ]]; then
+        info "== curl < $REPO/$ARCH/${1##*/}"
+        curl -fsSL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
+    else
+        info "== curl < $REPO/$ARCH/$1"
+        curl -fsSL -o "$dest" "$REPO/$ARCH/$1"
+    fi
     echo ">> ${dest##"$TEMPDIR/"}"
 )
 
@@ -266,7 +271,7 @@ fetch() {
 
         info3 "#3 Fetch $1 < $pkgfile"
         # v3 git releases do not have file hierarchy
-        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || return 1
+        _unzip "$pkgfile" || return 2
 
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
@@ -491,7 +496,7 @@ package() {
 
     for pkgfile in "${pkgfiles[@]}"; do
         info "## Fetch $pkgfile"
-        _unzip "$pkgfile" || _unzip "${pkgfile#*/}" || die "<< Fetch package $pkgfile/$ARCH failed"
+        _unzip "$pkgfile"                           || die "<< Fetch package $pkgfile/$ARCH failed"
     done
 
     touch "$PREBUILTS/.$pkgname.d" # mark as ready
