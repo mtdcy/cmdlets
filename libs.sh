@@ -503,15 +503,17 @@ _load() {
 
     local file="libs/$1.s"
 
+    # test -f: call _load in subshell may load libraries multiple times
+
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
+    test -f "$TEMPDIR/$1.s" || sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
 
     . "$TEMPDIR/$1.s"
 
     # default values:
     [ -n "$libs_name" ] || libs_name="$1"
 
-    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+    test -f "$TEMPDIR/$libs_name.patch" || sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 }
 
 # compile target
@@ -568,6 +570,8 @@ compile() {
 
         slogi "<<<<<" "$libs_name@$libs_ver"
     ) || {
+        _tty_reset
+
         sleep 1 # let _capture() finish
 
         mv "$_LOGFILE" "$_LOGFILE.fail"
