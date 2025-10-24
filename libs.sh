@@ -263,7 +263,10 @@ _init() {
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
-    export LD_LIBRARY_PATH=$PREFIX/lib
+    #export LD_LIBRARY_PATH=$PREFIX/lib
+    # rpath is meaningless for static libraries and executables, and
+    # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
+    # will help find out the mistakes.
 
     # export again after cmake and others
     export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
