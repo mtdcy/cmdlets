@@ -590,22 +590,16 @@ _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 #  input: name [...]
 _deps_get() {
     local list=()
-
     for lib in "$@"; do
         for dep in $(_deps_load "$lib"); do
-            # sanity check: self depends?
-            [[ "$*" == *"$dep"* ]] && continue
             # already exists?
-            [[ "${list[*]}" == *"$dep"* ]] && continue
+            [[ " $* ${list[*]} " == *" $dep "* ]] && continue
 
-            for x in $(_deps_get "$dep"); do
-                [[ "${list[*]}" == *"$x"* ]] || list+=( "$x" )
-            done
-
-            [[ "${list[*]}" == *"$dep"* ]] || list+=( "$dep" )
+            list+=( "$dep" )
+            list+=( $(_deps_get "$dep") )
         done
     done
-    echo "${list[@]}"
+    printf '%s\n' "${list[@]}" | sort -u | xargs
 }
 
 # check dependencies for libraries
@@ -613,11 +607,6 @@ _deps_check() {
     local list=()
 
     for x in $(_deps_get "$@"); do
-        # dependencies in targets
-        [[ "$*" == *"$x"* ]] && continue
-        # already exists?
-        [[ "${list[*]}" == *"$x"* ]] && continue
-
         #1. dep not installed
         #2. dep.s been updated
         if ! test -e "$PREFIX/.$x.d"; then
