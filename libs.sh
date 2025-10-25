@@ -663,7 +663,7 @@ build() {
         done
     fi
 
-    slogi "Build" "$* (depends: ${deps[*]})"
+    slogi "Build" "$* (depends: ${targets[*]})"
 
     # append targets
     targets+=( "$@" )
