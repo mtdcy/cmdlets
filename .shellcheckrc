@@ -6,7 +6,7 @@ shell=bash
 # and also look for absolute paths in /mnt/chroot
 source-path=SCRIPTDIR
 source=libs.sh
-source=libs/zlib.u
+source=libs/zlib.s
 
 # Since 0.9.0, values can be quoted with '' or "" to allow spaces
 #source-path="My Documents/scripts"
@@ -15,13 +15,13 @@ source=libs/zlib.u
 external-sources=libs.sh
 
 # Turn on warnings for unquoted variables with safe values
-enable=quote-safe-variables
+#enable=quote-safe-variables
 
 # Turn on warnings for unassigned uppercase variables
 enable=check-unassigned-uppercase
 
 # Allow [ ! -z foo ] instead of suggesting -n
-disable=SC2236
+#disable=SC2236
 
 # Allow A && B || C
 disable=SC2015
