@@ -679,6 +679,25 @@ build() {
     done
 }
 
+dependent() {
+    local list=()
+    for libs in libs/*; do
+        libs="${libs#*/}"
+        libs="${libs%.s}"
+        [[ "$libs" =~ ^[.@_] ]] && continue
+        [[ "$libs" == ALL ]] && continue
+
+        echo -en "checking $libs ..."
+        if [[ " $(_deps_get "$libs") " == *" $1 "* ]]; then
+            list+=( "$libs" )
+            echo -e " found"
+        else
+            echo -e ""
+        fi
+    done
+    echo "${list[@]}"
+}
+
 # print info of a library
 info() {
     _load "$1"
