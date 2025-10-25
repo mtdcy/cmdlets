@@ -7,9 +7,13 @@ libs_url=(
     https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
 )
 libs_sha=db0dee91561cbd957689036a3a71281efefd131d35d1d98ebbc32720e4da58e2
-libs_dep=( libb2 lz4 xz zstd bzip2 expat zlib )
+libs_dep=( libb2 lz4 xz zstd bzip2 expat zlib libiconv )
 
 libs_args=(
+    # our libiconv has no pc file
+    -DENABLE_ICONV=ON
+    -DLIBICONV_PATH="'$PREFIX'"
+
     -DENABLE_LZO=OFF        # Use lzop binary instead of lzo2 due to GPL
 
     # hashing options
@@ -38,6 +42,9 @@ libs_build() {
     cmake -S . -B build
 
     cmake --build build
+
+    # fix for libiconv
+    sed -i '/^Libs.private/s/$/& -liconv/' build/build/pkgconfig/libarchive.pc || die
 
     pkgfile libarchive -- cmake --install build
 }
