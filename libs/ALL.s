@@ -7,12 +7,15 @@ libs_ver="$(cat VERSION)"
 
 # only cmdlets here, no libraries
 libs_dep=(
+    # basic
+    coreutils gsed gawk findutils grep less file
+    gmake checkmake
     # zip
     gtar unrar unzip
-    # utils
-    coreutils gsed gawk findutils grep gmake
     # shell
-    bash ctags shfmt ripgrep tmux
+    bash bash32 bash44 zsh
+    shellcheck shfmt ctags ripgrep
+    tmux htop
     # net
     wget curl iperf3
     # multimedia
@@ -20,9 +23,11 @@ libs_dep=(
     # database
     sqlite
     # vcs
-    git
+    git patch delta lazygit
+    # go
+    go go-tools
     # misc
-    lazygit act htop
+    docker act
 )
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
