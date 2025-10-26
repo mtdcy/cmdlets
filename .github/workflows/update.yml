@@ -63,12 +63,15 @@ jobs:
                 newver="$m.$n.$((r+1))"
                 sed -e "s/libs_ver=.*$/libs_ver=$newver/g" -i "libs/$libs.s"
 
+                git diff "libs/$libs.s" || true
+
                 # load again and fetch package
                 fetch "$libs" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
                 sed -e "s/libs_ver=.*$/libs_ver=$newver/g" -i "libs/$libs.s"
 
+                git diff "libs/$libs.s" || true
                 fetch "$libs" || exit
               else
                 exit
