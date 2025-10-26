@@ -564,6 +564,8 @@ pkgfile() {
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
     IFS=' *' read -r sha _ <<< "$(sha256sum "$pkgfile")"
+
+    sed -i "\# $pkgfile#d" "$pkginfo"
     echo "$sha $pkgfile" >> "$pkginfo"
 
     # create a version file
