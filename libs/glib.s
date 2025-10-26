@@ -4,9 +4,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="LGPL-2.1-or-later"
-libs_ver=2.86.0
+libs_ver=2.86.1
 libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=56aef5791f402fff73a2de0664e573c5d00ef8cb71405eb76b388f44c6d78927
+libs_sha=c05a4ca8725ee81d41ae2f9c5be849243953d9c9df841ed31c1c31facaf88282
 libs_dep=( zlib pcre2 libiconv libffi )
 
 libs_args=(
