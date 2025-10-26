@@ -518,12 +518,15 @@ _load() {
     [ -n "$libs_name" ] || libs_name="$1"
 
     test -f "$TEMPDIR/$libs_name.patch" || sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+
+    # prepare logfile
+    mkdir -p "$LOGFILES"
+    export _LOGFILE="$LOGFILES/$1.log"
+    true > "$_LOGFILE"
 }
 
 # compile target
 compile() {
-    export _LOGFILE="$LOGFILES/${1##*/}.log"
-
     # always start subshell before _load()
     (
         set -eo pipefail
@@ -543,7 +546,6 @@ compile() {
         local workdir="$WORKDIR/$libs_name-$libs_ver"
 
         mkdir -p "$PREFIX"
-        mkdir -p "${_LOGFILE%/*}"
         mkdir -p "$workdir" && cd "$workdir"
 
         # clear logfile
