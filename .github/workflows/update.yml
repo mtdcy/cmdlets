@@ -1,19 +1,19 @@
 ---
-name: Update revision
+name: Update cmdlets
 
 on:
   schedule:
     - cron: '0 0 * * *'  # daily
 
-  push:
-    paths: null
-    branches:
-      - main
+# push:
+#   paths: null
+#   branches:
+#     - main
 
   workflow_dispatch: null
 
 jobs:
-  updater:
+  update:
     runs-on: ubuntu-latest
     container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:ubuntu-latest
     steps:
@@ -22,67 +22,69 @@ jobs:
         with:
           token: ${{ secrets.COMMIT_TOKEN }}
 
-      - name: Update (revision)
+      - name: Update
         shell: bash
         run: |
           pwd -P
 
           git config --global user.name "bot"
           git config --global user.email "bot@mtdcy.top"
-          git config --global --add safe.directory "$(pwd -P)"
+          git config --global --add safe.directory '*'
 
           export CL_NJOBS=1
           export CL_LOGGING=silent
 
           commits=/tmp/commits-$$.txt
-          for ulib in libs/*; do
-            ulib="$(basename "${ulib%.s}")"
+          true > "$commits"  # create empty file
+
+          for libs in libs/*; do
+            libs="${libs#*/}"
+            libs="${libs%.*}"
 
             # ignores
-            [[ "$ulib" =~ ^ALL    ]] && continue
-            [[ "$ulib" =~ ^[\.@_] ]] && continue
+            [[ "$libs" =~ ^ALL    ]] && continue
+            [[ "$libs" =~ ^[.@_]  ]] && continue
 
-            # update revision
+            # update 
             (
               . libs.sh
-              load $ulib
+              _load $libs
 
-              [ -n "$libs_ver" ] || exit
+              test -n "$libs_ver" || exit
 
               # version in url?
               echo "$libs_url" | grep -Fw "$libs_ver" || exit
 
-              trap "git checkout 'libs/$ulib.s'" EXIT
+              trap "git checkout 'libs/$libs.s'" EXIT
 
               IFS='=.' read -r m n r _ <<< "$libs_ver"
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
-                sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
-                    -i "libs/$ulib.s"
+                sed -e "s/libs_ver=.*$/libs_ver=$newver/g" -i "libs/$libs.s"
 
-                fetch "$ulib" || exit
+                # load again and fetch package
+                fetch "$libs" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
-                sed -e "s/libs_ver=.*$/libs_ver=$newver/" \
-                    -i "libs/$ulib.s"
+                sed -e "s/libs_ver=.*$/libs_ver=$newver/g" -i "libs/$libs.s"
 
-                fetch "$ulib" || exit
+                fetch "$libs" || exit
               else
                 exit
               fi
 
-              slogi "updated $ulib => $newver"
-              IFS=' ' read -r sha _ <<< "$(sha256sum "packages/$libs_zip")"
-              sed -e "s/libs_sha=.*$/libs_sha=$sha/" \
-                  -i "libs/$ulib.s"
+              slogi "updated $libs => $newver"
+              IFS=' ' read -r sha _ <<< "$(sha256sum "$(_packages "$libs_url")")"
 
-              git add "libs/$ulib.s"
-              echo "updated $ulib => $newver" >> "$commits"
+              sed -e "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$libs.s"
+
+              git add "libs/$libs.s"
+              echo "updated $libs => $newver" >> "$commits"
             ) || true
           done
 
-          test -f "$commits" || exit 0
+          test -s "$commits" || exit 0
 
           git status
 
