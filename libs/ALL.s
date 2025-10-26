@@ -11,7 +11,7 @@ libs_dep=(
     coreutils gsed gawk findutils grep less file
     gmake checkmake
     # zip
-    gtar unrar unzip
+    gtar unrar unzip pigz pbzip2 pixz plzip
     # shell
     bash bash32 bash44 zsh
     shellcheck shfmt ctags ripgrep
