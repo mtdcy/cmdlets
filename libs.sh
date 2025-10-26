@@ -507,17 +507,15 @@ _load() {
 
     local file="libs/$1.s"
 
-    # test -f: call _load in subshell may load libraries multiple times
-
     # sed: delete all lines after __END__
-    test -f "$TEMPDIR/$1.s" || sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
 
     . "$TEMPDIR/$1.s"
 
     # default values:
     [ -n "$libs_name" ] || libs_name="$1"
 
-    test -f "$TEMPDIR/$libs_name.patch" || sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
     mkdir -p "$LOGFILES"
