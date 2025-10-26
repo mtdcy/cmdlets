@@ -833,6 +833,20 @@ prerequisites() {
     fi
 }
 
+# update libs_ver
+update() {
+    load "$1"
+
+    slogi "update $1 $libs_ver => $2"
+    sed "/libs_ver=/,/libs_build/s/$libs_ver/$2/g" -i "libs/$1.s" || sloge "update $1 failed"
+
+    # load again and fetch
+    fetch "$1" || sloge "update $1 => $2 failed"
+
+    IFS=' ' read -r sha _ < <(sha256sum "$(_packages "$libs_url")")
+    sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
+}
+
 _on_exit() {
     # show ccache statistics
     if test -z "$CCACHE_DISABLE"; then

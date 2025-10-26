@@ -61,27 +61,15 @@ jobs:
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
-                sed -i "libs/$libs.s"                      \
-                    -e "s/libs_ver=.*$/libs_ver=$newver/g" \
-                    -e "\#^libs_url=#s#$libs_ver#$newver#"
-
-                # load again and fetch package
-                fetch "$libs" || exit
+                bash libs.sh update "$libs" "$newver" || exit
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
-                sed -i "libs/$libs.s"                      \
-                    -e "s/libs_ver=.*$/libs_ver=$newver/g" \
-                    -e "\#^libs_url=#s#$libs_ver#$newver#"
-
-                fetch "$libs" || exit
+                bash libs.sh update "$libs" "$newver" || exit
               else
                 exit
               fi
 
               slogi "updated $libs => $newver"
-              IFS=' ' read -r sha _ <<< "$(sha256sum "$(_packages "$libs_url")")"
-
-              sed -e "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$libs.s"
 
               git add "libs/$libs.s"
               echo "updated $libs => $newver" >> "$commits"
