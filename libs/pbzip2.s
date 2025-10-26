@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034
 libs_desc="Parallel bzip2"
 libs_lic='bzip2'
-libs_ver=1.1.13
+libs_ver=1.1.14
 libs_url=(
     https://launchpad.net/pbzip2/1.1/1.1.13/+download/pbzip2-1.1.13.tar.gz
 )
