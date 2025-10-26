@@ -724,6 +724,4 @@ caveats() {
     fi
 }
 
-_rm_libtool_archive 2>&1
-
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
