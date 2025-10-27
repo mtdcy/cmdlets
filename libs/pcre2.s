@@ -29,6 +29,7 @@ libs_build() {
 
     # no prograns or docs
     pkgfile libpcre2 -- make install \
+        bin_SCRIPTS=                 \
         bin_PROGRAMS=                \
         dist_man_MANS=               \
         dist_doc_DATA=               \
