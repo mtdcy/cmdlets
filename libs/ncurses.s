@@ -72,6 +72,9 @@ libs_build() {
 
     make
 
+    # no ncurses6-config
+    sed -i '/misc/d' Makefile
+
     pkgfile libncurses  -- make install.libs
 
     #       source          target  links...
