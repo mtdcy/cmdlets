@@ -535,6 +535,8 @@ _load() {
 compile() {
     # always start subshell before _load()
     (
+        trap _tty_reset EXIT
+
         set -eo pipefail
 
         . helpers.sh
@@ -574,21 +576,22 @@ compile() {
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
 
         # build library
-        libs_build || die "build $libs_name@$libs_ver failed"
+        ( libs_build ) || {
+            sloge "build $libs_name@$libs_ver failed"
+
+            sleep 1 # let _capture() finish
+
+            mv "$_LOGFILE" "$_LOGFILE.fail"
+            tail -v "$_LOGFILE.fail"
+
+            exit 127
+        }
 
         # update tracking file
         touch "$PREFIX/.$libs_name.d"
 
         slogi "<<<<<" "$libs_name@$libs_ver"
-    ) || {
-        _tty_reset
-
-        sleep 1 # let _capture() finish
-
-        mv "$_LOGFILE" "$_LOGFILE.fail"
-        tail -v "$_LOGFILE.fail"
-        exit 127
-    }
+    )
 }
 
 # load libs_deps
