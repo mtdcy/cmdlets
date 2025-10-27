@@ -19,23 +19,30 @@ libs_args=(
 
     --enable-pic
 
-    # no libpng-config => make install fails
-    #--without-binconfigs
+    # no libpng-config
+    --without-binconfigs
 
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
 
-    # binaries been included too
-    pkgfile libpng -- make install &&
+    # install all files first
+    make install
 
-    cmdlet ./pngfix       &&
-    cmdlet ./pngtest      &&
-    cmdlet ./pngimage     &&
-    cmdlet ./png-fix-itxt &&
+    # no libpng-config
+    pkgfile libpng                   \
+            include/libpng16         \
+            include/png*.h           \
+            lib/libpng*.a            \
+            lib/pkgconfig/libpng*.pc
+
+    cmdlet ./pngfix
+    cmdlet ./pngtest
+    cmdlet ./pngimage
+    cmdlet ./png-fix-itxt
 
     check  pngtest --version
 }

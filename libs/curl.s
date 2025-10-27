@@ -6,7 +6,7 @@ libs_lic="curl"
 libs_ver=8.13.0
 libs_url=https://curl.se/download/curl-$libs_ver.tar.bz2
 libs_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
-libs_dep=(brotli zlib zstd libidn2 nghttp2)
+libs_dep=(brotli zlib zstd libidn2 nghttp2 libssh2)
 
 is_darwin || libs_dep+=( openssl )
 
@@ -17,7 +17,6 @@ libs_args=(
 
     # default paths
     --sysconfdir=/etc
-    --with-ca-path=/etc/ssl
 
     --with-libidn2
     --with-zstd
@@ -25,11 +24,10 @@ libs_args=(
     --with-brotli
     --with-nghttp2
 
-    --with-ca-fallback # built-in CA
-    --without-ca-path
-    --without-ca-bundle
+    # ssh v2
+    --with-libssh2
+    --without-libssh
 
-    --without-libssh2
     --without-libpsl
     --without-librtmp
     --disable-ldap
@@ -51,21 +49,33 @@ is_darwin && libs_args+=(
 ) || libs_args+=(
     --with-openssl
     --with-default-ssl-backend=openssl
+
+    --with-ca-path=/etc/ssl/certs/
+    --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+
+    # embed ca in curl
+    --with-ca-embed=/etc/ssl/certs/ca-certificates.crt
+
+    # built-in CA store of the SSL library
+    --with-ca-fallback
 )
 
 libs_build() {
     apply_c89_flags || true
 
-    configure  &&
+    configure
 
-    make V=1 &&
+    make V=1
+
+    slogcmd ./src/curl -fsIL https://www.google.com
 
     # install library only
-    sed -i 's/^DIST_SUBDIRS = .*/DIST_SUBDIRS = lib include/' Makefile 
+    sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
-    pkgfile libcurl -- make install
+    # no curl-config
+    pkgfile libcurl -- make install bin_SCRIPTS=
 
-    cmdlet  ./src/curl  &&
+    cmdlet  ./src/curl
 
     check curl --version
 }

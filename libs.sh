@@ -90,7 +90,7 @@ _capture() {
 
 _tty_reset() {
     # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if test -t 1 && which tput &>/dev/null; then
+    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput ed         # clear to end of screen
         tput smam       # line break on
         tput sgr0       # reset colors
@@ -263,7 +263,7 @@ _init() {
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
     cat << EOF > "$ROOT/pkg-config"
 #!/bin/sh
-$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --with-path="$PREFIX/lib/pkgconfig" --static "\$@"
+$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --static "\$@"
 EOF
     chmod a+x "$ROOT/pkg-config"
 
@@ -535,6 +535,8 @@ _load() {
 compile() {
     # always start subshell before _load()
     (
+        trap _tty_reset EXIT
+
         set -eo pipefail
 
         . helpers.sh
@@ -574,21 +576,22 @@ compile() {
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
 
         # build library
-        libs_build || die "build $libs_name@$libs_ver failed"
+        ( libs_build ) || {
+            sloge "build $libs_name@$libs_ver failed"
+
+            sleep 1 # let _capture() finish
+
+            mv "$_LOGFILE" "$_LOGFILE.fail"
+            tail -v "$_LOGFILE.fail"
+
+            exit 127
+        }
 
         # update tracking file
         touch "$PREFIX/.$libs_name.d"
 
         slogi "<<<<<" "$libs_name@$libs_ver"
-    ) || {
-        _tty_reset
-
-        sleep 1 # let _capture() finish
-
-        mv "$_LOGFILE" "$_LOGFILE.fail"
-        tail -v "$_LOGFILE.fail"
-        exit 127
-    }
+    )
 }
 
 # load libs_deps
