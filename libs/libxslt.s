@@ -47,7 +47,7 @@ libs_build() {
 
     # install only libraries
     pkgfile "$libs_name" -- make install \
-        SUBDIRS='libxslt libexslt'       \
+        SUBDIRS="'libxslt libexslt'"     \
         bin_PROGRAMS=                    \
         bin_SCRIPTS=                     \
 
