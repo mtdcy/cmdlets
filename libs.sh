@@ -90,7 +90,7 @@ _capture() {
 
 _tty_reset() {
     # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if test -t 1 && which tput &>/dev/null; then
+    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput ed         # clear to end of screen
         tput smam       # line break on
         tput sgr0       # reset colors
