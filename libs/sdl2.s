@@ -17,9 +17,7 @@ libs_args=(
 libs_build() {
     configure && make || return $?
 
-    pkgfile libSDL2 -- make install INSTALL_SDL2_CONFIG=FALSE &&
-
-    cmdlet sdl2-config
+    pkgfile libSDL2 -- make install INSTALL_SDL2_CONFIG=FALSE
 }
 
 
