@@ -40,27 +40,27 @@ is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 libs_build() {
     slogcmd ./Configure "${libs_args[@]}" || return 1
 
-    is_darwin || {
-        # use host paths
-        engines=$(find /lib/ /usr/lib/ -type d -name "engines-3" | head -n1) || true
-        if [ -n "$engines" ]; then
-            modules="${engines/%engines-3/ossl-modules}"
-            sed -e "s!^ENGINESDIR=.*\$!ENGINESDIR=${engines}!" \
-                -e "s!^MODULESDIR=.*\$!MODULESDIR=${modules}!" \
-                -i Makefile
-        fi
-    }
-
     make clean || true
 
-    make V=1 || return 2
+    # ossl-modules: set OPENSSL_MODULES env instead
+    make ENGINESDIR= MODULESDIR=
 
     pkgfile libopenssl -- make install_dev &&
 
     cmdlet ./apps/openssl openssl &&
 
     # verify
-    check openssl version
+    check openssl version -a
+
+    caveats << EOF
+prebuilt static $(openssl version)
+
+always search ca certs in /etc/ssl
+
+env:
+    OPENSSL_MODULES : search modules in
+    OPENSSL_ENGINES : search engines in
+EOF
 }
 
 
