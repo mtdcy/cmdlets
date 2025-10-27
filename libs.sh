@@ -263,7 +263,7 @@ _init() {
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
     cat << EOF > "$ROOT/pkg-config"
 #!/bin/sh
-$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --with-path="$PREFIX/lib/pkgconfig" --static "\$@"
+$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --static "\$@"
 EOF
     chmod a+x "$ROOT/pkg-config"
 
