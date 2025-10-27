@@ -708,8 +708,6 @@ caveats() {
     # no version for caveats file
     pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
 
-    true > "$pkgfile"
-
     slogi "Caveats:"
     if test -n "$*"; then
         echo "$*" | tee -a "$pkgfile"
