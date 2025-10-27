@@ -14,10 +14,6 @@ libs_args=(
 
     --with-pic
 
-    # our libxml2 has no xml2-config
-    #  set libxml2 prefix explicitly to avoid call host xml2-config
-    --with-libxml-prefix="'$PREFIX'"
-
     # add crypto to exslt
     --with-crypto
 
@@ -32,8 +28,13 @@ libs_args=(
 )
 
 libs_build() {
-    LIBXML_CFLAGS="$(pkg-config --cflags libxml-2.0)"
-    LIBXML_LIBS="$(pkg-config --libs libxml-2.0)"
+    # our libxml2 has no xml2-config
+    #  set libxml2 prefix explicitly to avoid call host xml2-config
+    libs_args+=(
+        LIBXML_CONFIG_PREFIX="'$PREFIX'"
+        LIBXML_CFLAGS="'$($PKG_CONFIG --cflags libxml-2.0)'"
+        LIBXML_LIBS="'$($PKG_CONFIG --libs libxml-2.0)'"
+    )
 
     export LIBXML_CFLAGS LIBXML_LIBS
 
@@ -44,7 +45,11 @@ libs_build() {
 
     make
 
-    pkgfile "$libs_name" -- make install bin_PROGRAMS=
+    # install only libraries
+    pkgfile "$libs_name" -- make install \
+        SUBDIRS='libxslt libexslt'       \
+        bin_PROGRAMS=                    \
+        bin_SCRIPTS=                     \
 
     cmdlet ./xsltproc/xsltproc
 
