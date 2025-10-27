@@ -40,10 +40,6 @@ depends_on() {
     }
 }
 
-pkg-config() {
-    eval "$PKG_CONFIG" "$@"
-}
-
 configure() {
     if ! test -f configure; then
         if test -f autogen.sh; then
@@ -257,7 +253,7 @@ _cargo_init() {
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
 
     # https://docs.rs/pkg-config/latest/pkg_config/
-    export PKG_CONFIG="$(which pkg-config)" # rust pkg-config do not support parameters
+    #export PKG_CONFIG="$(which pkg-config)" # rust pkg-config do not support parameters
     export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
     # FOO_STATIC - pass --static for the library foo
 

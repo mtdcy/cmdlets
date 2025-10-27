@@ -259,8 +259,19 @@ _init() {
 
     export CFLAGS CXXFLAGS CPP CPPFLAGS LDFLAGS
 
-    # pkg-config
-    export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+    # some build system do not support pkg-config with parameters
+    #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
+    cat << EOF > "$ROOT/pkg-config"
+#!/bin/sh
+$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --with-path="$PREFIX/lib/pkgconfig" --static "\$@"
+EOF
+    chmod a+x "$ROOT/pkg-config"
+
+    PKG_CONFIG="$ROOT/pkg-config"
+    PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+    PKG_CONFIG_LIBDIR="$PREFIX/lib"
+
+    export PKG_CONFIG PKG_CONFIG_PATH
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
@@ -268,9 +279,6 @@ _init() {
     # rpath is meaningless for static libraries and executables, and
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
-
-    # export again after cmake and others
-    export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
 
     # ccache
     if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then

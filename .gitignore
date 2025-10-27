@@ -12,3 +12,4 @@ ssh_id_rsa
 .ERR_MSG
 .cargo
 .magic.mgc
+pkg-config
