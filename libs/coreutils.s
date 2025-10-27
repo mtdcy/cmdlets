@@ -8,13 +8,18 @@ libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=4a847a3aaf241d11f07fdc04ef36d73c722759675858665bc17e94f56c4fbfb3
 libs_dep=( libiconv )
 
-utils=(
-    arch base32 base64
-    cp rm ls ln install
-    readlink unlink realpath
-    sort uniq wc cut tr
-    cat echo tee more printf numfmt
-    test dd df du seq
+# override bsd utils
+uu_links=(
+    ls rm cp install
+    ln readlink unlink realpath
+    sort uniq cut tr wc
+)
+
+# df: do not print real stat on macOS
+uu_utils=(
+    base32 base64
+    numfmt nproc
+    more
 )
 
 libs_args=(
@@ -22,7 +27,7 @@ libs_args=(
     --verbose
 
     --no-default-features
-    --features "'${utils[*]}'"
+    --features "'${uu_links[*]} ${uu_utils[*]}'"
 )
 
 libs_build() {
@@ -32,8 +37,11 @@ libs_build() {
 
     cargo build
 
-    cmdlet "$(find target -name coreutils)" coreutils \
-        "${utils[@]}"
+    cmdlet "$(find target -name coreutils)" coreutils "${uu_links[@]}"
+
+    for x in "${uu_utils[@]}"; do
+        cmdlet "$(find target -name coreutils)" "$x"
+    done
 
     check coreutils --version
 }

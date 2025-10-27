@@ -329,19 +329,24 @@ fetch() {
 
                 local width=$(grep "^bin/" "$TEMPDIR/files" | _width )
 
-                while read -r file; do
-                    _ln_println "$width" "$file" "${file##*/}"
-                    links+=( "${file##*/}" )
-                done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
-
                 # cmdlets.sh install bash@3.2:bash
                 if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
+                    _ln_println "$width" "$PREBUILTS/bin/$target" "$target"
                     for link in ${2//:/ }; do
                         [ "$link" = "$target" ] && continue
                         _ln_println "$width" "$target" "$link"
                         links+=( "$link" )
                     done
                     shift 1
+                else
+                    while read -r file; do
+                        if test -L "$file"; then
+                            _ln_println "$width" "$(readlink "$file")" "${file##*/}"
+                        else
+                            _ln_println "$width" "$file" "${file##*/}"
+                        fi
+                        links+=( "${file##*/}" )
+                    done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
                 fi
                 ;;
             *)
