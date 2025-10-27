@@ -12,8 +12,9 @@ utils=(
     arch base32 base64
     cp rm ls ln install
     readlink unlink realpath
-    sort uniq wc
-    cat echo more printf numfmt
+    sort uniq wc cut tr
+    cat echo tee more printf numfmt
+    test dd df du seq
 )
 
 libs_args=(
