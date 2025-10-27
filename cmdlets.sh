@@ -654,9 +654,10 @@ invoke() {
             for x in "${@:2}"; do
                 ( package "$x" ) || true # ignore errors
             done
-            while read -r pc; do
-                _edit "s%^prefix=.*$%prefix=$PREBUILTS%g" "$pc"
-            done < <( find "$PREBUILTS/lib/pkgconfig" -name "*.pc" )
+            # no fix pc here, otherwise rsync will upload these files again
+            #while read -r pc; do
+            #    _edit "s%^prefix=.*$%prefix=$PREBUILTS%g" "$pc"
+            #done < <( find "$PREBUILTS/lib/pkgconfig" -name "*.pc" )
             ;;
         *)
             usage
