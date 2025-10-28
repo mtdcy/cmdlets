@@ -12,6 +12,9 @@ libs_args=(
 )
 
 libs_build() {
+    # not everyone support '-l:libuv.a'
+    sed -i 's/-l:libuv.a/-luv/g' libuv-static.pc.in
+
     cmake -S . -B build
 
     cmake --build build
