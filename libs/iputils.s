@@ -9,9 +9,9 @@ libs_dep=( libxslt libidn2 libcap )
 
 # configure args
 libs_args=(
-    -DBUILD_PING=true
     -DBUILD_TRACEPATH=true
 
+    -DBUILD_PING=false   # prefer inetutils-ping
     -DBUILD_ARPING=false # prefer portable impl
     -DBUILD_MANS=false
 
@@ -31,7 +31,7 @@ libs_build() {
 
     pkgfile libiputils -- meson install -C build
 
-    cmdlet ./build/ping/ping
+    #cmdlet ./build/ping/ping
     cmdlet ./build/tracepath
 
     check ping -V
