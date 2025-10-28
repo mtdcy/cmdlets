@@ -1,7 +1,7 @@
 # Implementation of the DNS protocols
 
 # shellcheck disable=SC2034
-libs_lic='LGPL|GPL'
+libs_lic='MPL-2.0'
 
 # BIND releases with even minor version numbers (9.14.x, 9.16.x, etc) are stable.
 libs_ver=9.20.15
@@ -22,18 +22,24 @@ libs_args=(
     --with-json-c
     --with-libidn2
     --with-openssl="'$PREFIX'"
+    --with-jemalloc
 
     --without-lmdb
     --without-cmocka
 
-    --disable-rpath     # need for build static
     --enable-developer  # need for build static
-
-    --disable-shared
     --enable-static
+    --disable-shared
 )
 
 libs_build() {
+
+    # FIXME:
+    # libisc has contructor and destructor in lib/isc/lib.c
+    #  when build static libisc with shared libc, the constructor
+    #  and destructor won't load.
+    depends_on is_musl_gcc
+
     # homebrew:
     # Apply macOS 15+ libxml2 deprecation to all macOS versions.
     # This allows our macOS 14-built Intel bottle to work on macOS 15+
@@ -54,6 +60,8 @@ libs_build() {
     configure
 
     make -C lib
+
+    #sed -i '/setup_libs(void)/a isc__initialize();' bin/dig/dighost.c
 
     # make all fails: build binaries only
     make -C bin/dig
