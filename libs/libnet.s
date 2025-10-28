@@ -5,7 +5,7 @@ libs_lic='BSD-2-Clause'
 libs_ver=1.3
 libs_url=https://github.com/libnet/libnet/releases/download/v1.3/libnet-1.3.tar.gz
 libs_sha=ad1e2dd9b500c58ee462acd839d0a0ea9a2b9248a1287840bc601e774fb6b28f
-libs_dep=( libnet )
+libs_dep=( )
 
 libs_args=(
     --disable-dependency-tracking
