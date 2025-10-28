@@ -261,17 +261,25 @@ _init() {
 
     # some build system do not support pkg-config with parameters
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
+    PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+    PKG_CONFIG_LIBDIR="$PREFIX/lib"
+
     cat << EOF > "$ROOT/pkg-config"
-#!/bin/sh
+#!/usr/bin/env bash
+echo -en "\$0"      >> pkg-config.log
+printf ' %q' "\$@"  >> pkg-config.log
+echo ""             >> pkg-config.log
+
+export PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+export PKG_CONFIG_LIBDIR="$PKG_CONFIG_LIBDIR"
 $PKG_CONFIG --define-variable=PREFIX="$PREFIX" --static "\$@"
 EOF
     chmod a+x "$ROOT/pkg-config"
 
+    # override PKG_CONFIG
     PKG_CONFIG="$ROOT/pkg-config"
-    PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
-    PKG_CONFIG_LIBDIR="$PREFIX/lib"
 
-    export PKG_CONFIG PKG_CONFIG_PATH
+    export PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
