@@ -38,14 +38,18 @@ libs_build() {
     # Apply macOS 15+ libxml2 deprecation to all macOS versions.
     # This allows our macOS 14-built Intel bottle to work on macOS 15+
     # and also cover the case where a user on macOS 14- updates to macOS 15+.
-    is_darwin && export CFLAGS+=" -DLIBXML_HAS_DEPRECATED_MEMORY_ALLOCATION_FUNCTIONS"
+    is_darwin && CFLAGS+=" -DLIBXML_HAS_DEPRECATED_MEMORY_ALLOCATION_FUNCTIONS"
+
+    CFLAGS+=" -Wno-error=implicit-function-declaration"
+
+    export CFLAGS
 
     # static json-c
     export JSON_C_CFLAGS="$($PKG_CONFIG --cflags json-c)"
     export JSON_C_LIBS="$($PKG_CONFIG --libs json-c)"
 
-    #export LIBIDN2_CFLAGS="$($PKG_CONFIG --cflags libidn2)"
-    #export LIBIDN2_LIBS="$($PKG_CONFIG --libs libidn2)"
+    export LIBUV_CFLAGS="$($PKG_CONFIG --cflags libuv-static)"
+    export LIBUV_LIBS="$($PKG_CONFIG --libs libuv-static)"
 
     configure
 
