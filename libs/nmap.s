@@ -22,7 +22,6 @@ libs_args=(
     --without-nmap-update
     --without-zenmap
     --without-ndiff
-    --without-ncat
 
     --disable-debug
     --disable-doxygen-doc
@@ -45,6 +44,9 @@ libs_build() {
 
     make -C nping
     cmdlet ./nping/nping nmap-ping
+
+    make -C ncat
+    cmdlet ./ncat/ncat nmap-cat
 
     check nmap --version
 }
