@@ -41,6 +41,7 @@ libs_build() {
     # build only static client libraries
 
     # edit only top SUBDIRS
+    #TOP_SUBDIRS=( util include lib build-tools plugins/kdb/db2 clients )
     TOP_SUBDIRS=( util include lib build-tools )
     sed -i 's/SUBDIRS/TOP_SUBDIRS/g' Makefile
 
@@ -48,6 +49,8 @@ libs_build() {
 
     # no krb5-config
     sed -i '/INSTALL.*krb5-config/d' build-tools/Makefile
+    # fix pc: -lresolv for dns_open and dns_close
+    is_darwin && sed -i '/Libs:/s/$/& -lresolv/' build-tools/mit-krb5.pc
 
     pkgfile libkrb5 -- make install TOP_SUBDIRS="'${TOP_SUBDIRS[*]}'"
 }
