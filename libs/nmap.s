@@ -41,8 +41,10 @@ libs_build() {
     configure
 
     make nmap
-
     cmdlet ./nmap
+
+    make -C nping
+    cmdlet ./nping/nping nmap-ping
 
     check nmap --version
 }
