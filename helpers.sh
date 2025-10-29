@@ -15,16 +15,21 @@ git_version() {
 }
 
 apply_c89_flags() {
-    local flags=(
-        -Wno-error=implicit-int
-        -Wno-error=incompatible-pointer-types
-    )
+    local flags=()
 
-    is_clang && flags+=(
-        -Wno-error=implicit-function-declaration
-    ) || flags+=(
-        -Wno-implicit-function-declaration
-    )
+    if is_clang; then
+        flags+=(
+            -Wno-implicit-int
+            -Wno-incompatible-pointer-types
+            -Wno-implicit-function-declaration
+        )
+    else
+        flags+=(
+            -Wno-error=implicit-int
+            -Wno-error=incompatible-pointer-types
+            -Wno-error=implicit-function-declaration
+        )
+    fi
 
     export CFLAGS+=" ${flags[*]}"
 }
