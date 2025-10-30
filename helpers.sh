@@ -723,4 +723,38 @@ caveats() {
     fi
 }
 
+# create pkg config file
+#  input: name -l.. -L.. -I.. -D..
+pkgconf() {
+    local name="${1%.pc}"; shift
+
+    local cflags=()
+    local ldflags=()
+    local requires=()
+    for arg in "$@"; do
+        case "$arg" in
+            -I*|-D*)    cflags+=( "$arg" )      ;;
+            -l*|-L*)    ldflags+=( "$arg" )     ;;
+            *)          requires+=( "-l$arg" )   ;;
+        esac
+    done
+
+    slogi "...pc" "$name.pc < ${cflags[*]} ${ldflags[*]}"
+
+    cat <<EOF > "$PKG_CONFIG_PATH/$name.pc"
+prefix=\${PREFIX}
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: $name
+Description: $name static library
+Version: $libs_ver
+
+Requires: ${requires[*]}
+Libs: -L\${libdir} ${ldflags[*]}
+Cflags: -I\${includedir} ${cflags[*]}
+EOF
+}
+
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
