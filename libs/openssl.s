@@ -25,12 +25,6 @@ libs_args=(
     no-zlib
 
     no-shared
-
-    "$CFLAGS"
-
-    "$CPPFLAGS"
-
-    "$LDFLAGS"
 )
 
 is_linux  && libs_args+=( "linux-$(uname -m)" )
@@ -38,6 +32,9 @@ is_linux  && libs_args+=( "linux-$(uname -m)" )
 is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
 libs_build() {
+    # -static will disable OPENSSL_THREADS
+    export LDFLAGS="${LDFLAGS//-static /}"
+
     slogcmd ./Configure "${libs_args[@]}" || return 1
 
     make clean || true
