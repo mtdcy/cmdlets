@@ -15,7 +15,30 @@ on:
         description: Which cmdlets to build
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch packages
+        shell: bash
+        run: |-
+          export CL_MIRRORS="${{ vars.MIRRORS }}"
+
+          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            packages
+
   build:
+    needs: prepare
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
     if: ${{ vars.LOCAL_REGISTRY == '' }}
@@ -41,6 +64,13 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: packages
+          path: |
+            packages
+
       - name: Build
         id: build
         shell: bash
@@ -51,23 +81,6 @@ jobs:
 
           arch="$(bash libs.sh arch)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
-
-          # make prepare-host fails on macos-15-intel
-          test -n "${{ matrix.builder }}" || {
-              make prepare-host
-          } || true
-
-          pwd -P
-          ls -lha
-
-          git config --global --add safe.directory '*'
-
-          git checkout HEAD
-
-          git config user.name "bot"
-          git config user.email "bot@noreply.mtdcy.github.com"
-          git tag -a "$arch" -m "$arch" --force
-          git push origin "$arch" --force
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
@@ -85,6 +98,5 @@ jobs:
           make_latest: ${{ steps.build.outputs.arch == 'x86_64-linux-gnu' }}
           files: |-
             prebuilts/${{ steps.build.outputs.arch }}/cmdlets.manifest
-            prebuilts/${{ steps.build.outputs.arch }}/prerequisites/prerequisites-*
             prebuilts/${{ steps.build.outputs.arch }}/*/*.tar.gz
             logs/*.tar.gz
