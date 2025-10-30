@@ -32,6 +32,9 @@ libs_build() {
 
     configure
 
+    # multiple definition of `cache_init' vs dnsmasq
+    hack.c.symbols include/cache.h cache_init
+
     make
 
     pkgconf libnftables.pc -lnftables -lgmp -ljansson -ledit -lmnl -lnftnl
