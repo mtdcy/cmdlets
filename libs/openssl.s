@@ -25,6 +25,13 @@ libs_args=(
     no-zlib
 
     no-shared
+
+    # build legacy provider into libcrypto.a
+    # https://github.com/openssl/openssl/issues/17679
+    #  check provider with:
+    #   default provider: openssl list -providers -verbose
+    #   legacy provider: openssl list -providers -verbose -provider legacy
+    no-module
 )
 
 is_linux  && libs_args+=( "linux-$(uname -m)" )
@@ -39,7 +46,7 @@ libs_build() {
 
     make clean || true
 
-    # ossl-modules: set OPENSSL_MODULES env instead
+    # ossl-modules: reset MODULESDIR
     make ENGINESDIR= MODULESDIR=
 
     pkgfile libopenssl -- make install_dev &&
@@ -54,8 +61,12 @@ prebuilt static $(openssl version)
 
 always search ca certs in /etc/ssl
 
+provider:
+    builtin default and legacy provider.
+
+    OPENSSL_MODULES and -provider-path will not work.
+
 env:
-    OPENSSL_MODULES : search modules in
     OPENSSL_ENGINES : search engines in
 EOF
 }
