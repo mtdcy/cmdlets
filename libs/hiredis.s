@@ -11,6 +11,8 @@ libs_args=(
 )
 
 libs_build() {
+    deparallelize
+
     # no shared libraries
     sed -i Makefile \
         -e '/^install:/s/\$(DYLIBNAME)//' \
