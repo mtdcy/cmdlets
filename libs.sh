@@ -224,7 +224,7 @@ _init() {
 
     # macOS does not support statically linked binaries
     if is_darwin; then
-        FLAGS+=( -Wno-error=deprecated-non-prototype )
+        FLAGS+=( -Wno-deprecated-non-prototype )
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
         # static linking => two '--' vs ldflags

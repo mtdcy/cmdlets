@@ -13,3 +13,4 @@ ssh_id_rsa
 .cargo
 .magic.mgc
 pkg-config
+pkg-config.log
