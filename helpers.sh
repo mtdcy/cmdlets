@@ -723,4 +723,60 @@ caveats() {
     fi
 }
 
+# create pkg config file
+#  input: name -l.. -L.. -I.. -D..
+pkgconf() {
+    local name="${1%.pc}"; shift
+
+    local cflags=()
+    local ldflags=()
+    local requires=()
+    for arg in "$@"; do
+        case "$arg" in
+            -I*|-D*)    cflags+=( "$arg" )      ;;
+            -l*|-L*)    ldflags+=( "$arg" )     ;;
+            *)          requires+=( "$arg" )    ;;
+        esac
+    done
+
+    slogi "...pc" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
+
+    cat <<EOF > "$name.pc"
+prefix=\${PREFIX}
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: $name
+Description: $name static library
+Version: $libs_ver
+
+Requires: ${requires[*]}
+Libs: -L\${libdir} ${ldflags[*]}
+Cflags: -I\${includedir} ${cflags[*]}
+EOF
+}
+
+# hack local symbols: append function with a random(pid) prefix
+#   input: filename function
+hack.c.symbols() {
+    # void cache_init(struct cache *cache);
+    #
+    # =>
+    #
+    # void hack25783_cache_init(struct cache *cache);
+    # #define cache_init(...) hack25783_cache_init(__VA_ARGS__)
+
+    # insert or append macro
+    if grep -wq "$2\s*(.*);" "$1"; then
+        sed -i "$1" \
+            -e "/\<$2\>\s*(/a #define $2(...) hack$$_$2(__VA_ARGS__)" \
+            -e "/\<$2\>\s*(/s/\<$2\>/hack$$_$2/"
+    else
+        sed -i "$1" \
+            -e "/\<$2\>\s*(/i #define $2(...) hack$$_$2(__VA_ARGS__)" \
+            -e "/\<$2\>\s*(/s/\<$2\>/hack$$_$2/"
+    fi
+}
+
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

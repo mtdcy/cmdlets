@@ -73,7 +73,7 @@ libs_build() {
     make
 
     # no ncurses6-config
-    sed -i '/misc/d' Makefile
+    sed -i '/NCURSES_CONFIG/d' misc/Makefile
 
     pkgfile libncurses  -- make install.libs
 

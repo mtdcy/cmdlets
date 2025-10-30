@@ -34,12 +34,6 @@ libs_args=(
 
 libs_build() {
 
-    # FIXME:
-    # libisc has contructor and destructor in lib/isc/lib.c
-    #  when build static libisc with shared libc, the constructor
-    #  and destructor won't load.
-    depends_on is_musl_gcc
-
     # homebrew:
     # Apply macOS 15+ libxml2 deprecation to all macOS versions.
     # This allows our macOS 14-built Intel bottle to work on macOS 15+
@@ -59,9 +53,22 @@ libs_build() {
 
     configure
 
-    make -C lib
+    # libisc has contructor and destructor in lib/isc/lib.c
+    #  when build static libisc on macOS, the constructor
+    #  and destructor won't be called.
 
-    #sed -i '/setup_libs(void)/a isc__initialize();' bin/dig/dighost.c
+    # hook isc constructor and destructor with a dummy function
+    echo "void hook_isc__initialize(void);"     >> lib/isc/lib.c
+    echo "void hook_isc__initialize(void) {}"   >> lib/isc/lib.c
+
+    find bin/dig -name "*.c" -exec sed -i \
+        -e '/^main(.*)\s\+{/a hook_isc__initialize();' \
+        {} +
+
+    # add this line before configure will cause gcc test fails, why?
+    export LDFLAGS+=" -Wl,--undefined=hook_isc__initialize"
+
+    pkgfile bind-libs -- make -C lib install
 
     # make all fails: build binaries only
     make -C bin/dig
@@ -69,6 +76,8 @@ libs_build() {
     cmdlet ./bin/dig/dig
     cmdlet ./bin/dig/host
     cmdlet ./bin/dig/nslookup
+
+    check dig www.google.com
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

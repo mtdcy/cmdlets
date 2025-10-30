@@ -398,6 +398,7 @@ _unzip() {
         *.gz)                   cmd=( gunzip )              ;;
         *.bz2)                  cmd=( bunzip )              ;;
         *.Z)                    cmd=( uncompress )          ;;
+        *.txt)                  return 0                    ;; # no unzip
         *)                      false                       ;;
     esac
 
