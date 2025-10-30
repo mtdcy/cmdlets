@@ -735,13 +735,13 @@ pkgconf() {
         case "$arg" in
             -I*|-D*)    cflags+=( "$arg" )      ;;
             -l*|-L*)    ldflags+=( "$arg" )     ;;
-            *)          requires+=( "-l$arg" )   ;;
+            *)          requires+=( "$arg" )    ;;
         esac
     done
 
-    slogi "...pc" "$name.pc < ${cflags[*]} ${ldflags[*]}"
+    slogi "...pc" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
-    cat <<EOF > "$PKG_CONFIG_PATH/$name.pc"
+    cat <<EOF > "$name.pc"
 prefix=\${PREFIX}
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
