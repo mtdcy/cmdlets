@@ -32,24 +32,41 @@ libs_build() {
     # fix static krb5
     export LIBS="$($PKG_CONFIG --libs-only-l krb5-gssapi)"
 
-    export LDFLAGS+=" -lkrb5support"
+    # FIXME: krb5support been filter out somewhere
+    #export LDFLAGS+=" -lkrb5support"
 
     configure
 
     # only static libraries
-    sed -i src/Makefile.shlib \
-        -e 's/ all-shared-lib//g' \
-        -e 's/ install-lib-shared//g'
+    find src -name "Makefile*" -exec sed -i \
+        -e 's/ all-shared-lib//g'           \
+        -e 's/ install-lib-shared//g'       \
+        {} +
 
-    sed -i src/interfaces/libpq/Makefile \
+    sed -i src/interfaces/libpq/Makefile    \
         -e 's/ libpq-refs-stamp//g'
 
     # https://stackoverflow.com/questions/68379786/building-postgres-from-source-throws-utils-errcodes-h-file-not-found-when-ca
     # MAKELEVEL: fatal error: 'utils/errcodes.h' file not found
-    make -C src/interfaces/libpq MAKELEVEL=0 all-static-lib
+    make -C src/common MAKELEVEL=0
+    make -C src/port MAKELEVEL=0
+    make -C src/interfaces MAKELEVEL=0
 
+    # fix pkgconfig files, refer to src/common/Makefile
+    find src/interfaces -name "*.pc" -exec sed -i \
+        -e 's/-lpgcommon /-lpgcommon_shlib /g' \
+        {} +
 
-    pkgfile libpq -- make -C src/interfaces/libpq install
+    make -C src/include install
+    make -C src/interfaces install
+    make -C src/common install
+    make -C src/port install
+
+    # fix installed pkgconfig files
+    LIBS="$($PKG_CONFIG --libs libpq krb5-gssapi | sed 's/^.*-lpq //')"
+
+    sed -i "$PREFIX/lib/pkgconfig/libpq.pc" \
+        -e "s%^Libs.private:.*%Libs.private: $LIBS%"
 
 #   # install only static client libraries
 #   for x in src/include src/interfaces src/common src/port; do
