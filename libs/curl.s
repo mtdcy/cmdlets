@@ -72,8 +72,12 @@ libs_build() {
     # install library only
     sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
-    # no curl-config
-    pkgfile libcurl -- make install bin_SCRIPTS=
+    # fix curl-config
+    #  1. eval all echo command
+    sed -i curl-config \
+        -e 's/\s\+\<echo\>/eval &/g'
+
+    pkgfile libcurl -- make install
 
     cmdlet  ./src/curl
 
