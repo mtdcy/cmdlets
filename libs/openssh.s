@@ -7,8 +7,8 @@ libs_url=https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.2p1.tar
 libs_sha=ccc42c0419937959263fa1dbd16dafc18c56b984c03562d2937ce56a60f798b2
 libs_dep=( ldns openssl libedit libxcrypt zlib )
 
-# pam is not available
-#is_linux && libs_dep+=( linux-pam )
+# macOS: use libpam from host
+is_linux && libs_dep+=( libpam )
 
 libs_args=(
     --sysconfdir=/etc/ssh
@@ -17,9 +17,7 @@ libs_args=(
     --with-ldns="'$PREFIX'"
     --with-libedit
     --with-kerberos5
-
-    # pam is not available
-    --without-pam
+    --with-pam
 
     # fido2 ?
     --disable-security-key
@@ -31,7 +29,12 @@ is_linux && libs_args+=( --with-privsep-path=/var/lib/sshd )
 
 libs_build() {
     # no ldns-config present
-    export LIBS='-lcrypto'
+    LIBS='-lcrypto'
+
+    # fix static libpam
+    is_linux && LIBS+=" $($PKG_CONFIG --libs-only-l pam)"
+
+    export LIBS
 
     # openssh use PKGCONFIG instead of PKG_CONFIG
     export PKGCONFIG="$PKG_CONFIG"
@@ -56,13 +59,12 @@ libs_build() {
 
     configure
 
-    # pam is not available
-    ## server
-    #make sshd sshd-session sshd-auth "${RELATIVE_PATHS[@]}"
-    #pkginst sshd bin            \
-    #             sshd           \
-    #             sshd-auth      \
-    #             sshd-session   \
+    # server
+    make sshd sshd-session sshd-auth "${RELATIVE_PATHS[@]}"
+    pkginst sshd bin            \
+                 sshd           \
+                 sshd-auth      \
+                 sshd-session   \
 
     # client tools
     make ssh ssh-keysign ssh-keygen ssh-add "${RELATIVE_PATHS[@]}"
