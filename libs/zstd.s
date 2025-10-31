@@ -29,7 +29,7 @@ libs_build() {
 
     make tests &&
 
-    pkgfile libzstd -- make install -C lib && 
+    pkgfile libzstd -- make install -C lib &&
 
     pkgfile zstd    -- make install -C programs &&
 

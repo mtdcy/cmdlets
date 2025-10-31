@@ -398,7 +398,6 @@ _unzip() {
         *.gz)                   cmd=( gunzip )              ;;
         *.bz2)                  cmd=( bunzip )              ;;
         *.Z)                    cmd=( uncompress )          ;;
-        *.txt)                  return 0                    ;; # no unzip
         *)                      false                       ;;
     esac
 
@@ -477,8 +476,14 @@ _fetch_unzip() {
 
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
-        # unzip to current fold
-        _unzip "$zip" "${ZIP_SKIP:-}"
+
+        if file "$zip" | grep -Fwq "text"; then
+            # copy ASCII text file directly
+            cp -f "$zip" .
+        else
+            # unzip to current fold
+            _unzip "$zip" "${ZIP_SKIP:-}"
+        fi
     fi
 }
 
@@ -645,7 +650,7 @@ _deps_sort() {
     local head=()
     local tail=()
     for dep in "$@"; do
-        for x in $(_deps_load "$dep"); do
+        for x in $(_deps_get "$dep"); do
             # have dependencies => tail
             if [[ "$*" == *"$x"* ]]; then
                 tail+=( "$dep" )

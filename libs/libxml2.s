@@ -32,15 +32,15 @@ libs_args=(
 
 libs_build() {
     mkdir -p build
-    
-    meson setup build                                      &&
 
-    meson compile -C build --verbose                       &&
+    meson.setup
 
-    pkgfile libxml2 -- meson install -C build --tags devel &&
+    meson.compile
 
-    cmdlet ./build/xmllint                                 &&
-    cmdlet ./build/xmlcatalog                              &&
+    pkgfile libxml2 -- meson.install --tags devel
+
+    cmdlet ./build/xmllint
+    cmdlet ./build/xmlcatalog
 
     check xmllint --version
 }

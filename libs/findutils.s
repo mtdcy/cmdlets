@@ -15,11 +15,11 @@ libs_args=(
 )
 
 libs_build() {
-    cargo build &&
-    
-    cmdlet "$(find target -name find)" &&
-    
-    cmdlet "$(find target -name xargs)" &&
+    cargo.build
+
+    cmdlet "$(find target -name find)"
+
+    cmdlet "$(find target -name xargs)"
 
     check find --version
 }

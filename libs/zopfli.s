@@ -19,11 +19,11 @@ libs_args=(
 )
 
 libs_build() {
-    cmake -S . -B build
+    cmake.setup
 
-    cmake --build build
+    cmake.build
 
-    pkgfile libzopfli -- cmake --install build
+    pkgfile libzopfli -- cmake.install
 
     cmdlet ./build/zopfli
 

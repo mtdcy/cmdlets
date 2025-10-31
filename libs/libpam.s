@@ -10,6 +10,14 @@ libs_dep=( libnsl libtirpc libxcrypt )
 # configure args
 libs_args=(
     --sysconfdir==/etc/
+
+    -Di18n=disabled
+    -Ddocs=disabled
+    #-Dexamples=False
+
+    # no modules
+    -Dpam_unix=disabled
+    -Dpam_userdb=disabled
 )
 
 libs_build() {
@@ -20,6 +28,18 @@ libs_build() {
     else
         libs_args+=( -Dsecuredir=/lib/$(uname -m)-linux-gnu/security )
     fi
+
+    sed -i meson.build \
+        -e '/modules/d'
+
+    sed -i libpam/meson.build libpamc/meson.build libpam_misc/meson.build \
+        -e 's/shared_library/static_library/' \
+        -e '/version:/d' \
+        -e '/link_depends:/d' \
+        -e '/link_args:/d'
+
+    sed -i libpam_internal/meson.build \
+        -e '/dependencies:/a install: true,'
 
     meson setup build
 
