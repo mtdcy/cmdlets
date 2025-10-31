@@ -801,6 +801,15 @@ fetch() {
     _load "$1"
 
     _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
+
+    # libs_resources: no mirrors
+    if test -n "${libs_resources[*]}"; then
+        local url sha
+        for x in "${libs_resources[@]}"; do
+            IFS=';|' read -r url sha <<< "$x"
+            _fetch "$(_packages "$url")" "$sha" "$url"
+        done
+    fi
 }
 
 arch() {
