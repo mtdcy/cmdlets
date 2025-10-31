@@ -195,7 +195,6 @@ _init() {
         "MAKE:gmake,make"
         "CMAKE:cmake"
         "MESON:meson"
-        "NINJA:ninja"
         "PKG_CONFIG:pkg-config"
         "PATCH:patch"
         "INSTALL:install"
@@ -455,13 +454,14 @@ _git() {
 
 _packages() {
     # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
-    if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
-        local path
-        IFS=':/' read -r _ _ _ _ path <<< "$1"
-        echo "$ROOT/packages/$libs_name/${path//\//_}"
-    else
-        echo "$ROOT/packages/$libs_name/${1##*/}"
-    fi
+    #if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
+    #    local path
+    #    IFS=':/' read -r _ _ _ _ path <<< "$1"
+    #    echo "$ROOT/packages/$libs_name/${path//\//_}"
+    #else
+    #    echo "$ROOT/packages/$libs_name/${1##*/}"
+    #fi
+    echo "$ROOT/packages/$libs_name/${1##*/}"
 }
 
 # unzip url to workdir or die
