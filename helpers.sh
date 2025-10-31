@@ -939,6 +939,25 @@ hack.makefile() {
     done
 }
 
+# no pcre2-config, use a hack function instead
+#  input: <path to configure or Makefile>
+hack.pcre2() {
+    # no shared pcre2, refer to src/config.h
+    unset PCRE2POSIX_SHARED
+
+    sed -i "$1" -r \
+        -e '/pcre2-config/ {
+                s/pcre2-config/$PKG_CONFIG/g;
+                s/--cflags(.*)/--cflags libpcre2\1/g;
+                s/--libs(.*)/--libs libpcre2\1/g;
+            }' \
+        -e '/\$PCRE_CONFIG/ {
+                s/PCRE_CONFIG/PKG_CONFIG/g;
+                s/--cflags(.*)/--cflags libpcre2\1/g;
+                s/--libs(.*)/--libs libpcre2\1/g;
+            }'
+}
+
 visibility.hidden() {
     CFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
     CXXFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
