@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=2.76
-libs_url=https://mirrors.edge.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.76.tar.xz
-libs_sha=629da4ab29900d0f7fcc36227073743119925fd711c99a1689bbf5c9b40c8e6f
+libs_ver=2.77
+libs_url=https://mirrors.edge.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.77.tar.xz
+libs_sha=897bc18b44afc26c70e78cead3dbb31e154acc24bee085a5a09079a88dbf6f52
 libs_dep=( )
 
 libs_args=(

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034,SC2154
 libs_lic="GPL-2.0-only"
-libs_ver=2.51.1
+libs_ver=2.51.2
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
-libs_sha=a83fd9ffaed7eee679ed92ceb06f75b4615ebf66d3ac4fbdbfbc9567dc533f4a
+libs_sha=233d7143a2d58e60755eee9b76f559ec73ea2b3c297f5b503162ace95966b4e3
 libs_dep=( zlib pcre2 libiconv expat curl )
 
 is_darwin || libs_dep+=( openssl )

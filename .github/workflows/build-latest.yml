@@ -15,7 +15,42 @@ on:
         description: Which cmdlets to build
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch packages
+        shell: bash
+        run: |-
+          export CL_MIRRORS="${{ vars.MIRRORS }}"
+
+          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: |
+            packages
+
+      - name: Deploy (rsync)
+        # uses: burnett01/rsync-deployments@7.0.1
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: packages/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
   build:
+    needs: prepare
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
     if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' }}
@@ -39,6 +74,13 @@ jobs:
           token: ${{ secrets.COMMIT_TOKEN }}
           fetch-depth: 0
 
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: packages
+          path: |
+            packages
+
       - name: Build
         shell: bash
         run: |-
@@ -46,15 +88,5 @@ jobs:
           export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
           export CL_MIRRORS="${{ vars.MIRRORS }}"
-
-          arch="$(bash libs.sh arch)"
-
-          git config --global --add safe.directory '*'
-
-          # tag to HEAD
-          git config user.name "bot"
-          git config user.email "bot@noreply.mtdcy.top"
-          git tag -a "$arch" -m "$arch" --force
-          git push origin "$arch" --force
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"

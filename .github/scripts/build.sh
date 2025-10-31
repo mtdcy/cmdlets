@@ -8,7 +8,7 @@ info "build $*"
 
 pwd -P
 bash --version
-          
+
 export CL_LOGGING="${CL_LOGGING:-silent}"
 export CL_CCACHE="${CL_CCACHE:-0}"
 export CL_NJOBS="${CL_NJOBS:-1}"
@@ -19,6 +19,14 @@ export FORCE_UNSAFE_CONFIGURE=1
 # fix: detected dubious ownership in repository
 git config --global --add safe.directory '*'
 
+arch="$(bash libs.sh arch)"
+
+# tag to HEAD
+git config user.name "bot"
+git config user.email "bot@noreply.mtdcy.top"
+git tag -a "$arch" -m "$arch" --force
+git push origin "$arch" --force
+
 if which brew; then
     _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
     for x in "${_gnubin[@]}"; do
@@ -26,6 +34,12 @@ if which brew; then
     done
     unset _gnubin
 fi
+
+# make prepare-host fails on macos-15-intel
+test -n "$BUILDER_NAME" || make prepare-host || true
+
+# check packages artifacts
+find packages || true
 
 echo $PATH
 env | grep "^CL_" | grep -v TOKEN
@@ -54,7 +68,7 @@ if [[ "${cmdlets[*]}" =~ =force ]]; then
 
     IFS=' ' read -r -a cmdlets <<< "${cmdlets[*]//=force/}"
 fi
-    
+
 bash libs.sh build "${cmdlets[@]}" || ret=$?
 
 unset CL_FORCE
@@ -83,7 +97,7 @@ bash libs.sh zip_files || true
 #    done
 #done
 #
-#if [ -n "${dependents[*]}" ]; then 
+#if [ -n "${dependents[*]}" ]; then
 #    IFS=' ' read -r -a dependents <<< "$(bash libs.sh _sort_by_depends "${dependents[@]}")"
 #
 #    info "*** build dependents: ${dependents[*]} ***"
@@ -107,15 +121,15 @@ if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then
     info "*** rsync logs to $CL_ARTIFACTS ***"
     rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" logs/ "$remote/cmdlets/logs/" || ret=$?
 
-    info "*** rsync packages to $CL_ARTIFACTS ***"
-    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
+    #info "*** rsync packages to $CL_ARTIFACTS ***"
+    #rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
 fi
 
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---
 $(git show HEAD --stat)
-" 
+"
 
     curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
 fi
