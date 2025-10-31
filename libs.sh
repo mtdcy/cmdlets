@@ -398,7 +398,6 @@ _unzip() {
         *.gz)                   cmd=( gunzip )              ;;
         *.bz2)                  cmd=( bunzip )              ;;
         *.Z)                    cmd=( uncompress )          ;;
-        *.txt)                  return 0                    ;; # no unzip
         *)                      false                       ;;
     esac
 
@@ -477,8 +476,14 @@ _fetch_unzip() {
 
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
-        # unzip to current fold
-        _unzip "$zip" "${ZIP_SKIP:-}"
+
+        if file "$zip" | grep -Fwq "ASCII text"; then
+            # copy ASCII text file directly
+            cp -f "$zip" .
+        else
+            # unzip to current fold
+            _unzip "$zip" "${ZIP_SKIP:-}"
+        fi
     fi
 }
 
