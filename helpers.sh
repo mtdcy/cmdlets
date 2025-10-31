@@ -791,4 +791,11 @@ hack.c.static() {
     sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
 }
 
+visibility.hidden() {
+    CFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
+    CXXFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
+
+    export CFLAGS CXXFLAGS
+}
+
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
