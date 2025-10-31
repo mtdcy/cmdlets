@@ -477,7 +477,7 @@ _fetch_unzip() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
 
-        if file "$zip" | grep -Fwq "ASCII text"; then
+        if file "$zip" | grep -Fwq "text"; then
             # copy ASCII text file directly
             cp -f "$zip" .
         else
