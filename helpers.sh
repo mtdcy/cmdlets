@@ -757,26 +757,38 @@ Cflags: -I\${includedir} ${cflags[*]}
 EOF
 }
 
-# hack local symbols: append function with a random(pid) prefix
+# hack local symbols: append function with a random(pid) suffix
 #   input: filename function
 hack.c.symbols() {
     # void cache_init(struct cache *cache);
     #
     # =>
     #
-    # void hack25783_cache_init(struct cache *cache);
-    # #define cache_init(...) hack25783_cache_init(__VA_ARGS__)
+    # void cache_init_xxxx(struct cache *cache);
+    # #define cache_init cache_init_xxxx
+
+    # use suffix instead of prefix to keep func syntax
+    local suffix="$$"
+
+    # append random for multiple hacks
+    suffix+="_$(openssl rand -hex 4)"
 
     # insert or append macro
     if grep -wq "$2\s*(.*);" "$1"; then
         sed -i "$1" \
-            -e "/\<$2\>\s*(/a #define $2(...) hack$$_$2(__VA_ARGS__)" \
-            -e "/\<$2\>\s*(/s/\<$2\>/hack$$_$2/"
+            -e "/\<$2\>\s*(/a #define $2 $2_$suffix" \
+            -e "/\<$2\>\s*(/s/\<$2\>/$2_$suffix/"
     else
         sed -i "$1" \
-            -e "/\<$2\>\s*(/i #define $2(...) hack$$_$2(__VA_ARGS__)" \
-            -e "/\<$2\>\s*(/s/\<$2\>/hack$$_$2/"
+            -e "/\<$2\>\s*(/i #define $2 $2_$suffix" \
+            -e "/\<$2\>\s*(/s/\<$2\>/$2_$suffix/"
     fi
+}
+
+# set symbols as static
+hack.c.static() {
+    # void __noreturn __abi_breakage(const char *file, int line, const char *reason)
+    sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
 }
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
