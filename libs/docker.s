@@ -29,21 +29,21 @@ libs_build() (
     ln -srfv . src/github.com/docker/cli
 
     # -X main.version not working for docker
-    go_build -ldflags="'-X github.com/docker/cli/cli/version.Version=$libs_ver -X github.com/docker/cli/cli/version.GitCommit=$(git_version)'" -o docker github.com/docker/cli/cmd/docker &&
+    go.build -ldflags="'-X github.com/docker/cli/cli/version.Version=$libs_ver -X github.com/docker/cli/cli/version.GitCommit=$(git_version)'" -o docker github.com/docker/cli/cmd/docker &&
 
     # docker plugins
     (
         # docker compose
         pushd compose-*
 
-        go_build -ldflags="'-X github.com/docker/compose/v2/internal.Version=$compose_ver'" -o ../docker-compose ./cmd
+        go.build -ldflags="'-X github.com/docker/compose/v2/internal.Version=$compose_ver'" -o ../docker-compose ./cmd
     ) &&
 
     (
         # docker buildx
         pushd buildx-*
 
-        go_build -ldflags="'-X github.com/docker/buildx/version.Version=$buildx_ver'" -o ../docker-buildx ./cmd/buildx
+        go.build -ldflags="'-X github.com/docker/buildx/version.Version=$buildx_ver'" -o ../docker-buildx ./cmd/buildx
     ) &&
 
     # install tools

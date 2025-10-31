@@ -12,11 +12,11 @@ libs_dep=()
 # configure args
 libs_args=()
 libs_build() {
-    go clean || true
+    go.clean
 
-    go build ./cmd/shfmt &&
+    go.build ./cmd/shfmt
 
-    cmdlet shfmt &&
+    cmdlet shfmt
 
     check shfmt
 }

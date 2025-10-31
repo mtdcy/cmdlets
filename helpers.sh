@@ -45,10 +45,19 @@ depends_on() {
     }
 }
 
-# return 0 if $1 >= $2
-version.ge() {
-    [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]
+depends.on() {
+    "$@" || { slogw "No support on $OSTYPE"; exit 0; }
 }
+
+depends.libs() {
+    CFLAGS+=" $($PKG_CONFIG --cflags "$@")"
+    LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$@")"
+    export CFLAGS LDFLAGS
+}
+
+# return 0 if $1 >= $2
+version.ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
+version.le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
 
 configure() {
     if ! test -f configure; then
@@ -82,9 +91,22 @@ make() {
     slogcmd "${cmdline[@]}" || die "make $* failed."
 }
 
+make.all() {
+    slogcmd "$MAKE" install "-j$CL_NJOBS" "$@" || die "make all $* failed."
+}
+
+make.install() {
+    slogcmd "$MAKE" install -j1 "$@" || die "make install $* failed."
+}
+
 # setup cmake environments
 _cmake_init() {
     test -z "$CMAKE_READY" || return 0
+
+    # defaults:
+    : "${CMAKE_BINARY_DIR:=build}"
+
+    export CMAKE_BINARY_DIR
 
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
@@ -159,6 +181,40 @@ cmake() {
     slogcmd "${cmdline[@]}" || die "cmake $* failed."
 }
 
+cmake.setup() {
+    _cmake_init
+    export CMAKE_BUILD_PARALLEL_LEVEL=1
+
+    # extend CMAKE with compile tools
+    local std=(
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_PREFIX_PATH="'$PREFIX'"
+        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+        # rpath is meaningless for static libraries and executables
+        -DCMAKE_SKIP_RPATH=TRUE
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+    )
+    # sysroot
+    is_darwin || std+=( -DCMAKE_SYSROOT="'$($CC -print-sysroot)'" )
+    # cmake using a mixed path style with MSYS Makefiles, why???
+    is_msys   && std+=( -G"'MSYS Makefiles'" )
+
+    # std < libs_args < user args
+    slogcmd "$CMAKE" -S . -B "$CMAKE_BINARY_DIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
+}
+
+cmake.build() {
+    _cmake_init
+    export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+    slogcmd "$CMAKE" --build "$CMAKE_BINARY_DIR" "$@" || die "cmake.build failed."
+}
+
+cmake.install() {
+    _cmake_init
+    export CMAKE_BUILD_PARALLEL_LEVEL=1
+    slogcmd "$CMAKE" --install "$CMAKE_BINARY_DIR" "$@" || die "cmake.install failed."
+}
+
 meson() {
     local cmdline=( "$MESON" )
 
@@ -178,8 +234,9 @@ meson() {
                 -Dpkg_config_path="'$PKG_CONFIG_PATH'"
             )
 
-            ## meson >= 0.37.0
-            version.ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
+            # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
+            # meson >= 0.37.0
+            #version.ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
 
             # append user args
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
@@ -195,13 +252,31 @@ meson() {
     slogcmd "${cmdline[@]}" || die "meson $* failed."
 }
 
-ninja() {
-    local cmdline
+meson.setup() {
+    # meson builtin options: https://mesonbuild.com/Builtin-options.html
+    #  libdir: some package prefer install to lib/<machine>/
+    local std=(
+        -Dprefix="'$PREFIX'"
+        -Dlibdir=lib
+        -Dbuildtype=release
+        -Ddefault_library=static
+        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
+    )
 
-    # append user args
-    cmdline=( "$NINJA" -j "$CL_NJOBS" -v "$@" )
+    # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
+    # meson >= 0.37.0
+    #version.le "$($MESON --version)" 0.37.0 || std+=( -Dprefer_static=true )
 
-    slogcmd "${cmdline[@]}" || die "ninja $* failed."
+    # std < libs_args < user args
+    slogcmd "$MESON" setup build "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
+}
+
+meson.compile() {
+    slogcmd "$MESON" compile -C build --verbose "-j$CL_NJOBS" "$@" || die "meson.compile failed."
+}
+
+meson.install() {
+    slogcmd "$MESON" install -C build "$@" || die "meson.compile failed."
 }
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
@@ -303,8 +378,19 @@ cargo() {
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
+cargo.build() {
+    _cargo_init
+
+    slogcmd "$CARGO" build "${libs_args[@]}" "$@" || die "cargo.build failed."
+}
+
 _go_init() {
     test -z "$GO_READY" || return 0
+
+    # defaults:
+    : "${CGO_ENABLED:=0}"   # CGO_ENABLED=0 is necessary for build static binaries except macOS
+
+    export CGO_ENABLED
 
     # see _cargo_init notes
 
@@ -394,9 +480,6 @@ _go_filter_options() {
 go() {
     _go_init
 
-    # CGO_ENABLED=0 is necessary for build static binaries except macOS
-    export CGO_ENABLED="${CGO_ENABLED:-0}"
-
     local cmdline=("$GO" "$1" )
     case "$1" in
         build)
@@ -436,10 +519,44 @@ go() {
     slogcmd "${cmdline[@]}" || die "go $* failed."
 }
 
-# easy command for go project
-go_build() {
-    go clean || true
-    go build "$@"
+go.clean() {
+    _go_init
+
+    slogcmd "$GO" clean || die "go.clean failed."
+}
+
+go.build() {
+    _go_init
+
+    # fix 'invalid go version'
+    if [ -f go.mod ]; then
+        local m n
+        IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
+        sed "s/^go [0-9.]\+$/go $m.$n/" -i go.mod
+        # go mod edit won't work here
+        #slogcmd "$GO" mod edit -go="$m.$n"
+        slogcmd "$GO" mod tidy || true
+    fi
+
+    #1. static without dwarf and stripped
+    #2. add version info
+    local ldflags=( -w -s -X main.version="$libs_ver" )
+
+    [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
+
+    # merge user ldflags
+    ldflags+=( $(_go_filter_ldflags "$@") )
+
+    # verbose
+    local std=( -x -v )
+
+    # set ldflags
+    std+=( -ldflags="'${ldflags[*]}'" )
+
+    # append user options
+    std+=( $(_go_filter_options "$@") )
+
+    slogcmd "$GO" build "${std[@]}" || die "go.build failed."
 }
 
 # libtool archive hardcoded PREFIX which is bad for us
@@ -804,5 +921,9 @@ visibility.hidden() {
 
     export CFLAGS CXXFLAGS
 }
+
+if [[ "$0" =~ helpers.sh$ ]]; then
+    cd "$(dirname "$0")" && "$@" || exit $?
+fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
