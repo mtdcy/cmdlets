@@ -8,6 +8,10 @@ libs_sha=b47d3ac19d3549e54a05d0019a6c400674da716123858cfdb6d3bdd70a66c702
 
 is_darwin || libs_dep=( krb5 )
 
+libs_resources=(
+    https://github.com/libevent/libevent/raw/refs/heads/master/compat/sys/queue.h
+)
+
 libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
@@ -19,6 +23,13 @@ libs_args=(
 
 libs_build() {
     is_darwin && export CFLAGS+=" -D__APPLE_USE_RFC_3542"
+
+    # fix missing sys/queue.h for musl-gcc
+    if is_musl_gcc; then
+        mkdir -p compat/sys
+        ln -sfv ../../queue.h compat/sys/
+        export CPPFLAGS+=" -I$PWD/compat"
+    fi
 
     # no krb5-config
     export KRB5_CONFIG="$PKG_CONFIG"
