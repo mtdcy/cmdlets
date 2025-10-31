@@ -42,6 +42,8 @@ libs_args=(
 libs_build() {
     depends_on is_linux
 
+    visibility.hidden
+
     libnetfilter() {
         (
             cd "$1"-*
@@ -49,6 +51,9 @@ libs_build() {
             pkgfile "$1@$2" -- make install
         ) || die "build $1 failed"
     }
+
+    hack.c.symbols libnetfilter_conntrack-1.1.0/include/internal/internal.h __abi_breakage
+    hack.c.symbols libnftnl-1.3.0/include/utils.h __abi_breakage
 
     libnetfilter libmnl 1.0.5
     libnetfilter libnftnl  1.3.0
