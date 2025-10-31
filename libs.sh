@@ -650,7 +650,7 @@ _deps_sort() {
     local head=()
     local tail=()
     for dep in "$@"; do
-        for x in $(_deps_load "$dep"); do
+        for x in $(_deps_get "$dep"); do
             # have dependencies => tail
             if [[ "$*" == *"$x"* ]]; then
                 tail+=( "$dep" )
