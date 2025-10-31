@@ -924,6 +924,21 @@ hack.c.static() {
     sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
 }
 
+# remove predefined variables in Makefile and use env instead
+#  input: Makefile variables...
+hack.makefile() {
+    for x in "${@:2}"; do
+        case "$x" in
+            *FLAGS) # append flags
+                sed -i "s/^$x\s*=\s*/$x += /" "$1"
+                ;;
+            *)      # delete others
+                sed -i "/^$x\s*=.*$/d" "$1"
+                ;;
+        esac
+    done
+}
+
 visibility.hidden() {
     CFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
     CXXFLAGS+=" -fvisibility=hidden -fvisibility-inlines-hidden"
