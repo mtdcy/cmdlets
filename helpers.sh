@@ -426,7 +426,7 @@ _go_init() {
     #  set GOPATH in host profile
     export GOPATH="${GOPATH:-$ROOT/.go}"
     #export GOCACHE="$ROOT/.go/go-build"
-    #export GOMODCACHE="$ROOT/.go/pkg/mod"
+    export GOMODCACHE="$ROOT/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -519,13 +519,7 @@ go() {
     slogcmd "${cmdline[@]}" || die "go $* failed."
 }
 
-go.clean() {
-    _go_init
-
-    slogcmd "$GO" clean || die "go.clean failed."
-}
-
-go.build() {
+go.setup() {
     _go_init
 
     # fix 'invalid go version'
@@ -537,6 +531,16 @@ go.build() {
         #slogcmd "$GO" mod edit -go="$m.$n"
         slogcmd "$GO" mod tidy || true
     fi
+}
+
+go.clean() {
+    _go_init
+
+    slogcmd "$GO" clean || die "go.clean failed."
+}
+
+go.build() {
+    _go_init
 
     #1. static without dwarf and stripped
     #2. add version info
@@ -782,7 +786,7 @@ inspect() {
 }
 
 # cmdlet executable [name] [alias ...]
-cmdlet() {
+cmdlet.install() {
     slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
     local target="$PREFIX/bin/${2:-"${1##*/}"}"
@@ -799,7 +803,7 @@ cmdlet() {
 }
 
 # perform visual check on cmdlet
-check() {
+cmdlet.check() {
     slogi "..Run" "check $*"
 
     # try prebuilts first
@@ -833,7 +837,7 @@ check() {
     fi
 }
 
-caveats() {
+cmdlet.caveats() {
     # no version for caveats file
     pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
 
@@ -846,6 +850,11 @@ caveats() {
         done
     fi
 }
+
+# deprecated
+cmdlet()    { cmdlet.install "$@";  }
+check()     { cmdlet.check "$@";    }
+caveats()   { cmdlet.caveats "$@" ; }
 
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
