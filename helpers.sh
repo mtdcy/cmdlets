@@ -636,8 +636,17 @@ _pack() {
                     -e "s%$PREFIX%\${prefix}%g" \
                     -i "$x"
                 ;;
+            bin/*-config)
+                # libraries config scripts
+                if file "$x" | grep -Fwq "shell script"; then
+                    # replace hardcoded PREFIX with env
+                    sed -i "$x" -e "s%$PREFIX%\${PREFIX:-/usr/local}%g"
+                elif test -x "$x"; then
+                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
+                fi
+                ;;
             bin/*)
-                if test -f "$x"; then
+                if test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
                 fi
                 ;;

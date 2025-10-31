@@ -47,9 +47,22 @@ libs_build() {
 
     make TOP_SUBDIRS="'${TOP_SUBDIRS[*]}'"
 
-    # no krb5-config
-    sed -i '/INSTALL.*krb5-config/d' build-tools/Makefile
+    # Fix krb5-config, OR configure and cmake may not work
+    # 1. replace hardcoded PREFIX, refer to helpers.sh:_pack()
+    # 2. append eval to echo command
+    # 3. drop rpath things
+    # 4. drop -dynamic
+    # 5. output static libraries
+    sed -i build-tools/krb5-config      \
+        -e 's/echo\s\+"\$DEF/eval &/'   \
+        -e '/RPATH/d'                   \
+        -e 's/-dynamic //g'             \
+        -e 's/echo\s\+\$lib_flags/& -lkrb5support $LIBS $DL_LIB/'
+
+    
     # fix pc: -lresolv for dns_open and dns_close
+    #  krb5 put -lresolv in krb5-config instead of pc file, which cause
+    #  some packages failed to build
     is_darwin && sed -i '/Libs:/s/$/& -lresolv/' build-tools/mit-krb5.pc
 
     pkgfile libkrb5 -- make install TOP_SUBDIRS="'${TOP_SUBDIRS[*]}'"
