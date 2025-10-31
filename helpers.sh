@@ -45,6 +45,11 @@ depends_on() {
     }
 }
 
+# return 0 if $1 >= $2
+version.ge() {
+    [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]
+}
+
 configure() {
     if ! test -f configure; then
         if test -f autogen.sh; then
@@ -174,11 +179,13 @@ meson() {
             )
 
             ## meson >= 0.37.0
-            #IFS='.' read -r _ ver _ < <($MESON --version)
-            #[ "$ver" -lt 37 ] || cmdline+=( -Dprefer_static=true )
+            version.ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
 
             # append user args
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            ;;
+        compile)
+            cmdline+=( "$1" "${args[@]}" "${@:2}" --jobs "$CL_NJOBS" )
             ;;
         *)
             cmdline+=( "$1" "${args[@]}" "${@:2}" )
