@@ -17,6 +17,9 @@ libs_args=(
     # add crypto to exslt
     --with-crypto
 
+    # search xml2-config in
+    --with-libxml-prefix="'$PREFIX'"
+
     --disable-debug
     --without-python # python bindings
     --without-debugger
@@ -28,22 +31,14 @@ libs_args=(
 )
 
 libs_build() {
-    # our libxml2 has no xml2-config
-    #  set libxml2 prefix explicitly to avoid call host xml2-config
-    libs_args+=(
-        LIBXML_CONFIG_PREFIX="'$PREFIX'"
-        LIBXML_CFLAGS="'$($PKG_CONFIG --cflags libxml-2.0)'"
-        LIBXML_LIBS="'$($PKG_CONFIG --libs libxml-2.0)'"
-    )
-
-    export LIBXML_CFLAGS LIBXML_LIBS
-
-    # link static libexslt by default
-    sed -i '/Libs.private/s/$/ -lexslt/' libxslt.pc.in
 
     configure
 
     make
+
+    # link static libexslt by default
+    #  => fix `xsltApplyStylesheet() failed' for some programs
+    pkgconf libxslt.pc -lexslt
 
     # install only libraries
     pkgfile "$libs_name" -- make install \
@@ -51,9 +46,8 @@ libs_build() {
         bin_PROGRAMS=                    \
         bin_SCRIPTS=                     \
 
-    cmdlet ./xsltproc/xsltproc
-
-    check xsltproc --version
+    cmdlet.install  ./xsltproc/xsltproc
+    cmdlet.check    xsltproc --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
