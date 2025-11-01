@@ -889,9 +889,10 @@ pkgconf() {
         esac
     done
 
-    slogi "...pc" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
+    slogi "..Fix" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
-    cat <<EOF > "$name.pc"
+    if ! test -f "$name.pc"; then
+        cat <<EOF > "$name.pc"
 prefix=\${PREFIX}
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
@@ -901,10 +902,18 @@ Name: ${name##*/}
 Description: ${name##*/} static library
 Version: $libs_ver
 
-Requires: ${requires[*]}
-Libs: -L\${libdir} ${ldflags[*]}
-Cflags: -I\${includedir} ${cflags[*]}
+Requires:
+Cflags: -I\${includedir}
+Libs: -L\${libdir}
 EOF
+    fi
+
+    # amend arguments to pc file
+    sed -i "$name.pc"                           \
+        -e "/Requires:/s%$% ${requires[*]}%"    \
+        -e "/Cflags:/s%$% ${cflags[*]}%"        \
+        -e "/Libs:/s%$% ${ldflags[*]}%"         \
+
 }
 
 # hack local symbols: append function with a random(pid) suffix
