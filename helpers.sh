@@ -380,10 +380,18 @@ cargo() {
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
+# for furture
+cargo.setup() {
+    _cargo_init
+}
+
 cargo.build() {
     _cargo_init
 
-    slogcmd "$CARGO" build "${libs_args[@]}" "$@" || die "cargo.build failed."
+    # CL_NJOBS => CARGO_BUILD_JOBS
+    local std=( --release --verbose )
+
+    slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
 }
 
 _go_init() {
