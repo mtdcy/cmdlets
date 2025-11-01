@@ -52,6 +52,11 @@ libs_build() {
 
     make.all
 
+    # fix librrd.pc for static libraries
+    pkgconf src/librrd.pc -lrrd \
+        $($PKG_CONFIG --cflags --libs glib-2.0 libpng) \
+        $($PREFIX/bin/xml2-config --cflags --libs)
+
     pkgfile librrd -- make.install bin_PROGRAMS=
 
     for x in rrdtool rrdupdate rrdcached; do
