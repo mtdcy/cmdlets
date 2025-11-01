@@ -4,6 +4,8 @@ info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
 }
 
+export CL_LOGGING="${CL_LOGGING:-silent}"
+
 cmdlets=()
 if test -n "$*"; then
     IFS=', ' read -r -a cmdlets <<< "$*"
@@ -17,6 +19,8 @@ else
 fi
 
 test -n "${cmdlets[*]}" || cmdlets=( $(bash libs.sh _deps_get ALL) )
+
+[[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) )
 
 for x in "${cmdlets[@]}"; do
     bash libs.sh fetch "$x"

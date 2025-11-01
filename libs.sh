@@ -800,6 +800,8 @@ load() {
 fetch() {
     _load "$1"
 
+    test -n "$libs_url" || return 0 # ignore error
+
     _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
 
     # libs_resources: no mirrors
