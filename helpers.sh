@@ -559,7 +559,11 @@ go.build() {
 
     #1. static without dwarf and stripped
     #2. add version info
-    local ldflags=( -w -s -X main.version="$libs_ver" )
+    local ldflags=(
+        -w -s
+        -X main.version="$libs_ver"
+        -X main.build="$((${PKGBUILD#*=}+1))"
+    )
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
 
@@ -744,8 +748,6 @@ pkgfile() {
     #else
     #    _ln "$libs_name/$name@latest"   "$name@latest"
     #fi
-
-    test -n "$PKGBUILD" || PKGBUILD="build=0"
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records

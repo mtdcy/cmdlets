@@ -585,6 +585,7 @@ compile() {
 
         # read pkgbuild before clear
         IFS=' ' read -r _ _ _ PKGBUILD < <(grep " $libs_name/.*@$libs_ver" "$PREFIX/cmdlets.manifest" | tail -n1)
+        test -n "$PKGBUILD" || PKGBUILD="build=0"
 
         # v3: clear manifest
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
