@@ -964,11 +964,11 @@ hack.configure() {
 hack.makefile() {
     for x in "${@:2}"; do
         case "$x" in
-            *FLAGS) # append flags
-                sed -i "s/^$x\s*:\?=\s*/$x += /" "$1"
+            *FLAGS) # append flags (only the first match)
+                sed -i "0,/^$x[[:blank:]]*:\?=/{ s/^$x[[:blank:]]*:\?=/$x += /; }" "$1"
                 ;;
-            *)      # delete others
-                sed -i "/^$x\s*:\?=.*$/d" "$1"
+            *)      # delete others (only the first match)
+                sed -i "0,/^$x[[:blank:]]*:\?=/{ /^$x[[:blank:]]*:\?=/d; }" "$1"
                 ;;
         esac
     done
