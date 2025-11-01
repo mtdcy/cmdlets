@@ -43,6 +43,11 @@ libs_build() {
 
     make.all
 
+    # fix xml2-config
+    #  1. no dynamic support, some program test with help message
+    sed -i xml2-config \
+        -e '/ --dynamic /d'
+
     pkgfile libxml2 -- make.install bin_PROGRAMS=
 
     for x in xmllint xmlcatalog; do

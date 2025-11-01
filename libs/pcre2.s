@@ -27,19 +27,23 @@ libs_args=(
 libs_build() {
     configure  && make || return $?
 
+    # fix pcre2-config
+    #  1. replace hardcoded PREFIX, refer to helpers.sh:_pack()
+    #  2. fix missing -DPCRE2_STATIC: pcre2-posix depends on pcre2-8 which has this macro defined
+    sed -i pcre2-config \
+        -e 's/echo \$includes *$/& -DPCRE2_STATIC/'
+
     # no prograns or docs
     pkgfile libpcre2 -- make install \
-        bin_SCRIPTS=                 \
         bin_PROGRAMS=                \
         dist_man_MANS=               \
         dist_doc_DATA=               \
         dist_html_DATA=              \
-        &&
 
-    cmdlet ./pcre2grep &&
-    cmdlet ./pcre2test &&
-
-    check pcre2grep --version
+    for x in pcre2grep pcre2test; do
+        cmdlet.install "$x"
+    done
+    cmdlet.check pcre2grep --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

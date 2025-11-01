@@ -5,7 +5,7 @@ libs_lic='GPLv3'
 libs_ver=6.4
 libs_url=https://github.com/ntop/ntopng/archive/refs/tags/6.4.tar.gz
 libs_sha=3eaff9f13566e349cada66d41191824a80288ea19ff4427a49a682386348931d
-libs_dep=( zlib zstd libpcap curl expat hiredis json-c libmaxminddb libsodium ndpi openssl sqlite zeromq rrdtool )
+libs_dep=( zlib zstd libpcap curl expat hiredis json-c libmaxminddb libsodium ndpi openssl sqlite zeromq rrdtool lua )
 # mariadb-connector-c
 
 is_linux && libs_dep+=( libcap )
@@ -41,20 +41,26 @@ libs_build() {
     # remove included libraries
     rm -rf third-party/json-c*
     rm -rf third-party/rrdtool*
+    rm -rf third-party/lua-*
 
     # fix static libcurl
     export LIBS="$($PREFIX/bin/curl-config --static-libs)"
 
     slogcmd ./autogen.sh
 
-    # fix configure
-    hack.configure
-
     configure
 
     # ntop configure do not handle CC/CXX env
     hack.makefile Makefile CC CXX
-    hack.makefile third-party/lua-5.4.6/src/Makefile CC CFLAGS LDFLAGS
+
+    # force use installed lua
+    sed -i Makefile \
+        -e '/[[:blank:]]*LUA_LIB=/d' \
+        -e '/[[:blank:]]*LUA_INC=/d' \
+        -e '/^\$(LUA_LIB):/,+1 d' \
+        -e '/LIB_TARGETS/s/\$(LUA_LIB)//'
+    export LUA_LIB="$($PKG_CONFIG --libs-only-l lua)"
+    export LUA_INC="$($PKG_CONFIG --cflags-only-I lua)"
 
     make.all
 

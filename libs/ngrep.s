@@ -17,9 +17,6 @@ libs_args=(
 )
 
 libs_build() {
-    # no pcre2-config
-    hack.pcre2 configure
-
     configure
 
     make.all
