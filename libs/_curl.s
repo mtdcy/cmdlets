@@ -1,0 +1,89 @@
+# URL retrival utility and library
+
+# shellcheck disable=SC2034
+libs_desc="Get a file from an HTTP, HTTPS or FTP server"
+libs_lic="curl"
+libs_ver=8.13.0
+libs_url=https://curl.se/download/curl-$libs_ver.tar.bz2
+libs_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
+libs_dep=(brotli zlib zstd libidn2 nghttp2 libssh2)
+
+is_darwin || libs_dep+=( openssl )
+
+libs_args=(
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
+
+    # default paths
+    --sysconfdir=/etc
+
+    --with-libidn2
+    --with-zstd
+    --with-zlib
+    --with-brotli
+    --with-nghttp2
+
+    # ssh v2
+    --with-libssh2
+    --without-libssh
+
+    --without-libpsl
+    --without-librtmp
+    --disable-ldap
+
+    --without-zsh-functions-dir
+    --without-fish-functions-dir
+
+    --disable-nls
+
+    --disable-docs
+    --disable-manual
+
+    --disable-shared
+    --enable-static
+)
+
+is_darwin && libs_args+=(
+    --with-secure-transport
+) || libs_args+=(
+    --with-openssl
+    --with-default-ssl-backend=openssl
+
+    --with-ca-path=/etc/ssl/certs/
+    --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+
+    # embed ca in curl
+    --with-ca-embed=/etc/ssl/certs/ca-certificates.crt
+
+    # built-in CA store of the SSL library
+    --with-ca-fallback
+)
+
+libs_build() {
+    apply_c89_flags || true
+
+    configure
+
+    make V=1
+
+    slogcmd ./src/curl -fsIL https://www.google.com
+
+    # edit only top SUBDIRS => install library only
+    TOP_SUBDIRS=( lib include )
+    sed -i Makefile \
+        -e 's/SUBDIRS/TOP_SUBDIRS/g' 
+
+    # fix curl-config
+    #  1. eval all echo command
+    sed -i curl-config \
+        -e 's/\s\+\<echo\>/eval &/g'
+
+    pkgfile libcurl -- make install
+
+    cmdlet  ./src/curl
+
+    check curl --version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

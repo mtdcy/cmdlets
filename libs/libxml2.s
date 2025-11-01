@@ -8,41 +8,48 @@ libs_sha=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
 libs_dep=(zlib xz libiconv readline)
 
 libs_args=(
-    # avoid hardcode PREFIX
-    -Dsysconfdir=/etc/
-    -Dlocalstatedir=/var
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
 
-    -Dzlib=enabled
-    -Dlzma=enabled
-    -Diconv=enabled
-    -Dreadline=true
-    -Dhtml=true
-    -Dhttp=true
-    -Dhistory=true          # history support for shell
+    --sysconfdir=/etc
 
-    -Ddebuging=false
-    -Dpython=false          # python bindings
+    --with-zlib
+    --with-lzma
 
-    # icu: no i18n for static linked executables
-    -Dicu=disabled
+    --with-history # shell mode
+    --with-http
+
+    # python ?
+    --without-python
+
+    # icu4c ?
+    --without-icu
 
     # https://gitlab.gnome.org/GNOME/libxml2/-/issues/751#note_2157870
-    -Dlegacy=true   # ISO-8859-X support if no iconv
+    --with-legacy
+
+    --disable-shared
+    --enable-static
 )
 
 libs_build() {
-    mkdir -p build
 
-    meson.setup
+    configure
 
-    meson.compile
+    # no doc and examples
+    sed -i Makefile \
+        -e '/^SUBDIRS/s/doc example//'
 
-    pkgfile libxml2 -- meson.install --tags devel
+    make.all
 
-    cmdlet ./build/xmllint
-    cmdlet ./build/xmlcatalog
+    pkgfile libxml2 -- make.install bin_PROGRAMS=
 
-    check xmllint --version
+    for x in xmllint xmlcatalog; do
+        cmdlet.install "$x"
+    done
+
+    cmdlet.check xmllint --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

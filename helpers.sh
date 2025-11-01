@@ -92,7 +92,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" install "-j$CL_NJOBS" "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$CL_NJOBS" "$@" || die "make all $* failed."
 }
 
 make.install() {
@@ -426,7 +426,7 @@ _go_init() {
     #  set GOPATH in host profile
     export GOPATH="${GOPATH:-$ROOT/.go}"
     #export GOCACHE="$ROOT/.go/go-build"
-    #export GOMODCACHE="$ROOT/.go/pkg/mod"
+    export GOMODCACHE="$ROOT/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -519,13 +519,7 @@ go() {
     slogcmd "${cmdline[@]}" || die "go $* failed."
 }
 
-go.clean() {
-    _go_init
-
-    slogcmd "$GO" clean || die "go.clean failed."
-}
-
-go.build() {
+go.setup() {
     _go_init
 
     # fix 'invalid go version'
@@ -537,6 +531,16 @@ go.build() {
         #slogcmd "$GO" mod edit -go="$m.$n"
         slogcmd "$GO" mod tidy || true
     fi
+}
+
+go.clean() {
+    _go_init
+
+    slogcmd "$GO" clean || die "go.clean failed."
+}
+
+go.build() {
+    _go_init
 
     #1. static without dwarf and stripped
     #2. add version info
@@ -632,8 +636,21 @@ _pack() {
                     -e "s%$PREFIX%\${prefix}%g" \
                     -i "$x"
                 ;;
+            bin/*-config)
+                # libraries config scripts
+                if file "$x" | grep -Fwq "shell script"; then
+                    # replace hardcoded PREFIX with env
+                    #1. prefix may be single quoted => replace prefix= first
+                    #2. replace others with ${prefix}
+                    sed -i "$x" \
+                        -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
+                        -e "s%$PREFIX%\${prefix}%g"
+                elif test -x "$x"; then
+                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
+                fi
+                ;;
             bin/*)
-                if test -f "$x"; then
+                if test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
                 fi
                 ;;
@@ -782,7 +799,7 @@ inspect() {
 }
 
 # cmdlet executable [name] [alias ...]
-cmdlet() {
+cmdlet.install() {
     slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
     local target="$PREFIX/bin/${2:-"${1##*/}"}"
@@ -799,7 +816,7 @@ cmdlet() {
 }
 
 # perform visual check on cmdlet
-check() {
+cmdlet.check() {
     slogi "..Run" "check $*"
 
     # try prebuilts first
@@ -833,7 +850,7 @@ check() {
     fi
 }
 
-caveats() {
+cmdlet.caveats() {
     # no version for caveats file
     pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
 
@@ -847,6 +864,11 @@ caveats() {
     fi
 }
 
+# deprecated
+cmdlet()    { cmdlet.install "$@";  }
+check()     { cmdlet.check "$@";    }
+caveats()   { cmdlet.caveats "$@" ; }
+
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
 pkgconf() {
@@ -855,11 +877,15 @@ pkgconf() {
     local cflags=()
     local ldflags=()
     local requires=()
-    for arg in "$@"; do
+
+    while [ $# -gt 0 ]; do
+        local arg="$1"; shift 1
         case "$arg" in
-            -I*|-D*)    cflags+=( "$arg" )      ;;
-            -l*|-L*)    ldflags+=( "$arg" )     ;;
-            *)          requires+=( "$arg" )    ;;
+            -I*|-D*)    cflags+=( "$arg" )              ;;
+            -l*|-L*)    ldflags+=( "$arg" )             ;;
+            -framework) ldflags+=( "$arg" "$1" ); shift ;; # -framework AppKit
+            -*)         ldflags+=( "$arg" )             ;; # -pthread
+            *)          requires+=( "$arg" )            ;;
         esac
     done
 
@@ -871,8 +897,8 @@ exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
 includedir=\${prefix}/include
 
-Name: $name
-Description: $name static library
+Name: ${name##*/}
+Description: ${name##*/} static library
 Version: $libs_ver
 
 Requires: ${requires[*]}
@@ -913,6 +939,49 @@ hack.c.symbols() {
 hack.c.static() {
     # void __noreturn __abi_breakage(const char *file, int line, const char *reason)
     sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
+}
+
+# fix configure
+hack.configure() {
+    sed -i "${1:-configure}" \
+        -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
+        -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'
+    #1. replace pkg-config with PKG_CONFIG env
+    #2. replace PKGCONFIG with PKG_CONFIG
+}
+
+# remove predefined variables in Makefile and use env instead
+#  input: Makefile variables...
+hack.makefile() {
+    for x in "${@:2}"; do
+        case "$x" in
+            *FLAGS) # append flags
+                sed -i "s/^$x\s*:\?=\s*/$x += /" "$1"
+                ;;
+            *)      # delete others
+                sed -i "/^$x\s*:\?=.*$/d" "$1"
+                ;;
+        esac
+    done
+}
+
+# no pcre2-config, use a hack function instead
+#  input: <path to configure or Makefile>
+hack.pcre2() {
+    # no shared pcre2, refer to src/config.h
+    unset PCRE2POSIX_SHARED
+
+    sed -i "$1" -r \
+        -e '/pcre2-config/ {
+                s/pcre2-config/$PKG_CONFIG/g;
+                s/--cflags(.*)/--cflags libpcre2\1/g;
+                s/--libs(.*)/--libs libpcre2\1/g;
+            }' \
+        -e '/\$PCRE_CONFIG/ {
+                s/PCRE_CONFIG/PKG_CONFIG/g;
+                s/--cflags(.*)/--cflags libpcre2\1/g;
+                s/--libs(.*)/--libs libpcre2\1/g;
+            }'
 }
 
 visibility.hidden() {

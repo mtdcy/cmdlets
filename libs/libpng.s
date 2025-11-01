@@ -19,9 +19,6 @@ libs_args=(
 
     --enable-pic
 
-    # no libpng-config
-    --without-binconfigs
-
     --disable-shared
     --enable-static
 )
@@ -29,22 +26,20 @@ libs_args=(
 libs_build() {
     configure
 
-    # install all files first
-    make install
+    make.all
 
-    # no libpng-config
-    pkgfile libpng                   \
-            include/libpng16         \
-            include/png*.h           \
-            lib/libpng*.a            \
-            lib/pkgconfig/libpng*.pc
+    # fix libpng-config
+    #  1. always static
+    sed -i libpng16-config \
+        -e 's/\${libs}/\${all_libs}/g'
 
-    cmdlet ./pngfix
-    cmdlet ./pngtest
-    cmdlet ./pngimage
-    cmdlet ./png-fix-itxt
+    pkgfile libpng -- make.install bin_PROGRAMS=
 
-    check  pngtest --version
+    for x in pngfix pngtest pngimage png-fix-itxt; do
+        cmdlet.install "$x"
+    done
+
+    cmdlet.check pngtest --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -11,71 +11,36 @@ libs_dep=(brotli zlib zstd libidn2 nghttp2 libssh2)
 is_darwin || libs_dep+=( openssl )
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    # static only
+    -DBUILD_SHARED_LIBS=OFF
+    -DBUILD_STATIC_LIBS=ON
+    -DBUILD_STATIC_CURL=ON
+
+    -DCURL_USE_LIBPSL=OFF
+    -DUSE_NGTCP2=OFF
+
+    -DBUILD_LIBCURL_DOCS=OFF
+    -DBUILD_MISC_DOCS=OFF
+    -DENABLE_CURL_MANUAL=OFF
+
+    -DBUILD_TESTING=OFF
+    -DBUILD_EXAMPLES=OFF
 
     # default paths
-    --sysconfdir=/etc
-
-    --with-libidn2
-    --with-zstd
-    --with-zlib
-    --with-brotli
-    --with-nghttp2
-
-    # ssh v2
-    --with-libssh2
-    --without-libssh
-
-    --without-libpsl
-    --without-librtmp
-    --disable-ldap
-
-    --without-zsh-functions-dir
-    --without-fish-functions-dir
-
-    --disable-nls
-
-    --disable-docs
-    --disable-manual
-
-    --disable-shared
-    --enable-static
-)
-
-is_darwin && libs_args+=(
-    --with-secure-transport
-) || libs_args+=(
-    --with-openssl
-    --with-default-ssl-backend=openssl
-
-    --with-ca-path=/etc/ssl/certs/
-    --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
-
-    # embed ca in curl
-    --with-ca-embed=/etc/ssl/certs/ca-certificates.crt
-
-    # built-in CA store of the SSL library
-    --with-ca-fallback
+    #--sysconfdir=/etc
 )
 
 libs_build() {
-    apply_c89_flags || true
 
-    configure
+    cmake.setup
 
-    make V=1
+    cmake.build
 
-    slogcmd ./src/curl -fsIL https://www.google.com
+    slogcmd ./build/src/curl -fsIL https://www.google.com
 
-    # install library only
-    sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
+    pkgfile libcurl -- cmake.install --component Unspecified
 
-    # no curl-config
-    pkgfile libcurl -- make install bin_SCRIPTS=
-
-    cmdlet  ./src/curl
+    cmdlet  ./build/src/curl
 
     check curl --version
 }

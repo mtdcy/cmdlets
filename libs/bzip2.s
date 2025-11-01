@@ -9,12 +9,7 @@ libs_url=https://sourceware.org/pub/bzip2/bzip2-$libs_ver.tar.gz
 libs_sha=ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269
 
 libs_build() {
-    sed -e '/^CC=gcc/d'            \
-        -e '/^AR=ar/d'             \
-        -e '/^RANLIB=ranlib/d'     \
-        -e '/^LDFLAGS=/d'          \
-        -e 's/^CFLAGS=/CFLAGS+=/g' \
-        -i Makefile
+    hack.makefile Makefile CC AR RANLIB CFLAGS LDFLAGS
 
     make all test &&
 

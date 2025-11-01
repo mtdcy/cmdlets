@@ -31,9 +31,6 @@ libs_build() {
         export CPPFLAGS+=" -I$PWD/compat"
     fi
 
-    # no krb5-config
-    export KRB5_CONFIG="$PKG_CONFIG"
-
     configure
 
     make
