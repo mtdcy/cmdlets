@@ -46,14 +46,20 @@ libs_args=(
 )
 
 libs_build() {
-    hack.configure
-
     configure
+
+    # fix libraries order
+    #  1. place -llzma after -lxml2
+    sed -i Makefile src/Makefile \
+        -e '/^ALL_LIBS =/{
+                s/ -llzma//g;
+                s/-lxml2/& -llzma/;
+            }'
 
     make.all
 
     # fix librrd.pc for static libraries
-    pkgconf src/librrd.pc -lrrd \
+    pkgconf src/librrd.pc \
         $($PKG_CONFIG --cflags --libs glib-2.0 libpng) \
         $($PREFIX/bin/xml2-config --cflags --libs)
 
