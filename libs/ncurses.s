@@ -72,8 +72,10 @@ libs_build() {
 
     make
 
-    # no ncurses6-config
-    sed -i '/NCURSES_CONFIG/d' misc/Makefile
+    # fix ncurses6-config
+    #  1. no rpath things
+    sed -i misc/ncurses-config \
+        -e 's/^RPATH_LIST=.*/RPATH_LIST=/'
 
     pkgfile libncurses  -- make install.libs
 
