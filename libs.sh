@@ -261,7 +261,7 @@ _init() {
 
     # some build system do not support pkg-config with parameters
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
-    PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
     PKG_CONFIG_LIBDIR="$PREFIX/lib"
 
     cat << EOF > "$ROOT/pkg-config"
