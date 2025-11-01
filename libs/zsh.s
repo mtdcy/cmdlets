@@ -53,9 +53,6 @@ libs_build() {
 
     slogcmd ./Util/preconfig
 
-    # no pcre2-config
-    hack.pcre2 configure
-
     configure
 
     # static modules
