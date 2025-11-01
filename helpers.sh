@@ -557,13 +557,16 @@ go.clean() {
 go.build() {
     _go_init
 
-    #1. static without dwarf and stripped
-    #2. add version info
-    local ldflags=(
-        -w -s
-        -X main.version="$libs_ver"
-        -X main.build="$((${PKGBUILD#*=}+1))"
-    )
+    # static without dwarf and stripped
+    local ldflags=( -w -s )
+
+    # go embed version control
+    if test -f main.go; then
+        ldflags+=(
+            -X main.Version="$libs_ver"
+            -X main.Build="$((${PKGBUILD#*=}+1))"
+        )
+    fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
 
@@ -571,7 +574,7 @@ go.build() {
     ldflags+=( $(_go_filter_ldflags "$@") )
 
     # verbose
-    local std=( -x -v )
+    local std=( -x -v -p "$CL_NJOBS" )
 
     # set ldflags
     std+=( -ldflags="'${ldflags[*]}'" )
