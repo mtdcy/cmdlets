@@ -877,11 +877,15 @@ pkgconf() {
     local cflags=()
     local ldflags=()
     local requires=()
-    for arg in "$@"; do
+
+    while [ $# -gt 0 ]; do
+        local arg="$1"; shift 1
         case "$arg" in
-            -I*|-D*)    cflags+=( "$arg" )      ;;
-            -l*|-L*)    ldflags+=( "$arg" )     ;;
-            *)          requires+=( "$arg" )    ;;
+            -I*|-D*)    cflags+=( "$arg" )              ;;
+            -l*|-L*)    ldflags+=( "$arg" )             ;;
+            -framework) ldflags+=( "$arg" "$1" ); shift ;; # -framework AppKit
+            -*)         ldflags+=( "$arg" )             ;; # -pthread
+            *)          requires+=( "$arg" )            ;;
         esac
     done
 
@@ -893,8 +897,8 @@ exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
 includedir=\${prefix}/include
 
-Name: $name
-Description: $name static library
+Name: ${name##*/}
+Description: ${name##*/} static library
 Version: $libs_ver
 
 Requires: ${requires[*]}
