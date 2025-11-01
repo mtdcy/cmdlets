@@ -60,6 +60,8 @@ version.ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
 version.le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
 
 configure() {
+    _setup
+
     if ! test -f configure; then
         if test -f autogen.sh; then
             slogcmd ./autogen.sh
@@ -950,15 +952,6 @@ hack.c.static() {
     sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
 }
 
-# fix configure
-hack.configure() {
-    sed -i "${1:-configure}" \
-        -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
-        -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'
-    #1. replace pkg-config with PKG_CONFIG env
-    #2. replace PKGCONFIG with PKG_CONFIG
-}
-
 # remove predefined variables in Makefile and use env instead
 #  input: Makefile variables...
 hack.makefile() {
@@ -991,6 +984,40 @@ hack.pcre2() {
                 s/--cflags(.*)/--cflags libpcre2\1/g;
                 s/--libs(.*)/--libs libpcre2\1/g;
             }'
+}
+
+# invoke just before configure or xxx.setup
+# shellcheck disable=SC2016
+_setup() {
+    # env for xxx-config
+    if test -x "$PREFIX/bin/krb5-config"; then
+        export KRB5_CONFIG="$PREFIX/bin/krb5-config"
+    fi
+
+    if test -x "$PREFIX/bin/xml2-config"; then
+        export XML2_CONFIG="$PREFIX/bin/xml2-config"
+    fi
+
+    if test -x "$PREFIX/bin/pcre2-config"; then
+        export PCRE_CONFIG="$PREFIX/bin/pcre2-config"
+    fi
+
+    if test -f configure; then
+        sed -i configure \
+            -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
+            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'
+        #1. replace pkg-config with PKG_CONFIG env
+        #2. replace PKGCONFIG with PKG_CONFIG
+
+        # apply PCRE_CONFIG if pcre2-config been used directly
+        if grep -Fwq pcre2-config configure && ! grep -Fwq PCRE_CONFIG configure; then
+            #1. $(pcre2-config --cflags-posix) => ngrep
+            #2. `pcre2-config --cflags-posix`
+            sed -i configure \
+                -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g' \
+                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g'
+        fi
+    fi
 }
 
 visibility.hidden() {

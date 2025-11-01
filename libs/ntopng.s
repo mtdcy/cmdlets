@@ -48,9 +48,6 @@ libs_build() {
 
     slogcmd ./autogen.sh
 
-    # fix configure
-    hack.configure
-
     configure
 
     # ntop configure do not handle CC/CXX env
