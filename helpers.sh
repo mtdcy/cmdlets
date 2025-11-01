@@ -643,7 +643,7 @@ _pack() {
                     #1. prefix may be single quoted => replace prefix= first
                     #2. replace others with ${prefix}
                     sed -i "$x" \
-                        -e "s%^prefix=.*%prefix=\"\$PREFIX\"%" \
+                        -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
                         -e "s%$PREFIX%\${prefix}%g"
                 elif test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
