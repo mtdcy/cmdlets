@@ -52,8 +52,9 @@ libs_build() {
 
     configure
 
-    # ntop configure do not accept CC/CXX env
+    # ntop configure do not handle CC/CXX env
     hack.makefile Makefile CC CXX
+    hack.makefile third-party/lua-5.4.6/src/Makefile CC CFLAGS LDFLAGS
 
     make.all
 
