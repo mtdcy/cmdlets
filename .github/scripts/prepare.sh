@@ -22,6 +22,4 @@ test -n "${cmdlets[*]}" || cmdlets=( $(bash libs.sh _deps_get ALL) )
 
 [[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) )
 
-for x in "${cmdlets[@]}"; do
-    bash libs.sh fetch "$x"
-done
+bash libs.sh fetch "${cmdlets[@]}"

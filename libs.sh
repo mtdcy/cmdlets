@@ -798,20 +798,23 @@ load() {
 
 # fetch libname
 fetch() {
-    _load "$1"
+    slogi "fetch packages $*"
+    for libs in "$@"; do
+        _load "$libs"
 
-    test -n "$libs_url" || return 0 # ignore error
+        test -n "$libs_url" || continue
 
-    _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
 
-    # libs_resources: no mirrors
-    if test -n "${libs_resources[*]}"; then
-        local url sha
-        for x in "${libs_resources[@]}"; do
-            IFS=';|' read -r url sha <<< "$x"
-            _fetch "$(_packages "$url")" "$sha" "$url"
-        done
-    fi
+        # libs_resources: no mirrors
+        if test -n "${libs_resources[*]}"; then
+            local url sha
+            for x in "${libs_resources[@]}"; do
+                IFS=';|' read -r url sha <<< "$x"
+                _fetch "$(_packages "$url")" "$sha" "$url"
+            done
+        fi
+    done
 }
 
 arch() {
