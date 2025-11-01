@@ -398,7 +398,12 @@ _go_init() {
     test -z "$GO_READY" || return 0
 
     # defaults:
-    : "${CGO_ENABLED:=0}"   # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    if is_darwin; then
+        : "${CGO_ENABLED:=1}"
+    else
+        : "${CGO_ENABLED:=0}"
+    fi
 
     export CGO_ENABLED
 
