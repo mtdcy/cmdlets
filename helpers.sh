@@ -92,7 +92,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" install "-j$CL_NJOBS" "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$CL_NJOBS" "$@" || die "make all $* failed."
 }
 
 make.install() {
@@ -640,7 +640,11 @@ _pack() {
                 # libraries config scripts
                 if file "$x" | grep -Fwq "shell script"; then
                     # replace hardcoded PREFIX with env
-                    sed -i "$x" -e "s%$PREFIX%\${PREFIX:-/usr/local}%g"
+                    #1. prefix may be single quoted => replace prefix= first
+                    #2. replace others with ${prefix}
+                    sed -i "$x" \
+                        -e "s%^prefix=.*%prefix=\"\$PREFIX\"%" \
+                        -e "s%$PREFIX%\${prefix}%g"
                 elif test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
                 fi
@@ -948,10 +952,10 @@ hack.makefile() {
     for x in "${@:2}"; do
         case "$x" in
             *FLAGS) # append flags
-                sed -i "s/^$x\s*=\s*/$x += /" "$1"
+                sed -i "s/^$x\s*:\?=\s*/$x += /" "$1"
                 ;;
             *)      # delete others
-                sed -i "/^$x\s*=.*$/d" "$1"
+                sed -i "/^$x\s*:\?=.*$/d" "$1"
                 ;;
         esac
     done
