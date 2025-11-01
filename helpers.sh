@@ -933,6 +933,15 @@ hack.c.static() {
     sed -i "$1" -e "/\<$2\>\s*(/s/^/static /"
 }
 
+# fix configure
+hack.configure() {
+    sed -i "${1:-configure}" \
+        -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
+        -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'
+    #1. replace pkg-config with PKG_CONFIG env
+    #2. replace PKGCONFIG with PKG_CONFIG
+}
+
 # remove predefined variables in Makefile and use env instead
 #  input: Makefile variables...
 hack.makefile() {
