@@ -94,7 +94,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" all "-j$CL_NJOBS" "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$CL_NJOBS" V=1 "$@" || die "make all $* failed."
 }
 
 make.install() {
