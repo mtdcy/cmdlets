@@ -24,13 +24,14 @@ libs_args=(
 libs_build() {
     configure
 
-    make
+    make.all
 
-    sed -i Makefile \
-        -e '/^install:/s/pcap-config//' \
-        -e '/pcap-config/d'
+    # fix pcap-config
+    sed -i pcap-config \
+        -e 's/^static=.*/static=1/' \
+        -e 's/^static_pcap_only=.*/static_pcap_only=1/' \
 
-    pkgfile $libs_name -- make install
+    pkgfile $libs_name -- make.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

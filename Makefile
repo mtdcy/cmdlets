@@ -186,9 +186,9 @@ endif
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
 
-# permissons
-#DOCKER_ARGS += --cap-add=SYS_ADMIN
-#DOCKER_ARGS += --security-opt apparmor=unconfined
+# permissons => need for testing
+DOCKER_ARGS += --cap-add=SYS_ADMIN
+DOCKER_ARGS += --security-opt apparmor=unconfined
 
 #DOCKER_ARGS += -u $(USER):$(GROUP)
 DOCKER_ARGS += -e PUID=$(USER)

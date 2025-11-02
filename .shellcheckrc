@@ -28,3 +28,6 @@ disable=SC2015
 
 # disable source warnings
 disable=SC1090
+
+# disable array initial warnings
+disable=SC2207

@@ -94,7 +94,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" all "-j$CL_NJOBS" "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$CL_NJOBS" V=1 "$@" || die "make all $* failed."
 }
 
 make.install() {
@@ -329,7 +329,7 @@ _cargo_init() {
     mkdir -p "$CARGO_HOME"
 
     # search for libraries in PREFIX
-    CARGO_BUILD_RUSTFLAGS="-L$PREFIX/lib"
+    CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
 
     if is_linux; then
         # static linked C runtime
@@ -337,6 +337,11 @@ _cargo_init() {
 
         CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
         rustup target add "$CARGO_BUILD_TARGET"
+
+        # error: toolchain 'stable-xxxx-unknown-linux-musl' may not be able to run on this system
+        #rustup default "stable-$CARGO_BUILD_TARGET"
+    else
+        CARGO_BUILD_TARGET="$(rustup default | cut -d' ' -f1 | sed 's/stable-//g')"
     fi
 
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -380,17 +385,52 @@ cargo() {
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
+# setup various rust things
+cargo.setup() {
+    _cargo_init
+
+    # debug
+    #export RUSTC_LOG=rustc_codegen_ssa::back::link=info
+
+    local rustflags=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -l*)    rustflags+=( -l "static=${1#-l}" );     ;;
+            -L)     rustflags+=( -L "$2" ); shift 1         ;;
+            -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
+            *)
+        esac
+        shift 1
+    done
+
+    test -z "$rustflags" || export RUSTFLAGS+=" ${rustflags[*]}"
+}
+
 cargo.build() {
     _cargo_init
 
-    slogcmd "$CARGO" build "${libs_args[@]}" "$@" || die "cargo.build failed."
+    # CL_NJOBS => CARGO_BUILD_JOBS
+    local std=( 
+        --release -vv
+
+        # If the --target flag (or build.target) is used, then 
+        # the build.rustflags will only be passed to the compiler for the target.
+        --target "$CARGO_BUILD_TARGET"
+    )
+
+    slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
 }
 
 _go_init() {
     test -z "$GO_READY" || return 0
 
     # defaults:
-    : "${CGO_ENABLED:=0}"   # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    # CGO_ENABLED=0 is necessary for build static binaries except macOS
+    if is_darwin; then
+        : "${CGO_ENABLED:=1}"
+    else
+        : "${CGO_ENABLED:=0}"
+    fi
 
     export CGO_ENABLED
 
@@ -544,9 +584,16 @@ go.clean() {
 go.build() {
     _go_init
 
-    #1. static without dwarf and stripped
-    #2. add version info
-    local ldflags=( -w -s -X main.version="$libs_ver" )
+    # static without dwarf and stripped
+    local ldflags=( -w -s )
+
+    # go embed version control
+    if test -f main.go; then
+        ldflags+=(
+            -X main.Version="$libs_ver"
+            -X main.Build="$((${PKGBUILD#*=}+1))"
+        )
+    fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
 
@@ -554,7 +601,7 @@ go.build() {
     ldflags+=( $(_go_filter_ldflags "$@") )
 
     # verbose
-    local std=( -x -v )
+    local std=( -x -v -p "$CL_NJOBS" )
 
     # set ldflags
     std+=( -ldflags="'${ldflags[*]}'" )
@@ -731,8 +778,6 @@ pkgfile() {
     #else
     #    _ln "$libs_name/$name@latest"   "$name@latest"
     #fi
-
-    test -n "$PKGBUILD" || PKGBUILD="build=0"
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
