@@ -15,9 +15,8 @@ libs_args=(
 libs_build() {
     # fix dependencies of static libxcb
     #export RUSTFLAGS="-L $PREFIX/lib -l static=Xau -l static=Xdmcp"
-    is_linux && export RUSTFLAGS="$($PKG_CONFIG --libs xcb | sed 's/ -l/ -l static=/g')"
-
-    cargo.setup
+    cargo.setup \
+        $($PKG_CONFIG --libs xcb)
 
     cargo.build
 
