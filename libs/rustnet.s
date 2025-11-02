@@ -22,8 +22,11 @@ libs_build() {
     #LIBBPF_SYS_LIBRARY_PATH="-L native=$PREFIX/lib"
     #LIBBPF_SYS_EXTRA_CFLAGS="$($PKG_CONFIG --cflags --libs libelf libpcap)"
 
-    # native libpcap
-    LIBPCAP_LIBDIR="-L native=$PREFIX/lib"
+    # XXX: rust pcap crate predefined LIBPCAP_LIBDIR but no env for headers
+    if [[ "$libs_dep" =~ libpcap ]]; then
+        # native libpcap
+        LIBPCAP_LIBDIR="-L native=$PREFIX/lib"
+    fi
 
    #sed -i build.rs \
    #    -e "/Ok(())/{
