@@ -454,14 +454,20 @@ _git() {
 }
 
 _packages() {
+    local package
     # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
     if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
         local path
         IFS=':/' read -r _ _ _ _ path <<< "$1"
-        echo "$ROOT/packages/$libs_name/${path//\//_}"
+        package="$ROOT/packages/$libs_name/${path//\//_}"
     else
-        echo "$ROOT/packages/$libs_name/${1##*/}"
+        package="$ROOT/packages/$libs_name/${1##*/}"
     fi
+    
+    # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
+    package="${package%\?*}"
+
+    echo "$package"
 }
 
 # unzip url to workdir or die
