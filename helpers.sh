@@ -380,9 +380,22 @@ cargo() {
     slogcmd "${cmdline[@]}" || die "cargo $* failed."
 }
 
-# for furture
+# setup various rust things
 cargo.setup() {
     _cargo_init
+
+    local rustflags=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -L)     rustflags+=( "$1" "$2" ); shift 1       ;;
+            -L*)    rustflags+=( -L "native=${1#-L}" );     ;;
+            -l*)    rustflags+=( -l "static=${1#-l}" );     ;;
+            *)
+        esac
+        shift 1
+    done
+
+    test -z "$rustflags" || export RUSTFLAGS+=" ${rustflags[*]}"
 }
 
 cargo.build() {
