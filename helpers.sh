@@ -612,6 +612,41 @@ go.build() {
     slogcmd "$GO" build "${std[@]}" || die "go.build failed."
 }
 
+_python_init() {
+    test -z "$PYTHON_READY" || return 0
+
+    local pythonpath="$ROOT/.pip/${PREFIX##*/}"
+    mkdir -p "$pythonpath"
+    cat << EOF > "$pythonpath/pip.conf"
+[global]
+cache-dir = $pythonpath/cache
+
+[install]
+target = $pythonpath
+
+EOF
+
+    export PATH="$pythonpath/bin:$PATH"
+    export PYTHONPATH="$pythonpath:$PYTHONPATH"
+    export PIP_CONFIG_FILE="$pythonpath/pip.conf"
+
+    python3 -m pip config debug
+    python3 -m pip install pyinstaller
+
+    export PYTHON_READY=1
+}
+
+python.setup() {
+    _python_init
+
+    python3 -m pip install -r requirements.txt
+}
+
+python.build() {
+    #nuitka --standalone --main="$@"
+    python3 -m PyInstaller --onefile "$@"
+}
+
 # libtool archive hardcoded PREFIX which is bad for us
 _rm_libtool_archive() {
     CL_LOGGING=silent \
