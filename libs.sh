@@ -307,9 +307,7 @@ EOF
     fi
 
     # cmdlets
-    export CMDLETS_PREBUILTS="$PREFIX"
-
-    [ -z "$CL_MIRRORS" ] || export CMDLETS_MAIN_REPO="$CL_MIRRORS/cmdlets/latest"
+    [ -z "$CL_MIRRORS" ] || export REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
 # _curl source destination [options]
@@ -463,7 +461,7 @@ _packages() {
     else
         package="$ROOT/packages/$libs_name/${1##*/}"
     fi
-    
+
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
     package="${package%\?*}"
 

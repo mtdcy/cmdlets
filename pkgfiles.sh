@@ -20,6 +20,9 @@ _pkgfile() {
     echo "$PREFIX/$1"
 }
 
+# v3/git releases
+_flat() { [[ "$REPO" =~ ^flat+ ]]; }
+
 # fetch pkgfile to PREFIX
 _fetch() (
     local dest="$(_pkgfile "$1")"
@@ -27,7 +30,7 @@ _fetch() (
 
     mkdir -p "${dest%/*}"
 
-    if [[ "$REPO" =~ ^flat+ ]]; then
+    if _flat; then
         info "== curl < $REPO/$ARCH/${1##*/}"
         curl -fsSL "${opts[@]}" -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}" || return 1
     else
@@ -57,7 +60,7 @@ pkgfile() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if _fetch "$pkginfo" --connect-timeout 1; then
+    if ! _flat && _fetch "$pkginfo"; then
         # sha pkgfile ...
         IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$(_pkgfile "$pkginfo")" | xargs )
     else
