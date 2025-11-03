@@ -154,9 +154,6 @@ _search() {
 
     IFS='@' read -r pkgfile pkgvern  <<< "${1%.tar.*}"
 
-    # v3: no latest support
-    [ "$pkgvern" = "latest" ] && unset pkgvern || true
-
     # pkgname exists?
     [[ "$pkgfile" =~ / ]] && IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
 
@@ -166,10 +163,12 @@ _search() {
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                if test -n "$pkgvern"; then
+                if [ "$pkgvern" = "latest" ]; then
+                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" | tail -n1 || true
+                elif test -n "$pkgvern"; then
                     grep "^$pkgfile@$pkgvern \|/$pkgfile@$pkgvern" "$MANIFEST" || true
                 else
-                    grep "^$pkgfile " "$MANIFEST" || true
+                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" || true
                 fi
                 ;;
             --pkgname)
