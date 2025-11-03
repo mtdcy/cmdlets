@@ -261,8 +261,10 @@ _init() {
 
     # some build system do not support pkg-config with parameters
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
-    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
     PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+    # XXX: not all build system support multiple pkgconfig dirs, fix install scripts later
+    #PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
 
     cat << EOF > "$ROOT/pkg-config"
 #!/usr/bin/env bash
@@ -270,8 +272,8 @@ echo -en "\$0"      >> pkg-config.log
 printf ' %q' "\$@"  >> pkg-config.log
 echo ""             >> pkg-config.log
 
-export PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
-export PKG_CONFIG_LIBDIR="$PKG_CONFIG_LIBDIR"
+export PKG_CONFIG_PATH="\${PKG_CONFIG_PATH:-$PKG_CONFIG_PATH}"
+export PKG_CONFIG_LIBDIR="\${PKG_CONFIG_LIBDIR:-$PKG_CONFIG_LIBDIR}"
 $PKG_CONFIG --define-variable=PREFIX="$PREFIX" --static "\$@"
 EOF
     chmod a+x "$ROOT/pkg-config"
