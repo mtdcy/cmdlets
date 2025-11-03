@@ -313,6 +313,10 @@ _cargo_init() {
         else
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
         fi
+    elif test -f rust-toolchain.toml; then
+        # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
+        #  choose ROOT instead of HOME for docker buildings
+        export RUSTUP_HOME="$ROOT/.rustup"
     else
         rustup default || rustup default stable
     fi
