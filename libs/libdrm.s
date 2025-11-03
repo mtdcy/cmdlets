@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=2.4.127
+libs_ver=2.4.128
 libs_url=https://dri.freedesktop.org/libdrm/libdrm-$libs_ver.tar.xz
-libs_sha=051aeb3e542a57621018ffc443fb088dd69b78eef0ce4808b604ce0feac9f47f
+libs_sha=3bb35db8700c2a0b569f2c6729a53f5495786856b310854c8de57782a22bddac
 
 libs_args=(
     -Dudev=false
