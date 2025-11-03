@@ -76,21 +76,6 @@ jobs:
           cmdlets.sh ls | grep " zlib/minigzip@1.3.1 - 1.3.1"
           rm -rf minigzip prebuilts
 
-          # 2 - package
-          # 2.1
-          cmdlets.sh package zlib
-          find prebuilts/bin/minigzip
-          find prebuilts/lib/libz.a
-          find prebuilts/include/zlib.h
-          rm -rf prebuilts
-
-          # 2.2
-          cmdlets.sh package zlib@1.3.1
-          find prebuilts/bin/minigzip
-          find prebuilts/lib/libz.a
-          find prebuilts/include/zlib.h
-          rm -rf prebuilts
-
           # v3: versioned pkgfile
           latest=5.3
           versioned() {

@@ -688,7 +688,7 @@ build() {
         slogi "Force rebuild dependencies"
         targets=( "${deps[@]}" )
     else
-        ./cmdlets.sh package "${deps[@]}"
+        bash pkgfiles.sh "${deps[@]}" || true # ignore errors
 
         for dep in "${deps[@]}"; do
             [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
