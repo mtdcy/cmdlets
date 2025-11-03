@@ -295,6 +295,12 @@ _cargo_init() {
     # always prepend cargo bin to PATH
     export PATH="$CARGO_HOME/bin:$PATH"
 
+    # set mirrors for toolchain download
+    if test -n "$CL_MIRRORS"; then
+        export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
+        export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+    fi
+
     # we need rustup to add target
     if ! which rustup; then
         # RUSTUP_HOME: toolchain and configurations
@@ -302,17 +308,17 @@ _cargo_init() {
 
         mkdir -p "$RUSTUP_HOME" "$CARGO_HOME"
 
-        if test -n "$CL_MIRRORS"; then
-            export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
-            export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
-        fi
-
         RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
         if which rustup-init; then
             rustup-init "${RUSTUP_INIT_OPTS[@]}"
         else
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
         fi
+    elif test -f rust-toolchain.toml; then
+        # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
+        #  choose ROOT instead of HOME for docker buildings
+        export RUSTUP_HOME="$ROOT/.rustup"
+        # `rustup which` will install the specified toolchain
     else
         rustup default || rustup default stable
     fi
@@ -340,8 +346,6 @@ _cargo_init() {
 
         # error: toolchain 'stable-xxxx-unknown-linux-musl' may not be able to run on this system
         #rustup default "stable-$CARGO_BUILD_TARGET"
-    else
-        CARGO_BUILD_TARGET="$(rustup default | cut -d' ' -f1 | sed 's/stable-//g')"
     fi
 
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -410,13 +414,11 @@ cargo.build() {
     _cargo_init
 
     # CL_NJOBS => CARGO_BUILD_JOBS
-    local std=( 
-        --release -vv
+    local std=( --release -vv )
 
-        # If the --target flag (or build.target) is used, then 
-        # the build.rustflags will only be passed to the compiler for the target.
-        --target "$CARGO_BUILD_TARGET"
-    )
+    # If the --target flag (or build.target) is used, then
+    # the build.rustflags will only be passed to the compiler for the target.
+    test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
 
     slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
 }
@@ -589,10 +591,8 @@ go.build() {
 
     # go embed version control
     if test -f main.go; then
-        ldflags+=(
-            -X main.Version="$libs_ver"
-            -X main.Build="$((${PKGBUILD#*=}+1))"
-        )
+        echo "$*" | grep -i main.version    || ldflags+=( -X main.version="$libs_ver" )
+        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${PKGBUILD#*=}+1))" )
     fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )

@@ -21,6 +21,8 @@ libs_build() {
     pkgfile $libs_name -- make.install
 
     # test
+    # xorg installed pkgconfig into share instead of lib
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$PREFIX/share/pkgconfig"
     slogcmd "$PKG_CONFIG" --print-errors --variable=pkgdatadir xorg-macros || die "test failed."
 }
 

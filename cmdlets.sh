@@ -53,7 +53,7 @@ Options:
     update  <cmdlet>            - update cmdlet
 
     list                        - list installed cmdlets
-    search  <name>              - search for cmdlet, library or package
+    search  <name>              - search for cmdlet or resources
     install <cmdlet>            - fetch and install cmdlet
     remove  <cmdlet>            - remove cmdlet
 
@@ -61,14 +61,10 @@ Options:
 
     (for developers)
     fetch   <cmdlet ...>        - fetch cmdlet(s)
-    package <pkgname ...>       - fetch package(s) (cmdlets & libraries)
 
 Examples:
     $NAME install minigzip                          # install the latest version
     $NAME install zlib/minigzip@1.3.1               # install the specific version
-
-    $NAME package zlib                              # install the latest package
-    $NAME package zlib@1.3.1                        # install the specific version
 
     # create resource link
     $NAME install mergetools                        # install git mergetools
@@ -153,16 +149,10 @@ _search() {
     #   minigzip
     #   minigzip@1.3.1
     #   zlib/minigzip@1.3.1
-    # packages:
-    #   zlib
-    #   zlib@1.3.1
 
     local pkgname pkgfile pkgvern
 
     IFS='@' read -r pkgfile pkgvern  <<< "${1%.tar.*}"
-
-    # v3: no latest support
-    [ "$pkgvern" = "latest" ] && unset pkgvern || true
 
     # pkgname exists?
     [[ "$pkgfile" =~ / ]] && IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
@@ -173,10 +163,12 @@ _search() {
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                if test -n "$pkgvern"; then
+                if [ "$pkgvern" = "latest" ]; then
+                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" | tail -n1 || true
+                elif test -n "$pkgvern"; then
                     grep "^$pkgfile@$pkgvern \|/$pkgfile@$pkgvern" "$MANIFEST" || true
                 else
-                    grep "^$pkgfile " "$MANIFEST" || true
+                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" || true
                 fi
                 ;;
             --pkgname)
@@ -467,53 +459,6 @@ remove() {
     fi
 }
 
-# fetch package
-package() {
-    local pkgname pkgvern pkginfo pkgfiles
-
-    # priority: v2 > v3, no v1 package()
-
-    info "📦 Fetch package $1:"
-
-    # zlib@1.3.1
-    IFS='@' read -r pkgname pkgvern <<< "$1"
-
-    # v2: latest version
-    : "${pkgvern:=latest}"
-
-    pkginfo="$pkgname/pkginfo@$pkgvern"
-
-    true > "$TEMPDIR/pkginfo"
-
-    # prefer v2 pkginfo than v3 manifest for developers
-    if _curl "$pkginfo" "$TEMPDIR/pkginfo"; then
-        # sha pkgfile ...
-        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo" | xargs )
-    else
-        # v3/manifest: name pkgfile sha ...
-        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS=' '  read -r _ pkginfo _ < <( _search "$1" --pkgname | tail -n 1 )
-            IFS='/@' read -r _ _ pkgvern <<< "${pkginfo%.tar.*}"
-        fi
-        test -n "$pkgvern"                          || die "<< failed to find pkgvern for $pkgname"
-
-        IFS=' ' read -r -a pkgfiles < <( _search "$pkgname@$pkgvern" --pkgname | cut -d' ' -f2 | xargs )
-    fi
-
-    test -n "${pkgfiles[*]}"                        || die "<< Fetch package $1/$ARCH failed"
-
-    info "=> ${pkgfiles[*]}"
-
-    for pkgfile in "${pkgfiles[@]}"; do
-        info "## Fetch $pkgfile"
-        _unzip "$pkgfile"                           || die "<< Fetch package $pkgfile/$ARCH failed"
-    done
-
-    touch "$PREBUILTS/.$pkgname.d" # mark as ready
-
-    echo ""
-}
-
 install() {
     local target
     if [ -f "$0" ]; then
@@ -654,15 +599,6 @@ invoke() {
             for x in "${@:2}"; do
                 ( fetch "$x" ) || ret=$?
             done
-            ;;
-        package)    # fetch package files
-            for x in "${@:2}"; do
-                ( package "$x" ) || true # ignore errors
-            done
-            # no fix pc here, otherwise rsync will upload these files again
-            #while read -r pc; do
-            #    _edit "s%^prefix=.*$%prefix=$PREBUILTS%g" "$pc"
-            #done < <( find "$PREBUILTS/lib/pkgconfig" -name "*.pc" )
             ;;
         *)
             usage
