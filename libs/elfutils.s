@@ -10,7 +10,7 @@ libs_sha=09e2ff033d39baa8b388a2d7fbc5390bfde99ae3b7c67c7daaf7433fbcf0f01e
 libs_dep=( zlib bzip2 zstd xz )
 
 # musl missing some glibc features
-if is_musl_gcc; then
+if is_musl; then
     libs_dep+=( libargp musl-fts musl-obstack )
 
     # patches from alpine

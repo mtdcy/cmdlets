@@ -43,7 +43,7 @@ is_darwin && libs_args+=(
 )
 
 # "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
-is_musl_gcc && libs_args+=( NO_REGEX=NeedsStartEnd )
+is_musl && libs_args+=( NO_REGEX=NeedsStartEnd )
 
 #1. avoid hardcode PREFIX into git commands
 #2. avoid system libexec

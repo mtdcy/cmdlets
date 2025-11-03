@@ -22,7 +22,7 @@ libs_args=(
 # undefined reference to `__sprintf_chk'
 #  musl does not provide __sprintf_chk without _FORTIFY_SOURCE
 #   => undefine _FORTIFY_SOURCE
-is_musl_gcc && libs_args+=(
+is_musl && libs_args+=(
     COPTS=
 
     LIBCSTATIC=yes

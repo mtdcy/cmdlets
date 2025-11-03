@@ -26,12 +26,10 @@ unset ROOT PREFIX WORKDIR
 is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
 is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
 is_linux()      { [[ "$OSTYPE" =~ linux ]];                             }
-is_glibc()      { ldd --version 2>&1 | grep -qFi "glibc";               }
-# 'ldd --version' in alpine always return 1
-is_musl()       { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
-is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
+is_glibc()      { $CC -v 2>&1 | grep -q "^Target:.*gnu";                }
+is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
+is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
-is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
