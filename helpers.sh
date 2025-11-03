@@ -591,10 +591,8 @@ go.build() {
 
     # go embed version control
     if test -f main.go; then
-        ldflags+=(
-            -X main.Version="$libs_ver"
-            -X main.Build="$((${PKGBUILD#*=}+1))"
-        )
+        echo "$*" | grep -i main.version    || ldflags+=( -X main.version="$libs_ver" )
+        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${PKGBUILD#*=}+1))" )
     fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
