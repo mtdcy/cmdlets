@@ -17,7 +17,7 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_musl_gcc
+    depends_on is_musl
 
     configure
 

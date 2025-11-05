@@ -25,7 +25,7 @@ libs_build() {
     is_darwin && export CFLAGS+=" -D__APPLE_USE_RFC_3542"
 
     # fix missing sys/queue.h for musl-gcc
-    if is_musl_gcc; then
+    if is_musl; then
         mkdir -p compat/sys
         ln -sfv ../../queue.h compat/sys/
         export CPPFLAGS+=" -I$PWD/compat"

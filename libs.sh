@@ -26,12 +26,10 @@ unset ROOT PREFIX WORKDIR
 is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
 is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
 is_linux()      { [[ "$OSTYPE" =~ linux ]];                             }
-is_glibc()      { ldd --version 2>&1 | grep -qFi "glibc";               }
-# 'ldd --version' in alpine always return 1
-is_musl()       { { ldd --version 2>&1 || true; } | grep -qF "musl";    }
-is_clang()      { $CC --version 2>/dev/null | grep -qF "clang";         }
+is_glibc()      { $CC -v 2>&1 | grep -q "^Target:.*gnu";                }
+is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
+is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
-is_musl_gcc()   { [[ "$CC" =~ musl-gcc$ ]];                             }
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
@@ -266,22 +264,17 @@ _init() {
     # XXX: not all build system support multiple pkgconfig dirs, fix install scripts later
     #PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
 
-    cat << EOF > "$ROOT/pkg-config"
-#!/usr/bin/env bash
-echo -en "\$0"      >> pkg-config.log
-printf ' %q' "\$@"  >> pkg-config.log
-echo ""             >> pkg-config.log
-
-export PKG_CONFIG_PATH="\${PKG_CONFIG_PATH:-$PKG_CONFIG_PATH}"
-export PKG_CONFIG_LIBDIR="\${PKG_CONFIG_LIBDIR:-$PKG_CONFIG_LIBDIR}"
-$PKG_CONFIG --define-variable=PREFIX="$PREFIX" --static "\$@"
-EOF
-    chmod a+x "$ROOT/pkg-config"
-
-    # override PKG_CONFIG
-    PKG_CONFIG="$ROOT/pkg-config"
-
     export PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
+
+    # scripts override
+    #  input: script env
+    _init_scripts() {
+        eval export REAL_$2="\$$2"
+        eval export $2="$ROOT/scripts/$1"
+    }
+    #PKG_CONFIG="$ROOT/scripts/pkg-config"
+    _init_scripts pkg-config PKG_CONFIG
+    export PATH="$ROOT/scripts:$PATH"
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
