@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 {
-    echo -en "$0"
-    printf ' %q' "$@"
-    echo ""
+    printf '%s ' "$0"
+    printf '%q ' "$@"
+    printf '\n'
 } >> pkg-config.log
 
 : "${PREFIX:=prebuilts/$(uname -m)-apple-darwin}"
@@ -11,4 +11,4 @@
 
 export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
 
-${REAL_PKG_CONFIG:-$(which pkg-config)} --define-variable=PREFIX="$PREFIX" --static "$@"
+"${REAL_PKG_CONFIG:-$(which pkg-config)}" --define-variable=PREFIX="$PREFIX" --static "$@"
