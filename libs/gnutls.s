@@ -7,6 +7,8 @@ libs_url=https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-${libs_ver}.tar.xz
 libs_sha=91bd23c4a86ebc6152e81303d20cf6ceaeb97bc8f84266d0faec6e29f17baa20
 libs_dep=(zlib zstd brotli gmp libidn2 libtasn1 nettle libunistring)
 
+libs_rev=1
+
 libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
