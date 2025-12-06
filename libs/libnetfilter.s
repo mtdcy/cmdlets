@@ -4,9 +4,9 @@
 libs_lic='LGPLv2+'
 
 # use nftables version as pkgvern
-libs_ver=1.1.5
-libs_url=https://www.netfilter.org/projects/nftables/files/changes-nftables-1.1.5.txt
-libs_sha=c3f5bb2a25e1b5c04a9b4ebbe5e7c37efa95d07998d358890006434d18fcfcb0
+libs_ver=1.1.6
+libs_url=https://www.netfilter.org/projects/nftables/files/changes-nftables-1.1.6.txt
+libs_sha=a8d911230f388804d8642ce1338aa341ae736e4cb6d9976232799c8e4f0e4a0b
 libs_dep=( )
 
 libs_resources=(
