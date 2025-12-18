@@ -3,13 +3,13 @@
 
 libs_name=xz
 libs_lic="BSD"
-libs_ver=5.8.1
+libs_ver=5.8.2
 libs_url=(
     https://github.com/tukaani-project/xz/releases/download/v$libs_ver/xz-$libs_ver.tar.xz
     https://downloads.sourceforge.net/project/lzmautils/xz-$libs_ver.tar.xz
     https://mirrors.wikimedia.org/ubuntu/pool/main/x/xz-utils/xz-utils_$libs_ver.orig.tar.xz
 )
-libs_sha=0b54f79df85912504de0b14aec7971e3f964491af1812d83447005807513cd9e
+libs_sha=890966ec3f5d5cc151077879e157c0593500a522f413ac50ba26d22a9a145214
 libs_dep=()
 
 libs_args=(
