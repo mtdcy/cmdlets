@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=4.99.5
-libs_url=https://www.tcpdump.org/release/tcpdump-4.99.5.tar.gz
-libs_sha=8c75856e00addeeadf70dad67c9ff3dd368536b2b8563abf6854d7c764cd3adb
+libs_ver=4.99.6
+libs_url=https://www.tcpdump.org/release/tcpdump-4.99.6.tar.gz
+libs_sha=5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09
 libs_dep=( libpcap openssl )
 
 libs_args=(

@@ -4,10 +4,10 @@
 
 libs_name=ncurses
 libs_lic='MIT'
-libs_ver=6.5
+libs_ver=6.6
 libs_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
 #https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
-libs_sha=136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6
+libs_sha=355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11
 libs_dep=()
 
 libs_args=(
