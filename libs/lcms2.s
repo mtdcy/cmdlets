@@ -1,9 +1,9 @@
 # Color management engine supporting ICC profiles
 
 # shellcheck disable=SC2034
-libs_ver=2.17
+libs_ver=2.18
 libs_url=https://downloads.sourceforge.net/project/lcms/lcms/$libs_ver/lcms2-$libs_ver.tar.gz
-libs_sha=d11af569e42a1baa1650d20ad61d12e41af4fead4aa7964a01f93b08b53ab074
+libs_sha=ee67be3566f459362c1ee094fde2c159d33fa0390aa4ed5f5af676f9e5004347
 libs_dep=( zlib libjpeg-turbo libtiff )
 
 # configure args
