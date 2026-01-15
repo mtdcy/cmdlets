@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='GPL-2.0+'
-libs_ver=2.91
-libs_url=https://thekelleys.org.uk/dnsmasq/dnsmasq-2.91.tar.gz
-libs_sha=2d26a048df452b3cfa7ba05efbbcdb19b12fe7a0388761eb5d00938624bd76c8
+libs_ver=2.92
+libs_url=https://thekelleys.org.uk/dnsmasq/dnsmasq-2.92.tar.gz
+libs_sha=fd908e79ff37f73234afcb6d3363f78353e768703d92abd8e3220ade6819b1e1
 libs_dep=( libidn2 nettle )
 
 is_linux && libs_dep+=( nftables )
