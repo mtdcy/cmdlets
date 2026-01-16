@@ -355,18 +355,18 @@ _cargo_init() {
     export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
     # FOO_STATIC - pass --static for the library foo
 
-    if [ -n "$CL_MIRRORS" ]; then
+    if [ -n "$CL_CARGO_REGISTRY" ]; then
         # cargo
         local registry ver
         IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
         # cargo <= 1.68
-        [ "$ver" -le 68 ] && registry="$CL_MIRRORS" || registry="sparse+$CL_MIRRORS"
+        [ "$ver" -le 68 ] && registry="$CL_CARGO_REGISTRY" || registry="sparse+$CL_CARGO_REGISTRY"
         cat << EOF > "$CARGO_HOME/config.toml"
 [source.crates-io]
 replace-with = 'crates-io-mirrors'
 
 [source.crates-io-mirrors]
-registry = "$registry/crates.io-index/"
+registry = "$registry"
 EOF
     fi
 
@@ -480,7 +480,7 @@ _go_init() {
     export CGO_CPPFLAGS="$CPPFLAGS"
     export CGO_LDFLAGS="$LDFLAGS"
 
-    [ -z "$CL_MIRRORS" ] || export GOPROXY="$CL_MIRRORS/gomods"
+    [ -z "$CL_GO_PROXY" ] || export GOPROXY="$CL_GO_PROXY"
 
     export GO_READY=1
 }

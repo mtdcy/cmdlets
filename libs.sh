@@ -16,6 +16,12 @@ export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 
+# mirrors
+if test -n "$CL_MIRRORS"; then
+    : "${CL_CARGO_REGISTRY:=$CL_MIRRORS/crates.io-index/}"
+    : "${CL_GO_PROXY:=$CL_MIRRORS/gomods}"
+fi
+
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
