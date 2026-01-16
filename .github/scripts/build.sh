@@ -71,39 +71,17 @@ fi
 
 bash libs.sh build "${cmdlets[@]}" || ret=$?
 
+# find out dependents
+IFS=' ' read -r -a dependents <<< "$(bash libs.sh dependents "${cmdlets[@]}" | tail -n1)"
+if test -n "$dependents"; then
+    info "*** build dependents: ${dependents[*]} ***"
+    bash libs.sh build "${dependents[@]}" || ret=$?
+fi
+
 unset CL_FORCE
 
 # for release actions
 bash libs.sh zip_files || true
-
-## find out dependents
-#dependents=()
-#for pkg in libs/*.u; do
-#    IFS='/.' read -r _ ulib _ <<< "$pkg"
-#
-#    [[ "$ulib" =~ ^@  ]] && continue
-#    [[ "$ulib" == ALL ]] && continue
-#
-#    # already exists
-#    [[ "${dependents[*]}" == *"$ulib"* ]] && continue
-#
-#    IFS=' ' read -r -a deps <<< "$(bash libs.sh _deps_get "$ulib")"
-#
-#    for x in "${deps[@]}"; do
-#        if [[ "${cmdlets[*]}" == *"$x"* ]]; then
-#            dependents+=( "$ulib" )
-#            break
-#        fi
-#    done
-#done
-#
-#if [ -n "${dependents[*]}" ]; then
-#    IFS=' ' read -r -a dependents <<< "$(bash libs.sh _sort_by_depends "${dependents[@]}")"
-#
-#    info "*** build dependents: ${dependents[*]} ***"
-#
-#    bash libs.sh build "${dependents[@]}" || ret=$?
-#fi
 
 if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then
     echo "$CL_ARTIFACTS_TOKEN" > .ssh_token

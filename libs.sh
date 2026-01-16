@@ -710,21 +710,24 @@ build() {
     done
 }
 
-dependent() {
+# find out who depends on libs
+dependents() {
     local list=()
-    for libs in libs/*; do
-        libs="${libs#*/}"
-        libs="${libs%.s}"
-        [[ "$libs" =~ ^[.@_] ]] && continue
-        [[ "$libs" == ALL ]] && continue
+    for x in "$@"; do
+        for libs in libs/*; do
+            libs="${libs#*/}"
+            libs="${libs%.s}"
+            [[ "$libs" =~ ^[.@_] ]] && continue
+            [[ "$libs" == ALL ]] && continue
 
-        echo -en "checking $libs ..."
-        if [[ " $(_deps_get "$libs") " == *" $1 "* ]]; then
-            list+=( "$libs" )
-            echo -e " found"
-        else
-            echo -e ""
-        fi
+            echo -en "checking $libs ..."
+            if [[ " $(_deps_get "$libs") " == *" $x "* ]]; then
+                list+=( "$libs" )
+                echo -e " found"
+            else
+                echo -e ""
+            fi
+        done
     done
     echo "${list[@]}"
 }
