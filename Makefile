@@ -85,7 +85,7 @@ prepare: prepare-host
 endif
 
 mrproper:
-	rm -rf out prebuilts logs packages .cargo .go .ccache
+	rm -rf out prebuilts logs packages .cargo .go .ccache .pip .rustup node_modules
 
 .PHONY: clean distclean shell prepare runc test mrproper
 
