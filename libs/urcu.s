@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
-libs_ver=0.15.5
-libs_url=https://lttng.org/files/urcu/userspace-rcu-0.15.5.tar.bz2
-libs_sha=b2f787a8a83512c32599e71cdabcc5131464947b82014896bd11413b2d782de1
+libs_ver=0.15.6
+libs_url=https://lttng.org/files/urcu/userspace-rcu-0.15.6.tar.bz2
+libs_sha=850b192096eb11ebf2c70e8f97bc7da7479ee41da1bebeb44e3986908bac414f
 libs_dep=( )
 
 libs_args=(
