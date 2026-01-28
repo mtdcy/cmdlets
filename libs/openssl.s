@@ -5,9 +5,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='Apache-2.0'
-libs_ver=3.5.4
+libs_ver=3.5.5
 libs_url=https://www.openssl.org/source/openssl-$libs_ver.tar.gz
-libs_sha=967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
+libs_sha=b28c91532a8b65a1f983b4c28b7488174e4a01008e29ce8e69bd789f28bc2a89
 libs_dep=()
 
 libs_args=(
