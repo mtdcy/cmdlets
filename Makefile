@@ -15,8 +15,6 @@ CL_MIRRORS 	?= https://mirrors.mtdcy.top
 CL_LOGGING 	?= tty
 CL_CCACHE 	?= 1
 
-ARCH  		:= $(shell bash libs.sh arch)
-
 MAKEFLAGS 	+= --always-make
 
 ##############################################################################
