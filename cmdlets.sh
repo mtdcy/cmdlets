@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 #
 # shellcheck disable=SC2155
+#
+# Changes:
+#  1.0.0    - 20260129      - first release
 
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0-alpha
+VERSION=1.0.0
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
@@ -44,7 +47,7 @@ usage() {
     cat << EOF
 $NAME $VERSION
 
-Copyright (c) 2025, mtdcy.chen@gmail.com
+Copyright (c) 2026, mtdcy.chen@gmail.com
 
 Usage: $NAME cmd [args ...]
 
@@ -53,14 +56,18 @@ Options:
     update  <cmdlet>            - update cmdlet
 
     list                        - list installed cmdlets
+    list <cmdlets>              - list installed files of cmdlet(s)
     search  <name>              - search for cmdlet or resources
     install <cmdlet>            - fetch and install cmdlet
     remove  <cmdlet>            - remove cmdlet
+
+    version                     - show $NAME version
 
     help                        - show this help message
 
     (for developers)
     fetch   <cmdlet ...>        - fetch cmdlet(s)
+    --update                    - update only cmdlets
 
 Examples:
     $NAME install minigzip                          # install the latest version
@@ -78,7 +85,7 @@ info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
 info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
 info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
-die() { echo -e "\\033[31m$*\\033[39m" 1>&2; exit 1; }
+die()   { echo -e "\\033[31m$*\\033[39m" 1>&2; exit 1; }
 
 # prepend each line with '=> '
 _details() {
@@ -228,6 +235,8 @@ fetch() {
 
     true > "$TEMPDIR/files"
 
+    info "\n🌹 Install cmdlet $target"
+
     # cmdlet v1: path/to/file
     _v1() {
         info1 "#1 Fetch $1"
@@ -258,6 +267,9 @@ fetch() {
         IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
         test -n "$pkgfile" || return 1
 
+        # compatible
+        pkgbuild="${pkgbuild#build=}"
+
         info3 "#3 Fetch $1 < $pkgfile"
         _unzip "$pkgfile" || return 2
 
@@ -287,7 +299,7 @@ fetch() {
 
     # update installed: name pkgvern pkgbuild
     _edit "\#^$target #d" "$PREBUILTS/.cmdlets"
-    echo "$target ${pkgvern:-1.0} ${pkgbuild:-build=0}" >> "$PREBUILTS/.cmdlets"
+    echo "$target ${pkgvern:-1.0}-${pkgbuild:-0}" >> "$PREBUILTS/.cmdlets"
 
     # update files list: name files ...
     _edit "\#^$target #d" "$PREBUILTS/.files"
@@ -359,8 +371,8 @@ fetch() {
 
 update() {
     local pkgfile pkgvern pkgbuild
-    while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
-        info "\n🚀 Update $pkgfile ..."
+    while IFS=' -' read -r pkgfile pkgvern pkgbuild; do
+        info "🚀 Update $pkgfile ..."
 
         if test -z "$pkgbuild"; then
             info ">> no pkgbuild, always update"
@@ -372,15 +384,13 @@ update() {
             IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
 
             if test -z "$_pkgfile"; then
-                warn "<< update not found"
+                warn "<< no update found"
             elif [[ "$_pkgfile" != *"@$pkgvern.tar."* ]]; then
-                info ">> pkgvern updated"
+                info ">> new pkgvern > $_pkgfile"
                 fetch "$pkgfile" --install
             elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> pkgbuild updated"
+                info ">> new pkgbuild > $pkgvern-${_pkgbuild#*=}"
                 fetch "$pkgfile" --install
-            else
-                info "<< no update"
             fi
         fi
     done < <( sort "$PREBUILTS/.cmdlets" )
@@ -414,8 +424,8 @@ link() {
     done
 }
 
-# remove cmdlets
-#  input: name
+# remove installed files of cmdlet
+#  input: <cmdlet name>
 remove() {
     local name="${1%.tar.*}" # formated name
     info "== remove $name"
@@ -471,7 +481,7 @@ install() {
         target="/usr/local/bin/$NAME"
     fi
 
-    info "## Install $NAME => $target"
+    info "\n🌹 Install $NAME => $target"
 
     mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
 
@@ -506,30 +516,42 @@ list() {
         test -n "${args[*]}" && options=( --files ) || options=( --cmdlets )
     fi
 
+    # println: width name info
     _ls_println() {
         printf "   %${1}s - %s\n" "$2" "${*:3}"
+    }
+
+    # println: files ...
+    _ls_files_println() {
+        while read -r file; do
+            if test -L "$file"; then
+                echo "=> $file -> $(readlink "$file")"
+            else
+                echo "=> $file"
+            fi
+        done < <(tr -s ' ' '\n')
     }
 
     for opt in "${options[@]}"; do
         case "$opt" in
             --cmdlets)
-                info "== List installed cmdlets"
+                info "📦 Installed cmdlets:"
                 width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | _width)"
-                while IFS=' ' read -r name info; do
-                    _ls_println "$width" "$name" "$info"
+                while IFS=' -' read -r name pkgvern pkgbuild; do
+                    _ls_println "$width" "$name" "$pkgvern-${pkgbuild#build=}"
                 done < <( sort "$PREBUILTS/.cmdlets" )
                 ;;
             --files)
                 for x in "${args[@]}"; do
-                    info "== List installed files of $x"
-                    grep "^$x " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' | _details || {
+                    info "📦 Installed files of $x:"
+                    grep "^$x " "$PREBUILTS/.files" | cut -d' ' -f2- | _ls_files_println || {
                         # print link and target
                         echo "=> $x -> $(readlink "$x")"
                     }
                 done
                 ;;
             --links)
-                info "== List installed links"
+                info "📦 Installed links:"
                 width="$(find . -maxdepth 1 -type l | _width)"
 
                 while read -r link; do
@@ -549,18 +571,39 @@ invoke() {
     touch "$PREBUILTS/.cmdlets"
     touch "$PREBUILTS/.files"
 
-    export MANIFEST="$PREBUILTS/cmdlets.manifest"
-
-    touch "$MANIFEST"
+    local ret=0
+    local done=1
     case "$1" in
-        usage|help|ls|list|ln|link|rm|remove|uninstall) ;;
+        version)
+            echo "$VERSION"
+            ;;
+        ls|list)
+            list "${@:2}"
+            ;;
+        ln|link)
+            link "${@:2}"
+            ;;
+        rm|remove|uninstall)
+            for x in "${@:2}"; do
+                ( remove "$x" ) || ret=$?
+            done
+            ;;
+        usage|help)
+            usage
+            ;;
         *)
-            _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+            done=0
             ;;
     esac
 
+    [ "$done" -ne 1 ] || exit "$ret"
+
+    # always try to update manifest
+    export MANIFEST="$PREBUILTS/cmdlets.manifest"
+    touch "$MANIFEST"
+    _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+
     # handle commands
-    local ret=0
     case "$1" in
         manifest)
             cat "$MANIFEST"
@@ -575,12 +618,6 @@ invoke() {
                 install
             fi
             ;;
-        ls|list)
-            list "${@:2}"
-            ;;
-        ln|link)
-            link "${@:2}"
-            ;;
         search)
             search "${@:2}"
             ;;
@@ -588,11 +625,6 @@ invoke() {
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
                 ( fetch "$bin" --install "$alias" ) || ret=$?
-            done
-            ;;
-        rm|remove|uninstall)
-            for x in "${@:2}"; do
-                ( remove "$x" ) || ret=$?
             done
             ;;
         fetch)      # fetch cmdlets
