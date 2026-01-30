@@ -538,20 +538,21 @@ _load() {
     slogi ".Load" "libs/$1.s"
 
     local file="libs/$1.s"
+    local name="${1%%/*}"
 
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$1.s"
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
 
-    . "$TEMPDIR/$1.s"
+    . "$TEMPDIR/$name"
 
     # default values:
-    [ -n "$libs_name" ] || libs_name="$1"
+    test -n "$libs_name" || libs_name="$name"
 
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
     mkdir -p "$LOGFILES"
-    export _LOGFILE="$LOGFILES/$1.log"
+    export _LOGFILE="$LOGFILES/$libs_name.log"
     true > "$_LOGFILE"
 }
 
