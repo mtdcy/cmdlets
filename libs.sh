@@ -16,14 +16,18 @@ export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 
+# toolchain prefix
+export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+
 # mirrors
 if test -n "$CL_MIRRORS"; then
     : "${CL_CARGO_REGISTRY:=$CL_MIRRORS/crates.io-index/}"
     : "${CL_GO_PROXY:=$CL_MIRRORS/gomods}"
 fi
 
-# toolchain prefix
-export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+# defaults
+: "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
+# check: otool -l <path_to_binary> | grep minos
 
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
@@ -228,7 +232,10 @@ _init() {
 
     # macOS does not support statically linked binaries
     if is_darwin; then
-        FLAGS+=( -Wno-deprecated-non-prototype )
+        FLAGS+=(
+            -Wno-deprecated-non-prototype
+            -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
+        )
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     else
         # static linking => two '--' vs ldflags
@@ -301,11 +308,9 @@ _init() {
     fi
 
     # macos
-    if is_darwin; then
-        export MACOSX_DEPLOYMENT_TARGET=11.0
-    elif is_msys; then
-        export MSYS=winsymlinks:lnk
-    fi
+    export MACOSX_DEPLOYMENT_TARGET
+    # msys
+    export MSYS=winsymlinks:lnk
 
     # cmdlets
     [ -z "$CL_MIRRORS" ] || export REPO="$CL_MIRRORS/cmdlets/latest"
