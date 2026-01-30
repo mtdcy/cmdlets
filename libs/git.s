@@ -1,10 +1,10 @@
 # Distributed revision control system
 
 # shellcheck disable=SC2034,SC2154
-libs_lic="GPL-2.0-only"
-libs_ver=2.51.2
+libs_lic=GPLv2
+libs_ver=2.52.0
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
-libs_sha=233d7143a2d58e60755eee9b76f559ec73ea2b3c297f5b503162ace95966b4e3
+libs_sha=3cd8fee86f69a949cb610fee8cd9264e6873d07fa58411f6060b3d62729ed7c5
 libs_dep=( zlib pcre2 libiconv expat curl )
 
 is_darwin || libs_dep+=( openssl )
@@ -67,7 +67,7 @@ libs_build() {
     # git build system prefer hard link, disable it
     sed -i '/ln \$< \$@/d' Makefile || true
 
-    make "${libs_args[@]}" || return 1
+    make "${libs_args[@]}"
 
     # standalone cmds: binaries and bash scripts
     local cmds=(
@@ -85,16 +85,16 @@ libs_build() {
         git-request-pull
     )
 
-    make -C contrib/subtree "${libs_args[@]}" &&
-    cmds+=( contrib/subtree/git-subtree ) &&
+    make -C contrib/subtree "${libs_args[@]}"
+    cmds+=( contrib/subtree/git-subtree )
 
     if is_darwin; then
-        make -C contrib/credential/osxkeychain "${libs_args[@]}"  &&
+        make -C contrib/credential/osxkeychain "${libs_args[@]}"
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
     else
-        make -C contrib/credential/netrc "${libs_args[@]}"  &&
+        make -C contrib/credential/netrc "${libs_args[@]}"
         cmds+=( contrib/credential/netrc/git-credential-netrc )
-    fi &&
+    fi
 
     # git-sh-setup: NO_GETTEXT
     sed -i git-sh-setup                                 \
@@ -102,14 +102,14 @@ libs_build() {
         -e 's/eval_gettextln/eval echo/g'               \
         -e 's/eval_gettext/eval echo/g'                 \
         -e 's/gettextln/echo/g'                         \
-        &&
+        || die "modify git-sh-setup failed."
 
     # git-mergetool:
     sed -i git-mergetool                                \
         -e 's/git-sh-setup/$(which git-sh-setup)/'      \
         -e '/git-mergetool--lib/r git-mergetool--lib'   \
         -e '/git-mergetool--lib/d'                      \
-        &&
+        || die "modify git-mergetool failed."
 
     # git-difftool--helper:
     #  #1. GIT_EXTERNAL_DIFF=echo git diff
@@ -118,22 +118,22 @@ libs_build() {
     sed -i git-difftool--helper                         \
         -e '/git-mergetool--lib/r git-mergetool--lib'   \
         -e '/git-mergetool--lib/d'                      \
-        &&
+        || die "modify git-difftool--helper failed."
 
     for x in "${cmds[@]}"; do
         IFS=':' read -r bin links <<< "$x"
-        cmdlet "./$bin" "${bin##*/}" ${links//:/ } || return 3
+        cmdlet.install "./$bin" "${bin##*/}" ${links//:/ }
     done
 
     # pack all git tools into one pkgfile
-    pkgfile git bin/git bin/git-* &&
+    cmdlet.pkgfile git bin/git bin/git-*
 
     # mergetools: env MERGE_TOOLS_DIR
-    pkginst mergetools share/mergetools mergetools/* &&
+    cmdlet.pkginst mergetools share/mergetools mergetools/*
 
-    check git --version
+    cmdlet.check git --version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built $(./git --version) without libexec or i18n
 
 all tools are installed in and loaded from executable path
@@ -148,13 +148,13 @@ mergetools:
 EOF
 
     if is_darwin; then
-        caveats << EOF
+        cmdlet.caveats << EOF
 
 osxkeychain:
     git config --global credential.helper osxkeychain
 EOF
     else
-        caveats << EOF
+        cmdlet.caveats << EOF
 
 netrc:
     git config --global credential.helper netrc
