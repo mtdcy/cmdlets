@@ -3,12 +3,13 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.1    - 20260130      - fix link command
 #  1.0.0    - 20260129      - first release
 
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.0
+VERSION=1.0.1
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
@@ -399,29 +400,29 @@ update() {
 
 # link prebuilts to other place
 #  input: <targets ...> <destination>
+#  notes: requires coreutils' ln
 link() {
     local targets=( "${@:1:$(($#-1))}" )
     local to="${@:$#}"
 
+    # relative?
     [[ "$to" =~ ^/ ]] || to="$OLDPWD/$to"
 
     info "== Link ${targets[*]} => $to"
 
     if [ ${#targets[@]} -gt 1 ]; then
         mkdir -pv "$to" | _details
+
+        for x in "${targets[@]}"; do
+            test -e "$x" || x="$PREBUILTS/$x"
+            ln -srfv "$x" "$to" | _details_escape
+        done
     else
         mkdir -pv "${to%/*}" | _details
+
+        test -e "$targets" || targets="$PREBUILTS/$targets"
+        ln -srfv -T "$targets" "$to" | _details_escape
     fi
-
-    for x in "${targets[@]}"; do
-        test -e "$x" || x="$PREBUILTS/$x"
-
-        test -e "$x" || die "<< $x not exists"
-
-        # relative path: avoid using ln -srfv
-        x="$(realpath "$x" --relative-to="${to%/*}")"
-        ln -sfv "$x" "$to" | _details_escape
-    done
 }
 
 # remove installed files of cmdlet
