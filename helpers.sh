@@ -723,7 +723,7 @@ _ln() {
 }
 
 # create a pkgfile with given files
-pkgfile() {
+cmdlet.pkgfile() {
     local name version files
 
     # name contains version code?
@@ -789,14 +789,15 @@ pkgfile() {
 }
 
 # install files and create a pkgfile
-#  input: name                     \
-#         [include]       header.h \
-#         include/xxx     xxx.h    \
-#         [lib]           libxxx.a \
-#         [lib/pkgconfig] xxx.pc   \
-#         share           yyy      \
-#         share/man       zzz
-pkginst() {
+#  input: name                          \
+#         [include]         header.h    \
+#         include/xxx       xxx.h       \
+#         [lib]             libxxx.a    \
+#         [lib/pkgconfig]   xxx.pc      \
+#         bin               xxx         \
+#         share             yyy         \
+#         share/man         zzz
+cmdlet.pkginst() {
     local name="$1"; shift
 
     slogi ".Inst" "$name < $*"
@@ -829,20 +830,6 @@ pkginst() {
     done
 
     pkgfile "$name" "${installed[@]}"
-}
-
-# find out which files are installed by `make install'
-inspect() {
-    find "$PREFIX" > "$libs_name.pack.pre"
-
-    slogcmd "$@" || die "${*:2} failed."
-
-    _rm_libtool_archive
-
-    find "$PREFIX" > "$libs_name.pack.post"
-
-    # diff returns 1 if differences found
-    diff "$libs_name.pack.post" "$libs_name.pack.pre" || true
 }
 
 # cmdlet executable [name] [alias ...]
@@ -899,22 +886,36 @@ cmdlet.check() {
 
 cmdlet.caveats() {
     # no version for caveats file
-    pkgfile="$PREFIX/$libs_name/$libs_name.caveats"
+    caveats="$PREFIX/$libs_name/$libs_name.caveats"
 
     slogi "Caveats:"
     if test -n "$*"; then
-        echo "$*" | tee -a "$pkgfile"
+        echo "$*" | tee -a "$caveats" || die "write caveats failed."
     else
-        while IFS= read -r line; do
-            echo "$line" | tee -a "$pkgfile"
-        done
+        tee -a "$caveats" || die "write caveats failed."
     fi
 }
 
 # deprecated
+pkginst()   { cmdlet.pkginst "$@";  }
+pkgfile()   { cmdlet.pkgfile "$@";  }
 cmdlet()    { cmdlet.install "$@";  }
 check()     { cmdlet.check "$@";    }
 caveats()   { cmdlet.caveats "$@" ; }
+
+# find out which files are installed by `make install'
+inspect() {
+    find "$PREFIX" > "$libs_name.pack.pre"
+
+    slogcmd "$@" || die "${*:2} failed."
+
+    _rm_libtool_archive
+
+    find "$PREFIX" > "$libs_name.pack.post"
+
+    # diff returns 1 if differences found
+    diff "$libs_name.pack.post" "$libs_name.pack.pre" || true
+}
 
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
