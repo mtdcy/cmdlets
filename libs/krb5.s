@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=''
-libs_ver=1.22.1
-libs_url=https://kerberos.org/dist/krb5/1.22/krb5-1.22.1.tar.gz
-libs_sha=1a8832b8cad923ebbf1394f67e2efcf41e3a49f460285a66e35adec8fa0053af
+libs_ver=1.22.2
+libs_url=https://kerberos.org/dist/krb5/1.22/krb5-1.22.2.tar.gz
+libs_sha=3243ffbc8ea4d4ac22ddc7dd2a1dc54c57874c40648b60ff97009763554eaf13
 libs_dep=( openssl libedit )
 
 libs_args=(
