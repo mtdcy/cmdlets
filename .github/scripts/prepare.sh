@@ -13,6 +13,10 @@ else
     while read -r line; do
         # file been deleted or renamed
         test -f "$line" || continue
+
+        # no subdir
+        [ "$(dirname "$line")" = "libs" ] || continue
+
         libs="$(basename "$line")"
         [[ "$libs" =~ ^[.@_] ]] || cmdlets+=( "${libs%.s}" )
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
