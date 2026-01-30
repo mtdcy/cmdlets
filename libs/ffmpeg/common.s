@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034,SC2154
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
-libs_dep=(
+libs_dep+=(
     # basic libs
     zlib bzip2 xz libiconv
     # audio libs
@@ -11,7 +11,7 @@ libs_dep=(
     # image libs
     libpng giflib libjpeg-turbo libtiff libwebp openjpeg
     # video libs
-    #zimg 
+    #zimg
     theora libvpx
     openh264 kvazaar
     # text libs
@@ -22,7 +22,7 @@ libs_dep=(
     freetype fribidi harfbuzz    # for drawtext, TODO: fontconfig
 )
 
-libs_args=(
+libs_args+=(
     --enable-pic
     --enable-pthreads
     --enable-hardcoded-tables
@@ -72,6 +72,8 @@ libs_args=(
     --enable-static
     --pkg-config="'$PKG_CONFIG'"
 )
+
+is_arm64 && libs_args+=( --enable-neon )
 
 # Fix: libstdc++.a: linker input file unused because linking not done
 is_darwin || {

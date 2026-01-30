@@ -1,17 +1,13 @@
 # Play, record, convert, and stream audio and video
 
 # shellcheck disable=SC2034
-libs_ver=4.4.6
+libs_ver=6.1.4
 libs_url=https://ffmpeg.org/releases/ffmpeg-$libs_ver.tar.xz
-libs_sha=2290461f467c08ab801731ed412d8e724a5511d6c33173654bd9c1d2e25d0617
+libs_sha=a231e3d5742c44b1cdaebfb98ad7b6200d12763e0b6db9e1e2c5891f2c083a18
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 
-# shellcheck source=@ffmpeg.s
-. libs/@ffmpeg.s
-
-# Unknown option "--enable-libharfbuzz".
-libs_args=(${libs_args[@]//--enable-libharfbuzz/})
+. libs/ffmpeg/common.s
 
 libs_build() {
     configure &&
