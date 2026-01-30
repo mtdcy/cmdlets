@@ -2,35 +2,37 @@
 
 : "${REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
-_arch() {
+arch() {
     case "$(uname -s)" in
         Darwin)     echo "$(uname -m)-apple-darwin"         ;;
         msys)       echo "$(uname -m)-msys-${MSYSTEM,,}"    ;;
         *)          echo "$(uname -m)-linux-gnu"            ;;
     esac
 }
-: "${ARCH:=$(_arch)}"
+
+: "${ARCH:=$(arch)}"
 
 : "${PREFIX:=prebuilts/$ARCH}"
+
+# return path of pkgfiles
+path()  { echo "$PREFIX/$1"; }
+
+: "${MANIFEST:=$(path cmdlets.manifest)}"
 
 info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
 warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
 
-_pkgfile() {
-    echo "$PREFIX/$1"
-}
-
 # v3/git releases
-_flat() { [[ "$REPO" =~ ^flat+ ]]; }
+is_flat() { [[ "$REPO" =~ ^flat+ ]]; }
 
 # fetch pkgfile to PREFIX
-_fetch() (
-    local dest="$(_pkgfile "$1")"
+fetch() (
+    local dest="$(path "$1")"
     local opts=( "${@:2}" )
 
     mkdir -p "${dest%/*}"
 
-    if _flat; then
+    if is_flat; then
         info "== curl < $REPO/$ARCH/${1##*/}"
         curl -fsSL "${opts[@]}" -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}" || return 1
     else
@@ -44,12 +46,12 @@ _fetch() (
 )
 
 # fetch package files
-pkgfile() {
+package() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
 
-    info "📦 Fetch package $1"
+    info "\n📦 Fetch package $1"
 
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgvern <<< "$1"
@@ -60,9 +62,9 @@ pkgfile() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _flat && _fetch "$pkginfo"; then
+    if ! is_flat && fetch "$pkginfo"; then
         # sha pkgfile ...
-        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$(_pkgfile "$pkginfo")" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$(path "$pkginfo")" | xargs )
     else
         # v3: no latest => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
@@ -77,21 +79,19 @@ pkgfile() {
     test -n "${pkgfiles[*]}" || { warn "<< $* no pkgfile found"; return 1; }
 
     for x in "${pkgfiles[@]}"; do
-        _fetch "$x" || { warn "<< fetch $x failed"; return 1; }
+        fetch "$x" || { warn "<< fetch $x failed"; return 1; }
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
-
-    echo ""
 }
 
 # always fetch manifest
-export MANIFEST="$(_pkgfile cmdlets.manifest)"
-_fetch cmdlets.manifest
+info "📦 Fetch manifest => $PREFIX"
+fetch cmdlets.manifest
 
 ret=0
 for x in "$@"; do
-    pkgfile "$x" || ret=$?
+    package "$x" || ret=$?
 done
 
 exit "$ret"
