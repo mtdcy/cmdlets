@@ -32,7 +32,13 @@ test -n "${cmdlets[*]}" || {
     exit 0
 }
 
-[[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) ) || true
+if [[ "${cmdlets[*]}" =~ ALL ]]; then
+    cmdlets=( $(bash libs.sh _deps_get ALL) )
+else
+    # find out dependents
+    IFS=' ' read -r -a dependents <<< "$(bash libs.sh dependents "${cmdlets[@]}" | tail -n1)"
+    test -z "$dependents" || cmdlets+=( "${dependents[@]}" )
+fi
 
 info "*** prepare ${cmdlets[*]} ***"
 
