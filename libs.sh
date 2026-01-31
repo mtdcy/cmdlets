@@ -720,7 +720,8 @@ build() {
 dependents() {
     local list=()
     for x in "$@"; do
-        for libs in libs/*; do
+        # only top level *.s files
+        for libs in libs/*.s; do
             libs="${libs#*/}"
             libs="${libs%.s}"
             [[ "$libs" =~ ^[.@_] ]] && continue
