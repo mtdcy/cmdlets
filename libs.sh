@@ -533,6 +533,8 @@ _prepare() {
 
 # _load library
 _load() {
+    . helpers.sh
+
     unset "${!libs_@}"
 
     slogi ".Load" "libs/$1.s"
@@ -563,8 +565,6 @@ compile() {
         trap _tty_reset EXIT
 
         set -eo pipefail
-
-        . helpers.sh
 
         _load "$1"
 
