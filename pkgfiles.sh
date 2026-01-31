@@ -12,12 +12,9 @@ arch() {
 
 : "${ARCH:=$(arch)}"
 
-: "${PREFIX:=prebuilts/$ARCH}"
+: "${PREFIX:=$PWD/prebuilts/$ARCH}"
 
-# return path of pkgfiles
-path()  { echo "$PREFIX/$1"; }
-
-: "${MANIFEST:=$(path cmdlets.manifest)}"
+: "${MANIFEST:=$PREFIX/cmdlets.manifest}"
 
 info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
 warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
@@ -25,19 +22,20 @@ warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
 # v3/git releases
 is_flat() { [[ "$REPO" =~ ^flat+ ]]; }
 
-# fetch pkgfile to PREFIX
+# fetch pkgfile to destination
 fetch() (
-    local dest="$(path "$1")"
-    local opts=( "${@:2}" )
+    local dest
+
+    test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
 
     mkdir -p "${dest%/*}"
 
     if is_flat; then
         info "== curl < $REPO/$ARCH/${1##*/}"
-        curl -fsSL "${opts[@]}" -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}" || return 1
+        curl -fsSL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}" || return 1
     else
         info "== curl < $REPO/$ARCH/$1"
-        curl -fsSL "${opts[@]}" -o "$dest" "$REPO/$ARCH/$1" || return 1
+        curl -fsSL -o "$dest" "$REPO/$ARCH/$1" || return 1
     fi
 
     if [[ "$dest" =~ tar.gz$ ]]; then
@@ -64,7 +62,7 @@ package() {
     # prefer v2 pkginfo than v3 manifest for developers
     if ! is_flat && fetch "$pkginfo"; then
         # sha pkgfile ...
-        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$(path "$pkginfo")" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
         # v3: no latest => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
@@ -85,9 +83,14 @@ package() {
     touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
+if test -z "$TEMPDIR"; then
+    TEMPDIR="$(mktemp -d)"
+    trap 'rm -rf $TEMPDIR' EXIT
+fi
+
 # always fetch manifest
-info "📦 Fetch manifest => $PREFIX"
-fetch cmdlets.manifest
+info "📦 Fetch $MANIFEST"
+fetch cmdlets.manifest "$MANIFEST"
 
 ret=0
 for x in "$@"; do

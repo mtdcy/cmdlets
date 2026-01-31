@@ -911,7 +911,7 @@ _on_exit() {
     rm -rf "$TEMPDIR"
 }
 
-TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
+export TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 _init || exit 110
 
