@@ -540,9 +540,6 @@ _load() {
     local file="libs/$1.s"
     local name="${1##*/}"
 
-    # v2/latest?
-    [[ "$1" =~ / ]] && unset PKGINFO_LATEST || export PKGINFO_LATEST=1
-
     # sed: delete all lines after __END__
     sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
 

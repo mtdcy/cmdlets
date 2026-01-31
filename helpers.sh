@@ -763,10 +763,8 @@ cmdlet.pkgfile() {
     grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
     # v2/pkginfo
-    if test -n "$PKGINFO_LATEST"; then
-        _ln "$pkgvern" "$libs_name/$name@latest"
-        _ln "$pkginfo" "$libs_name/pkginfo@latest"
-    fi
+    _ln "$pkgvern" "$libs_name/$name@latest"
+    _ln "$pkginfo" "$libs_name/pkginfo@latest"
 
     if [ "$version" != "$libs_ver" ]; then
         _ln "$pkgvern" "$libs_name/$name@$version"
