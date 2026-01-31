@@ -1,9 +1,9 @@
 # Play, record, convert, and stream audio and video
 
 # shellcheck disable=SC2034
-libs_ver=8.0.1
+libs_ver=4.4.6
 libs_url=https://ffmpeg.org/releases/ffmpeg-$libs_ver.tar.xz
-libs_sha=05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41
+libs_sha=2290461f467c08ab801731ed412d8e724a5511d6c33173654bd9c1d2e25d0617
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
