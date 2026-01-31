@@ -50,13 +50,10 @@ if test -n "$*"; then
 else
     while read -r line; do
         # file been deleted or renamed
-        test -f "$line" || continue
+        test -e "$line" || continue
 
-        # only libs/*
-        [[ "$line" =~ ^libs/ ]] || continue
-
-        # remove libs/
-        line="${line#*/}"
+        # only top dir
+        [ "${line%/*}" = "libs" ] && line="${line#*/}" || continue
 
         # excludes
         [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
