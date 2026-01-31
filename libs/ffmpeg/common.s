@@ -73,52 +73,40 @@ libs_args+=(
     --pkg-config="'$PKG_CONFIG'"
 )
 
-is_arm64 && libs_args+=( --enable-neon )
-
-# Fix: libstdc++.a: linker input file unused because linking not done
-is_darwin || {
-    libs_args+=( --extra-libs=-lstdc++ )
-    export LDFLAGS+=" -static-libstdc++"
-}
-
-is_darwin || {
-    libs_dep+=(openssl)
-    libs_args+=(
-        # ffmpeg prefer shared libs, fix bug using extra libs
-        #--extra-libs=\"-lm -lpthread\"
-        --enable-openssl            # TLS
-    )
-
-    # TODO: Fix build libdrm with alpine/musl
-    is_glibc && {
-        libs_dep+=(libdrm)
-        libs_args+=( --enable-libdrm )
-    }
-}
-
-# always enable hwaccels for macOS
-is_darwin && {
+if is_darwin; then
+    # always enable hwaccels for macOS
     libs_args+=(
         --enable-hwaccels
         --enable-securetransport    # TLS
         --enable-coreimage          # for avfilter
         --enable-audiotoolbox       # audio codecs
         --enable-videotoolbox       # video codecs
-        --enable-opencl
     )
-}
+else
+    # Fix: libstdc++.a: linker input file unused because linking not done
+    libs_args+=( --extra-libs=-lstdc++ )
+    export LDFLAGS+=" -static-libstdc++"
 
-is_msys && {
-    libs_args+=(
-        --extra-cflags=-DKVZ_STATIC_LIB # read kvazaar's README
-    )
-}
+    libs_dep+=( openssl )
+    libs_args+=( --enable-openssl ) # TLS
+
+    # TODO: Fix build libdrm with alpine/musl
+    is_glibc && {
+        libs_dep+=(libdrm)
+        libs_args+=( --enable-libdrm )
+    }
+fi
+
+is_arm64 && libs_args+=( --enable-neon )
+
+# read kvazaar's README
+is_msys && libs_args+=( --extra-cflags=-DKVZ_STATIC_LIB )
 
 libs_lic="BSD"
 for v in ${FFMPEG_VARS//,/ }; do
     case "$v" in
         gpl)
-            libs_lic="GPL-2.0-and-later"
+            libs_lic="GPLv2.0+"
             libs_dep+=(amr x264 xvidcore frei0r)
             libs_args+=(
                 --enable-gpl                # GPL 2.x
@@ -133,7 +121,7 @@ for v in ${FFMPEG_VARS//,/ }; do
             }
             ;;
         lgpl)
-            libs_lic="LGPL-3.0-and-later"
+            libs_lic="LGPLv3.0+"
             libs_args+=(
                 --enable-version3           # LGPL 3.0
                 --enable-libopencore-amrnb  # amrnb encoding
@@ -151,21 +139,26 @@ for v in ${FFMPEG_VARS//,/ }; do
         hwaccels)
             # platform hw accel
             # https://trac.ffmpeg.org/wiki/HWAccelIntro
-            libs_args+=(--enable-hwaccels)
+            libs_args+=( --enable-hwaccels )
 
-            is_darwin || libs_dep+=(libva OpenCL)
+            if is_linux; then
+                libs_dep+=( libva )
+                libs_args+=(
+                    #--enable-opengl
+                    #--enable-vdpau
+                    --enable-vaapi
+                )
+            elif is_msys; then
+                libs_dep+=( libva )
+                libs_args+=(
+                    --enable-d3d11va
+                    --enable-dxva2
+                )
+            fi
 
-            is_linux && libs_args+=(
-                #--enable-opencl
-                #--enable-opengl
-                #--enable-vdpau
-                --enable-vaapi
-            )
-            is_msys && libs_args+=(
-                --enable-opencl
-                --enable-d3d11va
-                --enable-dxva2
-            )
+            # opencl
+            libs_dep+=( OpenCL )
+            libs_args+=( --enable-opencl )
             ;;
         ffplay)
             libs_dep+=(sdl2)
