@@ -13,13 +13,13 @@ FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,huge}"
 libs_args=(${libs_args[@]//--enable-libharfbuzz/})
 
 libs_build() {
-    configure &&
+    configure
 
-    make ffmpeg ffprobe &&
+    make ffmpeg ffprobe
 
     # install libs and headers only for the newest version
-    cmdlet ffmpeg_g  ffmpeg${libs_ver%%.*} &&
-    cmdlet ffprobe_g ffprobe${libs_ver%%.*} &&
+    cmdlet ffmpeg_g  ffmpeg${libs_ver%%.*}
+    cmdlet ffprobe_g ffprobe${libs_ver%%.*}
     # install-progs will install docs, which is not needed.
 
     check ffmpeg${libs_ver%%.*} -version
