@@ -19,7 +19,7 @@ libs_dep+=(
     # demuxers & muxers
     libxml2
     # filters
-    freetype fribidi harfbuzz    # for drawtext, TODO: fontconfig
+    freetype fribidi # for drawtext, TODO: fontconfig
 )
 
 libs_args+=(
@@ -65,13 +65,17 @@ libs_args+=(
     #--enable-libfontconfig
     --enable-libfreetype
     --enable-libfribidi
-    --enable-libharfbuzz
 
     # static linked
     --disable-shared
     --enable-static
     --pkg-config="'$PKG_CONFIG'"
 )
+
+if version.ge "$libs_ver" 6.0.0; then
+    libs_dep+=( harfbuzz )
+    libs_args+=( --enable-libharfbuzz )
+fi
 
 if is_darwin; then
     # always enable hwaccels for macOS

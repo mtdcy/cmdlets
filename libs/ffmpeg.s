@@ -19,9 +19,11 @@ install_ffmpeg_libs() {
 }
 
 libs_build() {
-    # bug since 7.1.3, see libavcodec/vlc.c:530
-    # https://git.ffmpeg.org/gitweb/ffmpeg.git/commitdiff/d8ffec5bf9a2803f55cc0822a97b7815f24bee83
-    sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
+    if version.ge "$libs_ver" 7.1.3; then
+        # bug since 7.1.3, see libavcodec/vlc.c:530
+        # https://git.ffmpeg.org/gitweb/ffmpeg.git/commitdiff/d8ffec5bf9a2803f55cc0822a97b7815f24bee83
+        sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
+    fi
 
 	CC_C='' configure
 
