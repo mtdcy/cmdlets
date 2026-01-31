@@ -538,7 +538,7 @@ _load() {
     slogi ".Load" "libs/$1.s"
 
     local file="libs/$1.s"
-    local name="${1%%/*}"
+    local name="${1##*/}"
 
     # v2/latest?
     [[ "$1" =~ / ]] && unset PKGINFO_LATEST || export PKGINFO_LATEST=1
