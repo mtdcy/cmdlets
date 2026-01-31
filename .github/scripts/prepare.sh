@@ -14,16 +14,26 @@ else
         # file been deleted or renamed
         test -f "$line" || continue
 
-        # no subdir
-        [ "$(dirname "$line")" = "libs" ] || continue
+        # only libs/*
+        [[ "$line" =~ ^libs/ ]] || continue
 
-        libs="$(basename "$line")"
-        [[ "$libs" =~ ^[.@_] ]] || cmdlets+=( "${libs%.s}" )
+        # remove libs/
+        line="${line#*/}"
+
+        # excludes
+        [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
+
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
 fi
 
-test -n "${cmdlets[*]}" || cmdlets=( $(bash libs.sh _deps_get ALL) )
+#test -n "${cmdlets[*]}" || cmdlets=( $(bash libs.sh _deps_get ALL) )
+test -n "${cmdlets[*]}" || {
+    info "*** no cmdlets, exit ***"
+    exit 0
+}
 
-[[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) )
+[[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) ) || true
+
+info "*** prepare ${cmdlets[*]} ***"
 
 bash libs.sh fetch "${cmdlets[@]}"
