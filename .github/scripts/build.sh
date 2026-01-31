@@ -70,6 +70,13 @@ test -n "${cmdlets[*]}" || {
     exit 0
 }
 
+# find out dependents
+IFS=' ' read -r -a dependents <<< "$(bash libs.sh dependents "${cmdlets[@]}" | tail -n1)"
+if test -n "$dependents"; then
+    info "*** append dependents: ${dependents[*]} ***"
+    cmdlets+=( "${dependents[@]}" )
+fi
+
 ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
@@ -81,13 +88,6 @@ if [[ "${cmdlets[*]}" =~ =force ]]; then
 fi
 
 bash libs.sh build "${cmdlets[@]}" || ret=$?
-
-# find out dependents
-IFS=' ' read -r -a dependents <<< "$(bash libs.sh dependents "${cmdlets[@]}" | tail -n1)"
-if test -n "$dependents"; then
-    info "*** build dependents: ${dependents[*]} ***"
-    bash libs.sh build "${dependents[@]}" || ret=$?
-fi
 
 unset CL_FORCE
 
