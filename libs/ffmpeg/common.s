@@ -72,7 +72,7 @@ libs_args+=(
     --pkg-config="'$PKG_CONFIG'"
 )
 
-if version.ge "$libs_ver" 6.0.0; then
+if version.ge 6.0.0; then
     libs_dep+=( harfbuzz )
     libs_args+=( --enable-libharfbuzz )
 fi

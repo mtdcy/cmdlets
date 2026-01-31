@@ -56,8 +56,11 @@ depends.libs() {
 }
 
 # return 0 if $1 >= $2
-version.ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
-version.le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
+_version_ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
+_version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
+
+version.ge() { _version_ge "$libs_ver" "$1"; }
+version.le() { _version_le "$libs_ver" "$1"; }
 
 configure() {
     _setup
@@ -238,7 +241,7 @@ meson() {
 
             # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
             # meson >= 0.37.0
-            #version.ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
+            #_version_ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
 
             # append user args
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
@@ -267,7 +270,7 @@ meson.setup() {
 
     # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
     # meson >= 0.37.0
-    #version.le "$($MESON --version)" 0.37.0 || std+=( -Dprefer_static=true )
+    #_version_le "$($MESON --version)" 0.37.0 || std+=( -Dprefer_static=true )
 
     # std < libs_args < user args
     slogcmd "$MESON" setup build "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
