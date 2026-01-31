@@ -19,11 +19,11 @@ libs_build() {
     make ffmpeg ffprobe
 
     # install libs and headers only for the newest version
-    cmdlet.install ffmpeg_g  ffmpeg
-    cmdlet.install ffprobe_g ffprobe
+    cmdlet.install ffmpeg_g  "ffmpeg${libs_ver%%.*}"
+    cmdlet.install ffprobe_g "ffprobe${libs_ver%%.*}"
     # install-progs will install docs, which is not needed.
 
-    cmdlet.check ffmpeg -version
+    cmdlet.check "ffmpeg${libs_ver%%.*}" -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
