@@ -61,18 +61,19 @@ package() {
 
     # prefer v2 pkginfo than v3 manifest for developers
     if ! is_flat && fetch "$pkginfo"; then
-        # sha pkgfile ...
-        IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
+        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            # v3: libz zlib/libz@1.3.1.tar.gz
-            IFS=' /@' read -r _ _ _ pkgvern _ < <( grep " $pkgname/" "$MANIFEST" | tail -n1 | sed 's/.tar.*$//')
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             info ">> found package $pkgname@$pkgvern"
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep " $pkgname/.*@$pkgvern.tar" "$MANIFEST" | cut -d' ' -f2 | xargs)
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$MANIFEST" | xargs )
     fi
 
     test -n "${pkgfiles[*]}" || { warn "<< $* no pkgfile found"; return 1; }
