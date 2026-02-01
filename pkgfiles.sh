@@ -64,14 +64,15 @@ package() {
         # sha pkgfile ...
         IFS=' ' read -r -a pkgfiles < <( cut -d' ' -f2 < "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
-        # v3: no latest => find out latest version
+        # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
             # v3: libz zlib/libz@1.3.1.tar.gz
-            IFS=' /@.' read -r _ _ _ pkgvern _ < <( grep " $pkgname/" "$MANIFEST" | tail -n1)
+            IFS=' /@' read -r _ _ _ pkgvern _ < <( grep " $pkgname/" "$MANIFEST" | tail -n1 | sed 's/.tar.*$//')
+            info ">> found package $pkgname@$pkgvern"
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep " $pkgname/.*@$pkgvern" "$MANIFEST" | cut -d' ' -f2 | xargs)
+        IFS=' ' read -r -a pkgfiles < <( grep " $pkgname/.*@$pkgvern.tar" "$MANIFEST" | cut -d' ' -f2 | xargs)
     fi
 
     test -n "${pkgfiles[*]}" || { warn "<< $* no pkgfile found"; return 1; }
