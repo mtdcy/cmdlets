@@ -68,6 +68,23 @@ libs_build() {
 
     make
 
+    # testing
+    check_magick_format() {
+        ./utilities/magick identify -list format | grep -w " $1" || die "missing $1 support"
+    }
+
+    for x in "${libs_dep[@]}"; do
+        case "$x" in
+            libraw)         check_magick_format RAW     ;;
+            libjpeg-turbo)  check_magick_format JPEG    ;;
+            openjpeg)       check_magick_format J2K     ;;
+            libpng)         check_magick_format PNG     ;;
+            libtiff)        check_magick_format TIFF    ;;
+            libwebp)        check_magick_format WEBP    ;;
+            libheif)        check_magick_format HEIC    ;;
+        esac
+    done
+
     # install configlib and configshare to the same directory.
     sed -i '/CONFIGURE_PATH/s/etc/share/' Makefile
 
