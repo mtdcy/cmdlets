@@ -164,12 +164,13 @@ _init() {
     PREFIX="$ROOT/prebuilts/$arch"
     WORKDIR="$ROOT/out/$arch"
     LOGFILES="$ROOT/logs/$arch"
+    MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export ROOT PREFIX WORKDIR LOGFILES
+    export ROOT PREFIX WORKDIR LOGFILES MANIFEST
 
     is_linux || unset CL_TOOLCHAIN_PREFIX
 
@@ -588,18 +589,18 @@ compile() {
 
         _prepare # or die
 
-        # v2: clear pkginfo
+        # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
 
-        # v3/manifest: name pkgfile sha build
-        touch "$PREFIX/cmdlets.manifest"
+        # v3/manifest: name pkgfile sha build=1
+        touch "$MANIFEST"
 
         # read pkgbuild before clear
-        IFS=' ' read -r _ _ _ PKGBUILD < <(grep " $libs_name/.*@$libs_ver" "$PREFIX/cmdlets.manifest" | tail -n1)
+        PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
         test -n "$PKGBUILD" || PKGBUILD="build=0"
 
         # v3: clear manifest
-        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$PREFIX/cmdlets.manifest"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$MANIFEST"
 
         # build library
         ( libs_build ) || {
@@ -839,9 +840,6 @@ arch() {
 
 # zip files for release actions
 zip_files() {
-    # manifest
-    cd "$PREFIX" && "$TAR" -cvf "cmdlets.manifest.tar.gz" cmdlets.manifest && cd - || true
-
     # log files
     test -n "$(ls -A "$LOGFILES")" || return 0
     "$TAR" -C "$LOGFILES" -cvf "$LOGFILES-logs.tar.gz" .

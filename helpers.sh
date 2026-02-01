@@ -784,9 +784,9 @@ cmdlet.pkgfile() {
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
-    sed -i "\#^$1 $pkgfile #d" cmdlets.manifest
+    sed -i "\#^$1 $pkgfile #d" "$MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> cmdlets.manifest
+    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> "$MANIFEST"
 
     popd || die "popd failed."
 }
