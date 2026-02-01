@@ -791,6 +791,14 @@ cmdlet.pkgfile() {
     popd || die "popd failed."
 }
 
+# disclam specific version of cmdlet from manifest
+#  input: version ...
+cmdlet.disclaim() {
+    for x in "$@"; do
+        sed -i "\#\ $libs_name/.*@$x#d" "$MANIFEST" || true
+    done
+}
+
 # install files and create a pkgfile
 #  input: name                          \
 #         [include]         header.h    \

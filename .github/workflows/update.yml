@@ -51,6 +51,7 @@ jobs:
               _load $libs
 
               test -n "$libs_ver" || exit
+              test -z "$libs_stable" || exit
 
               # version in url?
               echo "$libs_url" | grep -Fw "$libs_ver" || exit

@@ -1,11 +1,14 @@
 # nftables replaces the popular {ip,ip6,arp,eb}tables.
 # libnftables, the high-level userspace library that includes support for JSON.
 
+# no auto update
+libs_stable=1
+
 # shellcheck disable=SC2034
 libs_lic='GPLv2+'
-libs_ver=1.1.6
-libs_url=https://www.netfilter.org/projects/nftables/files/nftables-1.1.6.tar.xz
-libs_sha=372931bda8556b310636a2f9020adc710f9bab66f47efe0ce90bff800ac2530c
+libs_ver=1.0.6.1
+libs_url=https://www.netfilter.org/projects/nftables/files/nftables-$libs_ver.tar.xz
+libs_sha=bef0c9cfdca5f8b988957046c2cb33ef9869730593da0eacae4748201acf1116
 libs_dep=( gmp jansson libedit libnetfilter ) # libxtables
 
 libs_args=(
@@ -26,6 +29,9 @@ libs_args=(
 libs_build() {
     depends_on is_linux
 
+    # disclaim non-stable releases
+    cmdlet.disclaim 1.1.5 1.1.6
+
     # configure:
     #  fix static libedit with -lncurses
     export LIBS="-lncurses"
@@ -39,11 +45,11 @@ libs_build() {
 
     pkgconf libnftables.pc -lnftables -lgmp -ljansson -ledit -lmnl -lnftnl
 
-    pkgfile $libs_name -- make install sbin_PROGRAMS=
+    cmdlet.pkgfile libnftables -- make.install sbin_PROGRAMS=
 
-    cmdlet ./src/nft
+    cmdlet.install ./src/nft
 
-    check nft --version
+    cmdlet.check nft --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
