@@ -1,8 +1,9 @@
 # H.264/AVC encoder
 
 # shellcheck disable=SC2034
-libs_ver=0480cb05
-libs_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-$libs_ver.tar.bz2
+# version refer: https://artifacts.videolan.org/x264/release-macos-arm64/
+libs_ver=3222
+libs_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-b35605a.tar.bz2
 libs_sha=c28a4273ba87ddb5ceb3b6397554bd0c0e68e6484434e41467673ac80b7f7f19
 
 libs_args=(
@@ -19,7 +20,7 @@ libs_args=(
     --disable-lsmash
 
     --enable-pic
-    
+
     --disable-opencl
 
     # static only
