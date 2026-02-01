@@ -22,7 +22,7 @@ libs_args=(
     -DWITH_OpenH264_DECODER=OFF
 
     # AV1
-    -DWITH_RAV1E=OFF        
+    -DWITH_RAV1E=OFF
     -DWITH_SvtEnc=OFF
     -DWITH_AOM_ENCODER=OFF
     -DWITH_AOM_DECODER=OFF
@@ -46,13 +46,11 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p static
+    cmake.setup
 
-    cmake -S . -B static &&
+    cmake.build
 
-    cmake --build static &&
-
-    pkgfile libheif -- cmake --install static/libheif
+    pkgfile libheif -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
