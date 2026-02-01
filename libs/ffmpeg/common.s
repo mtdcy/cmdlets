@@ -93,13 +93,9 @@ else
 
     libs_dep+=( openssl )
     libs_args+=( --enable-openssl ) # TLS
-
-    # TODO: Fix build libdrm with alpine/musl
-    is_glibc && {
-        libs_dep+=(libdrm)
-        libs_args+=( --enable-libdrm )
-    }
 fi
+
+is_linux && libs_args+=( --enable-libdrm ) && libs_dep+=( libdrm )
 
 is_arm64 && libs_args+=( --enable-neon )
 

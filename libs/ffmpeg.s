@@ -25,7 +25,10 @@ libs_build() {
         sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
     fi
 
-	CC_C='' configure
+	CC_C='' configure || {
+        cat ffbuild/config.log >> "$_LOGFILE" &&
+        die "configure ffmpeg failed."
+    }
 
 	make
 
