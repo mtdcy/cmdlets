@@ -3,6 +3,7 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.2    - 20260201      - fix pkgbuild, pkgvern may has '-'
 #  1.0.1    - 20260130      - fix link command
 #  1.0.0    - 20260129      - first release
 
@@ -15,7 +16,8 @@ ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
 # user defined repo
-: "${REPO:=$CMDLETS_MAIN_REPO}"
+REPO="$CMDLETS_MAIN_REPO"
+
 # local private repo
 : "${REPO:=http://pub.mtdcy.top/cmdlets/latest}"
 
@@ -265,11 +267,8 @@ fetch() {
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        IFS=' ' read -r _ pkgfile _ pkgbuild < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
+        IFS=' ' read -r _ pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
         test -n "$pkgfile" || return 1
-
-        # compatible
-        pkgbuild="${pkgbuild#build=}"
 
         info3 "#3 Fetch $1 < $pkgfile"
         _unzip "$pkgfile" || return 2
@@ -300,7 +299,7 @@ fetch() {
 
     # update installed: name pkgvern pkgbuild
     _edit "\#^$target #d" "$PREBUILTS/.cmdlets"
-    echo "$target ${pkgvern:-1.0}-${pkgbuild:-0}" >> "$PREBUILTS/.cmdlets"
+    echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$PREBUILTS/.cmdlets"
 
     # update files list: name files ...
     _edit "\#^$target #d" "$PREBUILTS/.files"
@@ -372,7 +371,7 @@ fetch() {
 
 update() {
     local pkgfile pkgvern pkgbuild
-    while IFS=' -' read -r pkgfile pkgvern pkgbuild; do
+    while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "🚀 Update $pkgfile ..."
 
         if test -z "$pkgbuild"; then
@@ -390,7 +389,7 @@ update() {
                 info ">> new pkgvern > $_pkgfile"
                 fetch "$pkgfile" --install
             elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> new pkgbuild > $pkgvern-${_pkgbuild#*=}"
+                info ">> new pkgbuild > $pkgvern $_pkgbuild"
                 fetch "$pkgfile" --install
             fi
         fi
@@ -538,8 +537,8 @@ list() {
             --cmdlets)
                 info "📦 Installed cmdlets:"
                 width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | _width)"
-                while IFS=' -' read -r name pkgvern pkgbuild; do
-                    _ls_println "$width" "$name" "$pkgvern-${pkgbuild#build=}"
+                while IFS=' ' read -r name pkgvern pkgbuild; do
+                    _ls_println "$width" "$name" "$pkgvern" "$pkgbuild"
                 done < <( sort "$PREBUILTS/.cmdlets" )
                 ;;
             --files)
