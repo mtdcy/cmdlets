@@ -41,6 +41,9 @@ is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
 is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 
+# help functions
+is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local lvl date message
@@ -719,23 +722,25 @@ build() {
 
 # find out who depends on libs
 dependents() {
-    local list=()
-    for x in "$@"; do
-        # only top level *.s files
-        for libs in libs/*.s; do
-            libs="${libs#*/}"
-            libs="${libs%.s}"
-            [[ "$libs" =~ ^[.@_] ]] && continue
-            [[ "$libs" == ALL ]] && continue
+    local list deps
 
-            echo -en "checking $libs ..."
-            if [[ " $(_deps_get "$libs") " == *" $x "* ]]; then
-                list+=( "$libs" )
-                echo -e " found"
-            else
-                echo -e ""
-            fi
+    # only top level *.s files
+    for libs in libs/*.s; do
+        libs="${libs#*/}"
+        libs="${libs%.s}"
+
+        is_listed "$libs" "$@" && continue # exclude self
+
+        [[ "$libs" =~ ^[.@_] ]] && continue
+        [[ "$libs" == ALL ]] && continue
+
+        echo -en "checking $libs ..."
+
+        IFS=' ' read -r -a deps < <(_deps_get "$libs")
+        for x in "$@"; do
+            is_listed "$x" "${deps[@]}" && list+=( "$libs" ) && echo -en " found" && break
         done
+        echo ""
     done
     echo "${list[@]}"
 }
