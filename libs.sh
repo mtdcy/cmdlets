@@ -630,14 +630,15 @@ _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 # get all dependencies
 #  input: name [...]
 _deps_get() {
-    local list=()
-    for lib in "$@"; do
-        for dep in $(_deps_load "$lib"); do
-            # already exists?
-            [[ " $* ${list[*]} " == *" $dep "* ]] && continue
+    local list deps
+    for libs in "$@"; do
+        IFS=' ' read -r -a deps < <( _deps_load "$libs" )
+        test -n "${deps[*]}" || continue
 
-            list+=( "$dep" )
-            list+=( $(_deps_get "$dep") )
+        for x in "${deps[@]}"; do
+            is_listed "$x" "${list[@]}" && continue # already exists
+
+            list+=( $(_deps_get "$x") "$x" )
         done
     done
     printf '%s\n' "${list[@]}" | sort -u | xargs
@@ -657,30 +658,24 @@ _deps_check() {
         fi
     done
 
-    # sort is not needed as build() will sort before compile targets
-    #[ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
-    echo "${list[@]}"
+    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
 }
 
 _deps_sort() {
-    local head=()
-    local tail=()
-    for dep in "$@"; do
-        for x in $(_deps_get "$dep"); do
-            # have dependencies => tail
-            if [[ "$*" == *"$x"* ]]; then
-                tail+=( "$dep" )
-                break
-            fi
+    local head tail
+    for libs in "$@"; do
+        # have dependencies => tail
+        for x in $(_deps_get "$libs"); do
+            is_listed "$x" "$@" && tail+=( "$libs" ) && break
         done
 
         # OR append to head
-        [[ "${tail[*]}" == *"$dep"* ]] || head+=( "$dep" )
+        is_listed "$libs" "${tail[@]}" || head+=( "$libs" )
     done
 
     # sort tail again: be careful with circular dependencies
     if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a tail <<< "$(_deps_sort "${tail[@]}")"
+        IFS=' ' read -r -a tail < <( _deps_sort "${tail[@]}" )
     fi
 
     echo "${head[@]}" "${tail[@]}"
@@ -689,6 +684,8 @@ _deps_sort() {
 # build targets and its dependencies
 # build <lib list>
 build() {
+    local deps targets
+
     IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
 
     # pull dependencies
@@ -700,18 +697,14 @@ build() {
         bash pkgfiles.sh "${deps[@]}" || true # ignore errors
 
         for dep in "${deps[@]}"; do
-            [ -e "$PREFIX/.$dep.d" ] || targets+=( "$dep" )
+            test -e "$PREFIX/.$dep.d" || targets+=( "$dep" )
         done
     fi
 
     slogi "Build" "$* (depends: ${targets[*]})"
 
     # append targets
-    targets+=( "$@" )
-
-    if [ "${#targets[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a targets <<< "$(_deps_sort "${targets[@]}")"
-    fi
+    targets+=( $(_deps_sort "$@") )
 
     for i in "${!targets[@]}"; do
         slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
