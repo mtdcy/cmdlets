@@ -69,7 +69,10 @@ package() {
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
             IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
-            info ">> found package $pkgname@$pkgvern"
+            test -n "$pkgvern" && info ">> found package $pkgname@$pkgvern" || {
+                warn "<< no package found"
+                return 1
+            }
         fi
 
         # find all pkgfiles
@@ -91,7 +94,7 @@ if test -z "$TEMPDIR"; then
 fi
 
 # always fetch manifest
-info "📦 Fetch $MANIFEST"
+info "📦 Fetch pkgfiles $*"
 fetch cmdlets.manifest "$MANIFEST"
 
 ret=0

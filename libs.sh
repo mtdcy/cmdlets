@@ -292,7 +292,9 @@ _init() {
     }
     #PKG_CONFIG="$ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
-    export PATH="$ROOT/scripts:$PATH"
+
+    # update PATH
+    export PATH="$PREFIX/bin:$ROOT/scripts:$PATH"
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
@@ -656,7 +658,7 @@ _deps_check() {
         if ! test -e "$PREFIX/.$x.d"; then
             list+=( "$x" )
         elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
-            list+=( "$x" )
+            list+=( "$x" ) && rm -rf "$PREFIX/.$x.d"
         fi
     done
 

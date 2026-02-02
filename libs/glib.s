@@ -26,18 +26,26 @@ libs_args=(
     -Dsysprof=disabled
     -Dman-pages=disabled
     -Dglib_debug=disabled
-    -Dtests=False
+    -Dtests=false
 )
 
 libs_build() {
+    # no gvdb
     rm -rf subprojects/gvdb
-    mkdir -pv build
 
-    meson setup build &&
+    meson.setup
 
-    meson compile -C build --verbose || return 1
+    meson.compile
 
-    pkgfile libglib -- meson install -C build --tags devel
+    pkgfile libglib -- meson.install #--tags devel
+
+    for x in glib-genmarshal glib-mkenums; do
+        cmdlet.install "./build/gobject/$x"
+    done
+
+    for x in glib-compile-resources glib-compile-schemas; do
+        cmdlet.install "./build/gio/$x"
+    done
 }
 
 # patch: fix meson install with DESTDIR and PREFIX

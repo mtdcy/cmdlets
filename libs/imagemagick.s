@@ -4,7 +4,7 @@
 libs_ver=7.1.2-13
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
-libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib )
+libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib librsvg )
 
 # configure args
 libs_args=(
@@ -47,14 +47,15 @@ libs_args=(
 is_darwin && libs_args+=( --enable-osx-universal-binary=no )
 
 # supported formats
-libs_dep+=( libraw          ) && libs_args+=( --with-raw        ) # RAW
-libs_dep+=( libjpeg-turbo   ) && libs_args+=( --with-jpeg       ) # JPEG
-libs_dep+=( openjpeg        ) && libs_args+=( --with-openjp2    ) # JPEG 2000
-libs_dep+=( libpng          ) && libs_args+=( --with-png        ) # PNG
-libs_dep+=( libtiff         ) && libs_args+=( --with-tiff       ) # TIFF
-libs_dep+=( libwebp         ) && libs_args+=( --with-webp       ) # WEBP
-libs_dep+=( libheif         ) && libs_args+=( --with-heic       ) # HEIC
-libs_dep+=( libjxl          ) && libs_args+=( --with-jxl        ) # JPEG-XL
+libs_dep+=( libraw        ) && libs_args+=( --with-raw     ) # RAW
+libs_dep+=( libjpeg-turbo ) && libs_args+=( --with-jpeg    ) # JPEG
+libs_dep+=( openjpeg      ) && libs_args+=( --with-openjp2 ) # JPEG 2000
+libs_dep+=( libpng        ) && libs_args+=( --with-png     ) # PNG
+libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
+libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
+libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
+libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
+libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
@@ -79,6 +80,7 @@ libs_build() {
             libtiff)        check_magick_format TIFF    ;;
             libwebp)        check_magick_format WEBP    ;;
             libheif)        check_magick_format HEIC    ;;
+            librsvg)        check_magick_format SVG     ;;
         esac
     done
 
