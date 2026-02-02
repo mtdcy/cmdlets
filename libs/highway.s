@@ -12,12 +12,11 @@ libs_args=(
     -DHWY_ENABLE_EXAMPLES=OFF
 
     # static only
+    -DHWY_FORCE_STATIC_LIBS=ON
     -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
-    rm -f BUILD
-
     cmake.setup
 
     cmake.build
