@@ -338,8 +338,9 @@ _cargo_init() {
 
     export CARGO RUSTC
 
+    # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     # set CARGO_HOME again for local crates and cache
-    export CARGO_HOME="$ROOT/.cargo"
+    #export CARGO_HOME="$ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CL_NJOBS"
 
     mkdir -p "$CARGO_HOME"
@@ -431,6 +432,14 @@ cargo.build() {
     test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
 
     slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
+}
+
+# requires minimal rustc version
+cargo.depends.rustc() {
+    _cargo_init
+
+    slogcmd "$RUSTC" --version
+    _version_ge "$("$RUSTC" --version | cut -d' ' -f2)" "$1" || slogcmd rustup update
 }
 
 _go_init() {
