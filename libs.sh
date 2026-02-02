@@ -636,6 +636,7 @@ _deps_get() {
         test -n "${deps[*]}" || continue
 
         for x in "${deps[@]}"; do
+            is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" && continue # already exists
 
             list+=( $(_deps_get "$x") "$x" )
