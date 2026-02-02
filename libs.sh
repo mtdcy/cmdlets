@@ -656,7 +656,7 @@ _deps_check() {
         if ! test -e "$PREFIX/.$x.d"; then
             list+=( "$x" )
         elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
-            list+=( "$x" )
+            list+=( "$x" ) && rm -rf "$PREFIX/.$x.d"
         fi
     done
 
