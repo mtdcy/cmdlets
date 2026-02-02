@@ -65,19 +65,26 @@ version.le() { _version_le "$libs_ver" "$1"; }
 configure() {
     _setup
 
-    if ! test -f configure; then
+    local cmdline
+
+    test -f configure && cmdline=( ./configure ) || cmdline=( ../configure )
+
+    # shellcheck disable=SC2128
+    if ! test -f "$cmdline"; then
         if test -f autogen.sh; then
             slogcmd ./autogen.sh
         elif test -f bootstrap; then
             slogcmd ./bootstrap
         elif test -f configure.ac; then
             slogcmd autoreconf -fis
+        else
+            die "no configure found"
         fi
+
+        cmdline=( ./configure )
     fi
 
-    local cmdline
-
-    cmdline=( ./configure --prefix="$PREFIX" )
+    cmdline+=( --prefix="$PREFIX" )
 
     # append user args
     cmdline+=( "${libs_args[@]}" "$@" )
