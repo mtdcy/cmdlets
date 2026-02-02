@@ -40,6 +40,7 @@ is_glibc()      { $CC -v 2>&1 | grep -q "^Target:.*gnu";                }
 is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
 is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
+is_intel()      { uname -m | grep -qF "x86_64";                         }
 
 # help functions
 is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
