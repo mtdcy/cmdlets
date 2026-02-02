@@ -4,11 +4,7 @@
 libs_ver=7.1.2-13
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
-libs_dep=(
-    glib freetype lcms2
-    libxml2 liblqr imath
-    zlib
-)
+libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib )
 
 # configure args
 libs_args=(
@@ -21,6 +17,7 @@ libs_args=(
     --with-freetype=yes
     --with-lcms
     --with-lqr
+    --with-fftw
 
     # zlib only: automagically process .gz files
     --with-zlib
@@ -38,7 +35,6 @@ libs_args=(
     --without-gslib
     --without-openexr
     --without-djvu
-    --without-fftw
     --without-pango
     --without-wmf
     --without-x
