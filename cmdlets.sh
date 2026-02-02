@@ -3,6 +3,7 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.3    - 20260202      - add caveats command
 #  1.0.2    - 20260201      - fix pkgbuild, pkgvern may has '-'
 #  1.0.1    - 20260130      - fix link command
 #  1.0.0    - 20260129      - first release
@@ -10,10 +11,12 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.1
+VERSION=1.0.3
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
+CMDLETS_LIST="$PREBUILTS/.cmdlets"
+FILES_LIST="$PREBUILTS/.files"
 
 # user defined repo
 REPO="$CMDLETS_MAIN_REPO"
@@ -63,6 +66,7 @@ Options:
     search  <name>              - search for cmdlet or resources
     install <cmdlet>            - fetch and install cmdlet
     remove  <cmdlet>            - remove cmdlet
+    caveats <cmdlet>            - show cmdlet caveats
 
     version                     - show $NAME version
 
@@ -223,6 +227,8 @@ _width() {
     awk '{ if ( length > x ) { x = length } } END { print x }'
 }
 
+_caveats()  { echo "$PREBUILTS/caveats/${1//\//_}";     }
+
 # fetch cmdlet: name [options]
 #  input: name [--install [links...] ]
 #  output: return 0 on success
@@ -233,8 +239,9 @@ _width() {
 #       bash@3.2
 #       bash32/bash@3.2
 fetch() {
-    local target="$1"; shift 1
+    local target="${1%.tar.*}"; shift 1
     local pkgname pkgfile pkgvern pkgbuild
+    local caveats="$(_caveats "$target")"
 
     true > "$TEMPDIR/files"
 
@@ -276,8 +283,8 @@ fetch() {
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
         # caveats: v3 only
-        true > "$TEMPDIR/caveats"
-        _curl "$pkgname/$pkgname.caveats" "$TEMPDIR/caveats" 2>/dev/null || true
+        true > "$caveats"
+        _curl "$pkgname/$pkgname.caveats" "$caveats" 2>/dev/null || true
     }
 
     # install from local file.tar.gz
@@ -298,18 +305,18 @@ fetch() {
     fi
 
     # update installed: name pkgvern pkgbuild
-    _edit "\#^$target #d" "$PREBUILTS/.cmdlets"
-    echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$PREBUILTS/.cmdlets"
+    _edit "\#^$target #d" "$CMDLETS_LIST"
+    echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$CMDLETS_LIST"
 
     # update files list: name files ...
-    _edit "\#^$target #d" "$PREBUILTS/.files"
+    _edit "\#^$target #d" "$FILES_LIST"
     # fails with a lot of files
-    #echo "$target $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$PREBUILTS/.files"
+    #echo "$target $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$FILES_LIST"
     {
         echo -en "$target "
         sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
         echo -en "\n"
-    } >> "$PREBUILTS/.files"
+    } >> "$FILES_LIST"
 
     # ln helper: width from to
     _ln_println() {
@@ -360,12 +367,12 @@ fetch() {
     done
 
     # append file symlinks to last line
-    test -z "${links[*]}" || _edit "$ s%$% ${links[*]}%" "$PREBUILTS/.files"
+    test -z "${links[*]}" || _edit "$ s%$% ${links[*]}%" "$FILES_LIST"
 
     # caveats
-    if test -s "$TEMPDIR/caveats"; then
+    if test -s "$caveats"; then
         info "== Caveats:"
-        cat "$TEMPDIR/caveats"
+        cat "$caveats"
     fi
 }
 
@@ -393,7 +400,7 @@ update() {
                 fetch "$pkgfile" --install
             fi
         fi
-    done < <( sort "$PREBUILTS/.cmdlets" )
+    done < <( sort "$CMDLETS_LIST" )
 }
 
 
@@ -428,7 +435,12 @@ link() {
 #  input: <cmdlet name>
 remove() {
     local name="${1%.tar.*}" # formated name
+    local caveats="$(_caveats "$name")"
+
     info "== remove $name"
+
+    test -f "$CMDLETS_LIST" || return 0
+    test -s "$caveats" && rm -rf "$caveats" || true
 
     _rm_println() {
         if test -L "$1"; then
@@ -439,17 +451,17 @@ remove() {
         fi
     }
 
-    if grep -q "^$name " "$PREBUILTS/.files"; then
+    if grep -q "^$name " "$FILES_LIST"; then
         # fails with `rm: Argument list too long'
-        #IFS=' ' read -r -a files < <( grep "^$name " "$PREBUILTS/.files" | cut -d' ' -f2- )
+        #IFS=' ' read -r -a files < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- )
         #_rm_println "${files[@]}"
         while read -r file; do
             _rm_println "$file"
-        done < <( grep "^$name " "$PREBUILTS/.files" | cut -d' ' -f2- | tr -s ' ' '\n' )
+        done < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n' )
 
         # clear recrods
-        _edit "\#^$name #d" "$PREBUILTS/.files"
-        _edit "\#^$name #d" "$PREBUILTS/.cmdlets"
+        _edit "\#^$name #d" "$FILES_LIST"
+        _edit "\#^$name #d" "$CMDLETS_LIST"
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
@@ -483,7 +495,9 @@ install() {
 
     info "\n🌹 Install $NAME => $target"
 
-    mkdir -pv "$(dirname "$target")" | _details || die "<< Permission Denied?"
+    mkdir -pv "$(dirname "$target")" | _details
+
+    test -w "$(dirname "$target")" || die "<< Permission Denied"
 
     for inst in "${INSTALLERS[@]}"; do
         if _curl "$inst" "$TEMPDIR/$NAME"; then
@@ -503,6 +517,8 @@ install() {
 
 # list installed cmdlets
 list() {
+    test -f "$CMDLETS_LIST" || return 0
+
     while test -n "$1"; do
         case "$1" in
             --*) options+=( "$1" ) ;;
@@ -536,15 +552,15 @@ list() {
         case "$opt" in
             --cmdlets)
                 info "📦 Installed cmdlets:"
-                width="$(cut -d' ' -f1 < "$PREBUILTS/.cmdlets" | _width)"
+                width="$(cut -d' ' -f1 < "$CMDLETS_LIST" | _width)"
                 while IFS=' ' read -r name pkgvern pkgbuild; do
                     _ls_println "$width" "$name" "$pkgvern" "$pkgbuild"
-                done < <( sort "$PREBUILTS/.cmdlets" )
+                done < <( sort "$CMDLETS_LIST" )
                 ;;
             --files)
                 for x in "${args[@]}"; do
                     info "📦 Installed files of $x:"
-                    grep "^$x " "$PREBUILTS/.files" | cut -d' ' -f2- | _ls_files_println || {
+                    grep "^$x " "$FILES_LIST" | cut -d' ' -f2- | _ls_files_println || {
                         # print link and target
                         echo "=> $x -> $(readlink "$x")"
                     }
@@ -566,10 +582,10 @@ list() {
 
 # invoke cmd [args...]
 invoke() {
-    # init directories and files
-    mkdir -pv "$PREBUILTS"
-    touch "$PREBUILTS/.cmdlets"
-    touch "$PREBUILTS/.files"
+    mkdir -pv "$PREBUILTS"/{bin,share,caveats}
+
+    # Permission denied
+    test -r "$PREBUILTS" || die "<< Read Permission Denied"
 
     local ret=0
     local done=1
@@ -583,10 +599,9 @@ invoke() {
         ln|link)
             link "${@:2}"
             ;;
-        rm|remove|uninstall)
-            for x in "${@:2}"; do
-                ( remove "$x" ) || ret=$?
-            done
+        caveats|info)
+            local caveats="$(_caveats "$2")"
+            test -s "$caveats" && cat "$caveats" || info "<< no caveats found"
             ;;
         usage|help)
             usage
@@ -597,6 +612,13 @@ invoke() {
     esac
 
     [ "$done" -ne 1 ] || exit "$ret"
+
+    # Permission denied
+    test -w "$PREBUILTS" || die "<< Write Permission Denied?"
+
+    # init directories and files
+    touch "$CMDLETS_LIST"
+    touch "$FILES_LIST"
 
     # always try to update manifest
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
@@ -630,6 +652,11 @@ invoke() {
         fetch)      # fetch cmdlets
             for x in "${@:2}"; do
                 ( fetch "$x" ) || ret=$?
+            done
+            ;;
+        rm|remove|uninstall)
+            for x in "${@:2}"; do
+                ( remove "$x" ) || ret=$?
             done
             ;;
         *)
