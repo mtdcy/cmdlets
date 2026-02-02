@@ -434,6 +434,13 @@ cargo.build() {
     slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
 }
 
+# requires cargo tools
+cargo.depends() {
+    for x in "$@"; do
+        slogcmd cargo install "$x" || die "cargo install $x failed."
+    done
+}
+
 # requires minimal rustc version
 cargo.depends.rustc() {
     _cargo_init
