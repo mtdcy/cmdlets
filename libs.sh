@@ -292,7 +292,9 @@ _init() {
     }
     #PKG_CONFIG="$ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
-    export PATH="$ROOT/scripts:$PATH"
+
+    # update PATH
+    export PATH="$PREFIX/bin:$ROOT/scripts:$PATH"
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
