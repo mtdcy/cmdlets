@@ -35,7 +35,6 @@ libs_args=(
     --without-modules
     --without-fontconfig
     --without-gvc
-    --without-jxl       # jpeg-xl
     --without-gslib
     --without-openexr
     --without-djvu
@@ -52,13 +51,14 @@ libs_args=(
 is_darwin && libs_args+=( --enable-osx-universal-binary=no )
 
 # supported formats
-libs_dep+=( libraw )            && libs_args+=( --with-raw )        # RAW
-libs_dep+=( libjpeg-turbo )     && libs_args+=( --with-jpeg )       # JPEG
-libs_dep+=( openjpeg )          && libs_args+=( --with-openjp2 )    # JPEG 2000
-libs_dep+=( libpng )            && libs_args+=( --with-png )        # PNG
-libs_dep+=( libtiff )           && libs_args+=( --with-tiff )       # TIFF
-libs_dep+=( libwebp )           && libs_args+=( --with-webp )       # WEBP
-libs_dep+=( libheif )           && libs_args+=( --with-heic )       # HEIC
+libs_dep+=( libraw          ) && libs_args+=( --with-raw        ) # RAW
+libs_dep+=( libjpeg-turbo   ) && libs_args+=( --with-jpeg       ) # JPEG
+libs_dep+=( openjpeg        ) && libs_args+=( --with-openjp2    ) # JPEG 2000
+libs_dep+=( libpng          ) && libs_args+=( --with-png        ) # PNG
+libs_dep+=( libtiff         ) && libs_args+=( --with-tiff       ) # TIFF
+libs_dep+=( libwebp         ) && libs_args+=( --with-webp       ) # WEBP
+libs_dep+=( libheif         ) && libs_args+=( --with-heic       ) # HEIC
+libs_dep+=( libjxl          ) && libs_args+=( --with-jxl        ) # JPEG-XL
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
@@ -78,6 +78,7 @@ libs_build() {
             libraw)         check_magick_format RAW     ;;
             libjpeg-turbo)  check_magick_format JPEG    ;;
             openjpeg)       check_magick_format J2K     ;;
+            libjxl)         check_magick_format JXL     ;;
             libpng)         check_magick_format PNG     ;;
             libtiff)        check_magick_format TIFF    ;;
             libwebp)        check_magick_format WEBP    ;;
@@ -95,7 +96,9 @@ libs_build() {
     cmdlet.check magick --version
 
     cmdlet.caveats << EOF
-static built ImageMagick @ $libs_ver
+static built ImageMagick
+
+$(./utilities/magick -version)
 
 Configuration and resource files:
 
