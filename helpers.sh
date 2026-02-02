@@ -109,7 +109,7 @@ _cmake_init() {
     test -z "$CMAKE_READY" || return 0
 
     # defaults:
-    : "${CMAKE_BINARY_DIR:=build}"
+    : "${CMAKE_BINARY_DIR:=build-$$}"
 
     export CMAKE_BINARY_DIR
 
@@ -887,7 +887,7 @@ cmdlet.check() {
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
-        echocmd otool -L "$bin" # | grep -v "libSystem.*"
+        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/" && die "unexpected linked libraries" || true
     elif is_msys; then
         echocmd ntldd "$bin"
     else
