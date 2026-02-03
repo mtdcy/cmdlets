@@ -580,7 +580,7 @@ compile() {
             return 0
         fi
 
-        declare -F libs_build || {
+        declare -F libs_build >/dev/null || {
             slogw "<<<<<" "Not supported or missing libs_build"
             return 0
         }

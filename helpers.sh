@@ -206,18 +206,25 @@ cmake.setup() {
 
     # std < libs_args < user args
     slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
+
+    pushd "$LIBS_BUILDDIR" || die
 }
 
 cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
-    slogcmd "$CMAKE" --build "$LIBS_BUILDDIR" "$@" || die "cmake.build failed."
+    slogcmd "$CMAKE" --build . "$@" || die "cmake.build failed."
 }
 
 cmake.install() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL=1
-    slogcmd "$CMAKE" --install "$LIBS_BUILDDIR" "$@" || die "cmake.install failed."
+
+    local cmdline=( "$CMAKE" )
+
+    is_listed "--install" "$@" || cmdline+=( --install . )
+
+    slogcmd "${cmdline[@]}" "$@" || die "cmake.install failed."
 }
 
 meson() {
