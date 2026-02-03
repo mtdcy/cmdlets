@@ -293,8 +293,8 @@ _init() {
     #PKG_CONFIG="$ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
 
-    # update PATH
-    export PATH="$PREFIX/bin:$ROOT/scripts:$PATH"
+    # update PATH => tools like glib-compile-resources needs seat in PATH
+    export PATH="$PREFIX/bin:$PATH"
 
     # for running test
     # LD_LIBRARY_PATH or rpath?
@@ -580,6 +580,11 @@ compile() {
             return 0
         fi
 
+        declare -F libs_build || {
+            slogw "<<<<<" "Not supported or missing libs_build"
+            return 0
+        }
+
         test -n "$libs_url" || die "missing libs_url"
 
         # prepare work directories
@@ -804,20 +809,14 @@ search() {
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
             echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
-            # TODO: add a sanity check here
-        fi
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+        elif $PKG_CONFIG --exists "lib$x"; then
+            x="lib$x"
 
-        [[ "$x" =~ ^lib ]] && continue
-
-        x=lib$x
-        slogi "Search pkgconfig for $x ..."
-        if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
             echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
-            # TODO: add a sanity check here
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
         fi
     done
 }
@@ -916,6 +915,14 @@ update() {
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_packages "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
+}
+
+#
+meson.configure() {
+    _init
+    . helpers.sh
+
+    meson configure
 }
 
 _on_exit() {

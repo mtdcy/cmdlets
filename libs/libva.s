@@ -5,7 +5,8 @@ libs_lic="MIT"
 libs_ver=2.22.0
 libs_url=https://github.com/intel/libva/releases/download/$libs_ver/libva-$libs_ver.tar.bz2
 libs_sha=e3da2250654c8d52b3f59f8cb3f3d8e7fb1a2ee64378dbc400fbc5663de7edb8
-libs_dep=(libdrm wayland)
+
+is_linux && libs_dep=(libdrm wayland)
 
 libs_args+=(
     --disable-dependency-tracking
@@ -25,18 +26,19 @@ libs_args+=(
 
     # disable features
     --disable-docs
-   
+
     # static only
     --enable-static
     --disable-shared
 )
 
 libs_build() {
-    depends_on is_linux
 
     configure && make || return $?
 
     pkgfile libva -- make install
 }
+
+libs_depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

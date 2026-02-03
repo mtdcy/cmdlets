@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+set -eo pipefail
+
 {
     printf '%s ' "$0"
     printf '%q ' "$@"
@@ -11,4 +14,4 @@
 
 export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
 
-"${REAL_PKG_CONFIG:-$(which pkg-config)}" --define-variable=PREFIX="$PREFIX" --static "$@"
+"${REAL_PKG_CONFIG:-$(which pkg-config)}" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a pkg-config.log

@@ -11,7 +11,6 @@ libs_args=(
 )
 
 libs_build() {
-    depends.on is_darwin
 
     # Uses obsolete CGWindowListCreateImage and open PR doesn't work
     # Issue ref: https://github.com/BlueM/cliclick/issues/178
@@ -23,5 +22,7 @@ libs_build() {
 
     cmdlet.check cliclick
 }
+
+libs_depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

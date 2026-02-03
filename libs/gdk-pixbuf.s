@@ -35,8 +35,10 @@ for x in "${libs_dep[@]}"; do
 done
 
 libs_build() {
-    # default_library not working, prefer-static is mandatory, why?
-    meson.setup --prefer-static
+    # no subprojects, remove them in case someting went wrong.
+    rm -rf subprojects
+
+    meson.setup
 
     meson.compile
 

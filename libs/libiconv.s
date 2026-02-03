@@ -41,20 +41,27 @@ libs_build() {
 
     sed -i '/utf8.h/a utf8mac.h \\' lib/Makefile.in
 
-    configure &&
+    configure
 
     make -f Makefile.devel                    \
         CC="'$CC'"                            \
         CFLAGS="'$CFLAGS $CPPFLAGS $LDFLAGS'" \
         ACLOCAL=aclocal                       \
         AUTOMAKE=automake                     \
-        &&
 
-    make && make check || return $?
+    make
 
-    pkgfile libiconv -- make install &&
+    make check
 
-    cmdlet  src/iconv_no_i18n iconv &&
+    pkgconf iconv -liconv -lcharset
+    pkgconf libiconv -liconv -lcharset
+
+    pkginst libiconv \
+            include include/iconv.h lib/libcharset.h lib/localcharset.h \
+            lib     lib/.libs/libiconv.a lib/libcharset.a \
+            lib/pkgconfig iconv.pc libiconv.pc
+
+    cmdlet  src/iconv_no_i18n iconv
 
     # visual check
     check iconv --version

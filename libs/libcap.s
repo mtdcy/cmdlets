@@ -29,7 +29,6 @@ is_musl && libs_args+=(
 )
 
 libs_build() {
-    depends_on is_linux
 
     make "${libs_args[@]}"
 
@@ -40,5 +39,7 @@ libs_build() {
     cmdlet ./progs/capsh
     cmdlet ./progs/getpcaps
 }
+
+libs_depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

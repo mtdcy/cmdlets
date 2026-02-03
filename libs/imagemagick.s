@@ -36,6 +36,8 @@ libs_args=(
     --without-openexr
     --without-djvu
     --without-pango
+    --without-raqm
+    --without-dmr
     --without-wmf
     --without-x
 

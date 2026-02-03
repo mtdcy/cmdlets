@@ -27,7 +27,6 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_linux
 
     # disclaim non-stable releases
     cmdlet.disclaim 1.1.5 1.1.6
@@ -51,5 +50,7 @@ libs_build() {
 
     cmdlet.check nft --version
 }
+
+libs_depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
