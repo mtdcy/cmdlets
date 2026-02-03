@@ -30,15 +30,22 @@ libs_args=(
     -DunitTests=disabled
 )
 
+# shellcheck disable=SC2086
 libs_build() {
+    # ERROR: Dependency "iconv" not found
+    export LDFLAGS+=" -liconv"
 
     meson.setup
 
     meson.compile
 
+    # Fix libiconv dependency
+    sed -e '/Requires:/s/$/& libiconv/' \
+        -i meson-private/exiv2.pc || die
+
     pkgfile libexiv2 -- meson.install --tags devel
 
-    cmdlet.install ./build/exiv2
+    cmdlet.install exiv2
 
     cmdlet.check exiv2 --version --verbose
 }
