@@ -311,8 +311,8 @@ _cargo_init() {
     # $ROOT will be deleted when jobs finished.
 
     # rustup and cargo
-    : "${RUSTUP_HOME:-$HOME/.rustup}"   # toolchain and configurations
-    : "${CARGO_HOME:-$HOME/.cargo}"
+    : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
+    : "${CARGO_HOME:=$HOME/.cargo}"
 
     # a writable cargo home needed, refer to cargo.depends()
     test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
