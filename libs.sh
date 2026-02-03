@@ -714,46 +714,52 @@ _deps_sort() {
     echo "${head[@]}" "${tail[@]}"
 }
 
-# check dependencies for libraries
-_deps_check() {
-    _deps_init
-
-    local list=()
-
-    for x in $(depends "$@"); do
-        #1. dep not installed
-        #2. dep.s been updated
-        if ! test -e "$PREFIX/.$x.d"; then
-            list+=( "$x" )
-        elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
-            list+=( "$x" ) && rm -rf "$PREFIX/.$x.d"
-        fi
+_check_deps() {
+    local sign
+    local sep=""
+    for x in "$@"; do
+        test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
+        printf "%s%s%s" "$sep" "$x" "$sign"
+        sep=", "
     done
-
-    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    printf "\n"
 }
 
 # build targets and its dependencies
 # build <lib list>
 build() {
-    local deps targets
+    local deps
 
-    IFS=' ' read -r -a deps <<< "$(_deps_check "$@")"
+    IFS=' ' read -r -a deps <<< "$(depends "$@")"
+
+    # check dependencies: libraries updated
 
     # pull dependencies
-    local targets=()
     if [ "$CL_FORCE" -ne 0 ]; then
-        slogi "Force rebuild dependencies"
-        targets=( "${deps[@]}" )
-    else
-        bash pkgfiles.sh "${deps[@]}" || true # ignore errors
-
-        for dep in "${deps[@]}"; do
-            test -e "$PREFIX/.$dep.d" || targets+=( "$dep" )
+        # check dependencies: libraries updated
+        for x in "${deps[@]}"; do
+            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
+    else
+        local pkgfiles=()
+
+        # check dependencies: libraries updated or not ready
+        for x in "${deps[@]}"; do
+            test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
+            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+        done
+
+        bash pkgfiles.sh "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* (depends: ${targets[*]})"
+    slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
+
+    local targets=()
+
+    # check dependencies: rebuild targets
+    for x in "${deps[@]}"; do
+        test -e "$PREFIX/.$x.d" || targets+=( "$x" )
+    done
 
     # append targets
     targets+=( $(_deps_sort "$@") )
