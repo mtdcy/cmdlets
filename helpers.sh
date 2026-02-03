@@ -242,13 +242,12 @@ meson() {
                 -Dprefix="'$PREFIX'"
                 -Dlibdir=lib
                 -Dbuildtype=release
-                -Ddefault_library=static
+                -Ddefault_library=static    # prefer static internal project libraries
                 -Dpkg_config_path="'$PKG_CONFIG_PATH'"
             )
 
-            # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
-            # meson >= 0.37.0
-            #_version_ge "$($MESON --version)" 0.37.0 && args+=( -Dprefer_static=true ) || true
+            # prefer static external dependencies
+            is_darwin || args+=( --prefer-static )
 
             # append user args
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
@@ -287,9 +286,9 @@ meson.setup() {
         -Dpkg_config_path="'$PKG_CONFIG_PATH'"
     )
 
-    # prefer_static search libraries for libfoo-dev or foo-static, which is not work for us
-    # meson >= 0.37.0
-    #_version_le "$($MESON --version)" 0.37.0 || std+=( -Dprefer_static=true )
+    # prefer static external dependencies
+    is_darwin || std+=( --prefer-static )
+    # prefer-static not always work for macOS, like libresolv which do not have static version.
 
     # std < libs_args < user args
     slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
