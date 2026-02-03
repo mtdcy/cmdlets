@@ -293,8 +293,8 @@ _init() {
     #PKG_CONFIG="$ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
 
-    # update PATH
-    export PATH="$PREFIX/bin:$ROOT/scripts:$PATH"
+    # update PATH => tools like glib-compile-resources needs seat in PATH
+    export PATH="$PREFIX/bin:$PATH"
 
     # for running test
     # LD_LIBRARY_PATH or rpath?

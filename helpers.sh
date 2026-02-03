@@ -318,50 +318,57 @@ _cargo_init() {
     # $ROOT will be deleted when jobs finished.
 
     # rustup and cargo
-    export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+    : "${RUSTUP_HOME:-$HOME/.rustup}"   # toolchain and configurations
+    : "${CARGO_HOME:-$HOME/.cargo}"
 
-    # always prepend cargo bin to PATH
+    # a writable cargo home needed, refer to cargo.depends()
+    test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
+
+    mkdir -p "$CARGO_HOME/bin"
+
     export PATH="$CARGO_HOME/bin:$PATH"
+
+    # find out right rustup home
+    which rustup || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
+
+    # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
+    #  choose WORKDIR instead of HOME for docker buildings
+    test -f rust-toolchain.toml && RUSTUP_HOME="$WORKDIR/.rustup" || true
+
+    mkdir -p "$RUSTUP_HOME"
 
     # set mirrors for toolchain download
     if test -n "$CL_MIRRORS"; then
-        export RUSTUP_DIST_SERVER=$CL_MIRRORS/rust-static
-        export RUSTUP_UPDATE_ROOT=$CL_MIRRORS/rust-static/rustup
+        : "${RUSTUP_DIST_SERVER:=$CL_MIRRORS/rust-static}"
+        : "${RUSTUP_UPDATE_ROOT:=$CL_MIRRORS/rust-static/rustup}"
+        export RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT
     fi
 
-    # we need rustup to add target
     if ! which rustup; then
-        # RUSTUP_HOME: toolchain and configurations
-        export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
-
-        mkdir -p "$RUSTUP_HOME" "$CARGO_HOME"
-
         RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
         if which rustup-init; then
             rustup-init "${RUSTUP_INIT_OPTS[@]}"
         else
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
         fi
-    elif test -f rust-toolchain.toml; then
-        # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-        #  choose ROOT instead of HOME for docker buildings
-        export RUSTUP_HOME="$ROOT/.rustup"
-        # `rustup which` will install the specified toolchain
-    else
+    fi
+
+    # docker image RUSTUP_HOME may not be writable
+    if test -w "$RUSTUP_HOME"; then
         rustup default || rustup default stable
     fi
 
     CARGO="$(rustup which cargo)" || die "missing host tool cargo"
     RUSTC="$(rustup which rustc)" || die "missing host tool rustc"
 
-    export CARGO RUSTC
+    export CARGO_HOME RUSTUP_HOME CARGO RUSTC
 
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     # set CARGO_HOME again for local crates and cache
     #export CARGO_HOME="$ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CL_NJOBS"
 
-    mkdir -p "$CARGO_HOME"
+    mkdir -p "$CARGO_HOME/bin"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
@@ -452,10 +459,21 @@ cargo.build() {
     slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
 }
 
-# requires cargo tools
+# requires host cargo tools
 cargo.depends() {
+    _cargo_init
+
     for x in "$@"; do
-        slogcmd cargo install "$x" || die "cargo install $x failed."
+        (
+            # follow cargo's setting instead of ours to build host tools
+            unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
+            unset PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_ALL_STATIC
+            unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
+
+            #export CARGO_TARGET_DIR="$CARGO_HOME/builddir" # reuse builddir
+
+            slogcmd cargo install "$x"
+        ) || die "cargo install $x failed."
     done
 }
 
