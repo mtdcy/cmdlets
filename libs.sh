@@ -804,20 +804,14 @@ search() {
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
             echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
-            # TODO: add a sanity check here
-        fi
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+        elif $PKG_CONFIG --exists "lib$x"; then
+            x="lib$x"
 
-        [[ "$x" =~ ^lib ]] && continue
-
-        x=lib$x
-        slogi "Search pkgconfig for $x ..."
-        if $PKG_CONFIG --exists "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
             echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --libs "$x"   )"
-            # TODO: add a sanity check here
+            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
         fi
     done
 }
@@ -916,6 +910,14 @@ update() {
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_packages "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
+}
+
+#
+meson.configure() {
+    _init
+    . helpers.sh
+
+    meson configure
 }
 
 _on_exit() {
