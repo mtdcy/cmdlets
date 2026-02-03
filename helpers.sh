@@ -240,7 +240,7 @@ meson() {
             )
 
             # prefer static external dependencies
-            is_darwin || args+=( --prefer-static )
+            #is_darwin || args+=( --prefer-static )
 
             # append user args
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
@@ -280,8 +280,10 @@ meson.setup() {
     )
 
     # prefer static external dependencies
-    is_darwin || std+=( --prefer-static )
+    #is_darwin || std+=( --prefer-static )
     # prefer-static not always work for macOS, like libresolv which do not have static version.
+    # prefer-static not working like expected, -static-libgcc will not working with this
+    #  => use pkg-config and `-Wl,-Bstatic -latomic' instead
 
     # std < libs_args < user args
     slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
