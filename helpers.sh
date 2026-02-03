@@ -116,9 +116,9 @@ _cmake_init() {
     test -z "$CMAKE_READY" || return 0
 
     # defaults:
-    : "${CMAKE_BINARY_DIR:=build-$$}"
+    : "${LIBS_BUILDDIR:=build-$PPID}"
 
-    export CMAKE_BINARY_DIR
+    export LIBS_BUILDDIR
 
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     export CC="${CC/ccache\ /}"
@@ -212,19 +212,19 @@ cmake.setup() {
     is_msys   && std+=( -G"'MSYS Makefiles'" )
 
     # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$CMAKE_BINARY_DIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
+    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
 }
 
 cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
-    slogcmd "$CMAKE" --build "$CMAKE_BINARY_DIR" "$@" || die "cmake.build failed."
+    slogcmd "$CMAKE" --build "$LIBS_BUILDDIR" "$@" || die "cmake.build failed."
 }
 
 cmake.install() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL=1
-    slogcmd "$CMAKE" --install "$CMAKE_BINARY_DIR" "$@" || die "cmake.install failed."
+    slogcmd "$CMAKE" --install "$LIBS_BUILDDIR" "$@" || die "cmake.install failed."
 }
 
 meson() {
@@ -264,7 +264,19 @@ meson() {
     slogcmd "${cmdline[@]}" || die "meson $* failed."
 }
 
+_meson_init() {
+    test -z "$MESON_READY" || return 0
+
+    : "${LIBS_BUILDDIR:=build-$PPID}"
+
+    export LIBS_BUILDDIR
+
+    export MESON_READY=1
+}
+
 meson.setup() {
+    _meson_init
+
     # meson builtin options: https://mesonbuild.com/Builtin-options.html
     #  libdir: some package prefer install to lib/<machine>/
     local std=(
@@ -280,15 +292,22 @@ meson.setup() {
     #_version_le "$($MESON --version)" 0.37.0 || std+=( -Dprefer_static=true )
 
     # std < libs_args < user args
-    slogcmd "$MESON" setup build "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
+    slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
+
+    # enter builddir before return
+    pushd "$LIBS_BUILDDIR" || die
 }
 
 meson.compile() {
-    slogcmd "$MESON" compile -C build --verbose "-j$CL_NJOBS" "$@" || die "meson.compile failed."
+    _meson_init
+
+    slogcmd "$MESON" compile --verbose "-j$CL_NJOBS" "$@" || die "meson.compile failed."
 }
 
 meson.install() {
-    slogcmd "$MESON" install -C build "$@" || die "meson.compile failed."
+    _meson_init
+
+    slogcmd "$MESON" install "$@" || die "meson.install failed."
 }
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
