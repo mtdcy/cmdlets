@@ -14,6 +14,7 @@ CL_NJOBS 	?= $(shell nproc)
 CL_MIRRORS 	?= https://mirrors.mtdcy.top
 CL_LOGGING 	?= tty
 CL_CCACHE 	?= 1
+CL_DIST 	?= 0
 
 MAKEFLAGS 	+= --always-make
 
@@ -48,7 +49,11 @@ CL_ENVS :=  CL_FORCE 		\
 vpath %.s libs
 
 %: %.s
+ifeq ($(CL_DIST),1)
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $@"
+else
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+endif
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
