@@ -630,46 +630,75 @@ compile() {
 # load libs_deps
 _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 
-# get all dependencies
-#  input: name [...]
-_deps_get() {
-    local list deps
-    for libs in "$@"; do
-        IFS=' ' read -r -a deps < <( _deps_load "$libs" )
-        test -n "${deps[*]}" || continue
+_deps_init() {
+    #test -z "$DEPS_READY" || return
 
-        for x in "${deps[@]}"; do
-            is_listed "$x" "$@" && continue
-            is_listed "$x" "${list[@]}" && continue # already exists
+    export DEPS_FILE="$WORKDIR/.dependencies"
 
-            list+=( $(_deps_get "$x") "$x" )
+    test -f "$DEPS_FILE" || true > "$DEPS_FILE"
+
+    # generate dependencies map
+    if test -s "$DEPS_FILE"; then
+        while IFS='/' read -r _ libs; do
+            libs="${libs%.s}"
+
+            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
+
+            # update dependency
+            sed -i "/^$libs/d" "$DEPS_FILE"
+            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
+        done < <(find libs -maxdepth 1 -type f -newer "$DEPS_FILE")
+    else
+        for libs in libs/*.s; do
+            libs="${libs#*/}"
+            libs="${libs%.s}"
+
+            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
+
+            # write dependency
+            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
         done
-    done
-    printf '%s\n' "${list[@]}" | sort -u | xargs
+    fi
+    export DEPS_READY=1
 }
 
-# check dependencies for libraries
-_deps_check() {
+depends() {
+    _deps_init
+
     local list=()
+    while IFS=' ' read -r libs deps; do
+        test -n "$deps" || continue
+        is_listed "$libs" "$@" || continue
 
-    for x in $(_deps_get "$@"); do
-        #1. dep not installed
-        #2. dep.s been updated
-        if ! test -e "$PREFIX/.$x.d"; then
-            list+=( "$x" )
-        elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
-            list+=( "$x" ) && rm -rf "$PREFIX/.$x.d"
-        fi
-    done
+        for x in $(depends $deps) $deps; do
+            is_listed "$x" "$@" && continue
+            is_listed "$x" "${list[@]}" || list+=( "$x" )
+        done
+    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
 
-    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
+    echo "${list[@]}"
+}
+
+# dependence (reverse dependencies)
+rdepends() {
+    _deps_init
+
+    local list=()
+    while IFS=' ' read -r libs _; do
+        is_listed "$libs" "$@" && continue
+        is_listed "$libs" "${list[@]}" || list+=( "$libs" )
+    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
+
+    [ "${#list[@]}" -gt 0 ] && echo "${list[@]}" "$(rdepends "${list[@]}")" || true
 }
 
 _deps_sort() {
+    _deps_init
+
     local head tail
     for libs in "$@"; do
         # have dependencies => tail
-        for x in $(_deps_get "$libs"); do
+        for x in $(depends "$libs"); do
             is_listed "$x" "$@" && tail+=( "$libs" ) && break
         done
 
@@ -683,6 +712,25 @@ _deps_sort() {
     fi
 
     echo "${head[@]}" "${tail[@]}"
+}
+
+# check dependencies for libraries
+_deps_check() {
+    _deps_init
+
+    local list=()
+
+    for x in $(depends "$@"); do
+        #1. dep not installed
+        #2. dep.s been updated
+        if ! test -e "$PREFIX/.$x.d"; then
+            list+=( "$x" )
+        elif [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ]; then
+            list+=( "$x" ) && rm -rf "$PREFIX/.$x.d"
+        fi
+    done
+
+    [ "${#list[@]}" -gt 1 ] && _deps_sort "${list[@]}" || echo "${list[@]}"
 }
 
 # build targets and its dependencies
@@ -717,31 +765,6 @@ build() {
     done
 }
 
-# find out who depends on libs
-dependents() {
-    local list deps
-
-    # only top level *.s files
-    for libs in libs/*.s; do
-        libs="${libs#*/}"
-        libs="${libs%.s}"
-
-        is_listed "$libs" "$@" && continue # exclude self
-
-        [[ "$libs" =~ ^[.@_] ]] && continue
-        [[ "$libs" == ALL ]] && continue
-
-        echo -en "checking $libs ..."
-
-        IFS=' ' read -r -a deps < <(_deps_get "$libs")
-        for x in "$@"; do
-            is_listed "$x" "${deps[@]}" && list+=( "$libs" ) && echo -en " found" && break
-        done
-        echo ""
-    done
-    echo "${list[@]}"
-}
-
 # print info of a library
 info() {
     _load "$1"
@@ -751,7 +774,7 @@ info() {
     slogi "  libs_ver: $libs_ver"
     slogi "  libs_url: $libs_url"
     slogi "  libs_dep: ${libs_dep[*]}"
-    slogi "         => $(_deps_get "$1")"
+    slogi "         => $(depends "$1")"
 }
 
 search() {
@@ -792,23 +815,6 @@ search() {
         fi
     done
 }
-
-## find out dependencies of library
-#info() {
-#    slogi "$1: $(_deps_get "$1")"
-#
-#    for lib in libs/*.s; do
-#        IFS='/.' read -r _ lib _ <<< "$lib"
-#
-#        [[ "$libs" =~ ^[.@_] ]] && continue
-#
-#        IFS=' ' read -r -a deps <<< "$(bash libs.sh _deps_load "$lib")"
-#
-#        if [[ "${deps[*]}" == *"$1"* ]]; then
-#            slogi "$lib => $1"
-#        fi
-#    done
-#}
 
 # load libname
 load() {
@@ -853,11 +859,15 @@ env() {
 
 clean() {
     rm -rf "$WORKDIR" "$LOGFILES"
+    exit 0 # always exit here
 }
 
 distclean() {
-    clean
-    rm -rf "$PREFIX"
+    rm -rf "$PREFIX" && clean
+}
+
+dist() {
+    build "$@" $(rdepends "$@" | tail -n1)
 }
 
 # speed up prepare-host by making prerequisites.tar.gz
