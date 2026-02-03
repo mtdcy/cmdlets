@@ -1,51 +1,88 @@
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 
+# Core application library for GNOME and GTK
 # GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
-
 # shellcheck disable=SC2034
-libs_lic="LGPL-2.1-or-later"
+libs_lic=LGPLv2.1+
 libs_ver=2.86.3
 libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=ad0718637e4b91bbf4732e609cea8b06117bfcea8ddc036477bebf43939aab9f
 libs_dep=( zlib pcre2 libiconv libffi )
 
 libs_args=(
+    # avoid hardcode PREFIX
     -Dlocalstatedir=/var
     -Druntime_dir=/var/run
-    -Dbsymbolic_functions=false
-    #-Dgio_module_dir=#{HOMEBREW_PREFIX}/lib/gio/modules
+    -Dgio_module_dir=/usr/lib/gio/modules   # OR set env GIO_MODULE_DIR
+
+    # GLib libraries
+    -Dglib_assert=true
+    -Dglib_checks=true
+    -Dglib_debug=enabled
 
     # Disable dtrace; see https://trac.macports.org/ticket/30413
     # and https://gitlab.gnome.org/GNOME/glib/-/issues/653
-    -Ddtrace=false
+    -Ddtrace=disabled
 
     # no gobject-introspection
+    #  => used to create language bindings for other programming languages like Python, JavaScript, Vala, and Lua.
     -Dintrospection=disabled
+
+    -Dbsymbolic_functions=false
 
     -Dnls=disabled
     -Dsysprof=disabled
     -Dman-pages=disabled
-    -Dglib_debug=disabled
     -Dtests=false
 )
 
+# GFileMonitor backend: auto, inotify, kqueue, libinotify-kqueue, win32
+#is_linux && libs_args+=( -Dfile_monitor_backend=inotify ) || libs_args+=( -Dfile_monitor_backend=auto )
+
+# shellcheck disable=SC2086
 libs_build() {
     # no gvdb
     rm -rf subprojects/gvdb
+
+    # ERROR: Dependency "iconv" not found
+    sed -e "s/dependency('iconv')/dependency('iconv', required: true, static: true)/" \
+        -i meson.build
+    export LDFLAGS+=" -liconv -lcharset"
 
     meson.setup
 
     meson.compile
 
-    pkgfile libglib -- meson.install #--tags devel
+    # TODO: update meson.build instead
+    # Fix libiconv dependency
+    sed -e '/Requires:/s/$/& libiconv/' \
+        -i meson-private/glib-2.0.pc || die
 
-    for x in glib-genmarshal glib-mkenums; do
-        cmdlet.install "./build/gobject/$x"
-    done
+    pkgfile libglib -- meson.install --tags devel
 
-    for x in glib-compile-resources glib-compile-schemas; do
-        cmdlet.install "./build/gio/$x"
-    done
+    # Fix missing libinotify.a
+    if test -f "gio/inotify/libinotify.a"; then
+        pkgconf libinotify.pc -linotify
+        pkginst libinotify gio/inotify/libinotify.a libinotify.pc
+    fi
+
+    # gobject
+    pkginst gobject bin                     \
+        gobject/gobject-query               \
+        gobject/glib-genmarshal             \
+        gobject/glib-mkenums                \
+
+    # gio
+    pkginst gio bin                         \
+        gio/gio                             \
+        gio/gdbus                           \
+        gio/gsettings                       \
+        gio/gresource                       \
+        gio/gio-querymodules                \
+        gio/glib-compile-schemas            \
+        gio/glib-compile-resources          \
+        gio/gdbus-2.0/codegen/gdbus-codegen \
+
 }
 
 # patch: fix meson install with DESTDIR and PREFIX
