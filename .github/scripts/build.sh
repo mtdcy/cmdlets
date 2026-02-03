@@ -45,8 +45,8 @@ echo $PATH
 env | grep "^CL_" | grep -v TOKEN
 
 cmdlets=()
-if test -n "$*"; then
-    IFS=', ' read -r -a cmdlets <<< "$@"
+if test -n "$1"; then
+    cmdlets=( "$1" ) # build single library manually
 else
     while read -r line; do
         # file been deleted or renamed
@@ -77,7 +77,11 @@ if [[ "${cmdlets[*]}" =~ =force ]]; then
     IFS=' ' read -r -a cmdlets <<< "${cmdlets[*]//=force/}"
 fi
 
-bash libs.sh dist "${cmdlets[@]}" || ret=$?
+if [[ "$cmdlets" =~ -$ ]]; then
+    bash libs.sh build "${cmdlets%-}" || ret=$?
+else
+    bash libs.sh dist "${cmdlets[@]}" || ret=$?
+fi
 
 unset CL_FORCE
 

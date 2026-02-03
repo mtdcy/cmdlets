@@ -7,8 +7,8 @@ info() {
 export CL_LOGGING="${CL_LOGGING:-silent}"
 
 cmdlets=()
-if test -n "$*"; then
-    IFS=', ' read -r -a cmdlets <<< "$*"
+if test -n "$1"; then
+    cmdlets=( "$1" ) # build single library manually
 else
     while read -r line; do
         # file been deleted or renamed
@@ -33,4 +33,8 @@ test -n "${cmdlets[*]}" || {
 
 info "*** prepare ${cmdlets[*]} ***"
 
-bash libs.sh fetch "${cmdlets[@]}" $(bash libs.sh rdepends "${cmdlets[@]}")
+if [[ "$cmdlets" =~ -$ ]]; then
+    bash libs.sh fetch "${cmdlets%-}"
+else
+    bash libs.sh fetch "${cmdlets[@]}" $(bash libs.sh rdepends "${cmdlets[@]}")
+fi
