@@ -735,7 +735,10 @@ _check_deps() {
 build() {
     local deps
 
-    IFS=' ' read -r -a deps <<< "$(depends "$@")"
+    IFS=' ' read -r -a deps < <(depends "$@")
+
+    # always sort dependencies
+    IFS=' ' read -r -a deps < <(_deps_sort "${deps[@]}")
 
     # check dependencies: libraries updated
 
