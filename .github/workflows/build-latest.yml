@@ -89,4 +89,9 @@ jobs:
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
           export CL_MIRRORS="${{ vars.MIRRORS }}"
 
+          # fix: detected dubious ownership in repository
+          git config --global --add safe.directory '*'
+          git config user.name "bot"
+          git config user.email "bot@noreply.mtdcy.top"
+
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"

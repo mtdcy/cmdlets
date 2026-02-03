@@ -16,14 +16,9 @@ export CL_NJOBS="${CL_NJOBS:-1}"
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
-# fix: detected dubious ownership in repository
-git config --global --add safe.directory '*'
-
 arch="$(bash libs.sh arch)"
 
 # tag to HEAD
-git config user.name "bot"
-git config user.email "bot@noreply.mtdcy.top"
 git tag -a "$arch" -m "$arch" --force
 git push origin "$arch" --force
 
@@ -71,19 +66,14 @@ ret=0
 
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
-if [[ "${cmdlets[*]}" =~ =force ]]; then
-    export CL_FORCE=1
-
-    IFS=' ' read -r -a cmdlets <<< "${cmdlets[*]//=force/}"
-fi
-
 if [[ "$cmdlets" =~ -$ ]]; then
     bash libs.sh build "${cmdlets%-}" || ret=$?
+elif [[ "$cmdlets" =~ \+$ ]]; then
+    export CL_FORCE=1
+    bash libs.sh build "${cmdlets%+}" || ret=$?
 else
     bash libs.sh dist "${cmdlets[@]}" || ret=$?
 fi
-
-unset CL_FORCE
 
 # for release actions
 bash libs.sh zip_files || true

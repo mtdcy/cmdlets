@@ -35,6 +35,8 @@ info "*** prepare ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
     bash libs.sh fetch "${cmdlets%-}"
+elif [[ "$cmdlets" =~ \+$ ]]; then
+    bash libs.sh fetch $(bash libs.sh depends "${cmdlets%+}") "${cmdlets%+}"
 else
     bash libs.sh fetch "${cmdlets[@]}" $(bash libs.sh rdepends "${cmdlets[@]}")
 fi

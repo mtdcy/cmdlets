@@ -82,6 +82,11 @@ jobs:
           arch="$(bash libs.sh arch)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
 
+          # fix: detected dubious ownership in repository
+          git config --global --add safe.directory '*'
+          git config user.name "bot"
+          git config user.email "bot@noreply.mtdcy.top"
+
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
       - name: Release
