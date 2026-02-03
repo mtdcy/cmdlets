@@ -35,6 +35,9 @@ for x in "${libs_dep[@]}"; do
 done
 
 libs_build() {
+    # no subprojects, remove them in case someting went wrong.
+    rm -rf subprojects
+
     meson.setup
 
     meson.compile
