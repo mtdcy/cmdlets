@@ -319,7 +319,7 @@ _cargo_init() {
     # a writable cargo home needed, refer to cargo.depends()
     test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
 
-    mkdir -p "$CARGO_HOME/bin"
+    mkdir -pv "$CARGO_HOME/bin"
 
     export PATH="$CARGO_HOME/bin:$PATH"
 
@@ -362,8 +362,6 @@ _cargo_init() {
     # set CARGO_HOME again for local crates and cache
     #export CARGO_HOME="$ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CL_NJOBS"
-
-    mkdir -p "$CARGO_HOME/bin"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
