@@ -4,7 +4,7 @@
 libs_ver=7.1.2-13
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
-libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib librsvg )
+libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib )
 
 # configure args
 libs_args=(
@@ -57,7 +57,7 @@ libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
 libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
 libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
 libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
-libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+#libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
