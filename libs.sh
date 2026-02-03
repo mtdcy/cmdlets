@@ -580,6 +580,11 @@ compile() {
             return 0
         fi
 
+        declare -F libs_build || {
+            slogw "<<<<<" "Not supported or missing libs_build"
+            return 0
+        }
+
         test -n "$libs_url" || die "missing libs_url"
 
         # prepare work directories

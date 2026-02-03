@@ -38,15 +38,8 @@ deparallelize() {
     export CL_NJOBS=1
 }
 
-depends_on() {
-    "$@" || {
-        slogw "*****" "**** Not supported on $OSTYPE! ****"
-        exit 0 # exit shell
-    }
-}
-
-depends.on() {
-    "$@" || { slogw "No support on $OSTYPE"; exit 0; }
+libs_depends() {
+    "$@" || { unset libs_dep libs_args libs_build; }
 }
 
 depends.libs() {

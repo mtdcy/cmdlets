@@ -21,7 +21,6 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_linux
 
     if test -d /lib/security; then
         libs_args+=( -Dsecuredir=/lib/security )
@@ -47,5 +46,7 @@ libs_build() {
 
     pkgfile libpam -- meson install -C build
 }
+
+libs_deps is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

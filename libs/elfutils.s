@@ -54,7 +54,6 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_linux
 
     export CFLAGS+=" -D_GNU_SOURCE -Wno-error -Wno-null-dereference"
 
@@ -83,6 +82,8 @@ libs_build() {
     pkgfile libelf -- make.install bin_PROGRAMS=
 }
 
+libs_depends is_linux
+
 # patch: enable static build
 __END__
 From 5245a2d1f517458b36be87807baaa205aa8a4f50 Mon Sep 17 00:00:00 2001
@@ -107,25 +108,25 @@ index 58e58af2..6ecabc11 100644
 @@ -445,8 +445,10 @@ AS_HELP_STRING([--enable-install-elfh],[install elf.h in include dir]),
                 [install_elfh=$enableval], [install_elfh=no])
  AM_CONDITIONAL(INSTALL_ELFH, test "$install_elfh" = yes)
- 
+
 -AM_CONDITIONAL(BUILD_STATIC, [dnl
 -test "$use_gprof" = yes -o "$use_gcov" = yes])
 +AC_ARG_ENABLE([static],
 +AS_HELP_STRING([--enable-static],[enable static build]),
 +               [enable_static=yes], [enable_static=no])
 +AM_CONDITIONAL(BUILD_STATIC, test "$enable_static" = yes)
- 
+
  AC_ARG_ENABLE([tests-rpath],
  AS_HELP_STRING([--enable-tests-rpath],[build $ORIGIN-using rpath into tests]),
 @@ -1061,7 +1063,7 @@ AC_MSG_NOTICE([
      libdebuginfod client support       : ${enable_libdebuginfod}
      Debuginfod server support          : ${enable_debuginfod}
      Default DEBUGINFOD_URLS            : ${default_debuginfod_urls}
--    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification} 
+-    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification}
 +    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification}
      Default DEBUGINFOD_IMA_CERT_PATH   : ${default_debuginfod_ima_cert_path}
      ${program_prefix}stacktrace support              : ${enable_stacktrace}
- 
+
 diff --git a/libasm/Makefile.am b/libasm/Makefile.am
 index 969db935..458ee257 100644
 --- a/libasm/Makefile.am
@@ -133,7 +134,7 @@ index 969db935..458ee257 100644
 @@ -54,7 +54,7 @@ libasm_a_SOURCES = asm_begin.c asm_abort.c asm_end.c asm_error.c \
  libasm_pic_a_SOURCES =
  am_libasm_pic_a_OBJECTS = $(libasm_a_SOURCES:.c=.os)
- 
+
 -libasm_so_DEPS = ../lib/libeu.a ../libebl/libebl_pic.a ../libelf/libelf.so ../libdw/libdw.so
 +libasm_so_DEPS = ../lib/libeu.a ../libebl/libebl_pic.a ../libelf/libelf.a ../libdw/libdw.a
  libasm_so_LDLIBS = $(libasm_so_DEPS)
@@ -142,7 +143,7 @@ index 969db935..458ee257 100644
 @@ -71,16 +71,13 @@ libasm.so: $(srcdir)/libasm.map $(libasm_so_LIBS) $(libasm_so_DEPS)
  	@$(textrel_check)
  	$(AM_V_at)ln -fs $@ $@.$(VERSION)
- 
+
 -install: install-am libasm.so
 +install: install-am
  	$(mkinstalldirs) $(DESTDIR)$(libdir)
@@ -150,14 +151,14 @@ index 969db935..458ee257 100644
 -	ln -fs libasm-$(PACKAGE_VERSION).so $(DESTDIR)$(libdir)/libasm.so.$(VERSION)
 -	ln -fs libasm.so.$(VERSION) $(DESTDIR)$(libdir)/libasm.so
 +	$(INSTALL_PROGRAM) libasm.a $(DESTDIR)$(libdir)/libasm.a
- 
+
  uninstall: uninstall-am
  	rm -f $(DESTDIR)$(libdir)/libasm-$(PACKAGE_VERSION).so
 -	rm -f $(DESTDIR)$(libdir)/libasm.so.$(VERSION)
 -	rm -f $(DESTDIR)$(libdir)/libasm.so
 +	rm -f $(DESTDIR)$(libdir)/libasm.a
  	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(includedir)/elfutils
- 
+
  noinst_HEADERS = libasmP.h symbolhash.h
 diff --git a/libdw/Makefile.am b/libdw/Makefile.am
 index c98fe31f..799029c6 100644
@@ -175,7 +176,7 @@ index c98fe31f..799029c6 100644
 @@ -120,16 +120,12 @@ libdw.so: $(srcdir)/libdw.map $(libdw_so_LIBS) $(libdw_so_DEPS)
  	@$(textrel_check)
  	$(AM_V_at)ln -fs $@ $@.$(VERSION)
- 
+
 -install: install-am libdw.so
 +install: install-am
  	$(mkinstalldirs) $(DESTDIR)$(libdir)
@@ -183,37 +184,37 @@ index c98fe31f..799029c6 100644
 -	ln -fs libdw-$(PACKAGE_VERSION).so $(DESTDIR)$(libdir)/libdw.so.$(VERSION)
 -	ln -fs libdw.so.$(VERSION) $(DESTDIR)$(libdir)/libdw.so
 +	$(INSTALL_PROGRAM) libdw.a $(DESTDIR)$(libdir)/libdw.a
- 
+
  uninstall: uninstall-am
 -	rm -f $(DESTDIR)$(libdir)/libdw-$(PACKAGE_VERSION).so
 -	rm -f $(DESTDIR)$(libdir)/libdw.so.$(VERSION)
 -	rm -f $(DESTDIR)$(libdir)/libdw.so
 +	rm -f $(DESTDIR)$(libdir)/libdw.a
  	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(includedir)/elfutils
- 
+
  libdwfl_objects = $(shell cat ../libdwfl/libdwfl.manifest)
 diff --git a/libdwelf/Makefile.am b/libdwelf/Makefile.am
 index 5fb57379..3a1ac0ea 100644
 --- a/libdwelf/Makefile.am
 +++ b/libdwelf/Makefile.am
 @@ -46,8 +46,8 @@ libdwelf_a_SOURCES = dwelf_elf_gnu_debuglink.c dwelf_dwarf_gnu_debugaltlink.c \
- 
+
  libdwelf = $(libdw)
- 
+
 -libdw = ../libdw/libdw.so
 -libelf = ../libelf/libelf.so
 +libdw = ../libdw/libdw.a
 +libelf = ../libelf/libelf.a
  libebl = ../libebl/libebl.a
  libeu = ../lib/libeu.a
- 
+
 diff --git a/libdwfl/Makefile.am b/libdwfl/Makefile.am
 index 6ad5ba10..8d6b68c3 100644
 --- a/libdwfl/Makefile.am
 +++ b/libdwfl/Makefile.am
 @@ -85,8 +85,8 @@ libdwfl_a_SOURCES += zstd.c
  endif
- 
+
  libdwfl = $(libdw)
 -libdw = ../libdw/libdw.so
 -libelf = ../libelf/libelf.so
@@ -221,7 +222,7 @@ index 6ad5ba10..8d6b68c3 100644
 +libelf = ../libelf/libelf.a
  libebl = ../libebl/libebl.a
  libeu = ../lib/libeu.a
- 
+
 diff --git a/libelf/Makefile.am b/libelf/Makefile.am
 index 05484c12..c4cae408 100644
 --- a/libelf/Makefile.am
@@ -229,7 +230,7 @@ index 05484c12..c4cae408 100644
 @@ -125,16 +125,13 @@ libelf.so: $(srcdir)/libelf.map $(libelf_so_LIBS) $(libelf_so_DEPS)
  libeu_objects = $(shell cat ../lib/libeu.manifest)
  libelf_a_LIBADD = $(addprefix ../lib/,$(libeu_objects))
- 
+
 -install: install-am libelf.so
 +install: install-am
  	$(mkinstalldirs) $(DESTDIR)$(libdir)
@@ -237,15 +238,15 @@ index 05484c12..c4cae408 100644
 -	ln -fs libelf-$(PACKAGE_VERSION).so $(DESTDIR)$(libdir)/libelf.so.$(VERSION)
 -	ln -fs libelf.so.$(VERSION) $(DESTDIR)$(libdir)/libelf.so
 +	$(INSTALL_PROGRAM) libelf.a $(DESTDIR)$(libdir)/libelf.a
- 
+
  uninstall: uninstall-am
  	rm -f $(DESTDIR)$(libdir)/libelf-$(PACKAGE_VERSION).so
 -	rm -f $(DESTDIR)$(libdir)/libelf.so.$(VERSION)
 -	rm -f $(DESTDIR)$(libdir)/libelf.so
 +	rm -f $(DESTDIR)$(libdir)/libelf.a
- 
+
  EXTRA_DIST = libelf.map
- 
+
 diff --git a/src/Makefile.am b/src/Makefile.am
 index f041d458..92f4f9b0 100644
 --- a/src/Makefile.am
@@ -266,6 +267,5 @@ index f041d458..92f4f9b0 100644
  else
  libdebuginfod =
  endif
--- 
+--
 2.51.1
-

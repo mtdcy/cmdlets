@@ -13,15 +13,14 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_linux
 
-    mkdir -p build
+    meson.setup
 
-    meson setup build && 
+    meson.compile
 
-    meson compile -C build --verbose &&
-
-    pkgfile libdrm -- meson install -C build --tags devel
+    pkgfile libdrm -- meson.install --tags devel
 }
+
+libs_depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

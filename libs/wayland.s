@@ -17,19 +17,18 @@ libs_args=(
 )
 
 libs_build() {
-    depends_on is_linux
 
-    mkdir -p build
-    
-    meson setup build && 
+    meson.setup
 
-    meson compile -C build --verbose &&
+    meson.compile
 
-    pkgfile libwayland -- meson install -C build --tags devel &&
+    pkgfile libwayland -- meson.install --tags devel
 
-    cmdlet ./build/src/wayland-scanner &&
+    cmdlet.install src/wayland-scanner
 
-    check wayland-scanner
+    cmdlet.check wayland-scanner
 }
+
+libs_depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

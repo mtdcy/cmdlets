@@ -20,8 +20,6 @@ libs_args=(
 )
 
 libs_build() {
-    # Linux use elfutils
-    depends_on is_darwin
 
     slogcmd autoreconf -fiv
 
@@ -35,5 +33,8 @@ libs_build() {
             lib             lib/libelf.a \
             lib/pkgconfig   libelf.pc
 }
+
+# Linux use elfutils
+libs_depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
