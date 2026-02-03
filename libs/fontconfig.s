@@ -39,7 +39,7 @@ libs_build() {
 
     # tools
     for x in fc-list fc-scan fc-query fc-validate; do
-        cmdlet.install "./build/$x/$x" "$x"
+        cmdlet.install "$x/$x" "$x"
     done
 
     cmdlet.check fc-list --version
