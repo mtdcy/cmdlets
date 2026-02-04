@@ -736,7 +736,12 @@ _pack() {
         #test -e "$x" || die "$x not exists."
         case "$x" in
             # no libtool archive files
-            *.la) continue ;;
+            *.la)           rm -f "$x" && continue ;;
+            # no gdb files
+            */gdb/*)        rm -f "$x" && continue ;;
+            */valgrind/*)   rm -f "$x" && continue ;;
+            # no gettext(i18n & i10n) files
+            */gettext/*)    rm -f "$x" && continue ;;
             *.a)
                 echocmd "$STRIP" -x "$x"
                 echocmd "$RANLIB" "$x"
@@ -745,6 +750,10 @@ _pack() {
                 # shellcheck disable=SC2016
                 sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
                     -e "s%$PREFIX%\${prefix}%g" \
+                    -i "$x"
+                ;;
+            *.cmake)
+                sed -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" \
                     -i "$x"
                 ;;
             bin/*-config)
