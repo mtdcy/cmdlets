@@ -21,6 +21,9 @@ else
         [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
 
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
+
+    # build cmdlet and rdepends by default
+    rdepends=1
 fi
 
 #test -n "${cmdlets[*]}" || cmdlets=( $(bash libs.sh _deps_get ALL) )
@@ -34,9 +37,9 @@ test -n "${cmdlets[*]}" || {
 info "*** prepare ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
-    bash libs.sh fetch "${cmdlets%-}"
-elif [[ "$cmdlets" =~ \+$ ]]; then
-    bash libs.sh fetch $(bash libs.sh depends "${cmdlets%+}") "${cmdlets%+}"
+    bash libs.sh fetch $(bash libs.sh depends "${cmdlets[@]%-}") "${cmdlets[@]%-}"
+elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
+    bash libs.sh fetch "${cmdlets[@]%+}" $(bash libs.sh rdepends "${cmdlets[@]%+}")
 else
-    bash libs.sh fetch "${cmdlets[@]}" $(bash libs.sh rdepends "${cmdlets[@]}")
+    bash libs.sh fetch "${cmdlets[@]}"
 fi
