@@ -50,7 +50,7 @@ libs_build() {
 
     cmake.build
 
-    pkgfile libheif -- cmake.install
+    pkgfile libheif -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
