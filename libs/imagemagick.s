@@ -80,20 +80,20 @@ libs_build() {
 
     # testing
     check_magick_format() {
-        ./utilities/magick identify -list format | grep -m 1 -w " $1" || die "missing $1 support"
+        ./utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
     }
 
     for x in "${libs_dep[@]}"; do
         case "$x" in
-            libraw)         check_magick_format RAW     ;;
-            libjpeg-turbo)  check_magick_format JPEG    ;;
-            openjpeg)       check_magick_format J2K     ;;
-            libjxl)         check_magick_format JXL     ;;
-            libpng)         check_magick_format PNG     ;;
-            libtiff)        check_magick_format TIFF    ;;
-            libwebp)        check_magick_format WEBP    ;;
-            libheif)        check_magick_format HEIC    ;;
-            librsvg)        check_magick_format SVG     ;;
+            libraw)         check_magick_format raw     ;;
+            libjpeg-turbo)  check_magick_format jpeg    ;;
+            openjpeg)       check_magick_format jp2     ;;
+            libjxl)         check_magick_format jxl     ;;
+            libpng)         check_magick_format png     ;;
+            libtiff)        check_magick_format tiff    ;;
+            libwebp)        check_magick_format webp    ;;
+            libheif)        check_magick_format heic    ;;
+            librsvg)        check_magick_format svg     ;;
         esac
     done
 
