@@ -137,7 +137,7 @@ slogcmd() {
 #  ENV: COMMAND='xcrun --find'
 _init_tools() {
     local cmd="${COMMAND:-which}"
-    local k v p
+    local k v p x y
     for x in "$@"; do
         IFS=':' read -r k v <<< "$x"
 
@@ -509,6 +509,8 @@ _prepare() {
     # libs_url: support mirrors
     _fetch_unzip "$libs_sha" "${libs_url[@]}"
 
+    local x patch
+
     # libs_resources: no mirrors
     if test -n "${libs_resources[*]}"; then
         local url sha
@@ -645,6 +647,8 @@ _deps_init() {
 
     test -f "$DEPS_FILE" || true > "$DEPS_FILE"
 
+    local libs
+
     # generate dependencies map
     if test -s "$DEPS_FILE"; then
         while IFS='/' read -r _ libs; do
@@ -673,7 +677,7 @@ _deps_init() {
 depends() {
     _deps_init
 
-    local list=()
+    local list=() libs deps x
     while IFS=' ' read -r libs deps; do
         test -n "$deps" || continue
         is_listed "$libs" "$@" || continue
@@ -691,7 +695,7 @@ depends() {
 rdepends() {
     _deps_init
 
-    local list=()
+    local list=() libs x
     while IFS=' ' read -r libs _; do
         is_listed "$libs" "$@" && continue
 
@@ -706,7 +710,7 @@ rdepends() {
 _deps_sort() {
     _deps_init
 
-    local head tail
+    local head tail libs x
     for libs in "$@"; do
         # have dependencies => tail
         for x in $(depends "$libs"); do
@@ -726,8 +730,7 @@ _deps_sort() {
 }
 
 _check_deps() {
-    local sign
-    local sep=""
+    local sep="" sign x
     for x in "$@"; do
         test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
         printf "%s%s%s" "$sep" "$x" "$sign"
@@ -739,7 +742,7 @@ _check_deps() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    local deps
+    local deps x i targets=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
 
@@ -767,8 +770,6 @@ build() {
     fi
 
     slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
-
-    local targets=()
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
@@ -847,6 +848,7 @@ _pkgfile() {
 
     test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
 
+    local x
     for x in "${pkgfiles[@]}"; do
         _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
     done
@@ -860,7 +862,7 @@ package() {
 
     _fetch_unzip_pkgfile cmdlets.manifest "$MANIFEST"
 
-    ret=0
+    local ret=0 x
     for x in "$@"; do
         _pkgfile "$x" || ret=$?
     done
@@ -882,6 +884,7 @@ info() {
 
 search() {
     slogi "Search $PREFIX"
+    local x
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
@@ -921,6 +924,7 @@ load() {
 # fetch libname
 fetch() {
     slogi "fetch packages $*"
+    local libs x
     for libs in "$@"; do
         _load "$libs"
 

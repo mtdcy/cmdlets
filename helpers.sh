@@ -463,6 +463,7 @@ cargo.build() {
 cargo.requires() {
     _cargo_init
 
+    local x
     for x in "$@"; do
         (
             # follow cargo's setting instead of ours to build host tools
@@ -731,6 +732,7 @@ _pack() {
     local files=()
 
     # preprocessing installed files
+    local x
     for x in "${@:2}"; do
         # test won't work as file glob exists
         #test -e "$x" || die "$x not exists."
@@ -862,6 +864,7 @@ cmdlet.pkgfile() {
 # disclam specific version of cmdlet from manifest
 #  input: version ...
 cmdlet.disclaim() {
+    local x
     for x in "$@"; do
         sed -i "\#\ $libs_name/.*@$x#d" "$MANIFEST" || true
     done
@@ -920,6 +923,7 @@ cmdlet.install() {
     echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
 
     local alias=()
+    local x
     for x in "${@:3}"; do
         _ln "$target" "$PREFIX/bin/$x"
         alias+=( "$PREFIX/bin/$x" )
@@ -1083,6 +1087,7 @@ hack.c.static() {
 # remove predefined variables in Makefile and use env instead
 #  input: Makefile variables...
 hack.makefile() {
+    local x
     for x in "${@:2}"; do
         case "$x" in
             *FLAGS) # append flags (only the first match)
