@@ -57,7 +57,9 @@ libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
 libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
 libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
 #libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
-libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+
+# SVG takes ~5M in executable
+#libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
