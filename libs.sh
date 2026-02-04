@@ -16,8 +16,11 @@ export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 
+
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+
+: "${REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
 if test -n "$CL_MIRRORS"; then
@@ -318,9 +321,6 @@ _init() {
     export MACOSX_DEPLOYMENT_TARGET
     # msys
     export MSYS=winsymlinks:lnk
-
-    # cmdlets
-    [ -z "$CL_MIRRORS" ] || export REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
 # _curl source destination [options]
@@ -763,7 +763,7 @@ build() {
             [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
-        bash pkgfiles.sh "${pkgfiles[@]}" || true # ignore errors
+        package "${pkgfiles[@]}" || true # ignore errors
     fi
 
     slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
@@ -783,6 +783,89 @@ build() {
 
         time compile "${targets[i]}" || die "build ${targets[i]} failed."
     done
+}
+
+# v3/git releases
+_is_flat_repo() { [[ "$REPO" =~ ^flat+ ]]; }
+
+_fetch_unzip_pkgfile() {
+    local dest
+
+    test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
+
+    mkdir -p "${dest%/*}"
+
+    local arch="${PREFIX##*/}"
+    if _is_flat_repo; then
+        slogi "== curl < $REPO/$arch/${1##*/}"
+        curl -fsSL -o "$dest" "${REPO#flat+}/$arch/${1##*/}" || return 1
+    else
+        slogi "== curl < $REPO/$arch/$1"
+        curl -fsSL -o "$dest" "$REPO/$arch/$1" || return 1
+    fi
+
+    if [[ "$dest" =~ tar.gz$ ]]; then
+        tar -C "$PREFIX" -xvf "$dest"
+        echo ""
+    fi
+}
+
+_pkgfile() {
+    local pkgname pkgvern pkginfo pkgfiles
+
+    # priority: v2 > v3, no v1 package
+
+    slogi "📦 Fetch package $1"
+
+    # zlib@1.3.1
+    IFS='@' read -r pkgname pkgvern <<< "$1"
+
+    # v2: latest version
+    : "${pkgvern:=latest}"
+
+    pkginfo="$pkgname/pkginfo@$pkgvern"
+
+    # prefer v2 pkginfo than v3 manifest for developers
+    if ! _is_flat_repo && _fetch_unzip_pkgfile "$pkginfo"; then
+        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+    else
+        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+
+        # v3: no pkgvern => find out latest version
+        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
+                slogw "<< no package found"
+                return 1
+            }
+        fi
+
+        # find all pkgfiles
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$MANIFEST" | xargs )
+    fi
+
+    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
+
+    for x in "${pkgfiles[@]}"; do
+        _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
+    done
+
+    touch "$PREFIX/.$pkgname.d" # mark as ready
+}
+
+package() {
+    slogi "📦 Fetch pkgfiles $*"
+    echo ""
+
+    _fetch_unzip_pkgfile cmdlets.manifest "$MANIFEST"
+
+    ret=0
+    for x in "$@"; do
+        _pkgfile "$x" || ret=$?
+    done
+
+    return $?
 }
 
 # print info of a library
