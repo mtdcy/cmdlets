@@ -23,25 +23,24 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return 1
+    configure
 
-    inspect make install &&
+    make
+
+    inspect make install
 
     pkgfile liblcms2               \
             include/lcms2.h        \
             include/lcms2_plugin.h \
             lib/liblcms2.a         \
             lib/pkgconfig/lcms2.pc \
-            && 
 
-    cmdlet  ./utils/linkicc/linkicc   &&
-    cmdlet  ./utils/transicc/transicc &&
-    cmdlet  ./utils/psicc/psicc       &&
+    cmdlet.install utils/transicc/transicc
+    cmdlet.install utils/linkicc/linkicc
+    cmdlet.install utils/jpgicc/jpgicc
+    cmdlet.install utils/psicc/psicc
 
-    # install: cannot stat './utils/jpgicc/jpgicc': No such file or directory
-    #cmdlet  ./utils/jpgicc/jpgicc     &&
-
-    check linkicc --version
+    cmdlet.check linkicc --help
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
