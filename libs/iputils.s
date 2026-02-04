@@ -24,16 +24,18 @@ libs_args=(
 
 libs_build() {
 
-    meson setup build
+    meson.setup
 
-    meson compile -C build --verbose
+    meson.compile
 
-    pkgfile libiputils -- meson install -C build
+    pkgfile libiputils -- meson.install
 
-    #cmdlet ./build/ping/ping
-    cmdlet ./build/tracepath
+    # inetutils provides ping
+    #cmdlet ping/ping
 
-    check ping -V
+    cmdlet.install tracepath
+
+    check tracepath
 }
 
 libs_depends is_linux
