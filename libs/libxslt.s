@@ -46,8 +46,8 @@ libs_build() {
         bin_PROGRAMS=                    \
         bin_SCRIPTS=                     \
 
-    cmdlet.install  ./xsltproc/xsltproc
-    cmdlet.check    xsltproc --version
+    cmdlet.install  xsltproc/xsltproc
+    cmdlet.check    xsltproc
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
