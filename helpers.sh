@@ -323,7 +323,7 @@ _cargo_init() {
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
     : "${CARGO_HOME:=$HOME/.cargo}"
 
-    # a writable cargo home needed, refer to cargo.depends()
+    # a writable cargo home needed, refer to cargo.requires()
     test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
 
     mkdir -pv "$CARGO_HOME/bin"
@@ -460,7 +460,7 @@ cargo.build() {
 }
 
 # requires host cargo tools
-cargo.depends() {
+cargo.requires() {
     _cargo_init
 
     for x in "$@"; do
@@ -478,7 +478,7 @@ cargo.depends() {
 }
 
 # requires minimal rustc version
-cargo.depends.rustc() {
+cargo.requires.rustc() {
     _cargo_init
 
     slogcmd "$RUSTC" --version
