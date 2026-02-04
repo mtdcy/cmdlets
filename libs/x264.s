@@ -2,7 +2,7 @@
 
 # shellcheck disable=SC2034
 # version refer: https://artifacts.videolan.org/x264/release-macos-arm64/
-libs_ver=3222
+libs_ver=0.165.3222
 libs_url=https://code.videolan.org/videolan/x264/-/archive/stable/x264-b35605a.tar.bz2
 libs_sha=c28a4273ba87ddb5ceb3b6397554bd0c0e68e6484434e41467673ac80b7f7f19
 
@@ -32,16 +32,20 @@ libs_args=(
 is_arm64 && libs_args+=( --disable-asm )
 
 libs_build() {
+    cmdlet.disclaim 0480cb05 3222
+
     # old versions use yasm, but newer version use nasm
     is_arm64 || export AS="$NASM"
 
-    configure && make &&
+    configure
 
-    pkgfile libx264 -- make install-lib-static &&
+    make
 
-    cmdlet ./x264 &&
+    pkgfile libx264 -- make install-lib-static
 
-    check x264 -V
+    cmdlet.install x264
+
+    cmdlet.check x264
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
