@@ -450,7 +450,9 @@ cargo.build() {
     _cargo_init
 
     # CL_NJOBS => CARGO_BUILD_JOBS
-    local std=( --release -vv )
+    local std=( -vv )
+
+    is_listed "--release" "$@" "${libs_args}" || std+=( --release )
 
     # If the --target flag (or build.target) is used, then
     # the build.rustflags will only be passed to the compiler for the target.
