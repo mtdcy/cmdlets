@@ -19,11 +19,14 @@ libs_args=(
 )
 
 libs_build() {
+    # Allow type conversion between vectors on Arm Linux
+    is_linux && is_arm64 && export CFLAGS+=" -flax-vector-conversions"
+
     configure
 
-    make.all
+    make
 
-    pkgfile $libs_name -- make install bin_SCRIPTS=
+    pkgfile $libs_name -- make.install bin_SCRIPTS=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
