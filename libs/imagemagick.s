@@ -57,7 +57,7 @@ libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
 libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
 libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
 libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
-#libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
@@ -78,7 +78,7 @@ libs_build() {
 
     # testing
     check_magick_format() {
-        ./utilities/magick identify -list format | grep -w " $1" || die "missing $1 support"
+        ./utilities/magick identify -list format | grep -m 1 -w " $1" || die "missing $1 support"
     }
 
     for x in "${libs_dep[@]}"; do
