@@ -16,7 +16,7 @@ libs_build() {
 
     cmdlet.install "$libs_name"
 
-    cmdlet.check "$libs_name" --version
+    cmdlet.check "$libs_name"
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
