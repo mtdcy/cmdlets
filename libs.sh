@@ -744,9 +744,9 @@ build() {
 
     # pull dependencies
     if [ "$CL_FORCE" -ne 0 ]; then
-        # check dependencies: libraries updated
+        # check dependencies: force update
         for x in "${deps[@]}"; do
-            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+            rm -f "$PREFIX/.$x.d"
         done
     else
         local pkgfiles=()
