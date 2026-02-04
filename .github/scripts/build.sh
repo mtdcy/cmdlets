@@ -78,26 +78,6 @@ fi
 # for release actions
 bash libs.sh zip_files || true
 
-if [ -n "$CL_ARTIFACTS" ] && [ -n "$CL_ARTIFACTS_TOKEN" ]; then
-    echo "$CL_ARTIFACTS_TOKEN" > .ssh_token
-    chmod 0600 .ssh_token
-
-    IFS='@:' read -r user host port dest <<< "$CL_ARTIFACTS"
-
-    remote="$user@$host:$dest"
-    ssh_opt=( -p "$port" -o StrictHostKeyChecking=no )
-    [ -f .ssh_token ] && ssh_opt+=( -i .ssh_token ) || true
-
-    info "*** rsync artifacts to $CL_ARTIFACTS ***"
-    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
-
-    info "*** rsync logs to $CL_ARTIFACTS ***"
-    rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" logs/ "$remote/cmdlets/logs/" || ret=$?
-
-    #info "*** rsync packages to $CL_ARTIFACTS ***"
-    #rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
-fi
-
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---
