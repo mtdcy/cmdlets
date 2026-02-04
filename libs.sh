@@ -562,7 +562,6 @@ _load() {
     # prepare logfile
     mkdir -p "$LOGFILES"
     export _LOGFILE="$LOGFILES/$libs_name.log"
-    true > "$_LOGFILE"
 }
 
 # compile target
@@ -574,6 +573,10 @@ compile() {
         set -eo pipefail
 
         _load "$1"
+
+        # clear logfiles
+        test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
+        true > "$_LOGFILE"
 
         if [ "$libs_type" = ".PHONY" ]; then
             slogw "<<<<<" "skip dummy target $libs_name"
