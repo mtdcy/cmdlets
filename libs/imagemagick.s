@@ -67,6 +67,15 @@ libs_build() {
 
     make
 
+    # install configlib and configshare to the same directory.
+    sed -i '/CONFIGURE_PATH/s/etc/share/' Makefile
+
+    cmdlet.pkgfile ImageMagick -- make install-configlibDATA install-configshareDATA
+
+    cmdlet.install ./utilities/magick
+
+    cmdlet.check magick --version
+
     # testing
     check_magick_format() {
         ./utilities/magick identify -list format | grep -w " $1" || die "missing $1 support"
@@ -85,15 +94,6 @@ libs_build() {
             librsvg)        check_magick_format SVG     ;;
         esac
     done
-
-    # install configlib and configshare to the same directory.
-    sed -i '/CONFIGURE_PATH/s/etc/share/' Makefile
-
-    cmdlet.pkgfile ImageMagick -- make install-configlibDATA install-configshareDATA
-
-    cmdlet.install ./utilities/magick
-
-    cmdlet.check magick --version
 
     cmdlet.caveats << EOF
 static built ImageMagick
