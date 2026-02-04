@@ -694,10 +694,13 @@ rdepends() {
     local list=()
     while IFS=' ' read -r libs _; do
         is_listed "$libs" "$@" && continue
-        is_listed "$libs" "${list[@]}" || list+=( "$libs" )
+
+        for x in "$libs" $(rdepends "$libs"); do
+            is_listed "$x" "${list[@]}" || list+=( "$x" )
+        done
     done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
 
-    [ "${#list[@]}" -gt 0 ] && echo "${list[@]}" "$(rdepends "${list[@]}")" || true
+    echo "${list[@]}"
 }
 
 _deps_sort() {
