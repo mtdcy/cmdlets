@@ -5,9 +5,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='Apache-2.0'
-libs_ver=3.5.5
-libs_url=https://www.openssl.org/source/openssl-$libs_ver.tar.gz
-libs_sha=b28c91532a8b65a1f983b4c28b7488174e4a01008e29ce8e69bd789f28bc2a89
+libs_ver=3.6.1
+libs_url=https://github.com/openssl/openssl/releases/download/openssl-3.6.1/openssl-3.6.1.tar.gz
+libs_sha=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e
 libs_dep=()
 
 libs_args=(
@@ -49,25 +49,26 @@ libs_build() {
     # ossl-modules: reset MODULESDIR
     make ENGINESDIR= MODULESDIR=
 
-    pkgfile libopenssl -- make install_dev &&
+    pkgfile libopenssl -- make install_dev
 
-    cmdlet ./apps/openssl openssl &&
+    cmdlet.install apps/openssl
+    cmdlet.install tools/c_rehash
 
     # verify
-    check openssl version -a
+    cmdlet.check openssl version -a
 
-    caveats << EOF
-prebuilt static $(openssl version)
+    cmdlet.caveats << EOF
+prebuilt static openssl @ $libs_ver
 
-always search ca certs in /etc/ssl
+$(./apps/openssl version -a)
 
-provider:
-    builtin default and legacy provider.
+$(./apps/openssl list -providers)
 
-    OPENSSL_MODULES and -provider-path will not work.
+    OR set env OPENSSL_MODULES instead
 
-env:
-    OPENSSL_ENGINES : search engines in
+$(./apps/openssl list -engines)
+
+    OR set env OPENSSL_ENGINES instead
 EOF
 }
 
