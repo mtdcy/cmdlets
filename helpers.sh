@@ -206,18 +206,25 @@ cmake.setup() {
 
     # std < libs_args < user args
     slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
+
+    pushd "$LIBS_BUILDDIR" || die
 }
 
 cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
-    slogcmd "$CMAKE" --build "$LIBS_BUILDDIR" "$@" || die "cmake.build failed."
+    slogcmd "$CMAKE" --build . "$@" || die "cmake.build failed."
 }
 
 cmake.install() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL=1
-    slogcmd "$CMAKE" --install "$LIBS_BUILDDIR" "$@" || die "cmake.install failed."
+
+    local cmdline=( "$CMAKE" )
+
+    is_listed "--install" "$@" || cmdline+=( --install . )
+
+    slogcmd "${cmdline[@]}" "$@" || die "cmake.install failed."
 }
 
 meson() {
@@ -316,7 +323,7 @@ _cargo_init() {
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
     : "${CARGO_HOME:=$HOME/.cargo}"
 
-    # a writable cargo home needed, refer to cargo.depends()
+    # a writable cargo home needed, refer to cargo.requires()
     test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
 
     mkdir -pv "$CARGO_HOME/bin"
@@ -453,7 +460,7 @@ cargo.build() {
 }
 
 # requires host cargo tools
-cargo.depends() {
+cargo.requires() {
     _cargo_init
 
     for x in "$@"; do
@@ -471,7 +478,7 @@ cargo.depends() {
 }
 
 # requires minimal rustc version
-cargo.depends.rustc() {
+cargo.requires.rustc() {
     _cargo_init
 
     slogcmd "$RUSTC" --version
@@ -729,7 +736,12 @@ _pack() {
         #test -e "$x" || die "$x not exists."
         case "$x" in
             # no libtool archive files
-            *.la) continue ;;
+            *.la)           rm -f "$x" && continue ;;
+            # no gdb files
+            */gdb/*)        rm -f "$x" && continue ;;
+            */valgrind/*)   rm -f "$x" && continue ;;
+            # no gettext(i18n & i10n) files
+            */gettext/*)    rm -f "$x" && continue ;;
             *.a)
                 echocmd "$STRIP" -x "$x"
                 echocmd "$RANLIB" "$x"
@@ -738,6 +750,10 @@ _pack() {
                 # shellcheck disable=SC2016
                 sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
                     -e "s%$PREFIX%\${prefix}%g" \
+                    -i "$x"
+                ;;
+            *.cmake)
+                sed -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" \
                     -i "$x"
                 ;;
             bin/*-config)
@@ -927,23 +943,26 @@ cmdlet.check() {
     # print to tty instead of capture it
     file "$bin"
 
-    # check version if options/arguments provide
-    if [ $# -gt 1 ]; then
-        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$libs_ver"
-    fi
-
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            echocmd ldd "$bin"
+            CL_LOGGING=plain echocmd ldd "$bin"
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
-        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/" && die "unexpected linked libraries" || true
+        CL_LOGGING=plain \
+        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib" && die "unexpected linked libraries" || true
     elif is_msys; then
+        CL_LOGGING=plain \
         echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
+    fi
+
+    # check version if options/arguments provide
+    if [ $# -gt 1 ]; then
+        CL_LOGGING=plain \
+        echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }
 

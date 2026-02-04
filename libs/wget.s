@@ -6,35 +6,40 @@ libs_lic='GPL-3.0-or-later'
 libs_ver=1.25.0
 libs_url=https://ftpmirror.gnu.org/gnu/wget/wget-$libs_ver.tar.gz
 libs_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
-libs_dep=(zlib xz libidn2 openssl)
-
-# using system tls on macOS
-#is_darwin || libs_dep+=(openssl)
+libs_dep=( zlib libiconv libunistring libidn2 libpsl openssl )
 
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
 
-    # default paths
+    # avoid hardcode PREFIX
     --sysconfdir=/etc
+    --localedir=/no-locale
 
     --with-zlib
     --with-libidn
-    --with-ssl=openssl
+    --with-libpsl
 
-    # from homebrew:wget
+    # ssl
+    --with-ssl=openssl
+    --with-libssl-prefix="'$PREFIX'"
+
+    # unistring
+    --with-libunistring-prefix="'$PREFIX'"
+    --without-included-libunistring
+
+    # no regex
     --disable-pcre
     --disable-pcre2
     --without-included-regex
-    --without-libpsl
 
+    # included libraries
     #--enable-opie       # FTP opie
     #--enable-digest     # HTTP digest
     #--enable-ntlm       # NTLM
 
     --disable-nls
-
     --disable-doc
     --disable-man
 

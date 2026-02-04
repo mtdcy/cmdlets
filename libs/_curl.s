@@ -6,9 +6,7 @@ libs_lic="curl"
 libs_ver=8.13.0
 libs_url=https://curl.se/download/curl-$libs_ver.tar.bz2
 libs_sha=e0d20499260760f9865cb6308928223f4e5128910310c025112f592a168e1473
-libs_dep=(brotli zlib zstd libidn2 nghttp2 libssh2)
-
-is_darwin || libs_dep+=( openssl )
+libs_dep=(zlib zstd brotli libidn2 nghttp2 nghttp3 ngtcp2 libssh2)
 
 libs_args=(
     --disable-option-checking
@@ -18,16 +16,27 @@ libs_args=(
     # default paths
     --sysconfdir=/etc
 
-    --with-libidn2
-    --with-zstd
+    # compression
     --with-zlib
+    --with-zstd
     --with-brotli
+
+    # IDN
+    --without-apple-idn
+    --with-libidn2
+
+    # ssl
+    --with-ssl
     --with-nghttp2
+    --with-nghttp3
+    --with-ngtcp2
 
     # ssh v2
     --with-libssh2
     --without-libssh
 
+    # disabled features
+    --without-gssapi    # GSS-API
     --without-libpsl
     --without-librtmp
     --disable-ldap
@@ -42,23 +51,27 @@ libs_args=(
 
     --disable-shared
     --enable-static
-)
 
-is_darwin && libs_args+=(
-    --with-secure-transport
-) || libs_args+=(
-    --with-openssl
-    --with-default-ssl-backend=openssl
-
-    --with-ca-path=/etc/ssl/certs/
-    --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
-
+    # CA
+    --without-ca-bundle
+    --without-ca-path
+    --with-ca-fallback  # built-in CA store of the SSL library
     # embed ca in curl
-    --with-ca-embed=/etc/ssl/certs/ca-certificates.crt
-
-    # built-in CA store of the SSL library
-    --with-ca-fallback
+    #--with-ca-embed=/etc/ssl/certs/ca-certificates.crt
 )
+
+# ssl backend
+if is_darwin; then
+    # Apple OS native SSL/TLS
+    libs_args+=( --with-secure-transport )
+else
+    libs_dep+=( openssl )
+    libs_args+=(
+        --with-openssl
+        --with-default-ssl-backend=openssl
+        --without-openssl-quic
+    )
+fi
 
 libs_build() {
     apply_c89_flags || true
@@ -72,18 +85,18 @@ libs_build() {
     # edit only top SUBDIRS => install library only
     TOP_SUBDIRS=( lib include )
     sed -i Makefile \
-        -e 's/SUBDIRS/TOP_SUBDIRS/g' 
+        -e 's/SUBDIRS/TOP_SUBDIRS/g'
 
     # fix curl-config
     #  1. eval all echo command
     sed -i curl-config \
         -e 's/\s\+\<echo\>/eval &/g'
 
-    pkgfile libcurl -- make install
+    pkgfile libcurl -- make install bin_PROGRAMS=
 
-    cmdlet  ./src/curl
+    cmdlet.install src/curl
 
-    check curl --version
+    cmdlet.check curl --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

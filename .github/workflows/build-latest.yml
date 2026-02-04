@@ -84,10 +84,8 @@ jobs:
       - name: Build
         shell: bash
         run: |-
-          export CL_ARTIFACTS="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
-          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
           export CL_MIRRORS="${{ vars.MIRRORS }}"
+          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
@@ -95,3 +93,11 @@ jobs:
           git config user.email "bot@noreply.mtdcy.top"
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
+
+      - name: Release
+        if: always()
+        shell: bash
+        run: |-
+          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
+
+          ./.github/scripts/rsync.sh "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"

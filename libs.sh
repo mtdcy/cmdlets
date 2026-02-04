@@ -562,7 +562,6 @@ _load() {
     # prepare logfile
     mkdir -p "$LOGFILES"
     export _LOGFILE="$LOGFILES/$libs_name.log"
-    true > "$_LOGFILE"
 }
 
 # compile target
@@ -575,12 +574,16 @@ compile() {
 
         _load "$1"
 
+        # clear logfiles
+        test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
+        true > "$_LOGFILE"
+
         if [ "$libs_type" = ".PHONY" ]; then
             slogw "<<<<<" "skip dummy target $libs_name"
             return 0
         fi
 
-        declare -F libs_build || {
+        declare -F libs_build >/dev/null || {
             slogw "<<<<<" "Not supported or missing libs_build"
             return 0
         }
@@ -735,15 +738,18 @@ _check_deps() {
 build() {
     local deps
 
-    IFS=' ' read -r -a deps <<< "$(depends "$@")"
+    IFS=' ' read -r -a deps < <(depends "$@")
+
+    # always sort dependencies
+    IFS=' ' read -r -a deps < <(_deps_sort "${deps[@]}")
 
     # check dependencies: libraries updated
 
     # pull dependencies
     if [ "$CL_FORCE" -ne 0 ]; then
-        # check dependencies: libraries updated
+        # check dependencies: force update
         for x in "${deps[@]}"; do
-            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+            rm -f "$PREFIX/.$x.d"
         done
     else
         local pkgfiles=()

@@ -25,9 +25,9 @@ libs_args=(
     --without-gettext
     --disable-install-man
 
-    # static 
+    # static
     --disable-shared
-    --enable-shared
+    --enable-static
 )
 
 libs_build() {

@@ -9,27 +9,28 @@ libs_url=https://github.com/fribidi/fribidi/releases/download/v$libs_ver/fribidi
 libs_sha=6a64f2a687f5c4f203a46fa659f43dd43d1f8b845df8d723107e8a7e6158e4ce
 
 libs_args=(
-    --enable-shared
     --enable-static
-    --disable-shared 
+    --disable-shared
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
 
-    pkgfile libfribidi -- make install SUBDIRS=lib &&
+    make
 
-    cmdlet bin/fribidi &&
+    pkgfile libfribidi -- make.install SUBDIRS=lib
 
-    check fribidi &&
+    cmdlet.install bin/fribidi
 
-    echo "a _lsimple _RteST_o th_oat" > test.input &&
-    output=$($PREFIX/bin/fribidi --charset=CapRTL --test test.input)
+    cmdlet.check fribidi
 
-    echo $output
+    echo "a _lsimple _RteST_o th_oat" > test.input || die
 
-    [ "${output#*=> }" = "a simple TSet that" ]
-    return $?
+    output=$(./bin/fribidi --charset=CapRTL --test test.input)
+
+    echo "$output"
+
+    [ "${output#*=> }" = "a simple TSet that" ] || die "simple test failed."
 }
 
 

@@ -16,17 +16,19 @@ libs_args=(
     -DBUILD_TESTING=OFF
 )
 
+# shellcheck disable=SC2086
 libs_build() {
-    # build OpenCL Headers
-    pushd OpenCL-Headers-$libs_ver
+    (
+        # build OpenCL Headers
+        pushd OpenCL-Headers-$libs_ver || die
 
-    cmake.setup
+        cmake.setup
 
-    cmake.build
+        cmake.build
 
-    pkgfile libOpenCLHeaders -- cmake.install
+        pkgfile libOpenCLHeaders -- cmake.install
 
-    popd
+    ) || die "Build OpenCL Headers failed."
 
     # build OpenCL ICD Loader
     cmake.setup

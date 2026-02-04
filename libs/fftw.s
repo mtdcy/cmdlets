@@ -46,6 +46,10 @@ libs_build() {
     make
 
     pkgfile libfftw3 -- make.install bin_PROGRAMS= bin_SCRIPTS=
+
+    cmdlet.install tools/fftw-wisdom
+
+    cmdlet.check fftw-wisdom --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

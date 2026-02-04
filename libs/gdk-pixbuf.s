@@ -44,7 +44,7 @@ libs_build() {
 
     pkgfile libgdk-pixbuf -- meson.install --tags devel
 
-    #cmdlet.install ./build/gdk-pixbuf/gdk-pixbuf-query-loaders
+    cmdlet.install gdk-pixbuf/gdk-pixbuf-query-loaders
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
