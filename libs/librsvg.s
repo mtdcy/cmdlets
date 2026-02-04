@@ -12,14 +12,25 @@ libs_args=(
     -Dpixbuf=enabled            # GDK-Pixbuf, depends on glib and gdk-pixbuf
     -Dpixbuf-loader=disabled    # needs gdk-pixbuf-query-loaders
 
+    -Drsvg-convert=disabled
+
     -Ddocs=disabled
     -Dtests=False
 )
 
 libs_build() {
-    cargo.depends cargo-c
+    cargo.requires cargo-c
+
+    # respect CARGO_BUILD_TARGET
+    #test -z "$CARGO_BUILD_TARGET" || libs_args+=( -Dtriplet=$CARGO_BUILD_TARGET )
 
     meson.setup
+
+    # hack: something went wrong with meson+rustc build system
+    if [[ "$CARGO_BUILD_TARGET" =~ -linux-musl$ ]]; then
+        mkdir -p target
+        ln -sfv "$(uname -m)-unknown-linux-musl" "target/$(uname -m)-unknown-linux-gnu"
+    fi
 
     meson.compile
 
