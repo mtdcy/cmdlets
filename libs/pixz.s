@@ -21,9 +21,9 @@ libs_build() {
 
     make
 
-    cmdlet ./src/pixz
+    cmdlet.install src/pixz
 
-    check pixz --version
+    cmdlet.check pixz
 
     caveats << EOF
 static built pixz @ $libs_ver
