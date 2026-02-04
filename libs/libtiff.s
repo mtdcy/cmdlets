@@ -15,9 +15,10 @@ libs_args=(
 
     --enable-lzma
     --enable-zstd
+    --disable-libdeflate
 
     # loop dependency between libtiff & webp
-    --disable-webp     
+    --disable-webp
 
     --disable-shared
     --enable-static
@@ -25,22 +26,21 @@ libs_args=(
 )
 
 libs_build() {
-    # force configure
-    rm CMakeLists.txt
+    configure
 
-    configure && make || return 1
-    
-    pkgfile libtiff -- make install SUBDIRS=libtiff &&
+    make
+
+    pkgfile libtiff -- make.install SUBDIRS=libtiff
 
     IFS=' ' read -r -a tools < <(find tools -name "*.o" | xargs)
 
     for x in "${tools[@]%.o}"; do
-        if test -x "$x"; then
-            cmdlet "$x" || return 2
-        fi
+        test -x "$x" || continue
+
+        cmdlet.install "$x"
+        cmdlet.check "$x"
     done
 
-    check tiffinfo --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
