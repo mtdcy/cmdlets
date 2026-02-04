@@ -934,11 +934,6 @@ cmdlet.check() {
     # print to tty instead of capture it
     file "$bin"
 
-    # check version if options/arguments provide
-    if [ $# -gt 1 ]; then
-        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$libs_ver"
-    fi
-
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
@@ -946,11 +941,16 @@ cmdlet.check() {
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
-        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/" && die "unexpected linked libraries" || true
+        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib" && die "unexpected linked libraries" || true
     elif is_msys; then
         echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
+    fi
+
+    # check version if options/arguments provide
+    if [ $# -gt 1 ]; then
+        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$libs_ver"
     fi
 }
 
