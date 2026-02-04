@@ -26,7 +26,7 @@ libs_build() {
 
     make
 
-    pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=
+    pkgfile "$libs_name" -- make install bin_PROGRAMS=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
