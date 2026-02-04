@@ -962,7 +962,7 @@ cmdlet.check() {
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
         CL_LOGGING=plain \
-        echocmd "$bin" "${@:2}" 2>&1 | grep -Fw "$libs_ver" || die "no version found"
+        echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }
 
