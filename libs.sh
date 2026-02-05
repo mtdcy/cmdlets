@@ -22,9 +22,14 @@ export LANG=C
 
 # toolchain prefix
 
-# set default repo
+# set private vairables
+: "${_LOGGING:=$CMDLET_LOGGING}"
+
 : "${_REPO:=$CMDLET_REPO}"
 : "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
+
+# clear envs => setup by _init
+unset ROOT PREFIX WORKDIR
 
 # mirrors
 if test -n "$CMDLET_MIRRORS"; then
@@ -35,9 +40,6 @@ fi
 # defaults
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
-
-# clear envs => setup by _init
-unset ROOT PREFIX WORKDIR
 
 # conditionals
 is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
@@ -85,9 +87,9 @@ die()   {
 }
 
 _capture() {
-    if [ "$CMDLET_LOGGING" = "silent" ]; then
+    if [ "$_LOGGING" = "silent" ]; then
         cat >> "$_LOGFILE"
-    elif [ "$CMDLET_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    elif [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput dim                        # dim on
         tput rmam                       # line break off
 
@@ -109,7 +111,7 @@ _capture() {
 
 _tty_reset() {
     # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if [ "$CMDLET_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput ed         # clear to end of screen
         tput smam       # line break on
         tput sgr0       # reset colors
@@ -127,7 +129,7 @@ echocmd() {
     {
         echo "$@"
         eval -- "$*"
-    } 2>&1 | CMDLET_LOGGING=${CMDLET_LOGGING:-silent} _capture
+    } 2>&1 | _LOGGING=${_LOGGING:-silent} _capture
 }
 
 # slogcmd <command>
@@ -434,7 +436,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    CMDLET_LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
+    _LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
 
     # post strip
     case "${cmd[0]}" in
