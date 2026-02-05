@@ -16,7 +16,10 @@ libs_build() {
     # Issue ref: https://github.com/BlueM/cliclick/issues/178
     export MACOSX_DEPLOYMENT_TARGET=14.0
 
-    make
+    export OBJC="$CC"
+    export OBJCFLAGS="$CFLAGS -include cliclick_Prefix.pch -I Actions -I ."
+
+    make CC="'$CC'"
 
     cmdlet.install cliclick
 

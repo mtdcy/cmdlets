@@ -298,10 +298,12 @@ _init() {
 
     CFLAGS="${FLAGS[*]}"
     CXXFLAGS="${FLAGS[*]}"
+    OBJCFLAGS="${FLAGS[*]}"
+    OBJC="$CC"
     CPP="$CC -E"
     CPPFLAGS="-I$PREFIX/include"
 
-    export CFLAGS CXXFLAGS CPP CPPFLAGS LDFLAGS
+    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
 
     # some build system do not support pkg-config with parameters
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
