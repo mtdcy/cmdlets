@@ -317,7 +317,7 @@ _cargo_init() {
 
     # always use default value $HOME/.cargo, as
     # host act runner won't inherit envs from host and
-    # $ROOT will be deleted when jobs finished.
+    # $_ROOT will be deleted when jobs finished.
 
     # rustup and cargo
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
@@ -367,7 +367,7 @@ _cargo_init() {
 
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     # set CARGO_HOME again for local crates and cache
-    #export CARGO_HOME="$ROOT/.cargo"
+    #export CARGO_HOME="$_ROOT/.cargo"
     export CARGO_BUILD_JOBS="$CMDLET_BUILD_NJOBS"
 
     # search for libraries in PREFIX
@@ -531,11 +531,11 @@ _go_init() {
     export GO
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    #  using ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
     #  set GOPATH in host profile
-    export GOPATH="${GOPATH:-$ROOT/.go}"
-    #export GOCACHE="$ROOT/.go/go-build"
-    export GOMODCACHE="$ROOT/.go/pkg/mod" # OR pkg installed to workdir
+    export GOPATH="${GOPATH:-$_ROOT/.go}"
+    #export GOCACHE="$_ROOT/.go/go-build"
+    export GOMODCACHE="$_ROOT/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto

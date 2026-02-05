@@ -36,7 +36,7 @@ if test -n "$_MIRRORS"; then
 fi
 
 # clear envs => setup by _init
-unset ROOT PREFIX WORKDIR
+unset _ROOT PREFIX WORKDIR
 
 
 # defaults
@@ -160,9 +160,9 @@ _init_tools() {
 }
 
 _init() {
-    [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
+    [ -z "$_ROOT" ] && _ROOT="$(pwd -P)" || return 0
 
-    mkdir -p "$ROOT"/{prebuilts,out,logs,packages}
+    mkdir -p "$_ROOT"/{prebuilts,out,logs,packages}
 
     if [ "$(uname -s)" = Darwin ]; then
         _ARCH_="$(uname -m)-apple-darwin"
@@ -175,16 +175,16 @@ _init() {
     fi
 
     # prepare directories and files
-    PREFIX="$ROOT/prebuilts/$_ARCH_"
-    WORKDIR="$ROOT/out/$_ARCH_"
-    LOGFILES="$ROOT/logs/$_ARCH_"
+    PREFIX="$_ROOT/prebuilts/$_ARCH_"
+    WORKDIR="$_ROOT/out/$_ARCH_"
+    LOGFILES="$_ROOT/logs/$_ARCH_"
     MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export ROOT PREFIX WORKDIR LOGFILES MANIFEST
+    export _ROOT PREFIX WORKDIR LOGFILES MANIFEST
 
     is_linux || unset CMDLET_TOOLCHAIN_PREFIX
 
@@ -298,9 +298,9 @@ _init() {
     #  input: script env
     _init_scripts() {
         eval export REAL_$2="\$$2"
-        eval export $2="$ROOT/scripts/$1"
+        eval export $2="$_ROOT/scripts/$1"
     }
-    #PKG_CONFIG="$ROOT/scripts/pkg-config"
+    #PKG_CONFIG="$_ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
 
     # update PATH => tools like glib-compile-resources needs seat in PATH
@@ -318,7 +318,7 @@ _init() {
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
-        CCACHE_DIR="$ROOT/.ccache/$_ARCH_"
+        CCACHE_DIR="$_ROOT/.ccache/$_ARCH_"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -477,9 +477,9 @@ _packages() {
     if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
         local path
         IFS=':/' read -r _ _ _ _ path <<< "$1"
-        package="$ROOT/packages/$libs_name/${path//\//_}"
+        package="$_ROOT/packages/$libs_name/${path//\//_}"
     else
-        package="$ROOT/packages/$libs_name/${1##*/}"
+        package="$_ROOT/packages/$libs_name/${1##*/}"
     fi
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
@@ -770,7 +770,7 @@ build() {
         # check dependencies: libraries updated or not ready
         for x in "${deps[@]}"; do
             test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
-            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+            [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
         package "${pkgfiles[@]}" || true # ignore errors
@@ -894,15 +894,15 @@ search() {
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # libraries?
         slogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # headers?
         slogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
