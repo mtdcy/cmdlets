@@ -489,7 +489,7 @@ cargo.requires.rustc() {
 }
 
 _go_init() {
-    test -z "$GO_READY" || return 0
+    test -z "$_GO_READY" || return 0
 
     # defaults:
     # CGO_ENABLED=0 is necessary for build static binaries except macOS
@@ -547,7 +547,7 @@ _go_init() {
 
     [ -z "$_GO_PROXY" ] || export GOPROXY="$_GO_PROXY"
 
-    export GO_READY=1
+    export _GO_READY=1
 }
 
 # go can not amend `-ldflags='
@@ -589,7 +589,7 @@ _go_filter_options() {
 go() {
     _go_init
 
-    local cmdline=("$GO" "$1" )
+    local cmdline=( "$GO" "$1" )
     case "$1" in
         build)
             # fix 'invalid go version'
