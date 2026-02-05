@@ -227,18 +227,29 @@ cmake.install() {
     slogcmd "${cmdline[@]}" "$@" || die "cmake.install failed."
 }
 
+_meson_init() {
+    test -z "$_MESON_READY" || return 0
+
+    : "${LIBS_BUILDDIR:=build-$PPID}"
+
+    export LIBS_BUILDDIR
+
+    export _MESON_READY=1
+}
+
 meson() {
+    _meson_init
+
     local cmdline=( "$MESON" )
 
-    # global args < meson configure
-    args=(
-    )
+    # std args < meson configure
+    local std=( )
 
     case "$1" in
         setup)
             # meson builtin options: https://mesonbuild.com/Builtin-options.html
             #  libdir: some package prefer install to lib/<machine>/
-            args+=(
+            std+=(
                 -Dprefix="'$PREFIX'"
                 -Dlibdir=lib
                 -Dbuildtype=release
@@ -247,30 +258,20 @@ meson() {
             )
 
             # prefer static external dependencies
-            #is_darwin || args+=( --prefer-static )
+            #is_darwin || std+=( --prefer-static )
 
             # append user args
-            cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            cmdline+=( setup "${std[@]}" "${libs_args[@]}" "${@:2}" )
             ;;
         compile)
-            cmdline+=( "$1" "${args[@]}" "${@:2}" --jobs "$_NJOBS" )
+            cmdline+=( "$1" "${std[@]}" "${@:2}" --jobs "$_NJOBS" )
             ;;
         *)
-            cmdline+=( "$1" "${args[@]}" "${@:2}" )
+            cmdline+=( "$1" "${std[@]}" "${@:2}" )
             ;;
     esac
 
     slogcmd "${cmdline[@]}" || die "meson $* failed."
-}
-
-_meson_init() {
-    test -z "$MESON_READY" || return 0
-
-    : "${LIBS_BUILDDIR:=build-$PPID}"
-
-    export LIBS_BUILDDIR
-
-    export MESON_READY=1
 }
 
 meson.setup() {
