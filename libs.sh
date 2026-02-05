@@ -357,7 +357,7 @@ _curl() {
     if test -n "$2"; then
         curl -fsI "${@:3}" "$source" -o /dev/null &&
         # show errors
-        echocmd curl -fvSL "${@:3}" "$source" -o "$2"
+        curl -fsSL "${@:3}" "$source" -o "$2"
     else
         # silent curl output for stdout
         curl -fsSL "${@:3}" "$source"
@@ -476,7 +476,7 @@ _unzip() {
 
 # clone git repo
 #  input: git_url#branch_or_tag_name [path]
-_git() {
+_fetch_git() {
     local url branch
     local path="${2%.git*}"
 
@@ -491,7 +491,7 @@ _git() {
     fi
 }
 
-_packages() {
+_package_name() {
     local package
     # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
     if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
@@ -513,10 +513,10 @@ _packages() {
 _fetch_unzip() {
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _git "${@:2}" "${2##*/}"
+        _fetch_git "${@:2}" "${2##*/}"
     else
         # assemble zip name from url
-        local zip="$(_packages "$2")"
+        local zip="$(_package_name "$2")"
 
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
@@ -552,7 +552,7 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                local file="$(_packages "$patch")"
+                local file="$(_package_name "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH -p1 -N < $file" || die "patch < $file failed."
                 ;;
@@ -595,8 +595,7 @@ _load() {
 
 # compile target
 compile() {
-    # always start subshell before _load()
-    (
+    ( # always start subshell before _load()
         # initial build args
 
         trap _tty_reset EXIT
@@ -607,7 +606,6 @@ compile() {
 
         # clear logfiles
         test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
-        true > "$_LOGFILE"
 
         if [ "$libs_type" = ".PHONY" ]; then
             slogw "<<<<<" "skip dummy target $libs_name"
@@ -669,38 +667,34 @@ compile() {
 # load libs_deps
 _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 
+# generate or update dependencies map
 _deps_init() {
-    #test -z "$DEPS_READY" || return
+    test -z "$_DEPS_READY" || return 0
 
-    export DEPS_FILE="$_WORKDIR/.dependencies"
+    export _DEPS_FILE="$_WORKDIR/.dependencies"
 
-    test -f "$DEPS_FILE" || true > "$DEPS_FILE"
+    test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
     local libs
-
-    # generate dependencies map
-    if test -s "$DEPS_FILE"; then
-        while IFS='/' read -r _ libs; do
-            libs="${libs%.s}"
-
+    if test -s "$_DEPS_FILE"; then
+        while IFS='/.' read -r _ libs _; do
             [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
 
             # update dependency
-            sed -i "/^$libs/d" "$DEPS_FILE"
-            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
-        done < <(find libs -maxdepth 1 -type f -newer "$DEPS_FILE")
+            sed -i "/^$libs/d" "$_DEPS_FILE"
+            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <(find libs -maxdepth 1 -type f -newer "$_DEPS_FILE")
     else
         for libs in libs/*.s; do
-            libs="${libs#*/}"
-            libs="${libs%.s}"
+            IFS='/.' read -r _ libs _ <<< "$libs"
 
             [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
 
             # write dependency
-            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
+            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
         done
     fi
-    export DEPS_READY=1
+    export _DEPS_READY=1
 }
 
 depends() {
@@ -715,7 +709,7 @@ depends() {
             is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
+    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -731,7 +725,7 @@ rdepends() {
         for x in "$libs" $(rdepends "$libs"); do
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
+    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -758,13 +752,16 @@ _deps_sort() {
     echo "${head[@]}" "${tail[@]}"
 }
 
-_check_deps() {
+_deps_status() {
+    _deps_init
+
     local sep="" sign x
     for x in "$@"; do
         test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
         printf "%s%s%s" "$sep" "$x" "$sign"
         sep=", "
     done
+
     printf "\n"
 }
 
@@ -798,7 +795,7 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
+    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )"
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
@@ -818,23 +815,23 @@ build() {
 # v3/git releases
 _is_flat_repo() { [[ "$_REPO" =~ ^flat+ ]]; }
 
-_curl_pkgfile() {
-    local dest
+_fetch_unzip_pkgfile() {
+    local zip
 
-    test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
+    test -n "$2" && zip="$2" || zip="$TEMPDIR/${1##*/}"
 
-    mkdir -p "${dest%/*}"
+    mkdir -p "${zip%/*}"
 
     if _is_flat_repo; then
-        slogi "== curl < $_REPO/$_ARCH/${1##*/}"
-        curl -fsSL -o "$dest" "${_REPO#flat+}/$_ARCH/${1##*/}" || return 1
+        slogi "💫 $_REPO/$_ARCH/${1##*/}"
+        _curl "${_REPO#flat+}/$_ARCH/${1##*/}" "$zip" || return 1
     else
-        slogi "== curl < $_REPO/$_ARCH/$1"
-        curl -fsSL -o "$dest" "$_REPO/$_ARCH/$1" || return 1
+        slogi "💫 $_REPO/$_ARCH/$1"
+        _curl "$_REPO/$_ARCH/$1" "$zip" || return 1
     fi
 
-    if [[ "$dest" =~ tar.gz$ ]]; then
-        tar -C "$PREFIX" -xvf "$dest"
+    if [[ "$zip" =~ \.tar\..*$ ]]; then
+        tar -C "$PREFIX" -xvf "$zip"
         echo ""
     fi
 }
@@ -855,7 +852,7 @@ _fetch_pkgfile() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _curl_pkgfile "$pkginfo"; then
+    if ! _is_flat_repo && _fetch_unzip_pkgfile "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
@@ -865,7 +862,7 @@ _fetch_pkgfile() {
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
             IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
-                slogw "<< no package found"
+                slogw "🟠 no package found"
                 return 1
             }
         fi
@@ -878,17 +875,18 @@ _fetch_pkgfile() {
 
     local x
     for x in "${pkgfiles[@]}"; do
-        _curl_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
+        _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
 pkgfiles() {
-    slogi "📦 Fetch pkgfiles $*"
-    echo ""
+    slogi "☁️  Fetch pkgfiles $*"
 
-    _curl_pkgfile cmdlets.manifest "$_MANIFEST"
+    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
+
+    echo ""
 
     local ret=0 x
     for x in "$@"; do
@@ -902,12 +900,16 @@ pkgfiles() {
 info() {
     _load "$1"
 
-    slogi "$libs_name:"
+    if test -z "$libs_desc"; then
+        libs_desc="$(grep "^#" "libs/$1.s" | grep -vE "vim:|#!" | head -n1 | sed 's/[# ]*//')"
+    fi
 
+    slogi "$libs_name: $libs_desc"
+    slogi "  libs_lic: ${libs_lic:-Unknown}"
     slogi "  libs_ver: $libs_ver"
     slogi "  libs_url: $libs_url"
-    slogi "  libs_dep: ${libs_dep[*]}"
-    slogi "         => $(depends "$1")"
+    slogi "    Dependencies : $(depends "$1")"
+    slogi "    Dependences  : $(rdepends "$1")"
 }
 
 search() {
@@ -958,14 +960,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_package_name "$libs_url")" "$libs_sha" "$libs_url"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _fetch "$(_packages "$url")" "$sha" "$url"
+                _fetch "$(_package_name "$url")" "$sha" "$url"
             done
         fi
     done
@@ -992,39 +994,15 @@ clean() {
 }
 
 distclean() {
-    rm -rf "$PREFIX" && clean
+    rm -rf "$PREFIX" && clean || true
 }
 
 dist() {
-    build "$@" $(rdepends "$@" | tail -n1)
-}
+    local list=()
 
-# speed up prepare-host by making prerequisites.tar.gz
-#  input: [url]
-prerequisites() {
-    test -f "$PREFIX/prerequisites-0" && return 0
+    IFS=' ' read -r -a list < <(rdepends "$@")
 
-    # no prerequisites except for brew on macOS
-    which brew || return 0
-
-    # for _capture
-    export libs_name=prerequisites
-
-    cd "$PREFIX"
-    if test -n "$1"; then
-        for i in {0..9}; do
-            _curl "$1/${PREFIX##*/}/prerequisites-$i" "prerequisites-$i" || break
-        done
-
-        if test -f prerequisites-0; then
-            cat prerequisites-* | tar -C / -xz
-        fi
-    else
-        mkdir -pv "$libs_name" && cd "$libs_name"
-        tar -C / -czf "prerequisites.tar.gz" "$(brew --prefix)"
-        split -b 1G -d -a 1 prerequisites.tar.gz prerequisites-
-        rm prerequisites.tar.gz
-    fi
+    build "$@" "${list[@]}"
 }
 
 # update libs_ver
@@ -1037,16 +1015,8 @@ update() {
     # load again and fetch
     fetch "$1" || sloge "update $1 => $2 failed"
 
-    IFS=' ' read -r sha _ < <(sha256sum "$(_packages "$libs_url")")
+    IFS=' ' read -r sha _ < <(sha256sum "$(_package_name "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
-}
-
-#
-meson.configure() {
-    _init
-    . helpers.sh
-
-    meson configure
 }
 
 _on_exit() {
@@ -1058,7 +1028,7 @@ _on_exit() {
     rm -rf "$TEMPDIR"
 }
 
-export TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
+TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 _init || exit 110
 
