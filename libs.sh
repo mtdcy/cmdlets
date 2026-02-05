@@ -16,7 +16,7 @@ export LANG=C
 
 # public build options  =
      CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
-export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
+      CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # noparallel by default
 export       CL_REPO=${CL_REPO:-}           # cmdlet pkgfiles repo
 
 # toolchain prefix

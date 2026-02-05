@@ -73,7 +73,7 @@ export CMDLET_MIRRORS=http://pub.mtdcy.top
 export CMDLET_LOGGING=tty # options: tty,plain,silence
 
 # parallels jobs
-export CL_NJOBS=2
+export CMDLET_BUILD_NJOBS=2
 ```
 
 ## Artifacts

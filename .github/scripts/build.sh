@@ -11,7 +11,7 @@ bash --version
 
 export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
 export CMDLET_BUILD_CCACHE="${CMDLET_BUILD_CCACHE:-0}"
-export CL_NJOBS="${CL_NJOBS:-1}"
+export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
