@@ -42,6 +42,9 @@ jobs:
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
     if: ${{ vars.LOCAL_REGISTRY == '' }}
+    concurrency: # try to fix error: `too many retries'
+      group: release-${{ github.ref }}
+      cancel-in-progress: false  # Set to true to cancel previous, but false is safer for releases
     strategy:
       fail-fast: false
       matrix:
@@ -91,9 +94,6 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v2
-        concurrency: # try to fix error: `too many retries'
-          group: release-${{ github.ref }}
-          cancel-in-progress: false  # Set to true to cancel previous, but false is safer for releases
         if: always()
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
