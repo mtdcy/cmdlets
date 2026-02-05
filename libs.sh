@@ -18,7 +18,7 @@ export LANG=C
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
       CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
      CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
- CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+ CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-}
 
 # toolchain prefix
 
@@ -190,18 +190,26 @@ _init() {
 
     export PREFIX _ROOT _WORKDIR _LOGFILES _MANIFEST
 
-    is_linux || unset CMDLET_TOOLCHAIN_PREFIX
+    # toolchain
+    : "${_TOOLCHAIN:=$CMDLET_TOOLCHAIN_PREFIX}"
+    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
+
+    # check musl-gcc
+    : "${_TOOLCHAIN:=$(uname -m)-unknown-$(uname -s | tr A-Z a-z)-musl-}"
+    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
+
+    export _TOOLCHAIN
 
     # shellcheck disable=SC2054,SC2206
     local toolchains=(
-        CC:${CMDLET_TOOLCHAIN_PREFIX}gcc
-        CXX:${CMDLET_TOOLCHAIN_PREFIX}g++
-        AR:${CMDLET_TOOLCHAIN_PREFIX}ar
-        AS:${CMDLET_TOOLCHAIN_PREFIX}as
-        LD:${CMDLET_TOOLCHAIN_PREFIX}ld
-        NM:${CMDLET_TOOLCHAIN_PREFIX}nm
-        RANLIB:${CMDLET_TOOLCHAIN_PREFIX}ranlib
-        STRIP:${CMDLET_TOOLCHAIN_PREFIX}strip
+        CC:${_TOOLCHAIN}gcc
+        CXX:${_TOOLCHAIN}g++
+        AR:${_TOOLCHAIN}ar
+        AS:${_TOOLCHAIN}as
+        LD:${_TOOLCHAIN}ld
+        NM:${_TOOLCHAIN}nm
+        RANLIB:${_TOOLCHAIN}ranlib
+        STRIP:${_TOOLCHAIN}strip
     )
     if is_darwin; then
         COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
