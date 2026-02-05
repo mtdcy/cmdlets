@@ -37,13 +37,11 @@ jobs:
           commits=/tmp/commits-$$.txt
           true > "$commits"  # create empty file
 
-          for libs in libs/*; do
-            libs="${libs#*/}"
-            libs="${libs%.*}"
+          for libs in libs/*.s; do
+            IFS='/.' read -r _ libs _ <<< "$libs"
 
             # ignores
-            [[ "$libs" =~ ^ALL    ]] && continue
-            [[ "$libs" =~ ^[.@_]  ]] && continue
+            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
 
             # update 
             (
@@ -58,7 +56,7 @@ jobs:
 
               trap "git checkout 'libs/$libs.s'" EXIT
 
-              IFS='=.' read -r m n r _ <<< "$libs_ver"
+              IFS='.-' read -r m n r _ <<< "$libs_ver"
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
