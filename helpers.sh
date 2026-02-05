@@ -106,7 +106,7 @@ make.install() {
 
 # setup cmake environments
 _cmake_init() {
-    test -z "$CMAKE_READY" || return 0
+    test -z "$_CMAKE_READY" || return 0
 
     # defaults:
     : "${LIBS_BUILDDIR:=build-$PPID}"
@@ -134,7 +134,7 @@ _cmake_init() {
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
-    export CMAKE_READY=1
+    export _CMAKE_READY=1
 }
 
 _cmake_filter_out_defines() {
