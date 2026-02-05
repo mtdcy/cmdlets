@@ -26,6 +26,6 @@ libs_build() {
     cmdlet.check cliclick
 }
 
-libs_depends is_darwin
+libs.depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

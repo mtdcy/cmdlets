@@ -38,7 +38,7 @@ deparallelize() {
     export _NJOBS=1
 }
 
-libs_depends() {
+libs.depends() {
     "$@" || { unset libs_dep libs_args libs_build; }
 }
 
