@@ -2,16 +2,21 @@
 
 set -eo pipefail
 
+: "${PREFIX:=prebuilts/$(uname -m)-apple-darwin}"
+: "${PKG_CONFIG_LIBDIR:=$PREFIX/lib}"
+: "${PKG_CONFIG_PATH:=$PREFIX/lib/pkgconfig}"
+: "${REAL_PKG_CONFIG:=$(which pkg-config)}"
+: "${_LOGFILE:=pkg-config.log}"
+
+export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
+
 {
     printf '%s ' "$0"
     printf '%q ' "$@"
     printf '\n'
-} >> pkg-config.log
+} >> "$_LOGFILE"
 
-: "${PREFIX:=prebuilts/$(uname -m)-apple-darwin}"
-: "${PKG_CONFIG_LIBDIR:=$PREFIX/lib}"
-: "${PKG_CONFIG_PATH:=$PREFIX/lib/pkgconfig}"
-
-export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
-
-"${REAL_PKG_CONFIG:-$(which pkg-config)}" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a pkg-config.log
+{
+    "$REAL_PKG_CONFIG" --define-variable=PREFIX="$PREFIX" --static "$@" \
+        > >( tee -a "$_LOGFILE" )
+} 2> >( tee -a "$_LOGFILE" >&2 )
