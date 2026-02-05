@@ -4,9 +4,9 @@
 # GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
 # shellcheck disable=SC2034
 libs_lic=LGPLv2.1+
-libs_ver=2.86.3
+libs_ver=2.87.0
 libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=ad0718637e4b91bbf4732e609cea8b06117bfcea8ddc036477bebf43939aab9f
+libs_sha=38db769829f7af831cf2b0afa3abb107ce905c5379f7095b66252d49f29345e0
 libs_dep=( zlib pcre2 libiconv libffi )
 
 libs_args=(

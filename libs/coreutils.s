@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 libs_name=coreutils
 libs_lic="MIT"
-libs_ver=0.2.2
+libs_ver=0.6.0
 libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=4a847a3aaf241d11f07fdc04ef36d73c722759675858665bc17e94f56c4fbfb3
+libs_sha=f751b8209ec05ae304941a727e42a668dcc45674986252f44d195ed43ccfad2f
 libs_dep=( libiconv )
 
 # override bsd utils

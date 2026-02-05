@@ -2,12 +2,12 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=1.8.4
+libs_ver=1.9.0
 libs_url=(
-    https://github.com/NLnetLabs/ldns/archive/refs/tags/1.8.4.tar.gz
-    https://nlnetlabs.nl/downloads/ldns/ldns-1.8.4.tar.gz
+    https://github.com/NLnetLabs/ldns/archive/refs/tags/1.9.0.tar.gz
+    https://nlnetlabs.nl/downloads/ldns/ldns-1.9.0.tar.gz
 )
-libs_sha=b64a0f619ecb74aaf5fe4fbbb4640b150aec55f9a708031a68b3b4fae95326a2
+libs_sha=e882cdb6b30504623a799e724f77273c14d5f265c925a2884de9fbc94aa88d19
 libs_dep=( openssl )
 
 libs_args=(

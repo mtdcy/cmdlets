@@ -1,6 +1,7 @@
 # Distributed revision control system
 
 # shellcheck disable=SC2034,SC2154
+libs_stable=1 # no auto update
 libs_lic=GPLv2
 libs_ver=2.52.0
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
@@ -8,6 +9,8 @@ libs_sha=3cd8fee86f69a949cb610fee8cd9264e6873d07fa58411f6060b3d62729ed7c5
 libs_dep=( zlib pcre2 libiconv expat curl )
 
 is_darwin || libs_dep+=( openssl )
+
+libs.requires.c89
 
 libs_args=(
     prefix="'$PREFIX'"

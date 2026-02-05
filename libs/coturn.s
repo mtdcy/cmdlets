@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=4.7.0
-libs_url=https://github.com/coturn/coturn/archive/refs/tags/4.7.0.tar.gz
-libs_sha=adbc90550d326e1b0fef4ccf9955c0ea32e63792acedcbc9cdbe9f71f380e622
+libs_ver=4.8.0
+libs_url=https://github.com/coturn/coturn/archive/refs/tags/4.8.0.tar.gz
+libs_sha=a3b302b52c5405a2595f59036c95fc3676e640436ba67e3f621937ec648b1ea5
 libs_dep=( hiredis libevent sqlite openssl )
 
 libs_args=(
@@ -33,15 +33,20 @@ libs_build() {
 
     configure
 
+    # fix cp: setting attributes for 'xxx': Not supported
+    #  => ACL or docker's problem?
+    sed -i Makefile \
+        -e 's/cp -pf/cp -f/g'
+
     make
 
-    cmdlet ./bin/turnserver turnserver turnadmin
+    cmdlet.install bin/turnserver turnserver turnadmin
 
-    for x in ./bin/turnutils_*; do
-        cmdlet "$x"
+    for x in bin/turnutils_*; do
+        cmdlet.install "$x"
     done
 
-    check turnserver --version
+    cmdlet.check turnserver --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSL-1.0'
-libs_ver=1.89.0
-libs_url=https://github.com/boostorg/boost/releases/download/boost-1.89.0/boost-1.89.0-b2-nodocs.tar.xz
-libs_sha=875cc413afa6b86922b6df3b2ad23dec4511c8a741753e57c1129e7fa753d700
+libs_ver=1.90.0
+libs_url=https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-b2-nodocs.tar.xz
+libs_sha=9e6bee9ab529fb2b0733049692d57d10a72202af085e553539a05b4204211a6f
 libs_dep=( zlib bzip2 xz zstd )
 
 libs_args=(

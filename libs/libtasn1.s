@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic='LGPL'
-libs_ver=4.20.0
+libs_ver=4.21.0
 libs_url=https://ftpmirror.gnu.org/gnu/libtasn1/libtasn1-$libs_ver.tar.gz
-libs_sha=92e0e3bd4c02d4aeee76036b2ddd83f0c732ba4cda5cb71d583272b23587a76c
+libs_sha=1d8a444a223cc5464240777346e125de51d8e6abf0b8bac742ac84609167dc87
 
 libs_args=(
     --disable-option-checking

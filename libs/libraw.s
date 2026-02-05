@@ -1,9 +1,9 @@
 # Library for reading RAW files from digital photo cameras
 
 # shellcheck disable=SC2034
-libs_ver=0.21.5
+libs_ver=0.22.0
 libs_url=https://github.com/LibRaw/LibRaw/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=4b7f183a68f6e46e579e80ba32ab121687e75bd30a2e5566f34c36a6bcba1679
+libs_sha=5a11327a9cef2496d6a4335e8da30a1604460b6c545a30fe7588cf4c00a0fcae
 libs_dep=( zlib libjpeg-turbo lcms2 )
 
 # configure args: RAW <=> JPEG
