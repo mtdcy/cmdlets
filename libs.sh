@@ -376,7 +376,7 @@ _fetch() {
 
     #1. try local file first
     if [ -f "$zip" ]; then
-        slogi ".FILE" "$zip"
+        slogi ".FILE" "${zip#"$_ROOT/"}"
 
         # verify sha only if it exists
         test -n "$2" || return 0
@@ -415,7 +415,7 @@ _fetch() {
 # unzip file to current dir, or exit program
 # _unzip <file> [strip]
 _unzip() {
-    slogi ".Zipx" "$1 => $(pwd)"
+    slogi ".Zipx" "${1#"$_ROOT/"} => ${PWD#"$_ROOT/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -628,7 +628,7 @@ compile() {
         # clear logfile
         echo -e "**** start build $libs_name ****\n$(date)\n" > "$_LOGFILE"
 
-        slogi ".Path" "$PWD"
+        slogi ".Path" "${PWD#"$_ROOT/"}"
 
         _prepare # or die
 
