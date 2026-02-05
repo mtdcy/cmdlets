@@ -129,10 +129,13 @@ _tty_reset() {
 #  Cons:
 #   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
+    # default: echo cmd without output
+    : "${_LOGGING:=silent}"
+
     {
         echo "$@"
-        eval -- "$*"
-    } 2>&1 | _LOGGING=${_LOGGING:-silent} _capture
+        eval -- "$*" 2>&1
+    } | _capture
 }
 
 # slogcmd <command>
@@ -161,9 +164,9 @@ _init_tools() {
 }
 
 _init() {
-    [ -z "$_ROOT" ] && _ROOT="$(pwd -P)" || return 0
+    test -z "$_ROOT" || return 0
 
-    mkdir -p "$_ROOT"/{prebuilts,out,logs,packages}
+    _ROOT="$(pwd -P)"
 
     if [ "$(uname -s)" = Darwin ]; then
         _ARCH="$(uname -m)-apple-darwin"
@@ -180,15 +183,16 @@ _init() {
 
     # private variables
     _WORKDIR="$_ROOT/out/$_ARCH"
+    _PACKAGES="$_ROOT/packages"
     _LOGFILES="$_ROOT/logs/$_ARCH"
     _MANIFEST="$PREFIX/cmdlets.manifest"
 
-    mkdir -p "$PREFIX" "$_WORKDIR" "$_LOGFILES"
+    mkdir -p "$PREFIX" "$_WORKDIR" "$_PACKAGES" "$_LOGFILES"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export PREFIX _ROOT _WORKDIR _LOGFILES _MANIFEST
+    export PREFIX _ROOT _WORKDIR _PACKAGES _LOGFILES _MANIFEST
 
     # toolchain
     : "${_TOOLCHAIN:=$CMDLET_TOOLCHAIN_PREFIX}"
@@ -489,9 +493,9 @@ _packages() {
     if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
         local path
         IFS=':/' read -r _ _ _ _ path <<< "$1"
-        package="$_ROOT/packages/$libs_name/${path//\//_}"
+        package="$_PACKAGES/$libs_name/${path//\//_}"
     else
-        package="$_ROOT/packages/$libs_name/${1##*/}"
+        package="$_PACKAGES/$libs_name/${1##*/}"
     fi
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
