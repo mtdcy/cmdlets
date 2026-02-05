@@ -92,35 +92,44 @@ die()   {
 }
 
 _capture() {
-    if [ "$_LOGGING" = "silent" ]; then
-        cat >> "$_LOGFILE"
-    elif [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$_LOGGING" = "tty" ]; then
+        test -t 1 && which tput &>/dev/null || unset _LOGGING
+    fi
+
+    if [ "$_LOGGING" = "tty" ]; then
         tput dim                        # dim on
         tput rmam                       # line break off
-
-        local i=0
-        while read -r line; do
-            i=$((i + 1))
-
-            tput ed                     # clear to end of screen
-            tput sc                     # save cursor position
-            printf "#$i: %s" "$line"
-            tput rc                     # restore cursor position
-        done < <(tee -a "$_LOGFILE")
-
-        _tty_reset
-    else
-        tee -a "$_LOGFILE"
     fi
+
+    case "$_LOGGING" in
+        silent)
+            cat >> "$_LOGFILE"
+            ;;
+        tty)
+            local i=0
+            while read -r line; do
+                i=$((i+1))
+
+                tput ed                     # clear to end of screen
+                tput sc                     # save cursor position
+                printf "#$i: %s" "$line"
+                tput rc                     # restore cursor position
+            done < <(tee -a "$_LOGFILE")
+            ;;
+        *)
+            tee -a "$_LOGFILE"
+            ;;
+    esac
+
+    [ "$_LOGGING" = "tty" ] && _tty_reset || true
 }
 
 _tty_reset() {
-    # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
-        tput ed         # clear to end of screen
-        tput smam       # line break on
-        tput sgr0       # reset colors
-    fi
+    [ "$_LOGGING" = "tty" ] || return 0
+
+    tput ed         # clear to end of screen
+    tput smam       # line break on
+    tput sgr0       # reset colors
 }
 
 # why eval as string?
