@@ -23,8 +23,8 @@ export LANG=C
 # toolchain prefix
 
 # set default repo
-: "${_REPO_:=$CMDLET_REPO}"
-: "${_REPO_:=https://pub.mtdcy.top/cmdlets/latest}"
+: "${_REPO:=$CMDLET_REPO}"
+: "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
 if test -n "$CMDLET_MIRRORS"; then
@@ -790,7 +790,7 @@ build() {
 }
 
 # v3/git releases
-_is_flat_repo() { [[ "$REPO" =~ ^flat+ ]]; }
+_is_flat_repo() { [[ "$_REPO" =~ ^flat+ ]]; }
 
 _fetch_unzip_pkgfile() {
     local dest
@@ -800,11 +800,11 @@ _fetch_unzip_pkgfile() {
     mkdir -p "${dest%/*}"
 
     if _is_flat_repo; then
-        slogi "== curl < $REPO/$_ARCH_/${1##*/}"
-        curl -fsSL -o "$dest" "${REPO#flat+}/$_ARCH_/${1##*/}" || return 1
+        slogi "== curl < $_REPO/$_ARCH_/${1##*/}"
+        curl -fsSL -o "$dest" "${_REPO#flat+}/$_ARCH_/${1##*/}" || return 1
     else
-        slogi "== curl < $REPO/$_ARCH_/$1"
-        curl -fsSL -o "$dest" "$REPO/$_ARCH_/$1" || return 1
+        slogi "== curl < $_REPO/$_ARCH_/$1"
+        curl -fsSL -o "$dest" "$_REPO/$_ARCH_/$1" || return 1
     fi
 
     if [[ "$dest" =~ tar.gz$ ]]; then
