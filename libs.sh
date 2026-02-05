@@ -132,6 +132,13 @@ _tty_reset() {
     tput sgr0       # reset colors
 }
 
+_capture_stderr() {
+    case "$_LOGGING" in
+        plain)  tee -a "$_LOGFILE" ;;
+        *)      cat >> "$_LOGFILE" ;;
+    esac >&2
+}
+
 # why eval as string?
 #  Pros:
 #   slogcmd "$PATCH -p1 -N < $file"     # redirect evals well
@@ -140,18 +147,16 @@ _tty_reset() {
 #  Cons:
 #   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
-    # default: echo cmd without output
-    : "${_LOGGING:=silent}"
+    # stderr: grep won't filter out the command
+    echo "$@" | _capture_stderr
 
-    {
-        echo "$@"
-        eval -- "$*" 2>&1
-    } | _capture
+    # capture both stdout and stderr
+    eval -- "$*" 2>&1 | _capture
 }
 
 # slogcmd <command>
 slogcmd() {
-    slogi "..Run" "$@"
+    slogi "..Run" "$@" >&2
     echocmd "$@"
 }
 
