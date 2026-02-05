@@ -793,7 +793,7 @@ build() {
             [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
-        package "${pkgfiles[@]}" || true # ignore errors
+        pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
     slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
@@ -816,7 +816,7 @@ build() {
 # v3/git releases
 _is_flat_repo() { [[ "$_REPO" =~ ^flat+ ]]; }
 
-_fetch_unzip_pkgfile() {
+_curl_pkgfile() {
     local dest
 
     test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
@@ -837,7 +837,7 @@ _fetch_unzip_pkgfile() {
     fi
 }
 
-_pkgfile() {
+_fetch_pkgfile() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
@@ -853,7 +853,7 @@ _pkgfile() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _fetch_unzip_pkgfile "$pkginfo"; then
+    if ! _is_flat_repo && _curl_pkgfile "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
@@ -876,21 +876,21 @@ _pkgfile() {
 
     local x
     for x in "${pkgfiles[@]}"; do
-        _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
+        _curl_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
-package() {
+pkgfiles() {
     slogi "📦 Fetch pkgfiles $*"
     echo ""
 
-    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
+    _curl_pkgfile cmdlets.manifest "$_MANIFEST"
 
     local ret=0 x
     for x in "$@"; do
-        _pkgfile "$x" || ret=$?
+        _fetch_pkgfile "$x" || ret=$?
     done
 
     return $?
