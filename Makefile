@@ -13,7 +13,7 @@ all: shell
 CMDLET_BUILD_NJOBS 	?= $(shell nproc)
 CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
 CMDLET_LOGGING 	?= tty
-CMDLET_BUILD_CCACHE 	?= 1
+CMDLET_CCACHE 	?= 1
 CL_DIST 	?= 0
 
 MAKEFLAGS 	+= --always-make
@@ -39,7 +39,7 @@ CL_ENVS :=  CMDLET_BUILD_FORCE 		\
 			CMDLET_LOGGING     	\
 			CL_STRICT    	\
 			CMDLET_MIRRORS    	\
-			CMDLET_BUILD_CCACHE 	   	\
+			CMDLET_CCACHE 	   	\
 
 ##############################################################################
 # Build Binaries & Libraries

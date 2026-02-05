@@ -12,12 +12,12 @@ export LANG=C
 # public options      =
         CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
         CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
+         CMDLET_CCACHE=${CMDLET_CCACHE:-0}          # enable ccache or not
            CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
 
 # public build options  =
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
       CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
-     CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
  CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-}
 
 # toolchain prefix
@@ -332,7 +332,7 @@ _init() {
     # will help find out the mistakes.
 
     # ccache
-    if [ "$CMDLET_BUILD_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+    if [ "$CMDLET_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
