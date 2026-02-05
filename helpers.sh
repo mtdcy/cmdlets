@@ -314,7 +314,7 @@ meson.install() {
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
 _cargo_init() {
-    test -z "$CARGO_READY" || return 0
+    test -z "$_CARGO_READY" || return 0
 
     # always use default value $HOME/.cargo, as
     # host act runner won't inherit envs from host and
@@ -407,7 +407,7 @@ registry = "$registry"
 EOF
     fi
 
-    export CARGO_READY=1
+    export _CARGO_READY=1
 }
 
 cargo() {
@@ -468,7 +468,7 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (
+        ( # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_ALL_STATIC
@@ -485,7 +485,6 @@ cargo.requires() {
 cargo.requires.rustc() {
     _cargo_init
 
-    slogcmd "$RUSTC" --version
     _version_ge "$("$RUSTC" --version | cut -d' ' -f2)" "$1" || slogcmd rustup update
 }
 
