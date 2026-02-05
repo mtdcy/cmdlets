@@ -28,14 +28,16 @@ export LANG=C
 : "${_REPO:=$CMDLET_REPO}"
 : "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
+# mirrors
+: "${_MIRRORS:=$CMDLET_MIRRORS}"
+if test -n "$_MIRRORS"; then
+    : "${CL_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
+    : "${CL_GO_PROXY:=$_MIRRORS/gomods}"
+fi
+
 # clear envs => setup by _init
 unset ROOT PREFIX WORKDIR
 
-# mirrors
-if test -n "$CMDLET_MIRRORS"; then
-    : "${CL_CARGO_REGISTRY:=$CMDLET_MIRRORS/crates.io-index/}"
-    : "${CL_GO_PROXY:=$CMDLET_MIRRORS/gomods}"
-fi
 
 # defaults
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
@@ -369,8 +371,8 @@ _fetch() {
     fi
 
     #2. try mirror
-    if test -n "$CMDLET_MIRRORS"; then
-        mirror="$CMDLET_MIRRORS/packages/$libs_name/${zip##*/}"
+    if test -n "$_MIRRORS"; then
+        mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip" ||
         rm -f "$zip"

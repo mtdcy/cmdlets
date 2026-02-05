@@ -340,9 +340,9 @@ _cargo_init() {
     mkdir -p "$RUSTUP_HOME"
 
     # set mirrors for toolchain download
-    if test -n "$CMDLET_MIRRORS"; then
-        : "${RUSTUP_DIST_SERVER:=$CMDLET_MIRRORS/rust-static}"
-        : "${RUSTUP_UPDATE_ROOT:=$CMDLET_MIRRORS/rust-static/rustup}"
+    if test -n "$_MIRRORS"; then
+        : "${RUSTUP_DIST_SERVER:=$_MIRRORS/rust-static}"
+        : "${RUSTUP_UPDATE_ROOT:=$_MIRRORS/rust-static/rustup}"
         export RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT
     fi
 
