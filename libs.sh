@@ -18,9 +18,9 @@ export LANG=C
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
       CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
      CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
+ CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
 # toolchain prefix
-export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
 # set default repo
 : "${_REPO_:=$CMDLET_REPO}"
@@ -182,18 +182,18 @@ _init() {
 
     export ROOT PREFIX WORKDIR LOGFILES MANIFEST
 
-    is_linux || unset CL_TOOLCHAIN_PREFIX
+    is_linux || unset CMDLET_TOOLCHAIN_PREFIX
 
     # shellcheck disable=SC2054,SC2206
     local toolchains=(
-        CC:${CL_TOOLCHAIN_PREFIX}gcc
-        CXX:${CL_TOOLCHAIN_PREFIX}g++
-        AR:${CL_TOOLCHAIN_PREFIX}ar
-        AS:${CL_TOOLCHAIN_PREFIX}as
-        LD:${CL_TOOLCHAIN_PREFIX}ld
-        NM:${CL_TOOLCHAIN_PREFIX}nm
-        RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
-        STRIP:${CL_TOOLCHAIN_PREFIX}strip
+        CC:${CMDLET_TOOLCHAIN_PREFIX}gcc
+        CXX:${CMDLET_TOOLCHAIN_PREFIX}g++
+        AR:${CMDLET_TOOLCHAIN_PREFIX}ar
+        AS:${CMDLET_TOOLCHAIN_PREFIX}as
+        LD:${CMDLET_TOOLCHAIN_PREFIX}ld
+        NM:${CMDLET_TOOLCHAIN_PREFIX}nm
+        RANLIB:${CMDLET_TOOLCHAIN_PREFIX}ranlib
+        STRIP:${CMDLET_TOOLCHAIN_PREFIX}strip
     )
     if is_darwin; then
         COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
