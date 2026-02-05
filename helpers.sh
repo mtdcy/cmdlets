@@ -545,7 +545,7 @@ _go_init() {
     export CGO_CPPFLAGS="$CPPFLAGS"
     export CGO_LDFLAGS="$LDFLAGS"
 
-    [ -z "$CL_GO_PROXY" ] || export GOPROXY="$CL_GO_PROXY"
+    [ -z "$_GO_PROXY" ] || export GOPROXY="$_GO_PROXY"
 
     export GO_READY=1
 }

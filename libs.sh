@@ -32,7 +32,7 @@ export LANG=C
 : "${_MIRRORS:=$CMDLET_MIRRORS}"
 if test -n "$_MIRRORS"; then
     : "${_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
-    : "${CL_GO_PROXY:=$_MIRRORS/gomods}"
+    : "${_GO_PROXY:=$_MIRRORS/gomods}"
 fi
 
 # clear envs => setup by _init
