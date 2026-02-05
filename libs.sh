@@ -15,9 +15,9 @@ export LANG=C
            CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
 
 # public build options  =
-      CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}   # force build dependencies
+      CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
+      CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
      CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
-      CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # noparallel by default
 
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
@@ -755,7 +755,7 @@ build() {
     # check dependencies: libraries updated
 
     # pull dependencies
-    if [ "$CMDLET_FORCE_BUILD" -ne 0 ]; then
+    if [ "$CMDLET_BUILD_FORCE" -ne 0 ]; then
         # check dependencies: force update
         for x in "${deps[@]}"; do
             rm -f "$PREFIX/.$x.d"
