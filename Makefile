@@ -11,7 +11,7 @@ all: shell
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
 #CL_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
 CL_NJOBS 	?= $(shell nproc)
-CL_MIRRORS 	?= https://mirrors.mtdcy.top
+CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
 CMDLET_LOGGING 	?= tty
 CL_CCACHE 	?= 1
 CL_DIST 	?= 0
@@ -38,7 +38,7 @@ CL_ENVS :=  CMDLET_FORCE_BUILD 		\
 			CL_NJOBS  		\
 			CMDLET_LOGGING     	\
 			CL_STRICT    	\
-			CL_MIRRORS    	\
+			CMDLET_MIRRORS    	\
 			CL_CCACHE 	   	\
 
 ##############################################################################

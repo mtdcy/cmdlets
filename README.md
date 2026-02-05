@@ -67,7 +67,7 @@ make zlib
 
 ```shell
 # local packages cache
-export CL_MIRRORS=http://pub.mtdcy.top
+export CMDLET_MIRRORS=http://pub.mtdcy.top
 
 # logging style
 export CMDLET_LOGGING=tty # options: tty,plain,silence

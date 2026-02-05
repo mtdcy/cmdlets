@@ -10,9 +10,9 @@ umask  0022
 export LANG=C
 
 # public options      =
-    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}         # force rebuild all dependencies
-        CMDLET_LOGGING=${CMDLET_LOGGING:-tty}     # tty,plain,silent
-export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
+    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}     # force build dependencies
+        CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
+        CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 export       CL_REPO=${CL_REPO:-}           # cmdlet pkgfiles repo
@@ -25,9 +25,9 @@ export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl
 : "${_REPO_:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
-if test -n "$CL_MIRRORS"; then
-    : "${CL_CARGO_REGISTRY:=$CL_MIRRORS/crates.io-index/}"
-    : "${CL_GO_PROXY:=$CL_MIRRORS/gomods}"
+if test -n "$CMDLET_MIRRORS"; then
+    : "${CL_CARGO_REGISTRY:=$CMDLET_MIRRORS/crates.io-index/}"
+    : "${CL_GO_PROXY:=$CMDLET_MIRRORS/gomods}"
 fi
 
 # defaults
@@ -365,8 +365,8 @@ _fetch() {
     fi
 
     #2. try mirror
-    if test -n "$CL_MIRRORS"; then
-        mirror="$CL_MIRRORS/packages/$libs_name/${zip##*/}"
+    if test -n "$CMDLET_MIRRORS"; then
+        mirror="$CMDLET_MIRRORS/packages/$libs_name/${zip##*/}"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip" ||
         rm -f "$zip"
