@@ -856,9 +856,9 @@ cmdlet.pkgfile() {
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
-    sed -i "\#^$1 $pkgfile #d" "$MANIFEST"
+    sed -i "\#^$1 $pkgfile #d" "$_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> "$MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> "$_MANIFEST"
 
     popd || die "popd failed."
 }
@@ -868,7 +868,7 @@ cmdlet.pkgfile() {
 cmdlet.disclaim() {
     local x
     for x in "$@"; do
-        sed -i "\#\ $libs_name/.*@$x#d" "$MANIFEST" || true
+        sed -i "\#\ $libs_name/.*@$x#d" "$_MANIFEST" || true
     done
 }
 

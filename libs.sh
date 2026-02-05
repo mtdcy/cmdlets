@@ -181,13 +181,14 @@ _init() {
     # private variables
     _WORKDIR="$_ROOT/out/$_ARCH"
     _LOGFILES="$_ROOT/logs/$_ARCH"
-    MANIFEST="$PREFIX/cmdlets.manifest"
+    _MANIFEST="$PREFIX/cmdlets.manifest"
 
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$_WORKDIR" "$_LOGFILES"
+    mkdir -p "$PREFIX" "$_WORKDIR" "$_LOGFILES"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export _ROOT PREFIX _WORKDIR _LOGFILES MANIFEST
+    export PREFIX _ROOT _WORKDIR _LOGFILES _MANIFEST
 
     is_linux || unset CMDLET_TOOLCHAIN_PREFIX
 
@@ -619,14 +620,14 @@ compile() {
         rm -rf "$PREFIX/$libs_name"
 
         # v3/manifest: name pkgfile sha build=1
-        touch "$MANIFEST"
+        touch "$_MANIFEST"
 
         # read pkgbuild before clear
-        PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
+        PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
         test -n "$PKGBUILD" || PKGBUILD="build=0"
 
         # v3: clear manifest
-        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$MANIFEST"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_MANIFEST"
 
         # build library
         ( libs_build ) || {
@@ -844,7 +845,7 @@ _pkgfile() {
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
                 slogw "<< no package found"
                 return 1
@@ -852,7 +853,7 @@ _pkgfile() {
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$MANIFEST" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_MANIFEST" | xargs )
     fi
 
     test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
@@ -869,7 +870,7 @@ package() {
     slogi "📦 Fetch pkgfiles $*"
     echo ""
 
-    _fetch_unzip_pkgfile cmdlets.manifest "$MANIFEST"
+    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
 
     local ret=0 x
     for x in "$@"; do
