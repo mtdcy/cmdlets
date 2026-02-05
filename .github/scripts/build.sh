@@ -9,7 +9,7 @@ info "build $*"
 pwd -P
 bash --version
 
-export CL_LOGGING="${CL_LOGGING:-silent}"
+export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
 export CL_CCACHE="${CL_CCACHE:-0}"
 export CL_NJOBS="${CL_NJOBS:-1}"
 

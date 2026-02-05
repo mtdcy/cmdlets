@@ -12,7 +12,7 @@ all: shell
 #CL_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
 CL_NJOBS 	?= $(shell nproc)
 CL_MIRRORS 	?= https://mirrors.mtdcy.top
-CL_LOGGING 	?= tty
+CMDLET_LOGGING 	?= tty
 CL_CCACHE 	?= 1
 CL_DIST 	?= 0
 
@@ -36,7 +36,7 @@ cmdlets.env:
 # host environment variables => docker/remote
 CL_ENVS :=  CMDLET_FORCE_BUILD 		\
 			CL_NJOBS  		\
-			CL_LOGGING     	\
+			CMDLET_LOGGING     	\
 			CL_STRICT    	\
 			CL_MIRRORS    	\
 			CL_CCACHE 	   	\

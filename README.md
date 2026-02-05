@@ -70,7 +70,7 @@ make zlib
 export CL_MIRRORS=http://pub.mtdcy.top
 
 # logging style
-export CL_LOGGING=tty # options: tty,plain,silence
+export CMDLET_LOGGING=tty # options: tty,plain,silence
 
 # parallels jobs
 export CL_NJOBS=2

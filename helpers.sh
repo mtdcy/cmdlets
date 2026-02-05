@@ -679,7 +679,7 @@ go.build() {
 
 # libtool archive hardcoded PREFIX which is bad for us
 _rm_libtool_archive() {
-    CL_LOGGING=silent \
+    CMDLET_LOGGING=silent \
         echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
@@ -952,14 +952,14 @@ cmdlet.check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            CL_LOGGING=plain echocmd ldd "$bin"
+            CMDLET_LOGGING=plain echocmd ldd "$bin"
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
-        CL_LOGGING=plain \
+        CMDLET_LOGGING=plain \
         echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
     elif is_msys; then
-        CL_LOGGING=plain \
+        CMDLET_LOGGING=plain \
         echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
@@ -967,7 +967,7 @@ cmdlet.check() {
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
-        CL_LOGGING=plain \
+        CMDLET_LOGGING=plain \
         echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }

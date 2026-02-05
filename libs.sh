@@ -9,9 +9,9 @@ set -e -o pipefail
 umask  0022
 export LANG=C
 
-# public options            =
-export    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}         # force rebuild all dependencies
-export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
+# public options      =
+    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}         # force rebuild all dependencies
+        CMDLET_LOGGING=${CMDLET_LOGGING:-tty}     # tty,plain,silent
 export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
@@ -83,9 +83,9 @@ die()   {
 }
 
 _capture() {
-    if [ "$CL_LOGGING" = "silent" ]; then
+    if [ "$CMDLET_LOGGING" = "silent" ]; then
         cat >> "$_LOGFILE"
-    elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    elif [ "$CMDLET_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput dim                        # dim on
         tput rmam                       # line break off
 
@@ -107,7 +107,7 @@ _capture() {
 
 _tty_reset() {
     # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$CMDLET_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput ed         # clear to end of screen
         tput smam       # line break on
         tput sgr0       # reset colors
@@ -125,7 +125,7 @@ echocmd() {
     {
         echo "$@"
         eval -- "$*"
-    } 2>&1 | CL_LOGGING=${CL_LOGGING:-silent} _capture
+    } 2>&1 | CMDLET_LOGGING=${CMDLET_LOGGING:-silent} _capture
 }
 
 # slogcmd <command>
@@ -432,7 +432,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
+    CMDLET_LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
 
     # post strip
     case "${cmd[0]}" in
