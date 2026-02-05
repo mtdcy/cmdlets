@@ -957,7 +957,7 @@ cmdlet.check() {
         } || true
     elif is_darwin; then
         CL_LOGGING=plain \
-        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib" && die "unexpected linked libraries" || true
+        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
     elif is_msys; then
         CL_LOGGING=plain \
         echocmd ntldd "$bin"
