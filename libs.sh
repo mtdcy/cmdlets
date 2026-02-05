@@ -9,18 +9,20 @@ set -e -o pipefail
 umask  0022
 export LANG=C
 
-# options           =
-export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
+# public options            =
+export    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}         # force rebuild all dependencies
 export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
 export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
-
+export       CL_REPO=${CL_REPO:-}           # cmdlet pkgfiles repo
 
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
-: "${REPO:=https://pub.mtdcy.top/cmdlets/latest}"
+# set default repo
+: "${_REPO_:=$CL_REPO}"
+: "${_REPO_:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
 if test -n "$CL_MIRRORS"; then
@@ -156,21 +158,20 @@ _init() {
 
     mkdir -p "$ROOT"/{prebuilts,out,logs,packages}
 
-    local arch
     if [ "$(uname -s)" = Darwin ]; then
-        arch="$(uname -m)-apple-darwin"
+        _ARCH_="$(uname -m)-apple-darwin"
     elif test -n "$MSYSTEM"; then
-        arch="$(uname -m)-msys-${MSYSTEM,,}"
+        _ARCH_="$(uname -m)-msys-${MSYSTEM,,}"
     #elif ldd --version 2>/dev/null | grep -qFw musl; then
-    #    arch="$(uname -m)-linux-musl"
+    #    _ARCH_="$(uname -m)-linux-musl"
     else
-        arch="$(uname -m)-$OSTYPE"
+        _ARCH_="$(uname -m)-$OSTYPE"
     fi
 
     # prepare directories and files
-    PREFIX="$ROOT/prebuilts/$arch"
-    WORKDIR="$ROOT/out/$arch"
-    LOGFILES="$ROOT/logs/$arch"
+    PREFIX="$ROOT/prebuilts/$_ARCH_"
+    WORKDIR="$ROOT/out/$_ARCH_"
+    LOGFILES="$ROOT/logs/$_ARCH_"
     MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
@@ -311,7 +312,7 @@ _init() {
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
-        CCACHE_DIR="$ROOT/.ccache/$arch"
+        CCACHE_DIR="$ROOT/.ccache/$_ARCH_"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -752,7 +753,7 @@ build() {
     # check dependencies: libraries updated
 
     # pull dependencies
-    if [ "$CL_FORCE" -ne 0 ]; then
+    if [ "$CMDLET_FORCE_BUILD" -ne 0 ]; then
         # check dependencies: force update
         for x in "${deps[@]}"; do
             rm -f "$PREFIX/.$x.d"
@@ -796,13 +797,12 @@ _fetch_unzip_pkgfile() {
 
     mkdir -p "${dest%/*}"
 
-    local arch="${PREFIX##*/}"
     if _is_flat_repo; then
-        slogi "== curl < $REPO/$arch/${1##*/}"
-        curl -fsSL -o "$dest" "${REPO#flat+}/$arch/${1##*/}" || return 1
+        slogi "== curl < $REPO/$_ARCH_/${1##*/}"
+        curl -fsSL -o "$dest" "${REPO#flat+}/$_ARCH_/${1##*/}" || return 1
     else
-        slogi "== curl < $REPO/$arch/$1"
-        curl -fsSL -o "$dest" "$REPO/$arch/$1" || return 1
+        slogi "== curl < $REPO/$_ARCH_/$1"
+        curl -fsSL -o "$dest" "$REPO/$_ARCH_/$1" || return 1
     fi
 
     if [[ "$dest" =~ tar.gz$ ]]; then
@@ -944,7 +944,7 @@ fetch() {
 }
 
 arch() {
-    echo "${PREFIX##*/}"
+    echo "$_ARCH_"
 }
 
 # zip files for release actions

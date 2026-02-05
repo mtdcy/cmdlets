@@ -34,7 +34,7 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-CL_ENVS :=  CL_FORCE 		\
+CL_ENVS :=  CMDLET_FORCE_BUILD 		\
 			CL_NJOBS  		\
 			CL_LOGGING     	\
 			CL_STRICT    	\
