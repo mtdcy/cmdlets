@@ -26,7 +26,7 @@ libs_args=(
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 libs_build() {
-    apply_c89_flags || true
+    libs.requires.c89 || true
 
     # bash 3.2 won't start with `-Os'
     CFLAGS="${CFLAGS//-Os/-O2}"

@@ -14,26 +14,6 @@ git.version() {
     git rev-parse --short HEAD
 }
 
-apply_c89_flags() {
-    local flags=()
-
-    if is_clang; then
-        flags+=(
-            -Wno-implicit-int
-            -Wno-incompatible-pointer-types
-            -Wno-implicit-function-declaration
-        )
-    else
-        flags+=(
-            -Wno-error=implicit-int
-            -Wno-error=incompatible-pointer-types
-            -Wno-error=implicit-function-declaration
-        )
-    fi
-
-    export CFLAGS+=" ${flags[*]}"
-}
-
 deparallelize() {
     export _NJOBS=1
 }
@@ -51,6 +31,28 @@ libs.requires() {
     done
 
     export CFLAGS LDFLAGS
+}
+
+libs.requires.c89() {
+    local flags=()
+
+    if is_clang; then
+        flags+=(
+            -Wno-int-conversion
+            -Wno-implicit-int
+            -Wno-incompatible-pointer-types
+            -Wno-implicit-function-declaration
+        )
+    else
+        flags+=(
+            -Wno-error=int-conversion
+            -Wno-error=implicit-int
+            -Wno-error=incompatible-pointer-types
+            -Wno-error=implicit-function-declaration
+        )
+    fi
+
+    export CFLAGS+=" ${flags[*]}"
 }
 
 # return 0 if $1 >= $2

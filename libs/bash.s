@@ -61,7 +61,7 @@ libs_args=(
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 libs_build() {
-    apply_c89_flags || true
+    libs.requires.c89 || true
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb

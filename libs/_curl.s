@@ -74,7 +74,7 @@ else
 fi
 
 libs_build() {
-    apply_c89_flags || true
+    libs.requires.c89 || true
 
     configure
 

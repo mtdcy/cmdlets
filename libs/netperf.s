@@ -23,7 +23,7 @@ libs_args=(
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 libs_build() {
-    apply_c89_flags
+    libs.requires.c89
 
     configure
 

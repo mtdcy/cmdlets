@@ -40,7 +40,7 @@ libs_args=(
 )
 
 libs_build() {
-    apply_c89_flags
+    libs.requires.c89
 
     if is_darwin; then
         grep "defined OSTYPE_FREEBSD" . -Rl | xargs sed -i 's/defined OSTYPE_FREEBSD/& || defined OSTYPE_DARWIN/g'
