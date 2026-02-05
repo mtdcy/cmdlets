@@ -31,7 +31,7 @@ test -n "$BUILDER_NAME" || make prepare-host || true
 find packages || true
 
 echo $PATH
-env | grep "^CL_" | grep -v TOKEN
+env | grep "^CMDLET_" | grep -v TOKEN || true
 
 cmdlets=()
 if test -n "$1"; then
