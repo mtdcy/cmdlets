@@ -166,19 +166,21 @@ _init() {
     mkdir -p "$_ROOT"/{prebuilts,out,logs,packages}
 
     if [ "$(uname -s)" = Darwin ]; then
-        _ARCH_="$(uname -m)-apple-darwin"
+        _ARCH="$(uname -m)-apple-darwin"
     elif test -n "$MSYSTEM"; then
-        _ARCH_="$(uname -m)-msys-${MSYSTEM,,}"
+        _ARCH="$(uname -m)-msys-${MSYSTEM,,}"
     #elif ldd --version 2>/dev/null | grep -qFw musl; then
-    #    _ARCH_="$(uname -m)-linux-musl"
+    #    _ARCH="$(uname -m)-linux-musl"
     else
-        _ARCH_="$(uname -m)-$OSTYPE"
+        _ARCH="$(uname -m)-$OSTYPE"
     fi
 
-    # prepare directories and files
-    PREFIX="$_ROOT/prebuilts/$_ARCH_"
-    _WORKDIR="$_ROOT/out/$_ARCH_"
-    LOGFILES="$_ROOT/logs/$_ARCH_"
+    # prepare variables
+    PREFIX="$_ROOT/prebuilts/$_ARCH"
+
+    # private variables
+    _WORKDIR="$_ROOT/out/$_ARCH"
+    LOGFILES="$_ROOT/logs/$_ARCH"
     MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$_WORKDIR" "$LOGFILES"
@@ -319,7 +321,7 @@ _init() {
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
-        CCACHE_DIR="$_ROOT/.ccache/$_ARCH_"
+        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -805,11 +807,11 @@ _fetch_unzip_pkgfile() {
     mkdir -p "${dest%/*}"
 
     if _is_flat_repo; then
-        slogi "== curl < $_REPO/$_ARCH_/${1##*/}"
-        curl -fsSL -o "$dest" "${_REPO#flat+}/$_ARCH_/${1##*/}" || return 1
+        slogi "== curl < $_REPO/$_ARCH/${1##*/}"
+        curl -fsSL -o "$dest" "${_REPO#flat+}/$_ARCH/${1##*/}" || return 1
     else
-        slogi "== curl < $_REPO/$_ARCH_/$1"
-        curl -fsSL -o "$dest" "$_REPO/$_ARCH_/$1" || return 1
+        slogi "== curl < $_REPO/$_ARCH/$1"
+        curl -fsSL -o "$dest" "$_REPO/$_ARCH/$1" || return 1
     fi
 
     if [[ "$dest" =~ tar.gz$ ]]; then
@@ -951,7 +953,7 @@ fetch() {
 }
 
 arch() {
-    echo "$_ARCH_"
+    echo "$_ARCH"
 }
 
 # zip files for release actions
