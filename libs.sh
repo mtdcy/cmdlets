@@ -10,20 +10,20 @@ umask  0022
 export LANG=C
 
 # public options      =
-    CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}     # force build dependencies
         CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
         CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
+           CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
 
 # public build options  =
+      CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}   # force build dependencies
      CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # noparallel by default
-export       CL_REPO=${CL_REPO:-}           # cmdlet pkgfiles repo
 
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
 # set default repo
-: "${_REPO_:=$CL_REPO}"
+: "${_REPO_:=$CMDLET_REPO}"
 : "${_REPO_:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
