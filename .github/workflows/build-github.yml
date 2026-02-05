@@ -54,10 +54,8 @@ jobs:
             builder: ghcr.io/mtdcy/builder:ubuntu-22.04
           # for arm64-apple-darwin
           - machine: macos-15
-
-          # release: always return `Error: Too many retries.' - 2025.02.05
-          ## for x86_64-apple-darwin
-          #- machine: macos-15-intel
+          # for x86_64-apple-darwin
+          - machine: macos-15-intel
 
     steps:
       - name: Checkout
