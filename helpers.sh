@@ -35,7 +35,7 @@ apply_c89_flags() {
 }
 
 deparallelize() {
-    export CMDLET_BUILD_NJOBS=1
+    export _NJOBS=1
 }
 
 libs_depends() {
@@ -89,7 +89,7 @@ make() {
     local cmdline=( "$MAKE" "$@" )
 
     # set default njobs
-    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$CMDLET_BUILD_NJOBS" )
+    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$_NJOBS" )
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
@@ -97,7 +97,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" all "-j$CMDLET_BUILD_NJOBS" V=1 "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$_NJOBS" V=1 "$@" || die "make all $* failed."
 }
 
 make.install() {
@@ -155,7 +155,7 @@ cmake() {
     local cmdline=( "$CMAKE" )
     case "$(_cmake_filter_out_defines "$@")" in
         --build*)
-            export CMAKE_BUILD_PARALLEL_LEVEL="$CMDLET_BUILD_NJOBS"
+            export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
             cmdline+=( "$@" )
             ;;
         --install*)
@@ -212,7 +212,7 @@ cmake.setup() {
 
 cmake.build() {
     _cmake_init
-    export CMAKE_BUILD_PARALLEL_LEVEL="$CMDLET_BUILD_NJOBS"
+    export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
     slogcmd "$CMAKE" --build . "$@" || die "cmake.build failed."
 }
 
@@ -253,7 +253,7 @@ meson() {
             cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
             ;;
         compile)
-            cmdline+=( "$1" "${args[@]}" "${@:2}" --jobs "$CMDLET_BUILD_NJOBS" )
+            cmdline+=( "$1" "${args[@]}" "${@:2}" --jobs "$_NJOBS" )
             ;;
         *)
             cmdline+=( "$1" "${args[@]}" "${@:2}" )
@@ -302,7 +302,7 @@ meson.setup() {
 meson.compile() {
     _meson_init
 
-    slogcmd "$MESON" compile --verbose "-j$CMDLET_BUILD_NJOBS" "$@" || die "meson.compile failed."
+    slogcmd "$MESON" compile --verbose "-j$_NJOBS" "$@" || die "meson.compile failed."
 }
 
 meson.install() {
@@ -368,7 +368,7 @@ _cargo_init() {
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     # set CARGO_HOME again for local crates and cache
     #export CARGO_HOME="$_ROOT/.cargo"
-    export CARGO_BUILD_JOBS="$CMDLET_BUILD_NJOBS"
+    export CARGO_BUILD_JOBS="$_NJOBS"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
@@ -449,7 +449,7 @@ cargo.setup() {
 cargo.build() {
     _cargo_init
 
-    # CMDLET_BUILD_NJOBS => CARGO_BUILD_JOBS
+    # _NJOBS => CARGO_BUILD_JOBS
     local std=( -vv )
 
     is_listed "--release" "$@" "${libs_args}" || std+=( --release )
@@ -666,7 +666,7 @@ go.build() {
     ldflags+=( $(_go_filter_ldflags "$@") )
 
     # verbose
-    local std=( -x -v -p "$CMDLET_BUILD_NJOBS" )
+    local std=( -x -v -p "$_NJOBS" )
 
     # set ldflags
     std+=( -ldflags="'${ldflags[*]}'" )

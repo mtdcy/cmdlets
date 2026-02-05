@@ -35,10 +35,12 @@ if test -n "$_MIRRORS"; then
     : "${_GO_PROXY:=$_MIRRORS/gomods}"
 fi
 
+# build args
+: "${_NJOBS:=$CMDLET_BUILD_NJOBS}"
+
 # clear envs => setup by _init
 unset _ROOT _WORKDIR PREFIX
 # => PREFIX is a widely used variable
-
 
 # defaults
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
@@ -593,6 +595,8 @@ _load() {
 compile() {
     # always start subshell before _load()
     (
+        # initial build args
+
         trap _tty_reset EXIT
 
         set -eo pipefail
