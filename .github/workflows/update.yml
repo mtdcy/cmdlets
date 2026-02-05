@@ -62,7 +62,11 @@ jobs:
 
               if test -n "$r"; then
                 newver="$m.$n.$((r+1))"
-                bash libs.sh update "$libs" "$newver" || exit
+                bash libs.sh update "$libs" "$newver" || {
+                  # try update minor version
+                  newver="$m.$((n+1)).0"
+                  bash libs.sh update "$libs" "$newver" || exit
+                }
               elif test -n "$n"; then
                 newver="$m.$((n+1))"
                 bash libs.sh update "$libs" "$newver" || exit
