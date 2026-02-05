@@ -67,13 +67,13 @@ make zlib
 
 ```shell
 # local packages cache
-export CL_MIRRORS=http://pub.mtdcy.top
+export CMDLET_MIRRORS=http://pub.mtdcy.top
 
 # logging style
-export CL_LOGGING=tty # options: tty,plain,silence
+export CMDLET_LOGGING=tty # options: tty,plain,silence
 
 # parallels jobs
-export CL_NJOBS=2
+export CMDLET_BUILD_NJOBS=2
 ```
 
 ## Artifacts

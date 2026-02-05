@@ -82,7 +82,7 @@ libs_build() {
     pkgfile libelf -- make.install bin_PROGRAMS=
 }
 
-libs_depends is_linux
+libs.depends is_linux
 
 # patch: enable static build
 __END__

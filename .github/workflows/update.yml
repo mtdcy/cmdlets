@@ -31,8 +31,8 @@ jobs:
           git config --global user.email "bot@mtdcy.top"
           git config --global --add safe.directory '*'
 
-          export CL_NJOBS=1
-          export CL_LOGGING=silent
+          export CMDLET_BUILD_NJOBS=1
+          export CMDLET_LOGGING=silent
 
           commits=/tmp/commits-$$.txt
           true > "$commits"  # create empty file

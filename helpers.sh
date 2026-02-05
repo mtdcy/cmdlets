@@ -8,7 +8,7 @@
 # shellcheck disable=SC2154
 
 # show git tag > branch > commit
-git_version() {
+git.version() {
     git describe --tags --exact-match 2> /dev/null ||
     git symbolic-ref -q --short HEAD ||
     git rev-parse --short HEAD
@@ -35,16 +35,21 @@ apply_c89_flags() {
 }
 
 deparallelize() {
-    export CL_NJOBS=1
+    export _NJOBS=1
 }
 
-libs_depends() {
+libs.depends() {
     "$@" || { unset libs_dep libs_args libs_build; }
 }
 
-depends.libs() {
-    CFLAGS+=" $($PKG_CONFIG --cflags "$@")"
-    LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$@")"
+libs.requires() {
+    for x in "$@"; do
+        "$PKG_CONFIG" --exists "$x" || die "$x not found."
+
+        CFLAGS+=" $($PKG_CONFIG --cflags "$x")"
+        LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+    done
+
     export CFLAGS LDFLAGS
 }
 
@@ -89,7 +94,7 @@ make() {
     local cmdline=( "$MAKE" "$@" )
 
     # set default njobs
-    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$CL_NJOBS" )
+    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$_NJOBS" )
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
@@ -97,7 +102,7 @@ make() {
 }
 
 make.all() {
-    slogcmd "$MAKE" all "-j$CL_NJOBS" V=1 "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$_NJOBS" V=1 "$@" || die "make all $* failed."
 }
 
 make.install() {
@@ -106,7 +111,7 @@ make.install() {
 
 # setup cmake environments
 _cmake_init() {
-    test -z "$CMAKE_READY" || return 0
+    test -z "$_CMAKE_READY" || return 0
 
     # defaults:
     : "${LIBS_BUILDDIR:=build-$PPID}"
@@ -134,7 +139,7 @@ _cmake_init() {
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
-    export CMAKE_READY=1
+    export _CMAKE_READY=1
 }
 
 _cmake_filter_out_defines() {
@@ -155,7 +160,7 @@ cmake() {
     local cmdline=( "$CMAKE" )
     case "$(_cmake_filter_out_defines "$@")" in
         --build*)
-            export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+            export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
             cmdline+=( "$@" )
             ;;
         --install*)
@@ -212,7 +217,7 @@ cmake.setup() {
 
 cmake.build() {
     _cmake_init
-    export CMAKE_BUILD_PARALLEL_LEVEL="$CL_NJOBS"
+    export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
     slogcmd "$CMAKE" --build . "$@" || die "cmake.build failed."
 }
 
@@ -227,18 +232,29 @@ cmake.install() {
     slogcmd "${cmdline[@]}" "$@" || die "cmake.install failed."
 }
 
+_meson_init() {
+    test -z "$_MESON_READY" || return 0
+
+    : "${LIBS_BUILDDIR:=build-$PPID}"
+
+    export LIBS_BUILDDIR
+
+    export _MESON_READY=1
+}
+
 meson() {
+    _meson_init
+
     local cmdline=( "$MESON" )
 
-    # global args < meson configure
-    args=(
-    )
+    # std args < meson configure
+    local std=( )
 
     case "$1" in
         setup)
             # meson builtin options: https://mesonbuild.com/Builtin-options.html
             #  libdir: some package prefer install to lib/<machine>/
-            args+=(
+            std+=(
                 -Dprefix="'$PREFIX'"
                 -Dlibdir=lib
                 -Dbuildtype=release
@@ -247,30 +263,20 @@ meson() {
             )
 
             # prefer static external dependencies
-            #is_darwin || args+=( --prefer-static )
+            #is_darwin || std+=( --prefer-static )
 
             # append user args
-            cmdline+=( setup "${args[@]}" "${libs_args[@]}" "${@:2}" )
+            cmdline+=( setup "${std[@]}" "${libs_args[@]}" "${@:2}" )
             ;;
         compile)
-            cmdline+=( "$1" "${args[@]}" "${@:2}" --jobs "$CL_NJOBS" )
+            cmdline+=( "$1" "${std[@]}" "${@:2}" --jobs "$_NJOBS" )
             ;;
         *)
-            cmdline+=( "$1" "${args[@]}" "${@:2}" )
+            cmdline+=( "$1" "${std[@]}" "${@:2}" )
             ;;
     esac
 
     slogcmd "${cmdline[@]}" || die "meson $* failed."
-}
-
-_meson_init() {
-    test -z "$MESON_READY" || return 0
-
-    : "${LIBS_BUILDDIR:=build-$PPID}"
-
-    export LIBS_BUILDDIR
-
-    export MESON_READY=1
 }
 
 meson.setup() {
@@ -302,7 +308,7 @@ meson.setup() {
 meson.compile() {
     _meson_init
 
-    slogcmd "$MESON" compile --verbose "-j$CL_NJOBS" "$@" || die "meson.compile failed."
+    slogcmd "$MESON" compile --verbose "-j$_NJOBS" "$@" || die "meson.compile failed."
 }
 
 meson.install() {
@@ -313,18 +319,18 @@ meson.install() {
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
 _cargo_init() {
-    test -z "$CARGO_READY" || return 0
+    test -z "$_CARGO_READY" || return 0
 
     # always use default value $HOME/.cargo, as
     # host act runner won't inherit envs from host and
-    # $ROOT will be deleted when jobs finished.
+    # $_ROOT will be deleted when jobs finished.
 
     # rustup and cargo
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
     : "${CARGO_HOME:=$HOME/.cargo}"
 
     # a writable cargo home needed, refer to cargo.requires()
-    test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
+    test -w "$CARGO_HOME" || CARGO_HOME="$_WORKDIR/.cargo"
 
     mkdir -pv "$CARGO_HOME/bin"
 
@@ -334,15 +340,15 @@ _cargo_init() {
     which rustup || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
 
     # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-    #  choose WORKDIR instead of HOME for docker buildings
-    test -f rust-toolchain.toml && RUSTUP_HOME="$WORKDIR/.rustup" || true
+    #  choose _WORKDIR instead of HOME for docker buildings
+    test -f rust-toolchain.toml && RUSTUP_HOME="$_WORKDIR/.rustup" || true
 
     mkdir -p "$RUSTUP_HOME"
 
     # set mirrors for toolchain download
-    if test -n "$CL_MIRRORS"; then
-        : "${RUSTUP_DIST_SERVER:=$CL_MIRRORS/rust-static}"
-        : "${RUSTUP_UPDATE_ROOT:=$CL_MIRRORS/rust-static/rustup}"
+    if test -n "$_MIRRORS"; then
+        : "${RUSTUP_DIST_SERVER:=$_MIRRORS/rust-static}"
+        : "${RUSTUP_UPDATE_ROOT:=$_MIRRORS/rust-static/rustup}"
         export RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT
     fi
 
@@ -367,8 +373,8 @@ _cargo_init() {
 
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     # set CARGO_HOME again for local crates and cache
-    #export CARGO_HOME="$ROOT/.cargo"
-    export CARGO_BUILD_JOBS="$CL_NJOBS"
+    #export CARGO_HOME="$_ROOT/.cargo"
+    export CARGO_BUILD_JOBS="$_NJOBS"
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
@@ -391,12 +397,12 @@ _cargo_init() {
     export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
     # FOO_STATIC - pass --static for the library foo
 
-    if [ -n "$CL_CARGO_REGISTRY" ]; then
+    if [ -n "$_CARGO_REGISTRY" ]; then
         # cargo
         local registry ver
         IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
         # cargo <= 1.68
-        [ "$ver" -le 68 ] && registry="$CL_CARGO_REGISTRY" || registry="sparse+$CL_CARGO_REGISTRY"
+        [ "$ver" -le 68 ] && registry="$_CARGO_REGISTRY" || registry="sparse+$_CARGO_REGISTRY"
         cat << EOF > "$CARGO_HOME/config.toml"
 [source.crates-io]
 replace-with = 'crates-io-mirrors'
@@ -406,7 +412,7 @@ registry = "$registry"
 EOF
     fi
 
-    export CARGO_READY=1
+    export _CARGO_READY=1
 }
 
 cargo() {
@@ -449,7 +455,7 @@ cargo.setup() {
 cargo.build() {
     _cargo_init
 
-    # CL_NJOBS => CARGO_BUILD_JOBS
+    # _NJOBS => CARGO_BUILD_JOBS
     local std=( -vv )
 
     is_listed "--release" "$@" "${libs_args}" || std+=( --release )
@@ -467,7 +473,7 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (
+        ( # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_ALL_STATIC
@@ -484,12 +490,11 @@ cargo.requires() {
 cargo.requires.rustc() {
     _cargo_init
 
-    slogcmd "$RUSTC" --version
     _version_ge "$("$RUSTC" --version | cut -d' ' -f2)" "$1" || slogcmd rustup update
 }
 
 _go_init() {
-    test -z "$GO_READY" || return 0
+    test -z "$_GO_READY" || return 0
 
     # defaults:
     # CGO_ENABLED=0 is necessary for build static binaries except macOS
@@ -531,11 +536,11 @@ _go_init() {
     export GO
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    #  using ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
     #  set GOPATH in host profile
-    export GOPATH="${GOPATH:-$ROOT/.go}"
-    #export GOCACHE="$ROOT/.go/go-build"
-    export GOMODCACHE="$ROOT/.go/pkg/mod" # OR pkg installed to workdir
+    export GOPATH="${GOPATH:-$_ROOT/.go}"
+    #export GOCACHE="$_ROOT/.go/go-build"
+    export GOMODCACHE="$_ROOT/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -545,9 +550,9 @@ _go_init() {
     export CGO_CPPFLAGS="$CPPFLAGS"
     export CGO_LDFLAGS="$LDFLAGS"
 
-    [ -z "$CL_GO_PROXY" ] || export GOPROXY="$CL_GO_PROXY"
+    [ -z "$_GO_PROXY" ] || export GOPROXY="$_GO_PROXY"
 
-    export GO_READY=1
+    export _GO_READY=1
 }
 
 # go can not amend `-ldflags='
@@ -589,7 +594,7 @@ _go_filter_options() {
 go() {
     _go_init
 
-    local cmdline=("$GO" "$1" )
+    local cmdline=( "$GO" "$1" )
     case "$1" in
         build)
             # fix 'invalid go version'
@@ -657,7 +662,7 @@ go.build() {
     # go embed version control
     if test -f main.go; then
         echo "$*" | grep -i main.version    || ldflags+=( -X main.version="$libs_ver" )
-        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${PKGBUILD#*=}+1))" )
+        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${_PKGBUILD#*=}+1))" )
     fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
@@ -666,7 +671,7 @@ go.build() {
     ldflags+=( $(_go_filter_ldflags "$@") )
 
     # verbose
-    local std=( -x -v -p "$CL_NJOBS" )
+    local std=( -x -v -p "$_NJOBS" )
 
     # set ldflags
     std+=( -ldflags="'${ldflags[*]}'" )
@@ -679,7 +684,7 @@ go.build() {
 
 # libtool archive hardcoded PREFIX which is bad for us
 _rm_libtool_archive() {
-    CL_LOGGING=silent \
+    _LOGGING=silent \
         echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
@@ -856,9 +861,9 @@ cmdlet.pkgfile() {
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
-    sed -i "\#^$1 $pkgfile #d" "$MANIFEST"
+    sed -i "\#^$1 $pkgfile #d" "$_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> "$MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_MANIFEST"
 
     popd || die "popd failed."
 }
@@ -868,7 +873,7 @@ cmdlet.pkgfile() {
 cmdlet.disclaim() {
     local x
     for x in "$@"; do
-        sed -i "\#\ $libs_name/.*@$x#d" "$MANIFEST" || true
+        sed -i "\#\ $libs_name/.*@$x#d" "$_MANIFEST" || true
     done
 }
 
@@ -952,14 +957,14 @@ cmdlet.check() {
     # check linked libraries
     if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
-            CL_LOGGING=plain echocmd ldd "$bin"
+            _LOGGING=plain echocmd ldd "$bin"
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
-        CL_LOGGING=plain \
+        _LOGGING=plain \
         echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
     elif is_msys; then
-        CL_LOGGING=plain \
+        _LOGGING=plain \
         echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
@@ -967,7 +972,7 @@ cmdlet.check() {
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
-        CL_LOGGING=plain \
+        _LOGGING=plain \
         echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }
@@ -1163,7 +1168,9 @@ visibility.hidden() {
 }
 
 if [[ "$0" =~ helpers.sh$ ]]; then
-    cd "$(dirname "$0")" && "$@" || exit $?
+    cd "$(dirname "$0")"
+    . libs.sh
+    "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

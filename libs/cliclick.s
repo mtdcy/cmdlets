@@ -16,13 +16,16 @@ libs_build() {
     # Issue ref: https://github.com/BlueM/cliclick/issues/178
     export MACOSX_DEPLOYMENT_TARGET=14.0
 
-    make
+    export OBJC="$CC"
+    export OBJCFLAGS="$CFLAGS -include cliclick_Prefix.pch -I Actions -I ."
+
+    make CC="'$CC'"
 
     cmdlet.install cliclick
 
     cmdlet.check cliclick
 }
 
-libs_depends is_darwin
+libs.depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

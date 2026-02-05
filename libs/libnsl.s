@@ -28,6 +28,6 @@ libs_build() {
     pkgfile $libs_name -- make install bin_SCRIPTS=
 }
 
-libs_depends is_linux
+libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

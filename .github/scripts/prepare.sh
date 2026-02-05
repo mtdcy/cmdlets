@@ -4,7 +4,7 @@ info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
 }
 
-export CL_LOGGING="${CL_LOGGING:-silent}"
+export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
 
 cmdlets=()
 if test -n "$1"; then

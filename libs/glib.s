@@ -47,7 +47,8 @@ libs_build() {
     # ERROR: Dependency "iconv" not found
     sed -e "s/dependency('iconv')/dependency('iconv', required: true, static: true)/" \
         -i meson.build
-    export LDFLAGS+=" -liconv -lcharset"
+
+    libs.requires iconv
 
     meson.setup
 
