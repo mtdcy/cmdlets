@@ -180,14 +180,14 @@ _init() {
 
     # private variables
     _WORKDIR="$_ROOT/out/$_ARCH"
-    LOGFILES="$_ROOT/logs/$_ARCH"
+    _LOGFILES="$_ROOT/logs/$_ARCH"
     MANIFEST="$PREFIX/cmdlets.manifest"
 
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$_WORKDIR" "$LOGFILES"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$_WORKDIR" "$_LOGFILES"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export _ROOT PREFIX _WORKDIR LOGFILES MANIFEST
+    export _ROOT PREFIX _WORKDIR _LOGFILES MANIFEST
 
     is_linux || unset CMDLET_TOOLCHAIN_PREFIX
 
@@ -572,8 +572,8 @@ _load() {
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
-    mkdir -p "$LOGFILES"
-    export _LOGFILE="$LOGFILES/$libs_name.log"
+    mkdir -p "$_LOGFILES"
+    export _LOGFILE="$_LOGFILES/$libs_name.log"
 }
 
 # compile target
@@ -959,8 +959,8 @@ arch() {
 # zip files for release actions
 zip_files() {
     # log files
-    test -n "$(ls -A "$LOGFILES")" || return 0
-    "$TAR" -C "$LOGFILES" -cvf "$LOGFILES-logs.tar.gz" .
+    test -n "$(ls -A "$_LOGFILES")" || return 0
+    "$TAR" -C "$_LOGFILES" -cvf "$_LOGFILES-logs.tar.gz" .
 }
 
 env() {
@@ -968,7 +968,7 @@ env() {
 }
 
 clean() {
-    rm -rf "$_WORKDIR" "$LOGFILES"
+    rm -rf "$_WORKDIR" "$_LOGFILES"
     exit 0 # always exit here
 }
 
