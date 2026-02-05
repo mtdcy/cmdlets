@@ -29,7 +29,7 @@ libs_build() (
     ln -srfv . src/github.com/docker/cli
 
     # -X main.version not working for docker
-    go.build -ldflags="'-X github.com/docker/cli/cli/version.Version=$libs_ver -X github.com/docker/cli/cli/version.GitCommit=$(git_version)'" -o docker github.com/docker/cli/cmd/docker &&
+    go.build -ldflags="'-X github.com/docker/cli/cli/version.Version=$libs_ver -X github.com/docker/cli/cli/version.GitCommit=$(git.version)'" -o docker github.com/docker/cli/cmd/docker &&
 
     # docker plugins
     (

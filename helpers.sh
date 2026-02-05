@@ -8,7 +8,7 @@
 # shellcheck disable=SC2154
 
 # show git tag > branch > commit
-git_version() {
+git.version() {
     git describe --tags --exact-match 2> /dev/null ||
     git symbolic-ref -q --short HEAD ||
     git rev-parse --short HEAD
@@ -1163,7 +1163,9 @@ visibility.hidden() {
 }
 
 if [[ "$0" =~ helpers.sh$ ]]; then
-    cd "$(dirname "$0")" && "$@" || exit $?
+    cd "$(dirname "$0")"
+    . libs.sh
+    "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
