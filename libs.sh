@@ -13,7 +13,9 @@ export LANG=C
     CMDLET_FORCE_BUILD=${CMDLET_FORCE_BUILD:-0}     # force build dependencies
         CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
         CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
-export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
+
+# public build options  =
+     CMDLET_BUILD_CCACHE=${CMDLET_BUILD_CCACHE:-0}  # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 export       CL_REPO=${CL_REPO:-}           # cmdlet pkgfiles repo
 
@@ -308,7 +310,7 @@ _init() {
     # will help find out the mistakes.
 
     # ccache
-    if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+    if [ "$CMDLET_BUILD_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
