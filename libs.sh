@@ -639,8 +639,8 @@ compile() {
         touch "$_MANIFEST"
 
         # read pkgbuild before clear
-        PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
-        test -n "$PKGBUILD" || PKGBUILD="build=0"
+        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
+        test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_MANIFEST"

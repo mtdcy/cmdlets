@@ -657,7 +657,7 @@ go.build() {
     # go embed version control
     if test -f main.go; then
         echo "$*" | grep -i main.version    || ldflags+=( -X main.version="$libs_ver" )
-        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${PKGBUILD#*=}+1))" )
+        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${_PKGBUILD#*=}+1))" )
     fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
@@ -858,7 +858,7 @@ cmdlet.pkgfile() {
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" "$_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${PKGBUILD#*=}+1))" >> "$_MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_MANIFEST"
 
     popd || die "popd failed."
 }
