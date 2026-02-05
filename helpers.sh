@@ -42,9 +42,14 @@ libs.depends() {
     "$@" || { unset libs_dep libs_args libs_build; }
 }
 
-depends.libs() {
-    CFLAGS+=" $($PKG_CONFIG --cflags "$@")"
-    LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$@")"
+libs.requires() {
+    for x in "$@"; do
+        "$PKG_CONFIG" --exists "$x" || die "$x not found."
+
+        CFLAGS+=" $($PKG_CONFIG --cflags "$x")"
+        LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+    done
+
     export CFLAGS LDFLAGS
 }
 
