@@ -26,7 +26,7 @@ jobs:
       - name: Fetch packages
         shell: bash
         run: |-
-          export CL_MIRRORS="${{ vars.MIRRORS }}"
+          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
 
           ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
@@ -77,7 +77,7 @@ jobs:
         run: |-
           set -ex
 
-          export REPO=flat+https://github.com/mtdcy/cmdlets/releases/download
+          export CMDLET_REPO=flat+https://github.com/mtdcy/cmdlets/releases/download
 
           arch="$(bash libs.sh arch)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
@@ -91,6 +91,9 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v2
+        concurrency: # try to fix error: `too many retries'
+          group: release-${{ github.ref }}
+          cancel-in-progress: false  # Set to true to cancel previous, but false is safer for releases
         if: always()
         with:
           token: ${{ secrets.RELEASE_TOKEN }}

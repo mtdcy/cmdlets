@@ -82,7 +82,7 @@ libs_build() {
     pkgfile libelf -- make.install bin_PROGRAMS=
 }
 
-libs_depends is_linux
+libs.depends is_linux
 
 # patch: enable static build
 __END__
@@ -118,14 +118,6 @@ index 58e58af2..6ecabc11 100644
 
  AC_ARG_ENABLE([tests-rpath],
  AS_HELP_STRING([--enable-tests-rpath],[build $ORIGIN-using rpath into tests]),
-@@ -1061,7 +1063,7 @@ AC_MSG_NOTICE([
-     libdebuginfod client support       : ${enable_libdebuginfod}
-     Debuginfod server support          : ${enable_debuginfod}
-     Default DEBUGINFOD_URLS            : ${default_debuginfod_urls}
--    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification}
-+    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification}
-     Default DEBUGINFOD_IMA_CERT_PATH   : ${default_debuginfod_ima_cert_path}
-     ${program_prefix}stacktrace support              : ${enable_stacktrace}
 
 diff --git a/libasm/Makefile.am b/libasm/Makefile.am
 index 969db935..458ee257 100644

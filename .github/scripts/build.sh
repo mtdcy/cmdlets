@@ -9,9 +9,9 @@ info "build $*"
 pwd -P
 bash --version
 
-export CL_LOGGING="${CL_LOGGING:-silent}"
-export CL_CCACHE="${CL_CCACHE:-0}"
-export CL_NJOBS="${CL_NJOBS:-1}"
+export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
+export CMDLET_CCACHE="${CMDLET_CCACHE:-0}"
+export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
@@ -64,7 +64,7 @@ ret=0
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
-    export CL_FORCE=1
+    export CMDLET_BUILD_FORCE=1
     bash libs.sh build "${cmdlets[@]%-}" || ret=$?
 elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
     bash libs.sh dist "${cmdlets[@]%+}" || ret=$?

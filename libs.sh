@@ -9,31 +9,42 @@ set -e -o pipefail
 umask  0022
 export LANG=C
 
-# options           =
-export      CL_FORCE=${CL_FORCE:-0}         # force rebuild all dependencies
-export    CL_LOGGING=${CL_LOGGING:-tty}     # tty,plain,silent
-export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
-export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
-export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
+# public options      =
+        CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
+        CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
+         CMDLET_CCACHE=${CMDLET_CCACHE:-0}          # enable ccache or not
+           CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
 
+# public build options  =
+      CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
+      CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
+ CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-}
 
 # toolchain prefix
-export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
 
-: "${REPO:=https://pub.mtdcy.top/cmdlets/latest}"
+# set private vairables
+: "${_LOGGING:=$CMDLET_LOGGING}"
+
+: "${_REPO:=$CMDLET_REPO}"
+: "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
-if test -n "$CL_MIRRORS"; then
-    : "${CL_CARGO_REGISTRY:=$CL_MIRRORS/crates.io-index/}"
-    : "${CL_GO_PROXY:=$CL_MIRRORS/gomods}"
+: "${_MIRRORS:=$CMDLET_MIRRORS}"
+if test -n "$_MIRRORS"; then
+    : "${_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
+    : "${_GO_PROXY:=$_MIRRORS/gomods}"
 fi
+
+# build args
+: "${_NJOBS:=$CMDLET_BUILD_NJOBS}"
+
+# clear envs => setup by _init
+unset _ROOT _WORKDIR PREFIX
+# => PREFIX is a widely used variable
 
 # defaults
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
-
-# clear envs => setup by _init
-unset ROOT PREFIX WORKDIR
 
 # conditionals
 is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
@@ -81,9 +92,9 @@ die()   {
 }
 
 _capture() {
-    if [ "$CL_LOGGING" = "silent" ]; then
+    if [ "$_LOGGING" = "silent" ]; then
         cat >> "$_LOGFILE"
-    elif [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    elif [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput dim                        # dim on
         tput rmam                       # line break off
 
@@ -105,7 +116,7 @@ _capture() {
 
 _tty_reset() {
     # test -t 1: fix `tput: No value for $TERM and no -T specified'
-    if [ "$CL_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
+    if [ "$_LOGGING" = "tty" ] && test -t 1 && which tput &>/dev/null; then
         tput ed         # clear to end of screen
         tput smam       # line break on
         tput sgr0       # reset colors
@@ -120,10 +131,13 @@ _tty_reset() {
 #  Cons:
 #   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
+    # default: echo cmd without output
+    : "${_LOGGING:=silent}"
+
     {
         echo "$@"
-        eval -- "$*"
-    } 2>&1 | CL_LOGGING=${CL_LOGGING:-silent} _capture
+        eval -- "$*" 2>&1
+    } | _capture
 }
 
 # slogcmd <command>
@@ -152,45 +166,56 @@ _init_tools() {
 }
 
 _init() {
-    [ -z "$ROOT" ] && ROOT="$(pwd -P)" || return 0
+    test -z "$_ROOT" || return 0
 
-    mkdir -p "$ROOT"/{prebuilts,out,logs,packages}
+    _ROOT="$(pwd -P)"
 
-    local arch
     if [ "$(uname -s)" = Darwin ]; then
-        arch="$(uname -m)-apple-darwin"
+        _ARCH="$(uname -m)-apple-darwin"
     elif test -n "$MSYSTEM"; then
-        arch="$(uname -m)-msys-${MSYSTEM,,}"
+        _ARCH="$(uname -m)-msys-${MSYSTEM,,}"
     #elif ldd --version 2>/dev/null | grep -qFw musl; then
-    #    arch="$(uname -m)-linux-musl"
+    #    _ARCH="$(uname -m)-linux-musl"
     else
-        arch="$(uname -m)-$OSTYPE"
+        _ARCH="$(uname -m)-$OSTYPE"
     fi
 
-    # prepare directories and files
-    PREFIX="$ROOT/prebuilts/$arch"
-    WORKDIR="$ROOT/out/$arch"
-    LOGFILES="$ROOT/logs/$arch"
-    MANIFEST="$PREFIX/cmdlets.manifest"
+    # prepare variables
+    PREFIX="$_ROOT/prebuilts/$_ARCH"
 
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
+    # private variables
+    _WORKDIR="$_ROOT/out/$_ARCH"
+    _PACKAGES="$_ROOT/packages"
+    _LOGFILES="$_ROOT/logs/$_ARCH"
+    _MANIFEST="$PREFIX/cmdlets.manifest"
+
+    mkdir -p "$PREFIX" "$_WORKDIR" "$_PACKAGES" "$_LOGFILES"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export ROOT PREFIX WORKDIR LOGFILES MANIFEST
+    export PREFIX _ROOT _WORKDIR _PACKAGES _LOGFILES _MANIFEST
 
-    is_linux || unset CL_TOOLCHAIN_PREFIX
+    # toolchain
+    : "${_TOOLCHAIN:=$CMDLET_TOOLCHAIN_PREFIX}"
+    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
+
+    # check musl-gcc
+    : "${_TOOLCHAIN:=$(uname -m)-unknown-$(uname -s | tr A-Z a-z)-musl-}"
+    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
+
+    export _TOOLCHAIN
 
     # shellcheck disable=SC2054,SC2206
     local toolchains=(
-        CC:${CL_TOOLCHAIN_PREFIX}gcc
-        CXX:${CL_TOOLCHAIN_PREFIX}g++
-        AR:${CL_TOOLCHAIN_PREFIX}ar
-        AS:${CL_TOOLCHAIN_PREFIX}as
-        LD:${CL_TOOLCHAIN_PREFIX}ld
-        NM:${CL_TOOLCHAIN_PREFIX}nm
-        RANLIB:${CL_TOOLCHAIN_PREFIX}ranlib
-        STRIP:${CL_TOOLCHAIN_PREFIX}strip
+        CC:${_TOOLCHAIN}gcc
+        CXX:${_TOOLCHAIN}g++
+        AR:${_TOOLCHAIN}ar
+        AS:${_TOOLCHAIN}as
+        LD:${_TOOLCHAIN}ld
+        NM:${_TOOLCHAIN}nm
+        RANLIB:${_TOOLCHAIN}ranlib
+        STRIP:${_TOOLCHAIN}strip
     )
     if is_darwin; then
         COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
@@ -273,10 +298,12 @@ _init() {
 
     CFLAGS="${FLAGS[*]}"
     CXXFLAGS="${FLAGS[*]}"
+    OBJCFLAGS="${FLAGS[*]}"
+    OBJC="$CC"
     CPP="$CC -E"
     CPPFLAGS="-I$PREFIX/include"
 
-    export CFLAGS CXXFLAGS CPP CPPFLAGS LDFLAGS
+    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
 
     # some build system do not support pkg-config with parameters
     #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
@@ -291,9 +318,9 @@ _init() {
     #  input: script env
     _init_scripts() {
         eval export REAL_$2="\$$2"
-        eval export $2="$ROOT/scripts/$1"
+        eval export $2="$_ROOT/scripts/$1"
     }
-    #PKG_CONFIG="$ROOT/scripts/pkg-config"
+    #PKG_CONFIG="$_ROOT/scripts/pkg-config"
     _init_scripts pkg-config PKG_CONFIG
 
     # update PATH => tools like glib-compile-resources needs seat in PATH
@@ -307,11 +334,11 @@ _init() {
     # will help find out the mistakes.
 
     # ccache
-    if [ "$CL_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
+    if [ "$CMDLET_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
-        CCACHE_DIR="$ROOT/.ccache/$arch"
+        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
         export CC CXX CCACHE_DIR
     else
         export CCACHE_DISABLE=1
@@ -330,7 +357,7 @@ _curl() {
     if test -n "$2"; then
         curl -fsI "${@:3}" "$source" -o /dev/null &&
         # show errors
-        echocmd curl -fvSL "${@:3}" "$source" -o "$2"
+        curl -fsSL "${@:3}" "$source" -o "$2"
     else
         # silent curl output for stdout
         curl -fsSL "${@:3}" "$source"
@@ -364,8 +391,8 @@ _fetch() {
     fi
 
     #2. try mirror
-    if test -n "$CL_MIRRORS"; then
-        mirror="$CL_MIRRORS/packages/$libs_name/${zip##*/}"
+    if test -n "$_MIRRORS"; then
+        mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
         slogi ".CURL" "$mirror"
         _curl "$mirror" "$zip" ||
         rm -f "$zip"
@@ -431,7 +458,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    CL_LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
+    _LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
 
     # post strip
     case "${cmd[0]}" in
@@ -449,7 +476,7 @@ _unzip() {
 
 # clone git repo
 #  input: git_url#branch_or_tag_name [path]
-_git() {
+_fetch_git() {
     local url branch
     local path="${2%.git*}"
 
@@ -464,15 +491,15 @@ _git() {
     fi
 }
 
-_packages() {
+_package_name() {
     local package
     # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
     if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
         local path
         IFS=':/' read -r _ _ _ _ path <<< "$1"
-        package="$ROOT/packages/$libs_name/${path//\//_}"
+        package="$_PACKAGES/$libs_name/${path//\//_}"
     else
-        package="$ROOT/packages/$libs_name/${1##*/}"
+        package="$_PACKAGES/$libs_name/${1##*/}"
     fi
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
@@ -486,10 +513,10 @@ _packages() {
 _fetch_unzip() {
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _git "${@:2}" "${2##*/}"
+        _fetch_git "${@:2}" "${2##*/}"
     else
         # assemble zip name from url
-        local zip="$(_packages "$2")"
+        local zip="$(_package_name "$2")"
 
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
@@ -525,7 +552,7 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                local file="$(_packages "$patch")"
+                local file="$(_package_name "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH -p1 -N < $file" || die "patch < $file failed."
                 ;;
@@ -562,14 +589,15 @@ _load() {
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
-    mkdir -p "$LOGFILES"
-    export _LOGFILE="$LOGFILES/$libs_name.log"
+    mkdir -p "$_LOGFILES"
+    export _LOGFILE="$_LOGFILES/$libs_name.log"
 }
 
 # compile target
 compile() {
-    # always start subshell before _load()
-    (
+    ( # always start subshell before _load()
+        # initial build args
+
         trap _tty_reset EXIT
 
         set -eo pipefail
@@ -578,7 +606,6 @@ compile() {
 
         # clear logfiles
         test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
-        true > "$_LOGFILE"
 
         if [ "$libs_type" = ".PHONY" ]; then
             slogw "<<<<<" "skip dummy target $libs_name"
@@ -593,7 +620,7 @@ compile() {
         test -n "$libs_url" || die "missing libs_url"
 
         # prepare work directories
-        local workdir="$WORKDIR/$libs_name-$libs_ver"
+        local workdir="$_WORKDIR/$libs_name-$libs_ver"
 
         mkdir -p "$PREFIX"
         mkdir -p "$workdir" && cd "$workdir"
@@ -609,14 +636,14 @@ compile() {
         rm -rf "$PREFIX/$libs_name"
 
         # v3/manifest: name pkgfile sha build=1
-        touch "$MANIFEST"
+        touch "$_MANIFEST"
 
         # read pkgbuild before clear
-        PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
-        test -n "$PKGBUILD" || PKGBUILD="build=0"
+        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
+        test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
-        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$MANIFEST"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_MANIFEST"
 
         # build library
         ( libs_build ) || {
@@ -640,38 +667,34 @@ compile() {
 # load libs_deps
 _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 
+# generate or update dependencies map
 _deps_init() {
-    #test -z "$DEPS_READY" || return
+    test -z "$_DEPS_READY" || return 0
 
-    export DEPS_FILE="$WORKDIR/.dependencies"
+    export _DEPS_FILE="$_WORKDIR/.dependencies"
 
-    test -f "$DEPS_FILE" || true > "$DEPS_FILE"
+    test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
     local libs
-
-    # generate dependencies map
-    if test -s "$DEPS_FILE"; then
-        while IFS='/' read -r _ libs; do
-            libs="${libs%.s}"
-
+    if test -s "$_DEPS_FILE"; then
+        while IFS='/.' read -r _ libs _; do
             [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
 
             # update dependency
-            sed -i "/^$libs/d" "$DEPS_FILE"
-            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
-        done < <(find libs -maxdepth 1 -type f -newer "$DEPS_FILE")
+            sed -i "/^$libs/d" "$_DEPS_FILE"
+            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <(find libs -maxdepth 1 -type f -newer "$_DEPS_FILE")
     else
         for libs in libs/*.s; do
-            libs="${libs#*/}"
-            libs="${libs%.s}"
+            IFS='/.' read -r _ libs _ <<< "$libs"
 
             [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
 
             # write dependency
-            echo "$libs $(_deps_load "$libs")" >> "$DEPS_FILE"
+            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
         done
     fi
-    export DEPS_READY=1
+    export _DEPS_READY=1
 }
 
 depends() {
@@ -686,7 +709,7 @@ depends() {
             is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
+    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -702,7 +725,7 @@ rdepends() {
         for x in "$libs" $(rdepends "$libs"); do
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
+    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -729,13 +752,16 @@ _deps_sort() {
     echo "${head[@]}" "${tail[@]}"
 }
 
-_check_deps() {
+_deps_status() {
+    _deps_init
+
     local sep="" sign x
     for x in "$@"; do
         test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
         printf "%s%s%s" "$sep" "$x" "$sign"
         sep=", "
     done
+
     printf "\n"
 }
 
@@ -752,7 +778,7 @@ build() {
     # check dependencies: libraries updated
 
     # pull dependencies
-    if [ "$CL_FORCE" -ne 0 ]; then
+    if [ "$CMDLET_BUILD_FORCE" -ne 0 ]; then
         # check dependencies: force update
         for x in "${deps[@]}"; do
             rm -f "$PREFIX/.$x.d"
@@ -763,13 +789,13 @@ build() {
         # check dependencies: libraries updated or not ready
         for x in "${deps[@]}"; do
             test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
-            [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+            [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
-        package "${pkgfiles[@]}" || true # ignore errors
+        pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
+    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )"
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
@@ -787,31 +813,30 @@ build() {
 }
 
 # v3/git releases
-_is_flat_repo() { [[ "$REPO" =~ ^flat+ ]]; }
+_is_flat_repo() { [[ "$_REPO" =~ ^flat+ ]]; }
 
 _fetch_unzip_pkgfile() {
-    local dest
+    local zip
 
-    test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
+    test -n "$2" && zip="$2" || zip="$TEMPDIR/${1##*/}"
 
-    mkdir -p "${dest%/*}"
+    mkdir -p "${zip%/*}"
 
-    local arch="${PREFIX##*/}"
     if _is_flat_repo; then
-        slogi "== curl < $REPO/$arch/${1##*/}"
-        curl -fsSL -o "$dest" "${REPO#flat+}/$arch/${1##*/}" || return 1
+        slogi "💫 $_REPO/$_ARCH/${1##*/}"
+        _curl "${_REPO#flat+}/$_ARCH/${1##*/}" "$zip" || return 1
     else
-        slogi "== curl < $REPO/$arch/$1"
-        curl -fsSL -o "$dest" "$REPO/$arch/$1" || return 1
+        slogi "💫 $_REPO/$_ARCH/$1"
+        _curl "$_REPO/$_ARCH/$1" "$zip" || return 1
     fi
 
-    if [[ "$dest" =~ tar.gz$ ]]; then
-        tar -C "$PREFIX" -xvf "$dest"
+    if [[ "$zip" =~ \.tar\..*$ ]]; then
+        tar -C "$PREFIX" -xvf "$zip"
         echo ""
     fi
 }
 
-_pkgfile() {
+_fetch_pkgfile() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
@@ -835,15 +860,15 @@ _pkgfile() {
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
-                slogw "<< no package found"
+                slogw "🟠 no package found"
                 return 1
             }
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$MANIFEST" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_MANIFEST" | xargs )
     fi
 
     test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
@@ -856,15 +881,16 @@ _pkgfile() {
     touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
-package() {
-    slogi "📦 Fetch pkgfiles $*"
-    echo ""
+pkgfiles() {
+    slogi "☁️  Fetch pkgfiles $*"
 
-    _fetch_unzip_pkgfile cmdlets.manifest "$MANIFEST"
+    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
+
+    echo ""
 
     local ret=0 x
     for x in "$@"; do
-        _pkgfile "$x" || ret=$?
+        _fetch_pkgfile "$x" || ret=$?
     done
 
     return $?
@@ -874,12 +900,16 @@ package() {
 info() {
     _load "$1"
 
-    slogi "$libs_name:"
+    if test -z "$libs_desc"; then
+        libs_desc="$(grep "^#" "libs/$1.s" | grep -vE "vim:|#!" | head -n1 | sed 's/[# ]*//')"
+    fi
 
+    slogi "$libs_name: $libs_desc"
+    slogi "  libs_lic: ${libs_lic:-Unknown}"
     slogi "  libs_ver: $libs_ver"
     slogi "  libs_url: $libs_url"
-    slogi "  libs_dep: ${libs_dep[*]}"
-    slogi "         => $(depends "$1")"
+    slogi "    Dependencies : $(depends "$1")"
+    slogi "    Dependences  : $(rdepends "$1")"
 }
 
 search() {
@@ -888,15 +918,15 @@ search() {
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # libraries?
         slogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # headers?
         slogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$ROOT/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
@@ -930,28 +960,28 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_packages "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_package_name "$libs_url")" "$libs_sha" "$libs_url"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _fetch "$(_packages "$url")" "$sha" "$url"
+                _fetch "$(_package_name "$url")" "$sha" "$url"
             done
         fi
     done
 }
 
 arch() {
-    echo "${PREFIX##*/}"
+    echo "$_ARCH"
 }
 
 # zip files for release actions
 zip_files() {
     # log files
-    test -n "$(ls -A "$LOGFILES")" || return 0
-    "$TAR" -C "$LOGFILES" -cvf "$LOGFILES-logs.tar.gz" .
+    test -n "$(ls -A "$_LOGFILES")" || return 0
+    "$TAR" -C "$_LOGFILES" -cvf "$_LOGFILES-logs.tar.gz" .
 }
 
 env() {
@@ -959,44 +989,20 @@ env() {
 }
 
 clean() {
-    rm -rf "$WORKDIR" "$LOGFILES"
+    rm -rf "$_WORKDIR" "$_LOGFILES"
     exit 0 # always exit here
 }
 
 distclean() {
-    rm -rf "$PREFIX" && clean
+    rm -rf "$PREFIX" && clean || true
 }
 
 dist() {
-    build "$@" $(rdepends "$@" | tail -n1)
-}
+    local list=()
 
-# speed up prepare-host by making prerequisites.tar.gz
-#  input: [url]
-prerequisites() {
-    test -f "$PREFIX/prerequisites-0" && return 0
+    IFS=' ' read -r -a list < <(rdepends "$@")
 
-    # no prerequisites except for brew on macOS
-    which brew || return 0
-
-    # for _capture
-    export libs_name=prerequisites
-
-    cd "$PREFIX"
-    if test -n "$1"; then
-        for i in {0..9}; do
-            _curl "$1/${PREFIX##*/}/prerequisites-$i" "prerequisites-$i" || break
-        done
-
-        if test -f prerequisites-0; then
-            cat prerequisites-* | tar -C / -xz
-        fi
-    else
-        mkdir -pv "$libs_name" && cd "$libs_name"
-        tar -C / -czf "prerequisites.tar.gz" "$(brew --prefix)"
-        split -b 1G -d -a 1 prerequisites.tar.gz prerequisites-
-        rm prerequisites.tar.gz
-    fi
+    build "$@" "${list[@]}"
 }
 
 # update libs_ver
@@ -1009,16 +1015,8 @@ update() {
     # load again and fetch
     fetch "$1" || sloge "update $1 => $2 failed"
 
-    IFS=' ' read -r sha _ < <(sha256sum "$(_packages "$libs_url")")
+    IFS=' ' read -r sha _ < <(sha256sum "$(_package_name "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
-}
-
-#
-meson.configure() {
-    _init
-    . helpers.sh
-
-    meson configure
 }
 
 _on_exit() {
@@ -1030,7 +1028,7 @@ _on_exit() {
     rm -rf "$TEMPDIR"
 }
 
-export TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
+TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 _init || exit 110
 

@@ -26,7 +26,7 @@ jobs:
       - name: Fetch packages
         shell: bash
         run: |-
-          export CL_MIRRORS="${{ vars.MIRRORS }}"
+          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
 
           ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
 
@@ -84,7 +84,7 @@ jobs:
       - name: Build
         shell: bash
         run: |-
-          export CL_MIRRORS="${{ vars.MIRRORS }}"
+          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
           # fix: detected dubious ownership in repository

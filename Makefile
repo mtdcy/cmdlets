@@ -9,11 +9,11 @@ all: shell
 # DEFAULT ENVs
 
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
-#CL_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
-CL_NJOBS 	?= $(shell nproc)
-CL_MIRRORS 	?= https://mirrors.mtdcy.top
-CL_LOGGING 	?= tty
-CL_CCACHE 	?= 1
+#CMDLET_BUILD_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
+CMDLET_BUILD_NJOBS 	?= $(shell nproc)
+CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
+CMDLET_LOGGING 	?= tty
+CMDLET_CCACHE 	?= 1
 CL_DIST 	?= 0
 
 MAKEFLAGS 	+= --always-make
@@ -34,12 +34,12 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-CL_ENVS :=  CL_FORCE 		\
-			CL_NJOBS  		\
-			CL_LOGGING     	\
+CL_ENVS :=  CMDLET_BUILD_FORCE 		\
+			CMDLET_BUILD_NJOBS  		\
+			CMDLET_LOGGING     	\
 			CL_STRICT    	\
-			CL_MIRRORS    	\
-			CL_CCACHE 	   	\
+			CMDLET_MIRRORS    	\
+			CMDLET_CCACHE 	   	\
 
 ##############################################################################
 # Build Binaries & Libraries
