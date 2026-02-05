@@ -450,7 +450,9 @@ cargo.build() {
     _cargo_init
 
     # CL_NJOBS => CARGO_BUILD_JOBS
-    local std=( --release -vv )
+    local std=( -vv )
+
+    is_listed "--release" "$@" "${libs_args}" || std+=( --release )
 
     # If the --target flag (or build.target) is used, then
     # the build.rustflags will only be passed to the compiler for the target.
@@ -463,6 +465,7 @@ cargo.build() {
 cargo.requires() {
     _cargo_init
 
+    local x
     for x in "$@"; do
         (
             # follow cargo's setting instead of ours to build host tools
@@ -731,6 +734,7 @@ _pack() {
     local files=()
 
     # preprocessing installed files
+    local x
     for x in "${@:2}"; do
         # test won't work as file glob exists
         #test -e "$x" || die "$x not exists."
@@ -862,6 +866,7 @@ cmdlet.pkgfile() {
 # disclam specific version of cmdlet from manifest
 #  input: version ...
 cmdlet.disclaim() {
+    local x
     for x in "$@"; do
         sed -i "\#\ $libs_name/.*@$x#d" "$MANIFEST" || true
     done
@@ -920,6 +925,7 @@ cmdlet.install() {
     echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
 
     local alias=()
+    local x
     for x in "${@:3}"; do
         _ln "$target" "$PREFIX/bin/$x"
         alias+=( "$PREFIX/bin/$x" )
@@ -951,7 +957,7 @@ cmdlet.check() {
         } || true
     elif is_darwin; then
         CL_LOGGING=plain \
-        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib" && die "unexpected linked libraries" || true
+        echocmd otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
     elif is_msys; then
         CL_LOGGING=plain \
         echocmd ntldd "$bin"
@@ -1083,6 +1089,7 @@ hack.c.static() {
 # remove predefined variables in Makefile and use env instead
 #  input: Makefile variables...
 hack.makefile() {
+    local x
     for x in "${@:2}"; do
         case "$x" in
             *FLAGS) # append flags (only the first match)

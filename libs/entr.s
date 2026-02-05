@@ -26,7 +26,7 @@ libs_build() {
 
     cmdlet.install entr
 
-    cmdlet.check entr --version
+    cmdlet.check entr
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

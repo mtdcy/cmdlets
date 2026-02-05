@@ -56,8 +56,10 @@ libs_dep+=( libpng        ) && libs_args+=( --with-png     ) # PNG
 libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
 libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
 libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
-libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
-libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+#libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
+
+# SVG takes ~5M in executable
+#libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
 
 # openmp
 is_darwin || libs_args+=( --enable-openmp )
@@ -78,20 +80,20 @@ libs_build() {
 
     # testing
     check_magick_format() {
-        ./utilities/magick identify -list format | grep -m 1 -w " $1" || die "missing $1 support"
+        ./utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
     }
 
     for x in "${libs_dep[@]}"; do
         case "$x" in
-            libraw)         check_magick_format RAW     ;;
-            libjpeg-turbo)  check_magick_format JPEG    ;;
-            openjpeg)       check_magick_format J2K     ;;
-            libjxl)         check_magick_format JXL     ;;
-            libpng)         check_magick_format PNG     ;;
-            libtiff)        check_magick_format TIFF    ;;
-            libwebp)        check_magick_format WEBP    ;;
-            libheif)        check_magick_format HEIC    ;;
-            librsvg)        check_magick_format SVG     ;;
+            libraw)         check_magick_format raw     ;;
+            libjpeg-turbo)  check_magick_format jpeg    ;;
+            openjpeg)       check_magick_format jp2     ;;
+            libjxl)         check_magick_format jxl     ;;
+            libpng)         check_magick_format png     ;;
+            libtiff)        check_magick_format tiff    ;;
+            libwebp)        check_magick_format webp    ;;
+            libheif)        check_magick_format heic    ;;
+            librsvg)        check_magick_format svg     ;;
         esac
     done
 

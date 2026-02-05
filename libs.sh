@@ -16,8 +16,11 @@ export    CL_MIRRORS=${CL_MIRRORS:-}        # package mirrors, and go/cargo/etc
 export     CL_CCACHE=${CL_CCACHE:-0}        # enable ccache or not
 export      CL_NJOBS=${CL_NJOBS:-1}         # noparallel by default
 
+
 # toolchain prefix
 export CL_TOOLCHAIN_PREFIX=${CL_TOOLCHAIN_PREFIX:-$(uname -m)-unknown-linux-musl-}
+
+: "${REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
 if test -n "$CL_MIRRORS"; then
@@ -134,7 +137,7 @@ slogcmd() {
 #  ENV: COMMAND='xcrun --find'
 _init_tools() {
     local cmd="${COMMAND:-which}"
-    local k v p
+    local k v p x y
     for x in "$@"; do
         IFS=':' read -r k v <<< "$x"
 
@@ -318,9 +321,6 @@ _init() {
     export MACOSX_DEPLOYMENT_TARGET
     # msys
     export MSYS=winsymlinks:lnk
-
-    # cmdlets
-    [ -z "$CL_MIRRORS" ] || export REPO="$CL_MIRRORS/cmdlets/latest"
 }
 
 # _curl source destination [options]
@@ -509,6 +509,8 @@ _prepare() {
     # libs_url: support mirrors
     _fetch_unzip "$libs_sha" "${libs_url[@]}"
 
+    local x patch
+
     # libs_resources: no mirrors
     if test -n "${libs_resources[*]}"; then
         local url sha
@@ -645,6 +647,8 @@ _deps_init() {
 
     test -f "$DEPS_FILE" || true > "$DEPS_FILE"
 
+    local libs
+
     # generate dependencies map
     if test -s "$DEPS_FILE"; then
         while IFS='/' read -r _ libs; do
@@ -673,7 +677,7 @@ _deps_init() {
 depends() {
     _deps_init
 
-    local list=()
+    local list=() libs deps x
     while IFS=' ' read -r libs deps; do
         test -n "$deps" || continue
         is_listed "$libs" "$@" || continue
@@ -691,19 +695,22 @@ depends() {
 rdepends() {
     _deps_init
 
-    local list=()
+    local list=() libs x
     while IFS=' ' read -r libs _; do
         is_listed "$libs" "$@" && continue
-        is_listed "$libs" "${list[@]}" || list+=( "$libs" )
+
+        for x in "$libs" $(rdepends "$libs"); do
+            is_listed "$x" "${list[@]}" || list+=( "$x" )
+        done
     done < <(IFS='|'; grep -Ew "$*" "$DEPS_FILE")
 
-    [ "${#list[@]}" -gt 0 ] && echo "${list[@]}" "$(rdepends "${list[@]}")" || true
+    echo "${list[@]}"
 }
 
 _deps_sort() {
     _deps_init
 
-    local head tail
+    local head tail libs x
     for libs in "$@"; do
         # have dependencies => tail
         for x in $(depends "$libs"); do
@@ -723,8 +730,7 @@ _deps_sort() {
 }
 
 _check_deps() {
-    local sign
-    local sep=""
+    local sep="" sign x
     for x in "$@"; do
         test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
         printf "%s%s%s" "$sep" "$x" "$sign"
@@ -736,7 +742,7 @@ _check_deps() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    local deps
+    local deps x i targets=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
 
@@ -760,12 +766,10 @@ build() {
             [ "$ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
-        bash pkgfiles.sh "${pkgfiles[@]}" || true # ignore errors
+        package "${pkgfiles[@]}" || true # ignore errors
     fi
 
     slogi "Build" "$* (depends: $(_check_deps "${deps[@]}") )"
-
-    local targets=()
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
@@ -782,6 +786,90 @@ build() {
     done
 }
 
+# v3/git releases
+_is_flat_repo() { [[ "$REPO" =~ ^flat+ ]]; }
+
+_fetch_unzip_pkgfile() {
+    local dest
+
+    test -n "$2" && dest="$2" || dest="$TEMPDIR/${1##*/}"
+
+    mkdir -p "${dest%/*}"
+
+    local arch="${PREFIX##*/}"
+    if _is_flat_repo; then
+        slogi "== curl < $REPO/$arch/${1##*/}"
+        curl -fsSL -o "$dest" "${REPO#flat+}/$arch/${1##*/}" || return 1
+    else
+        slogi "== curl < $REPO/$arch/$1"
+        curl -fsSL -o "$dest" "$REPO/$arch/$1" || return 1
+    fi
+
+    if [[ "$dest" =~ tar.gz$ ]]; then
+        tar -C "$PREFIX" -xvf "$dest"
+        echo ""
+    fi
+}
+
+_pkgfile() {
+    local pkgname pkgvern pkginfo pkgfiles
+
+    # priority: v2 > v3, no v1 package
+
+    slogi "📦 Fetch package $1"
+
+    # zlib@1.3.1
+    IFS='@' read -r pkgname pkgvern <<< "$1"
+
+    # v2: latest version
+    : "${pkgvern:=latest}"
+
+    pkginfo="$pkgname/pkginfo@$pkgvern"
+
+    # prefer v2 pkginfo than v3 manifest for developers
+    if ! _is_flat_repo && _fetch_unzip_pkgfile "$pkginfo"; then
+        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+    else
+        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+
+        # v3: no pkgvern => find out latest version
+        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
+                slogw "<< no package found"
+                return 1
+            }
+        fi
+
+        # find all pkgfiles
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$MANIFEST" | xargs )
+    fi
+
+    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
+
+    local x
+    for x in "${pkgfiles[@]}"; do
+        _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
+    done
+
+    touch "$PREFIX/.$pkgname.d" # mark as ready
+}
+
+package() {
+    slogi "📦 Fetch pkgfiles $*"
+    echo ""
+
+    _fetch_unzip_pkgfile cmdlets.manifest "$MANIFEST"
+
+    local ret=0 x
+    for x in "$@"; do
+        _pkgfile "$x" || ret=$?
+    done
+
+    return $?
+}
+
 # print info of a library
 info() {
     _load "$1"
@@ -796,6 +884,7 @@ info() {
 
 search() {
     slogi "Search $PREFIX"
+    local x
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
@@ -835,6 +924,7 @@ load() {
 # fetch libname
 fetch() {
     slogi "fetch packages $*"
+    local libs x
     for libs in "$@"; do
         _load "$libs"
 

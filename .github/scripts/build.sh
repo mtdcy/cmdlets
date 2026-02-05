@@ -16,12 +16,6 @@ export CL_NJOBS="${CL_NJOBS:-1}"
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
-arch="$(bash libs.sh arch)"
-
-# tag to HEAD
-git tag -a "$arch" -m "$arch" --force
-git push origin "$arch" --force
-
 if which brew; then
     _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
     for x in "${_gnubin[@]}"; do
@@ -53,6 +47,9 @@ else
         # excludes
         [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
     done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
+
+    # build cmdlet and rdepends by default
+    rdepends=1
 fi
 
 # default test target
@@ -67,12 +64,12 @@ ret=0
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
-    bash libs.sh build "${cmdlets%-}" || ret=$?
-elif [[ "$cmdlets" =~ \+$ ]]; then
     export CL_FORCE=1
-    bash libs.sh build "${cmdlets%+}" || ret=$?
+    bash libs.sh build "${cmdlets[@]%-}" || ret=$?
+elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
+    bash libs.sh dist "${cmdlets[@]%+}" || ret=$?
 else
-    bash libs.sh dist "${cmdlets[@]}" || ret=$?
+    bash libs.sh build "${cmdlets[@]}" || ret=$?
 fi
 
 # for release actions
@@ -85,6 +82,14 @@ $(git show HEAD --stat)
 "
 
     curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
+fi
+
+if [ "$ret" -eq 0 ]; then
+    # update tags
+    arch="$(bash libs.sh arch)"
+    # tag to HEAD
+    git tag -a "$arch" -m "$arch" --force
+    git push origin "$arch" --force
 fi
 
 exit "$ret"

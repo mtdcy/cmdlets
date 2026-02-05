@@ -17,6 +17,7 @@ libs_args=(
     -DJPEGXL_ENABLE_JNI=OFF     # JNI java wrapper
     -DJPEGXL_ENABLE_JPEGLI=OFF
     -DJPEGXL_ENABLE_SKCMS=OFF   # use lcms2 instead
+    -DJPEGXL_ENABLE_SJPEG=OFF
 
     -DJPEGXL_VERSION="$libs_ver"
 
@@ -38,7 +39,7 @@ libs_args=(
     -DCMAKE_USE_PTHREADS_INIT=1
 )
 
-#is_arm64 && libs_args+=( -DJPEGXL_FORCE_NEON=ON )
+is_arm64 && libs_args+=( -DJPEGXL_FORCE_NEON=ON )
 
 libs_build() {
 

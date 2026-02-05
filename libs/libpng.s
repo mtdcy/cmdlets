@@ -26,7 +26,7 @@ libs_args=(
 libs_build() {
     configure
 
-    make.all
+    make
 
     # fix libpng-config
     #  1. always static
@@ -39,7 +39,7 @@ libs_build() {
         cmdlet.install "$x"
     done
 
-    cmdlet.check pngtest --version
+    cmdlet.check pngtest
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
