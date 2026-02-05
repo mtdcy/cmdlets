@@ -39,7 +39,7 @@ deparallelize() {
 }
 
 libs.depends() {
-    "$@" || { unset libs_dep libs_args libs_build; }
+    eval -- "$*" || { unset libs_dep libs_args libs_build; }
 }
 
 libs.requires() {
