@@ -16,12 +16,6 @@ export CL_NJOBS="${CL_NJOBS:-1}"
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
-arch="$(bash libs.sh arch)"
-
-# tag to HEAD
-git tag -a "$arch" -m "$arch" --force
-git push origin "$arch" --force
-
 if which brew; then
     _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
     for x in "${_gnubin[@]}"; do
@@ -88,6 +82,14 @@ $(git show HEAD --stat)
 "
 
     curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
+fi
+
+if [ "$ret" -eq 0 ]; then
+    # update tags
+    arch="$(bash libs.sh arch)"
+    # tag to HEAD
+    git tag -a "$arch" -m "$arch" --force
+    git push origin "$arch" --force
 fi
 
 exit "$ret"
