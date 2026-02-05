@@ -324,7 +324,7 @@ _cargo_init() {
     : "${CARGO_HOME:=$HOME/.cargo}"
 
     # a writable cargo home needed, refer to cargo.requires()
-    test -w "$CARGO_HOME" || CARGO_HOME="$WORKDIR/.cargo"
+    test -w "$CARGO_HOME" || CARGO_HOME="$_WORKDIR/.cargo"
 
     mkdir -pv "$CARGO_HOME/bin"
 
@@ -334,8 +334,8 @@ _cargo_init() {
     which rustup || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
 
     # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-    #  choose WORKDIR instead of HOME for docker buildings
-    test -f rust-toolchain.toml && RUSTUP_HOME="$WORKDIR/.rustup" || true
+    #  choose _WORKDIR instead of HOME for docker buildings
+    test -f rust-toolchain.toml && RUSTUP_HOME="$_WORKDIR/.rustup" || true
 
     mkdir -p "$RUSTUP_HOME"
 

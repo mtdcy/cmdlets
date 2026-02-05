@@ -36,7 +36,8 @@ if test -n "$_MIRRORS"; then
 fi
 
 # clear envs => setup by _init
-unset _ROOT PREFIX WORKDIR
+unset _ROOT _WORKDIR PREFIX
+# => PREFIX is a widely used variable
 
 
 # defaults
@@ -176,15 +177,15 @@ _init() {
 
     # prepare directories and files
     PREFIX="$_ROOT/prebuilts/$_ARCH_"
-    WORKDIR="$_ROOT/out/$_ARCH_"
+    _WORKDIR="$_ROOT/out/$_ARCH_"
     LOGFILES="$_ROOT/logs/$_ARCH_"
     MANIFEST="$PREFIX/cmdlets.manifest"
 
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$WORKDIR" "$LOGFILES"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}} "$_WORKDIR" "$LOGFILES"
 
     true > "$PREFIX/.ERR_MSG" # create a zero sized file
 
-    export _ROOT PREFIX WORKDIR LOGFILES MANIFEST
+    export _ROOT PREFIX _WORKDIR LOGFILES MANIFEST
 
     is_linux || unset CMDLET_TOOLCHAIN_PREFIX
 
@@ -600,7 +601,7 @@ compile() {
         test -n "$libs_url" || die "missing libs_url"
 
         # prepare work directories
-        local workdir="$WORKDIR/$libs_name-$libs_ver"
+        local workdir="$_WORKDIR/$libs_name-$libs_ver"
 
         mkdir -p "$PREFIX"
         mkdir -p "$workdir" && cd "$workdir"
@@ -650,7 +651,7 @@ _deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
 _deps_init() {
     #test -z "$DEPS_READY" || return
 
-    export DEPS_FILE="$WORKDIR/.dependencies"
+    export DEPS_FILE="$_WORKDIR/.dependencies"
 
     test -f "$DEPS_FILE" || true > "$DEPS_FILE"
 
@@ -965,7 +966,7 @@ env() {
 }
 
 clean() {
-    rm -rf "$WORKDIR" "$LOGFILES"
+    rm -rf "$_WORKDIR" "$LOGFILES"
     exit 0 # always exit here
 }
 
