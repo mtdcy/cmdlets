@@ -391,12 +391,12 @@ _cargo_init() {
     export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
     # FOO_STATIC - pass --static for the library foo
 
-    if [ -n "$CL_CARGO_REGISTRY" ]; then
+    if [ -n "$_CARGO_REGISTRY" ]; then
         # cargo
         local registry ver
         IFS='.' read -r _ ver _ < <("$CARGO" --version | grep -oE '[0-9\.]+')
         # cargo <= 1.68
-        [ "$ver" -le 68 ] && registry="$CL_CARGO_REGISTRY" || registry="sparse+$CL_CARGO_REGISTRY"
+        [ "$ver" -le 68 ] && registry="$_CARGO_REGISTRY" || registry="sparse+$_CARGO_REGISTRY"
         cat << EOF > "$CARGO_HOME/config.toml"
 [source.crates-io]
 replace-with = 'crates-io-mirrors'

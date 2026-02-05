@@ -31,7 +31,7 @@ export LANG=C
 # mirrors
 : "${_MIRRORS:=$CMDLET_MIRRORS}"
 if test -n "$_MIRRORS"; then
-    : "${CL_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
+    : "${_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
     : "${CL_GO_PROXY:=$_MIRRORS/gomods}"
 fi
 
