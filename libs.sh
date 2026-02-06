@@ -221,7 +221,7 @@ _init() {
     test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
 
     # check musl-gcc
-    : "${_TOOLCHAIN:=$(uname -m)-unknown-$(uname -s | tr A-Z a-z)-musl-}"
+    : "${_TOOLCHAIN:=$(uname -m)-$(uname -s | tr A-Z a-z)-musl-}"
     test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
 
     export _TOOLCHAIN
