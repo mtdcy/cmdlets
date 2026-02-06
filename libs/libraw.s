@@ -20,18 +20,20 @@ libs_args=(
     --disable-jasper    # JPEG-2000
 
     --disable-examples
-    --disable-docs
 
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    slogcmd autoreconf -fiv || return 1
+    bootstrap
 
-    configure && make || return 2
+    configure
 
-    pkgfile libraw -- make install
+    make
+
+    # no docs
+    pkgfile libraw -- make.install doc_DATA=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
