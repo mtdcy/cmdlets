@@ -15,17 +15,19 @@ libs_args=(
     # static only
     --disable-shared
     --enable-static
-    )
+)
 
 libs_build() {
-    configure && make || return $?
- 
-    # bin/kvazaar also been installed
-    pkgfile libkvazaar -- make install SUBDIRS=src &&
+    configure
 
-    cmdlet src/kvazaar && 
-    
-    check kvazaar --version
+    make
+
+    # bin/kvazaar also been installed
+    cmdlet.pkgfile libkvazaar -- make.install -C src bin_PROGRAMS=
+
+    cmdlet.install src/kvazaar
+
+    cmdlet.check kvazaar --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
