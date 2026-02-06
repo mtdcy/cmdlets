@@ -27,12 +27,6 @@ fi
 # make prepare-host fails on macos-15-intel
 test -n "$BUILDER_NAME" || make prepare-host || true
 
-# check packages artifacts
-find packages || true
-
-echo $PATH
-env | grep "^CMDLET_" | grep -v TOKEN || true
-
 cmdlets=()
 if test -n "$1"; then
     cmdlets=( "$1" ) # build single library manually
