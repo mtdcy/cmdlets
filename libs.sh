@@ -1006,7 +1006,7 @@ arch() {
 zip_files() {
     # log files
     test -n "$(ls -A "$_LOGFILES")" || return 0
-    "$TAR" -C "$_LOGFILES" -cvf "$_LOGFILES-logs.tar.gz" .
+    "$TAR" -C "$_LOGFILES" -cf "$_LOGFILES-logs.tar.gz" .
 }
 
 env() {
@@ -1049,7 +1049,7 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _fetch "$(_package_name "$libs_url")" "$libs_sha" "$libs_url" || die
+    _fetch "$(_package_name "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_package_name "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"

@@ -1,18 +1,18 @@
-# BSD
+# H.264 codec from Cisco
 #
 # shellcheck disable=SC2034
-
-libs_ver=1.8.0
+libs_lic="BSD-2-Clause"
+libs_ver=2.6.0
 libs_url=https://github.com/cisco/openh264/archive/v$libs_ver.tar.gz
-libs_sha=08670017fd0bb36594f14197f60bebea27b895511251c7c64df6cd33fc667d34
+libs_sha=558544ad358283a7ab2930d69a9ceddf913f4a51ee9bf1bfb9e377322af81a69
 
 libs_args=(
     PREFIX="'$PREFIX'"
 
     CC="'$CC'"
     CXX="'$CXX'"
-    CFLAGS="'$CFLAGS'" 
-    CXXFLAGS="'$CXXFLAGS'" 
+    CFLAGS="'$CFLAGS'"
+    CXXFLAGS="'$CXXFLAGS'"
     CPPFLAGS="'$CPPFLAGS'"
     LDFLAGS="'$LDFLAGS'"
 
@@ -20,14 +20,14 @@ libs_args=(
 )
 
 libs_build() {
-    make "${libs_args[@]}" &&
+    make "${libs_args[@]}"
 
-    pkgfile libopenh264 -- make install-static "${libs_args[@]}" &&
-    
-    cmdlet ./h264dec &&
-    cmdlet ./h264enc &&
+    pkgfile libopenh264 -- make install-static "${libs_args[@]}"
 
-    check h264dec
+    for x in h264dec h264enc; do
+        cmdlet.install "$x"
+        cmdlet.check "$x"
+    done
 }
 
 
