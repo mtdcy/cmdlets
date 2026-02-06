@@ -516,13 +516,13 @@ _go_init() {
 
     # see _cargo_init notes
 
-    # there is no predefined user level GOROOT
-    if ! which go; then
-        export GOROOT="${GOROOT:-$HOME/.goroot/current}"
-        export PATH="$GOROOT/bin:$PATH"
-    fi
+    # find go, prefer GOROOT
+    test -z "$GOROOT" && GO="$(which go)" || GO="$GOROOT/bin/go"
 
-    if ! which go; then
+    # install go
+    if ! test -x "$GO"; then
+        # there is no predefined user level GOROOT
+        GOROOT="${GOROOT:-$HOME/.goroot/current}"
         local system arch version
         is_darwin && system=darwin  || system=linux
         is_arm64  && arch=arm64     || arch=amd64
@@ -537,11 +537,13 @@ _go_init() {
 
         ln -sfv "$version" "$GOROOT"
         popd || die
+
+        GO="$GOROOT/bin/go"
     fi
 
-    GO="$(which go)" || die "missing host tool go."
+    test -x "$GO" || die "missing host tool go"
 
-    export GO
+    export GO GOROOT
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
     #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
