@@ -78,12 +78,12 @@ _slog() {
             message="[$date] \\033[32m$1\\033[39m ${*:2}"
             ;;
     esac
-    echo -e "$message"
+    echo -e "$message" >&2
 }
 
-slogi() { _slog info  "$@" >&2;             }
-slogw() { _slog warn  "$@" >&2;             }
-sloge() { _slog error "$@" >&2; return 1;   }
+slogi() { _slog info  "$@";             }
+slogw() { _slog warn  "$@";             }
+sloge() { _slog error "$@"; return 1;   }
 
 die()   {
     _tty_reset # in case Ctrl-C happens
