@@ -2,16 +2,12 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD'
-libs_ver=1.48.0
-libs_url=https://github.com/jpr5/ngrep/archive/refs/tags/v1.48.0.tar.gz
-libs_sha=49a20b83f6e3d9191c0b5533c0875fcde83df43347938c4c6fa43702bdbd06b4
+libs_ver=1.48.3
+libs_url=https://github.com/jpr5/ngrep/archive/refs/tags/v1.48.3.tar.gz
+libs_sha=7c69777c21cc491368b2f1fe057d1d44febcf42413a885b59badeade5264a066
 libs_dep=( libpcap pcre2 )
 
 libs_args=(
-    --disable-dependency-tracking
-    --disable-silent-rules
-    --disable-dependency-tracking
-
     --enable-ipv6
     --enable-pcre2
 )

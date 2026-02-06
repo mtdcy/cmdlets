@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 libs_lic="BSD-3-Clause"
-libs_ver=1.5.0
+libs_ver=1.6.0
 libs_url=https://github.com/webmproject/libwebp/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=668c9aba45565e24c27e17f7aaf7060a399f7f31dba6c97a044e1feacb930f37
+libs_sha=93a852c2b3efafee3723efd4636de855b46f9fe1efddd607e1f42f60fc8f2136
 libs_dep=(libpng giflib libtiff libjpeg-turbo)
 
 libs_args=(

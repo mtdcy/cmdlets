@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='LGPLv2.1+'
-libs_ver=3.4.7
-libs_url=https://github.com/mariadb-corporation/mariadb-connector-c/archive/refs/tags/v3.4.7.tar.gz
-libs_sha=cf81cd1c71c3199da9d2125aee840cb6083d43e1ea4c60c4be5045bfc7824eba
+libs_ver=3.4.8
+libs_url=https://github.com/mariadb-corporation/mariadb-connector-c/archive/refs/tags/v3.4.8.tar.gz
+libs_sha=ced7e5063c91fe2bfafd9d63a759490fe53e81df80599a9abad01c570c202f0c
 libs_dep=( zlib zstd krb5 curl openssl )
 
 libs_args=(

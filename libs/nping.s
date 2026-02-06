@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=0.5.0
-libs_url=https://github.com/hanshuaikang/Nping/archive/refs/tags/v0.5.0.tar.gz
-libs_sha=0ba70f55fc126445b8c57be234c2eb355939336c731c8209b320bd89b85cac50
+libs_ver=0.6.0
+libs_url=https://github.com/hanshuaikang/Nping/archive/refs/tags/v0.6.0.tar.gz
+libs_sha=07ca7ce514b9e9584c33fc6e75c4b4974845deb348833cf92814a34ef4cbaca3
 libs_dep=( )
 
 libs_args=(
