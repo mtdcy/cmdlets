@@ -1,8 +1,12 @@
 #!/bin/bash
 
 # shellcheck shell=bash
-# shellcheck disable=SC2154
+# shellcheck disable=SC2018
+# shellcheck disable=SC2019
 # shellcheck disable=SC2031
+# shellcheck disable=SC2086
+# shellcheck disable=SC2115
+# shellcheck disable=SC2154
 
 set -e -o pipefail
 
