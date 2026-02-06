@@ -121,15 +121,15 @@ _cmake_init() {
     export LIBS_BUILDDIR
 
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-    export CC="${CC/ccache\ /}"
-    export CXX="${CXX/ccache\ /}"
+    export CC="${CC#ccache }"
+    export CXX="${CXX#ccache }"
     # asm
     is_arm64 || {
         export CMAKE_ASM_NASM_COMPILER="$NASM"
         export CMAKE_ASM_YASM_COMPILER="$YASM"
     }
     # compatible
-    if "$CMAKE" --version | grep -Fq 'version 4.'; then
+    if _version_ge "$("$CMAKE" --version | grep -oE "[0-9.]+" -m1)" "4.0"; then
         export CMAKE_POLICY_VERSION_MINIMUM=3.5
     fi
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
