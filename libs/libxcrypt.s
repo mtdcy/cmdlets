@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic="LGPL-2.1-or-later"
-libs_ver=4.5.0
+libs_ver=4.5.1
 libs_url=https://github.com/besser82/libxcrypt/releases/download/v$libs_ver/libxcrypt-$libs_ver.tar.xz
-libs_sha=825e764e4ff2e6304adb814cda297074b222d54a04edbd8ebc7cf58fc3af857d
+libs_sha=e9b46a62397c15372935f6a75dc3929c62161f2620be7b7f57f03d69102c1a86
 libs_dep=( )
 
 libs_args=(
