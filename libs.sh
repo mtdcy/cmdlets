@@ -148,16 +148,18 @@ _capture_stderr() {
 #   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
     # stderr: grep won't filter out the command
-    echo "$@" | _capture_stderr
+    echo "$@" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
-    eval -- "$*" 2>&1 | _capture
+    #  => logging as plain by default so grep will works
+    eval -- "$*" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
 }
 
 # slogcmd <command>
 slogcmd() {
     slogi "..Run" "$@" >&2
-    echocmd "$@"
+
+    _LOGGING="${_LOGGING:-silent}" echocmd "$@"
 }
 
 # find out executables and export envs
