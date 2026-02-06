@@ -647,6 +647,7 @@ compile() {
         # clear and log all environments
         {
             echo -e "**** start build $libs_name ****\n$(date)\n"
+            echo -e "PATH: $PATH\n"
             echo -e "----\n"
             env
             echo -e "----\n"
