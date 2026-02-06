@@ -641,8 +641,13 @@ compile() {
         mkdir -p "$PREFIX"
         mkdir -p "$workdir" && cd "$workdir"
 
-        # clear logfile
-        echo -e "**** start build $libs_name ****\n$(date)\n" > "$_LOGFILE"
+        # clear and log all environments
+        {
+            echo -e "**** start build $libs_name ****\n$(date)\n"
+            echo -e "----\n"
+            env
+            echo -e "----\n"
+        } > "$_LOGFILE"
 
         slogi ".Path" "${PWD#"$_ROOT/"}"
 
