@@ -6,15 +6,15 @@ all: shell
 
 .PHONY: all
 
-# DEFAULT ENVs
+# options
+DIST ?= 0
 
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
 #CMDLET_BUILD_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
 CMDLET_BUILD_NJOBS 	?= $(shell nproc)
-CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
-CMDLET_LOGGING 	?= tty
-CMDLET_CCACHE 	?= 1
-CL_DIST 	?= 0
+CMDLET_MIRRORS 		?= https://mirrors.mtdcy.top
+CMDLET_LOGGING 		?= tty
+CMDLET_CCACHE 		?= 1
 
 MAKEFLAGS 	+= --always-make
 
@@ -34,12 +34,11 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-CL_ENVS :=  CMDLET_BUILD_FORCE 		\
-			CMDLET_BUILD_NJOBS  		\
-			CMDLET_LOGGING     	\
-			CL_STRICT    	\
-			CMDLET_MIRRORS    	\
-			CMDLET_CCACHE 	   	\
+ENVS := CMDLET_BUILD_FORCE \
+		CMDLET_BUILD_NJOBS \
+		CMDLET_LOGGING     \
+		CMDLET_MIRRORS     \
+		CMDLET_CCACHE      \
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -49,7 +48,7 @@ CL_ENVS :=  CMDLET_BUILD_FORCE 		\
 vpath %.s libs
 
 %: %.s
-ifeq ($(CL_DIST),1)
+ifneq ($(DIST),0)
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $@"
 else
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
@@ -141,10 +140,10 @@ else ifneq (,$(shell which apk))
 prepare-host: prepare-host-alpine
 endif
 
-HOST_ENV := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v))))
+HOST_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v))))
 
 runc-host:
-	$(HOST_ENV) $(OPCODE)
+	$(HOST_ENVS) $(OPCODE)
 
 ##############################################################################
 ifneq ($(DOCKER_IMAGE),)
@@ -215,7 +214,7 @@ DOCKER_ARGS += -w $(WORKDIR)
 DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
 
 # envs
-DOCKER_ARGS += $(foreach v,$(CL_ENVS),$(if $($(v)),-e $(v)=$($(v))))
+DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
 
 ifeq ($(shell test -t 0 && echo tty),tty)
 DOCKER_RUNC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE)
@@ -235,7 +234,7 @@ ifneq ($(REMOTE_HOST),)
 # remote:
 REMOTE_WORKDIR ?= cmdlets
 
-SSH_ENVS := $(foreach v,$(CL_ENVS),$(if $($(v)),$(v)=$($(v)),))
+SSH_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),))
 
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
