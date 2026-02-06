@@ -14,6 +14,11 @@ git.version() {
     git rev-parse --short HEAD
 }
 
+# 2026-02-06T21:05:01
+date.iso8601() {
+    date +%Y-%m-%dT%H:%M:%S
+}
+
 deparallelize() {
     export _NJOBS=1
 }
