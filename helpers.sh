@@ -339,7 +339,7 @@ _cargo_init() {
     export PATH="$CARGO_HOME/bin:$PATH"
 
     # find out right rustup home
-    which rustup || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
+    which rustup &>/dev/null || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
 
     # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
     #  choose _WORKDIR instead of HOME for docker buildings
@@ -354,18 +354,19 @@ _cargo_init() {
         export RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT
     fi
 
-    if ! which rustup; then
+    if ! which rustup &>/dev/null; then
         RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
-        if which rustup-init; then
-            rustup-init "${RUSTUP_INIT_OPTS[@]}"
+        if which rustup-init &>/dev/null; then
+            _LOGGING=silent echocmd rustup-init "${RUSTUP_INIT_OPTS[@]}"
         else
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${RUSTUP_INIT_OPTS[@]}"
+            _LOGGING=silent echocmd "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- ${RUSTUP_INIT_OPTS[*]}"
         fi
     fi
 
     # docker image RUSTUP_HOME may not be writable
     if test -w "$RUSTUP_HOME"; then
-        rustup default || rustup default stable
+        _LOGGING=silent echocmd rustup default ||
+        _LOGGING=silent echocmd rustup default stable
     fi
 
     CARGO="$(rustup which cargo)" || die "missing host tool cargo"
@@ -379,7 +380,7 @@ _cargo_init() {
     export CARGO_BUILD_JOBS="$_NJOBS"
 
     # search for libraries in PREFIX
-    CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib"
+    CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib -C linker=$LD"
 
     if is_linux; then
         # static linked C runtime
@@ -443,7 +444,8 @@ cargo.setup() {
     local rustflags=()
     while [ $# -gt 0 ]; do
         case "$1" in
-            -l*)    rustflags+=( -l "static=${1#-l}" );     ;;
+            -l)     rustflags+=( -l "static=$2" )           ;;
+            -l*)    rustflags+=( -l "static=${1#-l}" )      ;;
             -L)     rustflags+=( -L "$2" ); shift 1         ;;
             -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
             *)
@@ -451,7 +453,11 @@ cargo.setup() {
         shift 1
     done
 
-    test -z "$rustflags" || export RUSTFLAGS+=" ${rustflags[*]}"
+    test -n "${rustflags[*]}" || return 0
+
+    RUSTFLAGS+=" $CARGO_BUILD_RUSTFLAGS ${rustflags[*]}"
+
+    export RUSTFLAGS
 }
 
 cargo.build() {
