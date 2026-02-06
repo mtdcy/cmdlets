@@ -14,17 +14,20 @@ libs_args=(
     --disable-dependency-tracking
     --enable-silent-rules
 
-    --enable-pic
-
     # static only
     --disable-shared
     --enable-static
 )
 
 libs_build() {
-    configure && make && make check || return $?
+    configure
 
-    pkgfile liblzo2 -- make install install-data
+    make
+
+    make check
+
+    # no doc
+    pkgfile liblzo2 -- make.install doc_DATA=
 }
 
 
