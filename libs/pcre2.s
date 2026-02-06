@@ -1,4 +1,4 @@
-
+# Perl compatible regular expressions library with a new API
 #
 # shellcheck disable=SC2034
 libs_des="Perl compatible regular expressions library with a new API"
@@ -25,7 +25,9 @@ libs_args=(
 )
 
 libs_build() {
-    configure  && make || return $?
+    configure
+
+    make
 
     # fix pcre2-config
     #  1. replace hardcoded PREFIX, refer to helpers.sh:_pack()
@@ -34,7 +36,7 @@ libs_build() {
         -e 's/echo \$includes *$/& -DPCRE2_STATIC/'
 
     # no prograns or docs
-    pkgfile libpcre2 -- make install \
+    pkgfile libpcre2 -- make.install \
         bin_PROGRAMS=                \
         dist_man_MANS=               \
         dist_doc_DATA=               \
@@ -43,6 +45,7 @@ libs_build() {
     for x in pcre2grep pcre2test; do
         cmdlet.install "$x"
     done
+
     cmdlet.check pcre2grep --version
 }
 

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=4.48.1
-libs_url=https://github.com/mikefarah/yq/archive/refs/tags/v4.48.1.tar.gz
-libs_sha=591158368f8155421bd8821754a67b4478ee2cde205b7abfbf2d50f90769cf0e
+libs_ver=4.48.2
+libs_url=https://github.com/mikefarah/yq/archive/refs/tags/v4.48.2.tar.gz
+libs_sha=af464e5c227ad3894628de65db2996db0e4716a16388eaf08bfa73e93ad0604e
 
 libs_args=(
 )

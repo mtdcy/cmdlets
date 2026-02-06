@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=Apache-2.0
-libs_ver=0.15.0
-libs_url=https://github.com/domcyrus/rustnet/archive/refs/tags/v0.15.0.tar.gz
-libs_sha=9fa251bbce11c4ff6f58ba57e08efbec94b2a031cd3d102d2ce45f0611d4f42e
+libs_ver=0.18.0
+libs_url=https://github.com/domcyrus/rustnet/archive/refs/tags/v0.18.0.tar.gz
+libs_sha=adc2a15e0ac7be2940ef0aaa070530e222935457fd5487eaec3176b1b808153b
 
 # macOS: use system libpcap
 is_linux && libs_dep=( libpcap elfutils )

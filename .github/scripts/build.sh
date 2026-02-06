@@ -9,8 +9,8 @@ info "build $*"
 pwd -P
 bash --version
 
-export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
-export CMDLET_CCACHE="${CMDLET_CCACHE:-0}"
+export CMDLET_LOGGING=silent
+export CMDLET_CCACHE=0
 export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 
 # need to run configure as root
@@ -26,12 +26,6 @@ fi
 
 # make prepare-host fails on macos-15-intel
 test -n "$BUILDER_NAME" || make prepare-host || true
-
-# check packages artifacts
-find packages || true
-
-echo $PATH
-env | grep "^CMDLET_" | grep -v TOKEN || true
 
 cmdlets=()
 if test -n "$1"; then

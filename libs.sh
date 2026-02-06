@@ -1,8 +1,12 @@
 #!/bin/bash
 
 # shellcheck shell=bash
-# shellcheck disable=SC2154
+# shellcheck disable=SC2018
+# shellcheck disable=SC2019
 # shellcheck disable=SC2031
+# shellcheck disable=SC2086
+# shellcheck disable=SC2115
+# shellcheck disable=SC2154
 
 set -e -o pipefail
 
@@ -148,16 +152,18 @@ _capture_stderr() {
 #   --prefix="'$PREFIX'"                # must be quoted twice
 echocmd() {
     # stderr: grep won't filter out the command
-    echo "$@" | _capture_stderr
+    echo "$@" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
-    eval -- "$*" 2>&1 | _capture
+    #  => logging as plain by default so grep will works
+    eval -- "$*" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
 }
 
 # slogcmd <command>
 slogcmd() {
     slogi "..Run" "$@" >&2
-    echocmd "$@"
+
+    _LOGGING="${_LOGGING:-silent}" echocmd "$@"
 }
 
 # find out executables and export envs
@@ -393,7 +399,7 @@ _fetch() {
         slogi ".FILE" "${zip#"$_ROOT/"}"
 
         # verify sha only if it exists
-        test -n "$2" || return 0
+        test -n "$sha" || return 0
 
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
@@ -408,8 +414,7 @@ _fetch() {
     if test -n "$_MIRRORS"; then
         mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
         slogi ".CURL" "$mirror"
-        _curl "$mirror" "$zip" ||
-        rm -f "$zip"
+        _curl "$mirror" "$zip" || rm -f "$zip"
     fi
 
     #3. try originals
@@ -420,7 +425,7 @@ _fetch() {
         done
     fi
 
-    test -f "$zip" || die "curl $1 failed."
+    test -f "$zip" || die ".CURL" "fetch $3 failed."
 
     slogi ".FILE" "$(sha256sum "$zip")"
     return 0
@@ -639,8 +644,14 @@ compile() {
         mkdir -p "$PREFIX"
         mkdir -p "$workdir" && cd "$workdir"
 
-        # clear logfile
-        echo -e "**** start build $libs_name ****\n$(date)\n" > "$_LOGFILE"
+        # clear and log all environments
+        {
+            echo -e "**** start build $libs_name ****\n$(date)\n"
+            echo -e "PATH: $PATH\n"
+            echo -e "----\n"
+            env
+            echo -e "----\n"
+        } > "$_LOGFILE"
 
         slogi ".Path" "${PWD#"$_ROOT/"}"
 
@@ -1012,25 +1023,38 @@ distclean() {
 }
 
 dist() {
-    local list=()
+    local list=() x
 
     IFS=' ' read -r -a list < <(rdepends "$@")
 
-    build "$@" "${list[@]}"
+    # support continue after failure
+    for x in "$@" $(rdepends "$@"); do
+        test -e "$PREFIX/.$x.d" || list+=( "$x" )
+    done
+
+    build "${list[@]}"
 }
 
-# update libs_ver
+# update libs to new version or die
+#  input: name version
 update() {
-    load "$1"
+    _load "$1"
 
-    slogi "update $1 $libs_ver => $2"
-    sed "/libs_ver=/,/libs_build/s/$libs_ver/$2/g" -i "libs/$1.s" || sloge "update $1 failed"
+    slogi ">>>>> update $1 $libs_ver => $2 <<<<<"
+    sed -i "libs/$1.s" \
+        -e "/libs_ver=/,/libs_build/s/$libs_ver/$2/g" \
+        -e "/libs_sha=/s/=.*$/=/" || die
+
+    # load again
+    _load "$1"
 
     # load again and fetch
-    fetch "$1" || sloge "update $1 => $2 failed"
+    _fetch "$(_package_name "$libs_url")" "$libs_sha" "$libs_url" || die
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_package_name "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
+
+    slogw "<<<<< updated $libs_name => $libs_ver >>>>>"
 }
 
 _on_exit() {

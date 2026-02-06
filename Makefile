@@ -54,14 +54,14 @@ else
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 endif
 
-dist:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
-
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
 
 distclean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
+
+release:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
 
 inspect:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"

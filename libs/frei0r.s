@@ -1,10 +1,11 @@
 # free video effect plugin collection
 
 # shellcheck disable=SC2034
-libs_lic="GPL"
-libs_ver=2.3.3
+libs_lic="GPLv2"
+libs_ver=2.5.1
 libs_url=https://github.com/dyne/frei0r/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=aeeefe3a9b44761b2cf110017d2b1dfa2ceeb873da96d283ba5157380c5d0ce5
+libs_sha=318ec4a3042c94a00a58fccdc1eb0d911f36a22beb3504d27aefcca4598f40b0
+libs_dep=()
 
 libs_args=(
     -DWITHOUT_OPENCV=ON
@@ -12,18 +13,15 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p build &&
+    # Disable opportunistic linking against Cairo
+    sed -i CMakeLists.txt \
+        -e 's/find_package (Cairo)//'
 
-    cd build &&
+    cmake.setup
 
-    cmake .. &&
+    cmake.build
 
-    make &&
-
-    pkginst libfrei0r                             \
-        include ../include/frei0r.h               \
-        lib/frei0r $(find . -name "*.so" | xargs) \
-        lib/pkgconfig frei0r.pc
+    pkgfile libfrei0r -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

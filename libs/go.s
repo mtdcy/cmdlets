@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="BSD-3-Clause"
-libs_ver=1.25.3
+libs_ver=1.25.4
 libs_url=https://go.dev/dl/go$libs_ver.src.tar.gz
-libs_sha=a81a4ba593d0015e10c51e267de3ff07c7ac914dfca037d9517d029517097795
+libs_sha=160043b7f17b6d60b50369436917fda8d5034640ba39ae2431c6b95a889cc98c
 
 libs_build() {
     _go_init
