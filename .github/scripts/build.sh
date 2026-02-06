@@ -9,8 +9,8 @@ info "build $*"
 pwd -P
 bash --version
 
-export CMDLET_LOGGING="${CMDLET_LOGGING:-silent}"
-export CMDLET_CCACHE="${CMDLET_CCACHE:-0}"
+export CMDLET_LOGGING=silent
+export CMDLET_CCACHE=0
 export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 
 # need to run configure as root

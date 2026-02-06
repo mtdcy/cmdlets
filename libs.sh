@@ -1022,11 +1022,16 @@ distclean() {
 }
 
 dist() {
-    local list=()
+    local list=() x
 
     IFS=' ' read -r -a list < <(rdepends "$@")
 
-    build "$@" "${list[@]}"
+    # support continue after failure
+    for x in "$@" $(rdepends "$@"); do
+        test -e "$PREFIX/.$x.d" || list+=( "$x" )
+    done
+
+    build "${list[@]}"
 }
 
 # update libs to new version or die
