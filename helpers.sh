@@ -62,6 +62,17 @@ _version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
 version.ge() { _version_ge "$libs_ver" "$1"; }
 version.le() { _version_le "$libs_ver" "$1"; }
 
+bootstrap() {
+    if test -f autogen.sh; then
+        slogcmd ./autogen.sh    || die "autogen.sh failed."
+    elif test -f bootstrap; then
+        slogcmd ./bootstrap     || die "bootstrap failed."
+    elif test -f configure.ac; then
+        slogcmd autoreconf -fiv || die "autoreconf failed."
+    fi
+}
+
+# shellcheck disable=SC2128
 configure() {
     _setup
 
@@ -69,20 +80,9 @@ configure() {
 
     test -f configure && cmdline=( ./configure ) || cmdline=( ../configure )
 
-    # shellcheck disable=SC2128
-    if ! test -f "$cmdline"; then
-        if test -f autogen.sh; then
-            slogcmd ./autogen.sh
-        elif test -f bootstrap; then
-            slogcmd ./bootstrap
-        elif test -f configure.ac; then
-            slogcmd autoreconf -fis
-        else
-            die "no configure found"
-        fi
+    test -f "$cmdline" || { bootstrap && cmdline=( ./configure ); }
 
-        cmdline=( ./configure )
-    fi
+    test -f "$cmdline" || die "configure not found."
 
     cmdline+=( --prefix="$PREFIX" )
 
