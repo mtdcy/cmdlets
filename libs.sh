@@ -1084,7 +1084,7 @@ update() {
 
 _on_exit() {
     # show ccache statistics
-    test -n "$CCACHE_DISABLE" || ccache -d "$CCACHE_DIR" -s
+    test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s
 
     rm -rf "$TEMPDIR"
 }
