@@ -3,6 +3,7 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.5    - 20260208      - fix update command
 #  1.0.4    - 20260207      - add force update cmd in case manifest broken
 #                           - fix `readlink: xxx: No such file or directory'
 #  1.0.3    - 20260202      - add caveats command
@@ -648,7 +649,11 @@ invoke() {
             ;;
         update)
             if test -n "$2"; then
-                fetch "$2" || ret=$?
+                for x in "${@:2}"; do
+                    fetch "$x" --install || ret=$?
+                done
+            elif test -L "$0"; then
+                update
             else
                 install
             fi
