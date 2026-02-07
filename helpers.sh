@@ -522,33 +522,46 @@ _go_init() {
     # see _cargo_init notes
 
     # find go, prefer GOROOT
-    test -z "$GOROOT" && GO="$(which go)" || GO="$GOROOT/bin/go"
+    test -n "$GOROOT" && GO="$GOROOT/bin/go" || GO="$(which go)"
 
-    # install go
+    # install go to HOME
     if ! test -x "$GO"; then
         # there is no predefined user level GOROOT
-        GOROOT="${GOROOT:-$HOME/.goroot/current}"
-        local system arch version
-        is_darwin && system=darwin  || system=linux
-        is_arm64  && arch=arm64     || arch=amd64
-        version="$(curl https://go.dev/VERSION?m=text | head -n1)"
-
-        mkdir -pv "${GOROOT%/*}" && pushd "${GOROOT%/*}" || die
-
-        test -d "$version" || {
-            curl -fsSL "https://go.dev/dl/$version.$system-$arch.tar.gz" | "$TAR" -xz
-            mv go "$version"
-        }
-
-        ln -sfv "$version" "$GOROOT"
-        popd || die
+        #  => multiple version supported
+        GOROOT="$HOME/.goroot/current"
 
         GO="$GOROOT/bin/go"
+        if ! test -x "$GO"; then
+            local system arch gover
+
+            is_darwin && system=darwin  || system=linux
+            is_arm64  && arch=arm64     || arch=amd64
+
+            gover="$(curl "https://go.dev/VERSION?m=text" | head -n1)"
+
+            mkdir -p "${GOROOT%/*}"
+            pushd "${GOROOT%/*}"
+
+            if ! test -d "$gover"; then
+                cd "${GOROOT%/*}"
+                curl -fsSL "https://go.dev/dl/$gover.$system-$arch.tar.gz" | "$TAR" -xz
+                mv go "$gover"
+            fi
+
+            # link as current
+            rm -rf "$GOROOT"
+            echocmd ln -sfv "$gover" "$GOROOT"
+
+            popd || die
+        fi
     fi
 
     test -x "$GO" || die "missing host tool go"
 
     export GO GOROOT
+
+    # exec: "go": executable file not found in $PATH
+    test -z "$GOROOT" || export PATH="$GOROOT/bin:$PATH"
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
     #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
