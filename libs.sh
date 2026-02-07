@@ -597,6 +597,9 @@ _load() {
     # default values:
     test -n "$libs_name" || libs_name="$name"
 
+    # update libs_dep to libs_deps, make old build compatible
+    test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
+
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
@@ -696,7 +699,7 @@ compile() {
 }
 
 # load libs_deps
-_deps_load() {( _load "$1" &>/dev/null; echo "${libs_dep[@]}"; )}
+_deps_load() {( _load "$1" &>/dev/null; echo "${libs_deps[@]}"; )}
 
 # generate or update dependencies map
 _deps_init() {
