@@ -124,7 +124,7 @@ APK_PACKAGES 	= wget curl git                                    \
 
 prepare-host-homebrew:
 	brew update
-	brew install $(BREW_PACKAGES)
+	brew install --quiet $(BREW_PACKAGES)
 
 prepare-host-debian:
 	sudo apt-get update
