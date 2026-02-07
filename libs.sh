@@ -93,7 +93,7 @@ sloge() { _slog error "$@"; return 1;   }
 
 die()   {
     _tty_reset # in case Ctrl-C happens
-    _slog error "$@"
+    test -z "$*" || _slog error "....." "$@"
     exit 1 # exit shell
 }
 
@@ -427,10 +427,11 @@ _fetch() {
         done
     fi
 
-    test -f "$zip" || die ".CURL" "fetch $3 failed."
-
-    slogi ".FILE" "$(sha256sum "$zip")"
-    return 0
+    if test -f "$zip"; then
+        slogi ".FILE" "$(sha256sum "$zip")"
+    else
+        sloge ".CURL" "fetch $3 failed." || die
+    fi
 }
 
 # unzip file to current dir, or exit program
@@ -674,14 +675,12 @@ compile() {
 
         # build library
         ( libs_build ) || {
-            sloge "build $libs_name@$libs_ver failed"
-
-            sleep 1 # let _capture() finish
+            sloge "<<<<<" "build $libs_name@$libs_ver failed"
 
             mv "$_LOGFILE" "$_LOGFILE.fail"
             tail -v "$_LOGFILE.fail"
 
-            exit 127
+            wait && exit 127
         }
 
         # update tracking file
@@ -804,7 +803,7 @@ build() {
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
     echo ""
 
-    local deps x i targets=()
+    local deps x i targets=() fails=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
 
@@ -831,21 +830,30 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )" || die "dependencies not ready"
-
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || targets+=( "$x" )
     done
 
-    # append targets
+    # sort and append targets
     targets+=( $(_deps_sort "$@") )
 
-    for i in "${!targets[@]}"; do
-        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
+    slogi "Build" "${targets[*]}"
 
-        time compile "${targets[i]}" || die "build ${targets[i]} failed."
+    set +x
+
+    # continue on error
+    for i in "${!targets[@]}"; do
+        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status $(depends "${targets[i]}")) )" || {
+            slogw "<<<<<" "dependencies not ready"
+            fails+=( "${targets[i]}" )
+            continue
+        }
+
+        time compile "${targets[i]}" || fails+=( "${targets[i]}" )
     done
+
+    test -z "${fails[*]}" || sloge "build failed: ${fails[*]}"
 }
 
 # v3/git releases
