@@ -793,6 +793,9 @@ _deps_status() {
 # build targets and its dependencies
 # build <lib list>
 build() {
+    slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
+    echo ""
+
     local deps x i targets=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
@@ -1072,7 +1075,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 _init || exit 110
 
 if [[ "$0" =~ libs.sh$ ]]; then
-    cd "$(dirname "$0")" && "$@" || exit $?
+    "$@" && wait || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
