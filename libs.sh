@@ -355,17 +355,6 @@ _init() {
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
 
-    # ccache
-    if [ "$CMDLET_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
-        CC="ccache $CC"
-        CXX="ccache $CXX"
-        # make clean should not clear ccache
-        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
-        export CC CXX CCACHE_DIR
-    else
-        export CCACHE_DISABLE=1
-    fi
-
     # macos
     export MACOSX_DEPLOYMENT_TARGET
     # msys
@@ -617,8 +606,24 @@ _load() {
 
 # compile target
 compile() {
+    # initial build args
+    if test -z "$CCACHE_DISABLE"; then
+        # only compile job need ccache
+        which ccache &>/dev/null    || CCACHE_DISABLE=1
+        [ "$CMDLET_CCACHE" -ne 0 ]  || CCACHE_DISABLE=1
+
+    fi
+
+    if test -z "$CCACHE_DISABLE" || [ "$CCACHE_DISABLE" -ne 1 ]; then
+        CC="ccache $CC"
+        CXX="ccache $CXX"
+        # make clean should not clear ccache
+        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
+        export CC CXX CCACHE_DIR
+    fi
+    export CCACHE_DISABLE
+
     ( # always start subshell before _load()
-        # initial build args
 
         trap _tty_reset EXIT
 
@@ -830,6 +835,10 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
+    slogi "BUILD" "$*"
+
+    test -z "${deps[*]}" || slogi ".DEPS" "$(_deps_status "${deps[@]}")"
+
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || targets+=( "$x" )
@@ -838,13 +847,11 @@ build() {
     # sort and append targets
     targets+=( $(_deps_sort "$@") )
 
-    slogi "Build" "${targets[*]}"
-
-    set +x
-
     # continue on error
     for i in "${!targets[@]}"; do
-        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status $(depends "${targets[i]}")) )" || {
+        echo ""
+        IFS=' ' read -r -a deps < <(depends "${targets[i]}")
+        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${deps[@]}") )" || {
             slogw "<<<<<" "dependencies not ready"
             fails+=( "${targets[i]}" )
             continue
@@ -974,18 +981,16 @@ search() {
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
-        if $PKG_CONFIG --exists "$x"; then
+        if $PKG_CONFIG --exists --print-errors --short-errors "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
-            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
-        elif $PKG_CONFIG --exists "lib$x"; then
-            x="lib$x"
-
-            slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
-            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "PREFIX  : $($PKG_CONFIG --variable=prefix "$x")"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "$x"   )"
+        elif [[ ! "$x" =~ ^lib ]] && $PKG_CONFIG --exists --print-errors --short-errors "lib$x"; then
+            slogi ".Found lib$x @ $($PKG_CONFIG --modversion "lib$x")"
+            echo "PREFIX  : $($PKG_CONFIG --variable=PREFIX="$PREFIX" "lib$x" )"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "lib$x" )"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "lib$x"   )"
         fi
     done
 }
@@ -1079,9 +1084,7 @@ update() {
 
 _on_exit() {
     # show ccache statistics
-    if test -z "$CCACHE_DISABLE"; then
-        ccache -d "$CCACHE_DIR" -s
-    fi
+    test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s
 
     rm -rf "$TEMPDIR"
 }
