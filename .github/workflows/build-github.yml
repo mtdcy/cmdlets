@@ -87,6 +87,8 @@ jobs:
           git config user.name "bot"
           git config user.email "bot@noreply.mtdcy.top"
 
+          make tag  # always tag as release is always
+
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
       - name: Release

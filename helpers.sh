@@ -266,7 +266,6 @@ meson() {
                 -Dlibdir=lib
                 -Dbuildtype=release
                 -Ddefault_library=static    # prefer static internal project libraries
-                -Dpkg_config_path="'$PKG_CONFIG_PATH'"
             )
 
             # prefer static external dependencies
@@ -296,7 +295,6 @@ meson.setup() {
         -Dlibdir=lib
         -Dbuildtype=release
         -Ddefault_library=static
-        -Dpkg_config_path="'$PKG_CONFIG_PATH'"
     )
 
     # prefer static external dependencies
@@ -400,11 +398,6 @@ _cargo_init() {
 
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
 
-    # https://docs.rs/pkg-config/latest/pkg_config/
-    #export PKG_CONFIG="$(which pkg-config)" # rust pkg-config do not support parameters
-    export PKG_CONFIG_ALL_STATIC=true   # pass --static for all libraries
-    # FOO_STATIC - pass --static for the library foo
-
     if [ -n "$_CARGO_REGISTRY" ]; then
         # cargo
         local registry ver
@@ -489,8 +482,8 @@ cargo.requires() {
         ( # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
-            unset PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_ALL_STATIC
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
+            unset PKG_CONFIG
 
             #export CARGO_TARGET_DIR="$CARGO_HOME/builddir" # reuse builddir
 

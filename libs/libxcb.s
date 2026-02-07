@@ -18,8 +18,8 @@ libs_args=(
     --enable-xprint
     --enable-selinux
     --disable-silent-rules
-    --enable-devel-docs=no
-    --with-doxygen=no
+    --disable-devel-docs
+    --without-doxygen
 
     PYTHON=python3
 
@@ -28,14 +28,11 @@ libs_args=(
 )
 
 libs_build() {
-    # xorg installed pkgconfig into share instead of lib
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$PREFIX/share/pkgconfig"
-
     configure
 
     make.all
 
-    pkgfile $libs_name -- make.install
+    pkgfile $libs_name -- make.install SUBDIRS=src BUILT_MAN_PAGES=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

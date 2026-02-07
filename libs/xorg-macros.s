@@ -16,14 +16,13 @@ libs_args=(
 libs_build() {
     configure
 
+    # install *.pc into lib instead of share
+    sed -i Makefile \
+        -e '/^pkgconfigdir/s/datadir/libdir/' || die
+
     make.all
 
     pkgfile $libs_name -- make.install
-
-    # test
-    # xorg installed pkgconfig into share instead of lib
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$PREFIX/share/pkgconfig"
-    slogcmd "$PKG_CONFIG" --print-errors --variable=pkgdatadir xorg-macros || die "test failed."
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

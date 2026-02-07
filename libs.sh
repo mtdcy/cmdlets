@@ -29,6 +29,10 @@ export LANG=C
 # set private vairables
 : "${_LOGGING:=$CMDLET_LOGGING}"
 
+if [ "$_LOGGING" = "tty" ]; then
+    test -t 1 && which tput &>/dev/null || _LOGGING=plain
+fi
+
 : "${_REPO:=$CMDLET_REPO}"
 : "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
@@ -98,21 +102,14 @@ die()   {
 }
 
 _capture() {
-    if [ "$_LOGGING" = "tty" ]; then
-        test -t 1 && which tput &>/dev/null || unset _LOGGING
-    fi
-
-    if [ "$_LOGGING" = "tty" ]; then
-        tput dim                        # dim on
-        tput rmam                       # line break off
-    fi
-
     case "$_LOGGING" in
         silent)
             cat >> "$_LOGFILE"
             ;;
         tty)
             local i=0
+            tput dim                        # dim on
+            tput rmam                       # line break off
             while read -r line; do
                 i=$((i+1))
 
@@ -121,13 +118,12 @@ _capture() {
                 printf "#$i: %s" "$line"
                 tput rc                     # restore cursor position
             done < <(tee -a "$_LOGFILE")
+            _tty_reset
             ;;
         *)
             tee -a "$_LOGFILE"
             ;;
     esac
-
-    [ "$_LOGGING" = "tty" ] && _tty_reset || true
 }
 
 _tty_reset() {
@@ -327,23 +323,16 @@ _init() {
 
     export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
 
-    # some build system do not support pkg-config with parameters
-    #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
-    PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-    # XXX: not all build system support multiple pkgconfig dirs, fix install scripts later
-    #PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
-
-    export PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
-
-    # scripts override
-    #  input: script env
-    _init_scripts() {
-        eval export REAL_$2="\$$2"
-        eval export $2="$_ROOT/scripts/$1"
+    # command wrapper
+    #  input: ENV wrapper.sh
+    _command_wrapper() {
+        eval export REAL_$1="\$$1"
+        export $1="$_ROOT/wrapper/$2"
     }
-    #PKG_CONFIG="$_ROOT/scripts/pkg-config"
-    _init_scripts pkg-config PKG_CONFIG
+
+    # pkg-config: some build system do not support pkg-config with parameters
+    _command_wrapper PKG_CONFIG pkg_config.sh
+    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper
 
     # update PATH => tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"

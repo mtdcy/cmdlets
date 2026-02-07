@@ -59,7 +59,7 @@ clean:
 distclean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
 
-release:
+check:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
 
 update:
@@ -70,6 +70,12 @@ inspect:
 
 shell:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
+
+# tag to HEAD
+ARCH ?= $(shell bash libs.sh arch)
+tag:
+	git tag -a $(ARCH) -m $(ARCH) --force
+	git push origin $(ARCH) --force
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote

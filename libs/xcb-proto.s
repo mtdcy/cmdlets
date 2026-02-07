@@ -21,6 +21,10 @@ libs_args=(
 libs_build() {
     configure
 
+    # install *.pc into lib instead of share
+    sed -i Makefile \
+        -e '/^pkgconfigdir/s/datarootdir/libdir/' || die
+
     make.all
 
     pkgfile $libs_name -- make.install
