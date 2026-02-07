@@ -59,7 +59,7 @@ clean:
 distclean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
 
-release:
+check:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
 
 update:
