@@ -16,7 +16,6 @@ export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
     printf '\n'
 } >> "$_LOGFILE"
 
-{
-    "$REAL_PKG_CONFIG" --define-variable=PREFIX="$PREFIX" --static "$@" \
-        > >( tee -a "$_LOGFILE" )
-} 2> >( tee -a "$_LOGFILE" >&2 )
+"$REAL_PKG_CONFIG" --define-variable=PREFIX="$PREFIX" --static "$@" \
+    1> >( tee -a "$_LOGFILE" ) \
+    2> >( tee -a "$_LOGFILE" >&2 )

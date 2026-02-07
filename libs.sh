@@ -323,23 +323,16 @@ _init() {
 
     export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
 
-    # some build system do not support pkg-config with parameters
-    #export PKG_CONFIG="$PKG_CONFIG --define-variable=PREFIX=$PREFIX --static"
-    PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-    # XXX: not all build system support multiple pkgconfig dirs, fix install scripts later
-    #PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
-
-    export PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
-
-    # scripts override
-    #  input: script env
-    _init_scripts() {
-        eval export REAL_$2="\$$2"
-        eval export $2="$_ROOT/scripts/$1"
+    # command wrapper
+    #  input: ENV wrapper.sh
+    _command_wrapper() {
+        eval export REAL_$1="\$$1"
+        export $1="$_ROOT/wrapper/$2"
     }
-    #PKG_CONFIG="$_ROOT/scripts/pkg-config"
-    _init_scripts pkg-config PKG_CONFIG
+
+    # pkg-config: some build system do not support pkg-config with parameters
+    _command_wrapper PKG_CONFIG pkg_config.sh
+    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper
 
     # update PATH => tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"
