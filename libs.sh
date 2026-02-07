@@ -976,18 +976,16 @@ search() {
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
-        if $PKG_CONFIG --exists "$x"; then
+        if $PKG_CONFIG --exists --print-errors --short-errors "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x")"
-            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
-        elif $PKG_CONFIG --exists "lib$x"; then
-            x="lib$x"
-
-            slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
-            echo "PREFIX : $($PKG_CONFIG --variable=prefix "$x" )"
-            echo "CFLAGS : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS: $($PKG_CONFIG --static --libs "$x"   )"
+            echo "PREFIX  : $($PKG_CONFIG --variable=prefix "$x")"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "$x" )"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "$x"   )"
+        elif [[ ! "$x" =~ ^lib ]] && $PKG_CONFIG --exists --print-errors --short-errors "lib$x"; then
+            slogi ".Found lib$x @ $($PKG_CONFIG --modversion "lib$x")"
+            echo "PREFIX  : $($PKG_CONFIG --variable=PREFIX="$PREFIX" "lib$x" )"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "lib$x" )"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "lib$x"   )"
         fi
     done
 }
