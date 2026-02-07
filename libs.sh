@@ -65,6 +65,7 @@ is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
+    local ret=$?
     local lvl date message
 
     [ $# -gt 1 ] && lvl="$1" && shift 1
@@ -83,6 +84,7 @@ _slog() {
             ;;
     esac
     echo -e "$message" >&2
+    return $ret
 }
 
 slogi() { _slog info  "$@";             }
@@ -780,14 +782,20 @@ _deps_sort() {
 _deps_status() {
     _deps_init
 
-    local sep="" sign x
+    local sep="" sign x ret=0
     for x in "$@"; do
-        test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
+        if test -f "$PREFIX/.$x.d"; then
+            sign="\\033[32m✔\\033[39m"
+        else
+            sign="\\033[31m✘\\033[39m"
+            ret=1
+        fi
         printf "%s%s%s" "$sep" "$x" "$sign"
         sep=", "
     done
 
     printf "\n"
+    return $ret
 }
 
 # build targets and its dependencies
@@ -823,7 +831,7 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )"
+    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )" || die "dependencies not ready"
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
