@@ -18,8 +18,8 @@ libs_args=(
     --enable-xprint
     --enable-selinux
     --disable-silent-rules
-    --enable-devel-docs=no
-    --with-doxygen=no
+    --disable-devel-docs
+    --without-doxygen
 
     PYTHON=python3
 
@@ -32,7 +32,7 @@ libs_build() {
 
     make.all
 
-    pkgfile $libs_name -- make.install
+    pkgfile $libs_name -- make.install SUBDIRS=src BUILT_MAN_PAGES=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
