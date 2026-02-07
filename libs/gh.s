@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
-libs_ver=2.83.1
-libs_url=https://github.com/cli/cli/archive/refs/tags/v2.83.1.tar.gz
-libs_sha=5053825b631fa240bba1bfdb3de6ac2c7af5e3c7884b755a6a5764994d02f999
+libs_ver=2.83.2
+libs_url=https://github.com/cli/cli/archive/refs/tags/v2.83.2.tar.gz
+libs_sha=c031ca887d3aaccb40402a224d901c366852f394f6b2b60d1158f20569e33c89
 libs_dep=( )
 
 # configure args
