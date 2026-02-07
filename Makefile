@@ -63,6 +63,9 @@ distclean:
 release:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
 
+update:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/update.sh"
+
 inspect:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
 
