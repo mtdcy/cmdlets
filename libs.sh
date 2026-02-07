@@ -1029,6 +1029,7 @@ dist() {
 
     # support continue after failure
     for x in "$@" $(rdepends "$@"); do
+        is_listed "$x" "${list[@]}" && continue
         test -e "$PREFIX/.$x.d" || list+=( "$x" )
     done
 
