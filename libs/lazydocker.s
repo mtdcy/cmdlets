@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=0.24.2
-libs_url=https://github.com/jesseduffield/lazydocker/archive/refs/tags/v0.24.2.tar.gz
-libs_sha=2a8421f7c72b0a08b50f95af0994cef8c21cc16173fef23011849e50831ae33c
+libs_ver=0.24.3
+libs_url=https://github.com/jesseduffield/lazydocker/archive/refs/tags/v0.24.3.tar.gz
+libs_sha=d6676b678105517a183d878180b041f186cd45a5591a2a7f25f30d5c0ee17670
 
 libs_args=(
 )

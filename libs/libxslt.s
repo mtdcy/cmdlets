@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic="X11"
-libs_ver=1.1.44
+libs_ver=1.1.45
 libs_url=https://github.com/GNOME/libxslt/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=261c87ef325bd8fd99684ded9fa85144f5c23c3835585477b4eaefde31be5580
+libs_sha=023900618fbf789dba364f38f184a0fe2d3ebad2b2ab06003ffd2d1ee2d5461c
 libs_dep=( libxml2 libgcrypt libgpg-error )
 
 libs_args=(

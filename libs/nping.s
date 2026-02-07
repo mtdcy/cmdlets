@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=0.6.0
-libs_url=https://github.com/hanshuaikang/Nping/archive/refs/tags/v0.6.0.tar.gz
-libs_sha=07ca7ce514b9e9584c33fc6e75c4b4974845deb348833cf92814a34ef4cbaca3
+libs_ver=0.6.1
+libs_url=https://github.com/hanshuaikang/Nping/archive/refs/tags/v0.6.1.tar.gz
+libs_sha=48d46e11cec3c69e6c28e91fefbba47f4773aab1c9d8c1f15e276311f79c43ec
 libs_dep=( )
 
 libs_args=(
@@ -16,7 +16,11 @@ libs_build() {
 
     cargo build
 
-    cmdlet "$(find target -name $libs_name)" "$libs_name"
+    if version.ge 0.6.1; then
+        cmdlet "$(find target -name nbping)" nbping nping
+    else
+        cmdlet "$(find target -name "$libs_name")"
+    fi
 
     check "$libs_name" --version
 }
