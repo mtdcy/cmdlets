@@ -355,17 +355,6 @@ _init() {
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
 
-    # ccache
-    if [ "$CMDLET_CCACHE" -ne 0 ] && which ccache &>/dev/null; then
-        CC="ccache $CC"
-        CXX="ccache $CXX"
-        # make clean should not clear ccache
-        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
-        export CC CXX CCACHE_DIR
-    else
-        export CCACHE_DISABLE=1
-    fi
-
     # macos
     export MACOSX_DEPLOYMENT_TARGET
     # msys
@@ -617,8 +606,24 @@ _load() {
 
 # compile target
 compile() {
+    # initial build args
+    if test -z "$CCACHE_DISABLE"; then
+        # only compile job need ccache
+        which ccache &>/dev/null    || CCACHE_DISABLE=1
+        [ "$CMDLET_CCACHE" -ne 0 ]  || CCACHE_DISABLE=1
+
+    fi
+
+    if test -z "$CCACHE_DISABLE" || [ "$CCACHE_DISABLE" -ne 1 ]; then
+        CC="ccache $CC"
+        CXX="ccache $CXX"
+        # make clean should not clear ccache
+        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
+        export CC CXX CCACHE_DIR
+    fi
+    export CCACHE_DISABLE
+
     ( # always start subshell before _load()
-        # initial build args
 
         trap _tty_reset EXIT
 
@@ -1079,9 +1084,7 @@ update() {
 
 _on_exit() {
     # show ccache statistics
-    if test -z "$CCACHE_DISABLE"; then
-        ccache -d "$CCACHE_DIR" -s
-    fi
+    test -n "$CCACHE_DISABLE" || ccache -d "$CCACHE_DIR" -s
 
     rm -rf "$TEMPDIR"
 }
