@@ -22,14 +22,14 @@ jobs:
       matrix:
         container:
           - ucrt64-latest
-          - mingw64-latest
+          #- mingw64-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.READ_TOKEN }}
-          fetch-depth: 2
+          token: ${{ secrets.COMMIT_TOKEN }}
+          fetch-depth: 0
 
       - name: prepare
         run: |-
@@ -37,16 +37,24 @@ jobs:
           chown -R buildbot:buildbot .
 
       - name: Build
-        shell: su buildbot -c "msys2 {0}"
+        shell: su buildbot -c "msys2 -c {0}"
         run: |-
-          export CL_ARTIFACTS="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
-          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
+          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
           git config user.name "bot"
           git config user.email "bot@noreply.mtdcy.top"
 
+          make tag  # always tag as release is always
+
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
+
+      - name: Release
+        if: always()
+        shell: bash
+        run: |-
+          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
+
+          ./.github/scripts/rsync.sh "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
