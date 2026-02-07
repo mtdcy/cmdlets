@@ -5,7 +5,10 @@ libs_lic="GD"
 libs_ver=2.3.3
 libs_url=https://github.com/libgd/libgd/releases/download/gd-$libs_ver/libgd-$libs_ver.tar.xz
 libs_sha=3fe822ece20796060af63b7c60acb151e5844204d289da0ce08f8fdf131e5a61
-libs_dep=( freetype libjpeg-turbo libpng libtiff libwebp )
+# mandatory
+libs_dep=( libiconv )
+# optional
+libs_dep+=( zlib freetype libjpeg-turbo libpng libtiff libwebp libheif )
 
 # revert breaking changes in 2.3.3, remove in next release
 libs_patches=(
@@ -17,12 +20,6 @@ libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
 
-    --with-freetype
-    --with-jpeg
-    --with-png
-    --with-tiff
-    --with-webp
-
     --without-avif
     --without-fontconfig
     --without-x
@@ -32,6 +29,16 @@ libs_args=(
     --disable-shared
     --enable-static
 )
+
+# optionals
+is_listed zlib          "${libs_dep[@]}" && libs_args+=( --with-zlib        ) || libs_args+=( --without-zlib        )
+is_listed freetype      "${libs_dep[@]}" && libs_args+=( --with-freetype    ) || libs_args+=( --without-freetype    )
+is_listed fontconfig    "${libs_dep[@]}" && libs_args+=( --with-fontconfig  ) || libs_args+=( --without-fontconfig  )
+is_listed libjpeg-turbo "${libs_dep[@]}" && libs_args+=( --with-jpeg        ) || libs_args+=( --without-jpeg        )
+is_listed libpng        "${libs_dep[@]}" && libs_args+=( --with-png         ) || libs_args+=( --without-png         )
+is_listed libtiff       "${libs_dep[@]}" && libs_args+=( --with-tiff        ) || libs_args+=( --without-tiff        )
+is_listed libwebp       "${libs_dep[@]}" && libs_args+=( --with-webp        ) || libs_args+=( --without-webp        )
+is_listed libheif       "${libs_dep[@]}" && libs_args+=( --with-heif        ) || libs_args+=( --without-heif        )
 
 libs_build() {
     configure
