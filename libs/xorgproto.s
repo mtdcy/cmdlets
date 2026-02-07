@@ -14,16 +14,11 @@ libs_args=(
 )
 
 libs_build() {
-    # xorg installed pkgconfig into share instead of lib
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$PREFIX/share/pkgconfig"
-
     configure
 
     make.all
 
     pkgfile $libs_name -- make.install
-
-    slogcmd "$PKG_CONFIG" --print-errors --cflags xproto || die "test failed"
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

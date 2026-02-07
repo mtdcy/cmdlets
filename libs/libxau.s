@@ -17,9 +17,6 @@ libs_args=(
 )
 
 libs_build() {
-    # xorg installed pkgconfig into share instead of lib
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$PREFIX/share/pkgconfig"
-
     configure
 
     make.all
