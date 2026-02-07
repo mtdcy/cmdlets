@@ -830,6 +830,10 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
+    slogi "BUILD" "$*"
+
+    test -z "${deps[*]}" || slogi ".DEPS" "$(_deps_status "${deps[@]}")"
+
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || targets+=( "$x" )
@@ -838,13 +842,11 @@ build() {
     # sort and append targets
     targets+=( $(_deps_sort "$@") )
 
-    slogi "Build" "${targets[*]}"
-
-    set +x
-
     # continue on error
     for i in "${!targets[@]}"; do
-        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status $(depends "${targets[i]}")) )" || {
+        echo ""
+        IFS=' ' read -r -a deps < <(depends "${targets[i]}")
+        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${deps[@]}") )" || {
             slogw "<<<<<" "dependencies not ready"
             fails+=( "${targets[i]}" )
             continue
