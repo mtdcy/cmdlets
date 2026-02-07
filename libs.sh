@@ -29,6 +29,10 @@ export LANG=C
 # set private vairables
 : "${_LOGGING:=$CMDLET_LOGGING}"
 
+if [ "$_LOGGING" = "tty" ]; then
+    test -t 1 && which tput &>/dev/null || _LOGGING=plain
+fi
+
 : "${_REPO:=$CMDLET_REPO}"
 : "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
 
@@ -98,21 +102,14 @@ die()   {
 }
 
 _capture() {
-    if [ "$_LOGGING" = "tty" ]; then
-        test -t 1 && which tput &>/dev/null || unset _LOGGING
-    fi
-
-    if [ "$_LOGGING" = "tty" ]; then
-        tput dim                        # dim on
-        tput rmam                       # line break off
-    fi
-
     case "$_LOGGING" in
         silent)
             cat >> "$_LOGFILE"
             ;;
         tty)
             local i=0
+            tput dim                        # dim on
+            tput rmam                       # line break off
             while read -r line; do
                 i=$((i+1))
 
@@ -121,13 +118,12 @@ _capture() {
                 printf "#$i: %s" "$line"
                 tput rc                     # restore cursor position
             done < <(tee -a "$_LOGFILE")
+            _tty_reset
             ;;
         *)
             tee -a "$_LOGFILE"
             ;;
     esac
-
-    [ "$_LOGGING" = "tty" ] && _tty_reset || true
 }
 
 _tty_reset() {
