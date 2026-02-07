@@ -71,6 +71,12 @@ inspect:
 shell:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
 
+# tag to HEAD
+ARCH ?= $(shell bash libs.sh arch)
+tag:
+	git tag -a $(ARCH) -m $(ARCH) --force
+	git push origin $(ARCH) --force
+
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
 else ifneq ($(BUILDER_NAME),)

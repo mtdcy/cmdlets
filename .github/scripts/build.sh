@@ -78,12 +78,4 @@ $(git show HEAD --stat)
     curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
 fi
 
-if [ "$ret" -eq 0 ]; then
-    # update tags
-    arch="$(bash libs.sh arch)"
-    # tag to HEAD
-    git tag -a "$arch" -m "$arch" --force
-    git push origin "$arch" --force
-fi
-
 exit "$ret"
