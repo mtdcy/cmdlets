@@ -65,6 +65,7 @@ is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
+    local ret=$?
     local lvl date message
 
     [ $# -gt 1 ] && lvl="$1" && shift 1
@@ -83,6 +84,7 @@ _slog() {
             ;;
     esac
     echo -e "$message" >&2
+    return $ret
 }
 
 slogi() { _slog info  "$@";             }
@@ -91,7 +93,7 @@ sloge() { _slog error "$@"; return 1;   }
 
 die()   {
     _tty_reset # in case Ctrl-C happens
-    _slog error "$@"
+    test -z "$*" || _slog error "....." "$@"
     exit 1 # exit shell
 }
 
@@ -425,10 +427,11 @@ _fetch() {
         done
     fi
 
-    test -f "$zip" || die ".CURL" "fetch $3 failed."
-
-    slogi ".FILE" "$(sha256sum "$zip")"
-    return 0
+    if test -f "$zip"; then
+        slogi ".FILE" "$(sha256sum "$zip")"
+    else
+        sloge ".CURL" "fetch $3 failed." || die
+    fi
 }
 
 # unzip file to current dir, or exit program
@@ -672,14 +675,12 @@ compile() {
 
         # build library
         ( libs_build ) || {
-            sloge "build $libs_name@$libs_ver failed"
-
-            sleep 1 # let _capture() finish
+            sloge "<<<<<" "build $libs_name@$libs_ver failed"
 
             mv "$_LOGFILE" "$_LOGFILE.fail"
             tail -v "$_LOGFILE.fail"
 
-            exit 127
+            wait && exit 127
         }
 
         # update tracking file
@@ -780,20 +781,29 @@ _deps_sort() {
 _deps_status() {
     _deps_init
 
-    local sep="" sign x
+    local sep="" sign x ret=0
     for x in "$@"; do
-        test -f "$PREFIX/.$x.d" && sign="\\033[32m✔\\033[39m" || sign="\\033[31m✘\\033[39m"
+        if test -f "$PREFIX/.$x.d"; then
+            sign="\\033[32m✔\\033[39m"
+        else
+            sign="\\033[31m✘\\033[39m"
+            ret=1
+        fi
         printf "%s%s%s" "$sep" "$x" "$sign"
         sep=", "
     done
 
     printf "\n"
+    return $ret
 }
 
 # build targets and its dependencies
 # build <lib list>
 build() {
-    local deps x i targets=()
+    slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
+    echo ""
+
+    local deps x i targets=() fails=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
 
@@ -820,21 +830,30 @@ build() {
         pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
-    slogi "Build" "$* ( depends: $(_deps_status "${deps[@]}") )"
-
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || targets+=( "$x" )
     done
 
-    # append targets
+    # sort and append targets
     targets+=( $(_deps_sort "$@") )
 
-    for i in "${!targets[@]}"; do
-        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]}"
+    slogi "Build" "${targets[*]}"
 
-        time compile "${targets[i]}" || die "build ${targets[i]} failed."
+    set +x
+
+    # continue on error
+    for i in "${!targets[@]}"; do
+        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status $(depends "${targets[i]}")) )" || {
+            slogw "<<<<<" "dependencies not ready"
+            fails+=( "${targets[i]}" )
+            continue
+        }
+
+        time compile "${targets[i]}" || fails+=( "${targets[i]}" )
     done
+
+    test -z "${fails[*]}" || sloge "build failed: ${fails[*]}"
 }
 
 # v3/git releases
@@ -1072,7 +1091,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 _init || exit 110
 
 if [[ "$0" =~ libs.sh$ ]]; then
-    cd "$(dirname "$0")" && "$@" || exit $?
+    "$@" && wait || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

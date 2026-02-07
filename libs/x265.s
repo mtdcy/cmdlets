@@ -13,7 +13,7 @@ if is_arm64; then
 
     is_darwin || asm_args+=(
         -DENABLE_ASSEMBLY=ON
-        -DENABLE_NEON=ON 
+        -DENABLE_NEON=ON
         -DENABLE_NEON_DOTPROD=OFF
         -DENABLE_NEON_I8MM=OFF
         -DENABLE_SVE=ON
@@ -53,7 +53,7 @@ libs_build() {
     mkdir -pv {8bit,10bit,12bit}
 
     if [ "$HIGH_BIT_DEPTH" -ne 0 ]; then
-        main_args+=( 
+        main_args+=(
             -DEXTRA_LIB=\"x265_main12.a\;x265_main10.a\"
             -DLINKED_12BIT=ON
             -DLINKED_10BIT=ON
@@ -69,7 +69,7 @@ libs_build() {
 
         is_arm64 || high_args+=(
         )
-    
+
         # 12 bit
         (
             cd 12bit
@@ -93,7 +93,7 @@ libs_build() {
     make x265-static || return 1
 
     if [ "$HIGH_BIT_DEPTH" -ne 0 ]; then
-        mv libx265.a libx265_main.a 
+        mv libx265.a libx265_main.a
 
         if is_darwin; then
             libtool -static -o libx265.a libx265_main.a libx265_main10.a libx265_main12.a
@@ -109,12 +109,12 @@ EOF
         fi || return 1
     fi
 
-    # bugfix
-    sed -i 's/-lgcc_s//g' x265.pc &&
+    # bugfix:
+    # 1. x265 hard code libstdc++.a into x265.pc
+    sed -i x265.pc \
+        -e 's%/.*/libstdc++.a%-lstdc++%' || die "fix x265.pc failed"
 
     pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
-
-    inspect make install
 
     # FIXME: we have problem to compile a static x265 executable
 }

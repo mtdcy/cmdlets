@@ -6,9 +6,6 @@ all: shell
 
 .PHONY: all
 
-# options
-DIST ?= 0
-
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
 #CMDLET_BUILD_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
 CMDLET_BUILD_NJOBS 	?= $(shell nproc)
@@ -48,11 +45,13 @@ ENVS := CMDLET_BUILD_FORCE \
 vpath %.s libs
 
 %: %.s
-ifneq ($(DIST),0)
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $@"
-else
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
-endif
+
+%+:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $(@:+=)"
+
+%-:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_BUILD_FORCE=1
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
@@ -62,6 +61,9 @@ distclean:
 
 release:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
+
+update:
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/update.sh"
 
 inspect:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
