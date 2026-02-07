@@ -94,7 +94,7 @@ configure() {
     # append user args
     cmdline+=( "${libs_args[@]}" "$@" )
 
-    slogcmd "${cmdline[@]}" || die "configure $* failed."
+    slogcmd "${cmdline[@]}" || die "configure $libs_name failed."
 }
 
 make() {
@@ -105,15 +105,15 @@ make() {
 
     [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
 
-    slogcmd "${cmdline[@]}" || die "make $* failed."
+    slogcmd "${cmdline[@]}" || die "make $libs_name failed."
 }
 
 make.all() {
-    slogcmd "$MAKE" all "-j$_NJOBS" V=1 "$@" || die "make all $* failed."
+    slogcmd "$MAKE" all "-j$_NJOBS" V=1 "$@" || die "make.all $libs_name failed."
 }
 
 make.install() {
-    slogcmd "$MAKE" install -j1 "$@" || die "make install $* failed."
+    slogcmd "$MAKE" install -j1 "$@" || die "make.install $libs_name failed."
 }
 
 # setup cmake environments
@@ -195,7 +195,7 @@ cmake() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "cmake $* failed."
+    slogcmd "${cmdline[@]}" || die "cmake $libs_name failed."
 }
 
 cmake.setup() {
@@ -217,7 +217,7 @@ cmake.setup() {
     is_msys   && std+=( -G"'MSYS Makefiles'" )
 
     # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup failed"
+    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
 
     pushd "$LIBS_BUILDDIR" || die
 }
@@ -225,7 +225,7 @@ cmake.setup() {
 cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
-    slogcmd "$CMAKE" --build . "$@" || die "cmake.build failed."
+    slogcmd "$CMAKE" --build . "$@" || die "cmake.build $libs_name failed."
 }
 
 cmake.install() {
@@ -236,7 +236,7 @@ cmake.install() {
 
     is_listed "--install" "$@" || cmdline+=( --install . )
 
-    slogcmd "${cmdline[@]}" "$@" || die "cmake.install failed."
+    slogcmd "${cmdline[@]}" "$@" || die "cmake.install $libs_name failed."
 }
 
 _meson_init() {
@@ -283,7 +283,7 @@ meson() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "meson $* failed."
+    slogcmd "${cmdline[@]}" || die "meson $1 $libs_name failed."
 }
 
 meson.setup() {
@@ -306,7 +306,7 @@ meson.setup() {
     #  => use pkg-config and `-Wl,-Bstatic -latomic' instead
 
     # std < libs_args < user args
-    slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup failed."
+    slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup $libs_name failed."
 
     # enter builddir before return
     pushd "$LIBS_BUILDDIR" || die
@@ -315,13 +315,13 @@ meson.setup() {
 meson.compile() {
     _meson_init
 
-    slogcmd "$MESON" compile --verbose "-j$_NJOBS" "$@" || die "meson.compile failed."
+    slogcmd "$MESON" compile --verbose "-j$_NJOBS" "$@" || die "meson.compile $libs_name failed."
 }
 
 meson.install() {
     _meson_init
 
-    slogcmd "$MESON" install "$@" || die "meson.install failed."
+    slogcmd "$MESON" install "$@" || die "meson.install $libs_name failed."
 }
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
@@ -436,7 +436,7 @@ cargo() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "cargo $* failed."
+    slogcmd "${cmdline[@]}" || die "cargo $1 $libs_name failed."
 }
 
 # setup various rust things
@@ -477,7 +477,7 @@ cargo.build() {
     # the build.rustflags will only be passed to the compiler for the target.
     test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
 
-    slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build failed."
+    slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build $libs_name failed."
 }
 
 # requires host cargo tools
@@ -495,7 +495,7 @@ cargo.requires() {
             #export CARGO_TARGET_DIR="$CARGO_HOME/builddir" # reuse builddir
 
             slogcmd cargo install "$x"
-        ) || die "cargo install $x failed."
+        ) || die "cargo.requires $x failed."
     done
 }
 
@@ -645,7 +645,7 @@ go() {
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "go $* failed."
+    slogcmd "${cmdline[@]}" || die "go $1 $libs_name failed."
 }
 
 go.setup() {
@@ -665,7 +665,7 @@ go.setup() {
 go.clean() {
     _go_init
 
-    slogcmd "$GO" clean || die "go.clean failed."
+    slogcmd "$GO" clean || die "go.clean $libs_name failed."
 }
 
 go.build() {
@@ -694,7 +694,7 @@ go.build() {
     # append user options
     std+=( $(_go_filter_options "$@") )
 
-    slogcmd "$GO" build "${std[@]}" || die "go.build failed."
+    slogcmd "$GO" build "${std[@]}" || die "go.build $libs_name failed."
 }
 
 # libtool archive hardcoded PREFIX which is bad for us
@@ -941,7 +941,7 @@ cmdlet.install() {
 
     local target="$PREFIX/bin/${2:-"${1##*/}"}"
 
-    echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $1 failed"
+    echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $libs_name failed"
 
     local alias=()
     local x
