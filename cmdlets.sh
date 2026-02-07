@@ -3,6 +3,8 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.4    - 20260207      - add force update cmd in case manifest broken
+#                           - fix `readlink: xxx: No such file or directory'
 #  1.0.3    - 20260202      - add caveats command
 #  1.0.2    - 20260201      - fix pkgbuild, pkgvern may has '-'
 #  1.0.1    - 20260130      - fix link command
@@ -11,7 +13,7 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.3
+VERSION=1.0.4
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
@@ -75,6 +77,7 @@ Options:
     (for developers)
     fetch   <cmdlet ...>        - fetch cmdlet(s)
     --update                    - update only cmdlets
+    --update --force            - force update cmdlets
 
 Examples:
     $NAME install minigzip                          # install the latest version
@@ -357,7 +360,7 @@ fetch() {
                             _ln_println "$width" "$file" "${file##*/}"
                         fi
                         links+=( "${file##*/}" )
-                    done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
+                    done < <( grep "^bin/" "$TEMPDIR/files" )
                 fi
                 ;;
             *)
@@ -377,7 +380,14 @@ fetch() {
 }
 
 update() {
-    local pkgfile pkgvern pkgbuild
+    local pkgfile pkgvern pkgbuild options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --force)    options+=( --force ) ;;
+        esac
+        shift 1
+    done
+
     while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "🚀 Update $pkgfile ..."
 
@@ -397,6 +407,9 @@ update() {
                 fetch "$pkgfile" --install
             elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
                 info ">> new pkgbuild > $pkgvern $_pkgbuild"
+                fetch "$pkgfile" --install
+            elif [[ "${options[*]}" =~ --force ]]; then
+                info ">> force update > $pkgvern $_pkgbuild"
                 fetch "$pkgfile" --install
             fi
         fi
@@ -631,7 +644,7 @@ invoke() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            update
+            update "${@:2}"
             ;;
         update)
             if test -n "$2"; then

@@ -33,6 +33,7 @@ for libs in libs/*.s; do
         if test -n "$r"; then
             newver="$m.$n.$((r+1))"
             bash libs.sh update "$libs" "$newver" || {
+                test -z "$libs_stable_minor" || exit
                 # try update minor version
                 newver="$m.$((n+1)).0"
                 bash libs.sh update "$libs" "$newver" || exit
