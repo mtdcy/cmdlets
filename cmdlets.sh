@@ -15,7 +15,7 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.4
+VERSION=1.0.5
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
