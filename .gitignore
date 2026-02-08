@@ -14,3 +14,4 @@ ssh_id_rsa
 .magic.mgc
 pkg-config.log
 .rustup
+.ssh_token

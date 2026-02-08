@@ -66,6 +66,12 @@ check:
 update:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/update.sh"
 
+ARTIFACTS_REMOTE ?=
+rsync:
+	@test -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa > .ssh_token || cat ~/.ssh/id_ed25519 > .ssh_token
+	@chmod 0600 .ssh_token
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/rsync.sh $(ARTIFACTS_REMOTE)"
+
 inspect:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
 
