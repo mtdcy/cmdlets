@@ -945,9 +945,10 @@ cmdlet.pkginst() {
 cmdlet.install() {
     slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
-    local target="$PREFIX/bin/${2:-"${1##*/}"}"
+    local bin="$1$_BINEXT"
+    local target="$PREFIX/bin/${2:-"${bin##*/}"}"
 
-    echocmd "$INSTALL" -v -m755 "$1" "$target" || die "install $libs_name failed"
+    echocmd "$INSTALL" -v -m755 "$bin" "$target" || die "install $libs_name failed"
 
     local alias=()
     local x
@@ -964,10 +965,10 @@ cmdlet.check() {
     slogi "..Run" "check $*"
 
     # try prebuilts first
-    local bin="$PREFIX/bin/$1"
+    local bin="$PREFIX/bin/$1$_BINEXT"
 
     # try local file again
-    test -f "$bin" || bin="$1"
+    test -f "$bin" || bin="$1$_BINEXT"
 
     test -f "$bin" || die "check $* failed, $bin not found."
 

@@ -33,6 +33,7 @@ cmdlets.env:
 # host environment variables => docker/remote
 ENVS := CMDLET_BUILD_FORCE \
 		CMDLET_BUILD_NJOBS \
+		CMDLET_TARGET      \
 		CMDLET_LOGGING     \
 		CMDLET_MIRRORS     \
 		CMDLET_CCACHE      \

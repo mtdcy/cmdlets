@@ -18,11 +18,11 @@ export LANG=C
         CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
          CMDLET_CCACHE=${CMDLET_CCACHE:-0}          # enable ccache or not
            CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
+         CMDLET_TARGET=${CMDLET_TARGET:-}
 
 # public build options  =
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
       CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
- CMDLET_TOOLCHAIN_PREFIX=${CMDLET_TOOLCHAIN_PREFIX:-}
 
 # toolchain prefix
 
@@ -35,6 +35,14 @@ fi
 
 : "${_REPO:=$CMDLET_REPO}"
 : "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
+
+# target
+: "${_TARGET:=$CMDLET_TARGET}"
+test -n "$_TARGET" && which "$_TARGET-gcc" &>/dev/null || unset _TARGET
+
+# check musl-gcc
+: "${_TARGET:=$(uname -m)-$(uname -s | tr A-Z a-z)-musl}"
+test -n "$_TARGET" && which "$_TARGET-gcc" &>/dev/null || unset _TARGET
 
 # mirrors
 : "${_MIRRORS:=$CMDLET_MIRRORS}"
@@ -63,6 +71,7 @@ is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
 is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_intel()      { uname -m | grep -qF "x86_64";                         }
+is_win64()      { [[ "$_TARGET" =~ w64 ]];                              }
 
 # help functions
 is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
@@ -190,13 +199,13 @@ _init() {
 
     if [ "$(uname -s)" = Darwin ]; then
         _ARCH="$(uname -m)-apple-darwin"
-    elif test -n "$MSYSTEM"; then
-        _ARCH="$(uname -m)-msys-${MSYSTEM,,}"
-    #elif ldd --version 2>/dev/null | grep -qFw musl; then
-    #    _ARCH="$(uname -m)-linux-musl"
+    elif test -n "$_TARGET"; then
+        _ARCH="$_TARGET"
     else
         _ARCH="$(uname -m)-$OSTYPE"
     fi
+
+    is_win64 && _BINEXT=.exe || unset _BINEXT
 
     # prepare variables
     PREFIX="$_ROOT/prebuilts/$_ARCH"
@@ -214,26 +223,16 @@ _init() {
 
     export PREFIX _ROOT _WORKDIR _PACKAGES _LOGFILES _MANIFEST
 
-    # toolchain
-    : "${_TOOLCHAIN:=$CMDLET_TOOLCHAIN_PREFIX}"
-    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
-
-    # check musl-gcc
-    : "${_TOOLCHAIN:=$(uname -m)-$(uname -s | tr A-Z a-z)-musl-}"
-    test -n "$_TOOLCHAIN" && which "$_TOOLCHAIN"gcc &>/dev/null || unset _TOOLCHAIN
-
-    export _TOOLCHAIN
-
     # shellcheck disable=SC2054,SC2206
     local toolchains=(
-        CC:${_TOOLCHAIN}gcc
-        CXX:${_TOOLCHAIN}g++
-        AR:${_TOOLCHAIN}ar
-        AS:${_TOOLCHAIN}as
-        LD:${_TOOLCHAIN}ld
-        NM:${_TOOLCHAIN}nm
-        RANLIB:${_TOOLCHAIN}ranlib
-        STRIP:${_TOOLCHAIN}strip
+        CC:$_TARGET-gcc
+        CXX:$_TARGET-g++
+        AR:$_TARGET-ar
+        AS:$_TARGET-as
+        LD:$_TARGET-ld
+        NM:$_TARGET-nm
+        RANLIB:$_TARGET-ranlib
+        STRIP:$_TARGET-strip
     )
     if is_darwin; then
         COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
@@ -255,7 +254,7 @@ _init() {
         "CMAKE:cmake"
         "MESON:meson"
         "NINJA:ninja"
-        "PKG_CONFIG:pkg-config"
+        "PKG_CONFIG:$_TARGET-pkg-config,pkg-config"
         "PATCH:patch"
         "INSTALL:install"
         "TAR:gtar,tar"
@@ -311,7 +310,7 @@ _init() {
         is_msys || LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
 
         # Security: FULL RELRO
-        is_msys || LDFLAGS+=" -Wl,-z,relro,-z,now"
+        is_win64 || LDFLAGS+=" -Wl,-z,relro,-z,now"
     fi
 
     CFLAGS="${FLAGS[*]}"
