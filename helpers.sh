@@ -806,7 +806,7 @@ _pack() {
                 fi
                 ;;
             bin/*)
-                test -f "$x" || x="$x.$_BINEXT"
+                test -f "$x" || x="$x$_BINEXT"
 
                 if test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
@@ -838,7 +838,7 @@ cmdlet.pkgfile() {
     # name contains version code?
     IFS='@' read -r name version <<< "$1"
 
-    test -z "$_BINEXT" || name="${name%.$_BINEXT}"
+    test -z "$_BINEXT" || name="${name%$_BINEXT}"
 
     test -n "$version" || version="$libs_ver"
 
@@ -959,10 +959,10 @@ cmdlet.install() {
     local bin target alias=( "${@:3}" ) x
 
     # mingw: no extension in filename
-    if test -n "$_BINEXT" && [[ ! "$1" =~ .$_BINEXT$ ]]; then
-        bin="$1.$_BINEXT"
-        test -n "$2" && target="$2.$_BINEXT" || target="${bin##*/}"
-        alias=( "${alias[@]/%/.$_BINEXT}" )
+    if test -n "$_BINEXT" && [[ ! "$1" =~ $_BINEXT$ ]]; then
+        bin="$1$_BINEXT"
+        test -n "$2" && target="$2$_BINEXT" || target="${bin##*/}"
+        alias=( "${alias[@]/%/$_BINEXT}" )
     else
         bin="$1"
         target="${2:-"${bin##*/}"}"
@@ -985,9 +985,9 @@ cmdlet.check() {
     local bin
 
     # mingw: no extension in filename
-    if test -n "$_BINEXT" && [[ ! "$1" =~ \.$_BINEXT$ ]] ; then
-        bin="$PREFIX/bin/$1.$_BINEXT"
-        test -f "$bin" || bin="$1.$_BINEXT"
+    if test -n "$_BINEXT" && [[ ! "$1" =~ $_BINEXT$ ]] ; then
+        bin="$PREFIX/bin/$1$_BINEXT"
+        test -f "$bin" || bin="$1$_BINEXT"
         test -f "$bin" || unset bin
     fi
 
