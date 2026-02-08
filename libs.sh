@@ -205,7 +205,26 @@ _init() {
         _ARCH="$(uname -m)-$OSTYPE"
     fi
 
-    is_win64 && _BINEXT=.exe || unset _BINEXT
+    # win64 with wine
+    if is_win64; then
+        _BINEXT=.exe || unset _BINEXT
+
+        if test -n "$WINEPREFIX"; then
+            # wine: '/wine' is not owned by you
+            sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
+
+            # enable binfmt support
+            if ! test -e /proc/sys/fs/binfmt_misc/wine; then
+                sudo mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
+                sudo update-binfmts --import wine
+                sudo update-binfmts --enable wine
+            fi
+
+            XDG_RUNTIME_DIR=/run/user/$(id -u)
+
+            export XDG_RUNTIME_DIR
+        fi
+    fi
 
     # prepare variables
     PREFIX="$_ROOT/prebuilts/$_ARCH"
