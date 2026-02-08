@@ -82,6 +82,9 @@ jobs:
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
+          # mingw64: build ASAP
+          while nproc && export CMDLET_BUILD_NJOBS=$(nproc) || true
+
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
           git config user.name "bot"
