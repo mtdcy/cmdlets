@@ -173,7 +173,7 @@ _cmake_init() {
         _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Darwin )
     elif is_linux; then
         _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Linux )
-    elif is_mingw; then 
+    elif is_mingw; then
         _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Windows )
     fi
 
@@ -1004,7 +1004,7 @@ cmdlet.check() {
     echocmd file "$bin"
 
     # check linked libraries
-    if is_linux; then
+    if is_linux || is_mingw; then
         file "$bin" | grep -Fw "dynamically linked" && {
             echocmd ldd "$bin"
             die "$bin is dynamically linked."
