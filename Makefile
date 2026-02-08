@@ -31,7 +31,7 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-ENVS := CMDLET_BUILD_FORCE \
+ENVS := CMDLET_NO_PKGFILES \
 		CMDLET_BUILD_NJOBS \
 		CMDLET_TARGET      \
 		CMDLET_LOGGING     \
@@ -52,7 +52,7 @@ vpath %.s libs
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $(@:+=)"
 
 %-:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_BUILD_FORCE=1
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_NO_PKGFILES=1
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"

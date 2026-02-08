@@ -22,7 +22,7 @@ export LANG=C
 
 # public build options  =
       CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
-      CMDLET_BUILD_FORCE=${CMDLET_BUILD_FORCE:-0}   # force build dependencies
+      CMDLET_NO_PKGFILES=${CMDLET_NO_PKGFILES:-0}   # force build dependencies
 
 # toolchain prefix
 
@@ -840,12 +840,7 @@ build() {
     IFS=' ' read -r -a deps < <(_deps_sort "${deps[@]}")
 
     # pull dependencies
-    if [ "$CMDLET_BUILD_FORCE" -ne 0 ]; then
-        # check dependencies: force update
-        for x in "${deps[@]}"; do
-            rm -f "$PREFIX/.$x.d"
-        done
-    else
+    if [ "$CMDLET_NO_PKGFILES" -eq 0 ]; then
         local pkgfiles=()
 
         # check dependencies: libraries updated or not ready

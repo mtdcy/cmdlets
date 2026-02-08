@@ -58,7 +58,7 @@ ret=0
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
-    export CMDLET_BUILD_FORCE=1
+    export CMDLET_NO_PKGFILES=1
     bash libs.sh build "${cmdlets[@]%-}" || ret=$?
 elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
     bash libs.sh dist "${cmdlets[@]%+}" || ret=$?
