@@ -3,8 +3,10 @@
 # shellcheck disable=SC2155
 #
 # Changes:
-#  1.0.4    - 20260207      - add force update cmd in case manifest broken
+#  1.0.5    - 20260208      - fix update command
+#                           - no sed in fetch()
 #                           - fix `readlink: xxx: No such file or directory'
+#  1.0.4    - 20260207      - add force update cmd in case manifest broken
 #  1.0.3    - 20260202      - add caveats command
 #  1.0.2    - 20260201      - fix pkgbuild, pkgvern may has '-'
 #  1.0.1    - 20260130      - fix link command
@@ -13,7 +15,7 @@
 set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.4
+VERSION=1.0.5
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
@@ -311,21 +313,10 @@ fetch() {
     _edit "\#^$target #d" "$CMDLETS_LIST"
     echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$CMDLETS_LIST"
 
-    # update files list: name files ...
-    _edit "\#^$target #d" "$FILES_LIST"
-    # fails with a lot of files
-    #echo "$target $(sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | xargs)" >> "$FILES_LIST"
-    {
-        echo -en "$target "
-        sed "s%^%$PREBUILTS/%" "$TEMPDIR/files" | tr -s '\n' ' '
-        echo -en "\n"
-    } >> "$FILES_LIST"
-
     # ln helper: width from to
     _ln_println() {
-        local exist="$(readlink "$3")"
-        if test -n "$exist" && [ "$exist" != "$2" ]; then
-            printf "%${1}s -> %s (displace %s)\n" "$3" "$2" "$exist"
+        if test -L "$3" && test -e "$3"; then
+            printf "%${1}s -> %s (displace %s)\n" "$3" "$2" "$(readlink "$3")"
         else
             printf "%${1}s -> %s\n" "$3" "$2"
         fi
@@ -354,6 +345,7 @@ fetch() {
                     shift 1
                 else
                     while read -r file; do
+                        file="$PREBUILTS/$file"
                         if test -L "$file"; then
                             _ln_println "$width" "$(readlink "$file")" "${file##*/}"
                         else
@@ -369,8 +361,21 @@ fetch() {
         shift 1
     done
 
-    # append file symlinks to last line
-    test -z "${links[*]}" || _edit "$ s%$% ${links[*]}%" "$FILES_LIST"
+    # update files list: name files ...
+    grep -Ev "^$target " "$FILES_LIST" > "$TEMPDIR/installed"
+    {
+        printf '%s ' "$target "
+        while read -r file; do
+            printf '%s ' "$PREBUILTS/$file"
+        done < "$TEMPDIR/files"
+
+        # append symlinks
+        for link in "${links[@]}"; do
+            printf '%s ' "$link"
+        done
+        printf '\n'
+    } >> "$TEMPDIR/installed"
+    mv "$TEMPDIR/installed" "$FILES_LIST"
 
     # caveats
     if test -s "$caveats"; then
@@ -648,7 +653,11 @@ invoke() {
             ;;
         update)
             if test -n "$2"; then
-                fetch "$2" || ret=$?
+                for x in "${@:2}"; do
+                    fetch "$x" --install || ret=$?
+                done
+            elif test -L "$0"; then
+                update
             else
                 install
             fi
