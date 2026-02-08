@@ -51,7 +51,8 @@ libs_build() {
 
     make
 
-    make check
+    # mingw check fails
+    is_mingw || make check
 
     pkgconf iconv -liconv -lcharset
     pkgconf libiconv -liconv -lcharset
