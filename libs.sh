@@ -62,20 +62,20 @@ unset _ROOT _WORKDIR PREFIX
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
 
-# conditionals
-is_darwin()     { [[ "$OSTYPE" =~ darwin ]];                            }
-is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
-is_linux()      { [[ "$OSTYPE" =~ linux ]];                             }
-is_glibc()      { $CC -v 2>&1 | grep -q "^Target:.*gnu";                }
-is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
-is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
-is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
-is_intel()      { uname -m | grep -qF "x86_64";                         }
-is_win64()      { [[ "$_TARGET" =~ -w64- ]];                            }
-is_mingw()      { [[ "$_TARGET" =~ mingw32$ ]];                         }
-
 # help functions
 is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
+
+# target check: ready after _init, at least CC is set.
+is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
+is_clang()      { is_listed clang   "${_VARIABLES[@]}";                 }
+is_darwin()     { is_listed apple   "${_VARIABLES[@]}";                 }
+is_linux()      { is_listed linux   "${_VARIABLES[@]}";                 }
+is_glibc()      { is_listed gnu     "${_VARIABLES[@]}";                 }
+is_musl()       { is_listed musl    "${_VARIABLES[@]}";                 }
+is_win64()      { is_listed w64     "${_VARIABLES[@]}";                 }
+is_mingw()      { is_listed mingw32 "${_VARIABLES[@]}";                 }
+is_arm64()      { is_listed arm64   "${_VARIABLES[@]}" || is_listed aarch64 "${_VARIABLES[@]}"; }
+is_intel()      { is_listed x86_64  "${_VARIABLES[@]}" || is_listed x86     "${_VARIABLES[@]}"; }
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
@@ -174,25 +174,6 @@ slogcmd() {
     _LOGGING="${_LOGGING:-silent}" echocmd "$@"
 }
 
-# find out executables and export envs
-#  input: name:file ...
-#  ENV: COMMAND='xcrun --find'
-_init_tools() {
-    local cmd="${COMMAND:-which}"
-    local k v p x y
-    for x in "$@"; do
-        IFS=':' read -r k v <<< "$x"
-
-        for y in ${v//,/ }; do
-            p="$(eval "$cmd" "$y" 2>/dev/null)" && break
-        done
-
-        [ -n "$p" ] || slogw "Init:" "missing host tools ${v[*]}"
-
-        export "$k=$p"
-    done
-}
-
 _init() {
     test -z "$_ROOT" || return 0
 
@@ -208,27 +189,6 @@ _init() {
 
     # compatible
     [[ "$_ARCH" =~ -musl$ ]] && _ARCH="${_ARCH/%-musl/-gnu}"
-
-    # win64 with wine
-    if is_win64; then
-        _BINEXT=exe || unset _BINEXT
-
-        if test -n "$WINEPREFIX"; then
-            # wine: '/wine' is not owned by you
-            sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
-
-            # enable binfmt support
-            if ! test -e /proc/sys/fs/binfmt_misc/wine; then
-                sudo mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
-                sudo update-binfmts --import wine
-                sudo update-binfmts --enable wine
-            fi
-
-            XDG_RUNTIME_DIR=/run/user/$(id -u)
-
-            export XDG_RUNTIME_DIR
-        fi
-    fi
 
     # prepare variables
     PREFIX="$_ROOT/prebuilts/$_ARCH"
@@ -246,22 +206,28 @@ _init() {
 
     export PREFIX _ROOT _WORKDIR _PACKAGES _LOGFILES _MANIFEST
 
-    # shellcheck disable=SC2054,SC2206
-    local toolchains=(
-        CC:$_TARGET-gcc
-        CXX:$_TARGET-g++
-        AR:$_TARGET-ar
-        AS:$_TARGET-as
-        LD:$_TARGET-ld
-        NM:$_TARGET-nm
-        RANLIB:$_TARGET-ranlib
-        STRIP:$_TARGET-strip
-    )
-    if is_darwin; then
-        COMMAND="xcrun --find" _init_tools "${toolchains[@]}"
-    else
-        _init_tools "${toolchains[@]}"
-    fi
+    # find out CC
+    test -n "$_TARGET" && CC="$_TARGET-gcc" || CC=gcc
+
+    which xcrun &>/dev/null && CC="$(xcrun --find "$CC")" || CC="$(which "$CC")"
+
+    test -n "$CC" && test -x "$CC" || die "missing gcc"
+
+    # for target checks
+    IFS=' :-()' read -r -a _VARIABLES < <({
+        "$CC" -dumpmachine          # target
+        "$CC" --version | head -n1  # version
+    } | xargs)
+
+    # toolchain utils
+    export CXX="${CC/%gcc/g++}"
+    export AR="${CC/%gcc/ar}"
+    export AS="${CC/%gcc/as}"
+    export LD="${CC/%gcc/ld}"
+    export NM="${CC/%gcc/nm}"
+    export RANLIB="${CC/%gcc/ranlib}"
+    export STRIP="${CC/%gcc/strip}"
+    export PKG_CONFIG="${CC/%gcc/pkg-config}"
 
     # STRIP
     #  libraries: strip local symbols but keep debug
@@ -277,11 +243,12 @@ _init() {
         "CMAKE:cmake"
         "MESON:meson"
         "NINJA:ninja"
-        "PKG_CONFIG:$_TARGET-pkg-config,pkg-config"
         "PATCH:patch"
         "INSTALL:install"
         "TAR:gtar,tar"
     )
+
+    test -z "$PKG_CONFIG" || host_tools+=( PKG_CONFIG:pkg-config )
 
     is_arm64 || host_tools+=(
         NASM:nasm
@@ -294,8 +261,20 @@ _init() {
         MMAKE:mingw32-make.exe
         RC:windres.exe
     )
+    _init_host_tools() {
+        local k v x p
+        for x in "$@"; do
+            IFS=':' read -r k v <<< "$x"
 
-    _init_tools "${host_tools[@]}"
+            for x in ${v//,/ }; do
+                p="$(which "$x" 2>/dev/null)" && break
+            done
+
+            test -n "$p" && export "$k=$p" || slogw ".Init" "missing host tool $v"
+        done
+    }
+
+    _init_host_tools "${host_tools[@]}"
 
     # common flags for c/c++
     local FLAGS=(
@@ -376,6 +355,27 @@ _init() {
     export MACOSX_DEPLOYMENT_TARGET
     # msys
     export MSYS=winsymlinks:lnk
+
+    # win64 with wine
+    if is_win64; then
+        _BINEXT=exe || unset _BINEXT
+
+        if test -n "$WINEPREFIX"; then
+            # wine: '/wine' is not owned by you
+            sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
+
+            # enable binfmt support
+            if ! test -e /proc/sys/fs/binfmt_misc/wine; then
+                sudo mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
+                sudo update-binfmts --import wine
+                sudo update-binfmts --enable wine
+            fi
+
+            XDG_RUNTIME_DIR=/run/user/$(id -u)
+
+            export XDG_RUNTIME_DIR
+        fi
+    fi
 }
 
 # _curl source destination [options]
@@ -827,6 +827,8 @@ _deps_status() {
 build() {
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
     echo ""
+
+    echo "${_VARIABLES[@]}"
 
     # always fetch manifest
     _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
