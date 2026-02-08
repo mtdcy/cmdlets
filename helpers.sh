@@ -154,6 +154,31 @@ _cmake_init() {
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
     env | _LOGGING=silent _capture
+    
+    # extend CMAKE with compile tools
+    _CMAKE_STD=(
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
+        -DCMAKE_PREFIX_PATH="'$PREFIX'"
+        # rpath is meaningless for static libraries and executables
+        -DCMAKE_SKIP_RPATH=TRUE
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+    )
+
+    # sysroot
+    #local sysroot="$("$CC" -print-sysroot)"
+    #test -z "$sysroot" || _CMAKE_STD+=( -DCMAKE_SYSROOT="'$sysroot'" )
+
+    if is_darwin; then
+        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Darwin )
+    elif is_linux; then
+        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Linux )
+    elif is_mingw; then 
+        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Windows )
+    fi
+
+    # cmake using a mixed path style with MSYS Makefiles, why???
+    is_msys && _CMAKE_STD+=( -G"'MSYS Makefiles'" )
 
     export _CMAKE_READY=1
 }
@@ -184,21 +209,8 @@ cmake() {
             cmdline+=( "$@" )
             ;;
         *)
-            # extend CMAKE with compile tools
-            cmdline+=(
-                -DCMAKE_BUILD_TYPE=RelWithDebInfo
-                -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-                -DCMAKE_PREFIX_PATH="'$PREFIX'"
-                # rpath is meaningless for static libraries and executables
-                -DCMAKE_SKIP_RPATH=TRUE
-                -DCMAKE_VERBOSE_MAKEFILE=ON
-            )
-            # sysroot
-            is_darwin || cmdline+=(
-                -DCMAKE_SYSROOT="'$($CC -print-sysroot)'"
-            )
-            # cmake using a mixed path style with MSYS Makefiles, why???
-            is_msys && cmdline+=( -G"'MSYS Makefiles'" )
+            # std
+            cmdline+=( "${_CMAKE_STD[@]}" )
             # append user args
             cmdline+=( "${libs_args[@]}" "$@" )
             ;;
@@ -211,22 +223,8 @@ cmake.setup() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL=1
 
-    # extend CMAKE with compile tools
-    local std=(
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_PREFIX_PATH="'$PREFIX'"
-        -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
-        # rpath is meaningless for static libraries and executables
-        -DCMAKE_SKIP_RPATH=TRUE
-        -DCMAKE_VERBOSE_MAKEFILE=ON
-    )
-    # sysroot
-    is_darwin || std+=( -DCMAKE_SYSROOT="'$($CC -print-sysroot)'" )
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys   && std+=( -G"'MSYS Makefiles'" )
-
     # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
+    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${_CMAKE_STD[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
 
     pushd "$LIBS_BUILDDIR" || die
 }
