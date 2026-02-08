@@ -82,6 +82,7 @@ jobs:
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
+          export CMDLET_TARGET="$(uname -m)-w64-mingw32
           # mingw64: build ASAP
           while nproc && export CMDLET_BUILD_NJOBS=$(nproc) || true
 
