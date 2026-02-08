@@ -14,7 +14,7 @@ libs_build() {
     # no doc
     sed '/-C doc/d' -i Makefile
 
-    make CFLAGS="'$CFLAGS'" LDFLAG="'$LDFLAGS'"
+    make CFLAGS="'$CFLAGS'" LDFLAG="'$LDFLAGS'" LIBUTILSO=
 
     pkgconf gif.pc -lgif
 
