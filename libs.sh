@@ -365,8 +365,11 @@ _init() {
             sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
 
             # enable binfmt support
-            if ! test -e /proc/sys/fs/binfmt_misc/wine; then
+            if ! test -e /proc/sys/fs/binfmt_misc; then
                 sudo mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
+            fi
+
+            if ! test -e /proc/sys/fs/binfmt_misc/wine; then
                 sudo update-binfmts --import wine
                 sudo update-binfmts --enable wine
             fi
