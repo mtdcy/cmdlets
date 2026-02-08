@@ -5,7 +5,6 @@
 # Changes:
 #  1.0.5    - 20260208      - fix update command
 #  1.0.4    - 20260207      - add force update cmd in case manifest broken
-#                           - fix `readlink: xxx: No such file or directory'
 #  1.0.3    - 20260202      - add caveats command
 #  1.0.2    - 20260201      - fix pkgbuild, pkgvern may has '-'
 #  1.0.1    - 20260130      - fix link command
@@ -361,7 +360,7 @@ fetch() {
                             _ln_println "$width" "$file" "${file##*/}"
                         fi
                         links+=( "${file##*/}" )
-                    done < <( grep "^bin/" "$TEMPDIR/files" )
+                    done < <( grep "^bin/" "$TEMPDIR/files" | sed "s%^%$PREBUILTS/%" )
                 fi
                 ;;
             *)
