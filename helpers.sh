@@ -154,7 +154,7 @@ _cmake_init() {
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
     env | _LOGGING=silent _capture
-    
+
     # extend CMAKE with compile tools
     _CMAKE_STD=(
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -169,12 +169,16 @@ _cmake_init() {
     #local sysroot="$("$CC" -print-sysroot)"
     #test -z "$sysroot" || _CMAKE_STD+=( -DCMAKE_SYSROOT="'$sysroot'" )
 
-    if is_darwin; then
-        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Darwin )
-    elif is_linux; then
-        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Linux )
-    elif is_mingw; then
-        _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Windows )
+    if test -n "$_TARGET"; then
+        if is_darwin; then
+            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Darwin )
+        elif is_linux; then
+            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Linux )
+        elif is_mingw; then
+            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Windows )
+        fi
+        # host or docker build, so `uname -m' is reliable
+        _CMAKE_STD+=( -DCMAKE_SYSTEM_PROCESSOR=$(uname -m) )
     fi
 
     # cmake using a mixed path style with MSYS Makefiles, why???
