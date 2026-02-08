@@ -15,42 +15,7 @@ on:
         description: Which cmdlets to build
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fetch packages
-        shell: bash
-        run: |-
-          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
-
-          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
-
-      - name: Upload packages
-        uses: actions/upload-artifact@v3
-        with:
-          name: packages
-          path: |
-            packages
-
-      - name: Deploy (rsync)
-        # uses: burnett01/rsync-deployments@7.0.1
-        uses: https://git.mtdcy.top/actions/rsync@7.0.1
-        with:
-          switches: -avc
-          path: packages/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
-
   build:
-    needs: prepare
     runs-on: ${{ matrix.machine }}
     container: ${{ matrix.builder }}
     if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' }}
@@ -69,22 +34,17 @@ jobs:
           token: ${{ secrets.COMMIT_TOKEN }}
           fetch-depth: 0
 
-      - name: Download packages
-        uses: actions/download-artifact@v3
-        with:
-          name: packages
-          path: |
-            packages
-
       - name: Build
         shell: bash
         run: |-
+          set -ex 
+
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
-          export CMDLET_TARGET="$(uname -m)-w64-mingw32
-          # mingw64: build ASAP
-          while nproc && export CMDLET_BUILD_NJOBS=$(nproc) || true
+          export CMDLET_TARGET="$(uname -m)-w64-mingw32"
+
+          which nproc && export CMDLET_BUILD_NJOBS=$(nproc) || true
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
@@ -93,7 +53,7 @@ jobs:
 
           make tag  # always tag as release is always
 
-          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}" 
+          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 
       - name: Release
         if: always()
