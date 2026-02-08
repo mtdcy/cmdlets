@@ -358,7 +358,7 @@ _init() {
 
     # win64 with wine
     if is_win64; then
-        _BINEXT=exe || unset _BINEXT
+        _BINEXT=".exe" || unset _BINEXT
 
         if test -n "$WINEPREFIX"; then
             # wine: '/wine' is not owned by you
