@@ -828,14 +828,16 @@ build() {
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
     echo ""
 
+    # always fetch manifest
+    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
+    echo ""
+
     local deps x i targets=() fails=()
 
     IFS=' ' read -r -a deps < <(depends "$@")
 
     # always sort dependencies
     IFS=' ' read -r -a deps < <(_deps_sort "${deps[@]}")
-
-    # check dependencies: libraries updated
 
     # pull dependencies
     if [ "$CMDLET_BUILD_FORCE" -ne 0 ]; then
@@ -954,10 +956,6 @@ _fetch_pkgfile() {
 
 pkgfiles() {
     slogi "☁️  Fetch pkgfiles $*"
-
-    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
-
-    echo ""
 
     local ret=0 x
     for x in "$@"; do
