@@ -206,6 +206,9 @@ _init() {
         _ARCH="$(uname -m)-$OSTYPE"
     fi
 
+    # compatible
+    [[ "$_ARCH" =~ -musl$ ]] && _ARCH="${_ARCH/%-musl/-gnu}"
+
     # win64 with wine
     if is_win64; then
         _BINEXT=.exe || unset _BINEXT
