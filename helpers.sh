@@ -803,6 +803,8 @@ _pack() {
                 fi
                 ;;
             bin/*)
+                test -f "$x" || x="$x.$_BINEXT"
+
                 if test -x "$x"; then
                     test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
                 fi
@@ -832,6 +834,8 @@ cmdlet.pkgfile() {
 
     # name contains version code?
     IFS='@' read -r name version <<< "$1"
+
+    test -z "$_BINEXT" || name="${name%.$_BINEXT}"
 
     test -n "$version" || version="$libs_ver"
 
@@ -942,37 +946,54 @@ cmdlet.pkginst() {
         installed+=( "$sub/${file##*/}" )
     done
 
-    pkgfile "$name" "${installed[@]}"
+    cmdlet.pkgfile "$name" "${installed[@]}"
 }
 
 # cmdlet executable [name] [alias ...]
 cmdlet.install() {
     slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
-    local bin="$1$_BINEXT"
-    local target="$PREFIX/bin/${2:-"${bin##*/}"}"
+    local bin target alias=( "${@:3}" ) x
+
+    # mingw: no extension in filename
+    if test -n "$_BINEXT" && [[ ! "$1" =~ .$_BINEXT$ ]]; then
+        bin="$1.$_BINEXT"
+        test -n "$2" && target="$2.$_BINEXT" || target="${bin##*/}"
+        alias=( "${alias[@]/%/.$_BINEXT}" )
+    else
+        bin="$1"
+        target="${2:-"${bin##*/}"}"
+    fi
+    target="$PREFIX/bin/$target"
 
     echocmd "$INSTALL" -v -m755 "$bin" "$target" || die "install $libs_name failed"
 
-    local alias=()
-    local x
-    for x in "${@:3}"; do
+    for x in "${alias[@]}"; do
         _ln "$target" "$PREFIX/bin/$x"
-        alias+=( "$PREFIX/bin/$x" )
     done
 
-    pkgfile "${target##*/}" "$target" "${alias[@]}"
+    cmdlet.pkgfile "${target##*/}" "$target" "${alias[@]/#/$PREFIX\/bin\/}"
 }
 
 # perform visual check on cmdlet
 cmdlet.check() {
     slogi "..Run" "check $*"
 
-    # try prebuilts first
-    local bin="$PREFIX/bin/$1$_BINEXT"
+    local bin
 
-    # try local file again
-    test -f "$bin" || bin="$1$_BINEXT"
+    # mingw: no extension in filename
+    if test -n "$_BINEXT" && [[ ! "$1" =~ \.$_BINEXT$ ]] ; then
+        bin="$PREFIX/bin/$1.$_BINEXT"
+        test -f "$bin" || bin="$1.$_BINEXT"
+        test -f "$bin" || unset bin
+    fi
+
+    if test -z "$bin"; then
+        # try prebuilts first
+        bin="$PREFIX/bin/$1"
+        # try local file again
+        test -f "$bin" || bin="$1"
+    fi
 
     test -f "$bin" || die "check $* failed, $bin not found."
 
