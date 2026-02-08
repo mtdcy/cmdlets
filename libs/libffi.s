@@ -19,17 +19,20 @@ libs_args=(
     --disable-docs
     --disable-man
 
-    # static 
+    # static
     --disable-shared
     --enable-static
 )
 
+is_mingw && libs_args+=( --disable-symvers )
+
 libs_build() {
-    configure && make || return 1
 
-    #inspect make install
+    configure
 
-    pkgfile libffi -- make install
+    make
+
+    pkgfile libffi -- make.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
