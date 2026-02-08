@@ -130,6 +130,8 @@ _cmake_init() {
     export CXX="${CXX#ccache }"
     # asm
     is_arm64 || {
+        export CMAKE_ASM_COMPILER="$NASM"
+        # these are not always working, e.g: zstd
         export CMAKE_ASM_NASM_COMPILER="$NASM"
         export CMAKE_ASM_YASM_COMPILER="$YASM"
     }
@@ -145,6 +147,8 @@ _cmake_init() {
 
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
+
+    env | _LOGGING=silent _capture
 
     export _CMAKE_READY=1
 }
