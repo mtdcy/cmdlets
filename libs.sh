@@ -71,7 +71,8 @@ is_musl()       { $CC -v 2>&1 | grep -q "^Target:.*musl";               }
 is_clang()      { $CC -v 2>&1 | grep -qF "clang";                       }
 is_arm64()      { uname -m | grep -q "arm64\|aarch64";                  }
 is_intel()      { uname -m | grep -qF "x86_64";                         }
-is_win64()      { [[ "$_TARGET" =~ w64 ]];                              }
+is_win64()      { [[ "$_TARGET" =~ -w64- ]];                            }
+is_mingw()      { [[ "$_TARGET" =~ mingw32$ ]];                         }
 
 # help functions
 is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
@@ -329,7 +330,10 @@ _init() {
         is_msys || LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
 
         # Security: FULL RELRO
-        is_win64 || LDFLAGS+=" -Wl,-z,relro,-z,now"
+        is_mingw || LDFLAGS+=" -Wl,-z,relro,-z,now"
+
+        # mingw: always link with pthread
+        is_mingw && LDFLAGS+=" -pthread"
     fi
 
     CFLAGS="${FLAGS[*]}"
