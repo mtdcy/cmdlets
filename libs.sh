@@ -198,10 +198,10 @@ _init() {
 
     _ROOT="$(pwd -P)"
 
-    if [ "$(uname -s)" = Darwin ]; then
-        _ARCH="$(uname -m)-apple-darwin"
-    elif test -n "$_TARGET"; then
+    if test -n "$_TARGET"; then
         _ARCH="$_TARGET"
+    elif [ "$(uname -s)" = Darwin ]; then
+        _ARCH="$(uname -m)-apple-darwin"
     else
         _ARCH="$(uname -m)-$OSTYPE"
     fi
