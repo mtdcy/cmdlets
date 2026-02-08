@@ -634,7 +634,7 @@ compile() {
 
     fi
 
-    if test -z "$CCACHE_DISABLE" || [ "$CCACHE_DISABLE" -ne 1 ]; then
+    if test -z "$CCACHE_DISABLE" && test -z "$CCACHE_DIR"; then
         CC="ccache $CC"
         CXX="ccache $CXX"
         # make clean should not clear ccache
