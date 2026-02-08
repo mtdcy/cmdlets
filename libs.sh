@@ -357,7 +357,10 @@ _init() {
 
     # pkg-config: some build system do not support pkg-config with parameters
     _command_wrapper PKG_CONFIG pkg_config.sh
-    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper
+    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
+    PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+    export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
 
     # update PATH => tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"

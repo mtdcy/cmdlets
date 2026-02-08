@@ -483,7 +483,7 @@ cargo.requires() {
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
-            unset PKG_CONFIG
+            unset PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
 
             #export CARGO_TARGET_DIR="$CARGO_HOME/builddir" # reuse builddir
 
