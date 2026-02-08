@@ -4,7 +4,9 @@
 libs_ver=7.1.2-13
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
-libs_dep=( glib freetype lcms2 libxml2 liblqr imath fftw zlib )
+libs_dep=( glib freetype lcms2 libxml2 liblqr imath zlib )
+
+is_mingw || libs_dep+=( fftw )
 
 # configure args
 libs_args=(

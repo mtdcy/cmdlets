@@ -52,4 +52,7 @@ libs_build() {
     cmdlet.check fftw-wisdom --version
 }
 
+# fftw requires aligned malloc, which is not ready on mingw
+libs.depends ! is_mingw
+
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
