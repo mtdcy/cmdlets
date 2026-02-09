@@ -273,57 +273,67 @@ _init() {
 
     _init_host_tools "${host_tools[@]}"
 
+    local cflags ldflags
+
     # common flags for c/c++
-    local FLAGS=(
+    cflags=(
         -g0 -Os             # optimize for size
         -fPIC -DPIC         # PIC
+    )
+    ldflags=(
+        -L$PREFIX/lib       # prebuilts
     )
 
     # macOS does not support statically linked binaries
     if is_darwin; then
-        FLAGS+=(
+        cflags+=(
             -Wno-deprecated-non-prototype
             -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
         )
-        LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
+        ldflags+=( -Wl,-dead_strip )
     elif is_mingw; then
-        # find out windows headers
+        # mingw windows headers
         #echo "#include <windows.h>" > "$TEMPDIR/test.c"
         #local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
-        #FLAGS+=( -I"$inc" --static -ffunction-sections -fdata-sections )
-        FLAGS+=( --static -ffunction-sections -fdata-sections )
+        #cflags+=( -I"$inc" )
 
-        LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic"
+        # wine windows headers and libraries
+        #cflags+=( -I/usr/include/wine/windows )
+        #ldflags+=( -L/usr/lib/wine/$(uname -m)-windows )
+
+        cflags+=( --static -ffunction-sections -fdata-sections )
+
+        # XXX: allow link with certain dlls?
+        ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
 
         # mingw: always link with pthread
-        LDFLAGS+=" -pthread"
+        ldflags+=( -pthread )
     else
         #1. static linking => two '--' vs ldflags
         #2. tell compiler to place each function and data into its own section
-        FLAGS+=(
+        cflags+=(
             --static
             -ffunction-sections
             -fdata-sections
         )
 
-        LDFLAGS="-L$PREFIX/lib "
-
         # remove unused sections, need -ffunction-sections and -fdata-sections
-        LDFLAGS+=" -Wl,-gc-sections"
+        ldflags+=( -Wl,-gc-sections )
 
         # Security: FULL RELRO
-        LDFLAGS+=" -Wl,-z,relro,-z,now"
+        ldflags+=( -Wl,-z,relro,-z,now )
 
         # disable dynamic linking and link used symbols only
-        LDFLAGS+=" -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic"
+        ldflags+=( -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
     fi
 
-    CFLAGS="${FLAGS[*]}"
-    CXXFLAGS="${FLAGS[*]}"
-    OBJCFLAGS="${FLAGS[*]}"
+    CFLAGS="${cflags[*]}"
+    CXXFLAGS="${cflags[*]}"
+    OBJCFLAGS="${cflags[*]}"
     OBJC="$CC"
     CPP="$CC -E"
     CPPFLAGS="-I$PREFIX/include"
+    LDFLAGS="${ldflags[*]}"
 
     export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
 
