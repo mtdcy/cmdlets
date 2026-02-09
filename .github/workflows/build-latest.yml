@@ -17,14 +17,16 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.machine }}
-    container: ${{ matrix.builder }}
+    container:
+      image: ${{ matrix.builder }}
+      options: --privileged
     if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           # for x86_64-w64-mingw32
-          - machine: ubuntu-latest
+          - machine: ubuntu-host
             builder: lcr.io/mtdcy/builder:mingw64-latest
 
     steps:

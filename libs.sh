@@ -360,7 +360,7 @@ _init() {
     if is_win64; then
         _BINEXT=".exe" || unset _BINEXT
 
-        if test -n "$WINEPREFIX"; then
+        if test -n "$WINEPREFIX" && ! test -f /tmp/cmdlets_binfmt_ready; then
             # wine: '/wine' is not owned by you
             sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
 
@@ -374,9 +374,14 @@ _init() {
                 sudo update-binfmts --enable wine
             fi
 
+            slogi "Wine binfmt status:"
+            echo -e "binfmt: $(cat /proc/sys/fs/binfmt_misc/status)" >&2
+            echo -e "wine: \n$(cat /proc/sys/fs/binfmt_misc/wine | sed 's/^/  /g')" >&2
+
             XDG_RUNTIME_DIR=/run/user/$(id -u)
 
             export XDG_RUNTIME_DIR
+            touch /tmp/cmdlets_binfmt_ready
         fi
     fi
 }
