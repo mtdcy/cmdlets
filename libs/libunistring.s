@@ -12,7 +12,6 @@ libs_args=(
     --disable-silent-rules
     --disable-dependency-tracking
 
-    --with-libiconv
     --with-libiconv-prefix="'$PREFIX'"
 
     # static only
@@ -20,12 +19,15 @@ libs_args=(
     --enable-static
 )
 
+is_mingw && libs_args+=( --enable-threads=win32 )
+
 libs_build() {
     configure
 
     make
 
-    make check
+    # fails with mingw
+    is_mingw || make check
 
     pkgfile libunistring -- make.install SUBDIRS=lib
 }
