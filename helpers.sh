@@ -1090,6 +1090,22 @@ cmdlet.caveats() {
     fi
 }
 
+run() {
+    local bin="$1"
+
+    test -f "$bin" || bin="$bin$_BINEXT"
+    test -f "$bin" || die "$1 not found."
+
+    if [[ "$bin" =~ $_BINEXT$ ]]; then
+        # CRLF(windows) vs LF(*nix) => sed CRLF to LF
+        _LOGGING=plain echocmd "$WINE" "$bin" "${@:2}" | sed 's/\r$//'
+    elif [[ "$bin" =~ ^[./] ]]; then
+        _LOGGING=plain echocmd "$bin" "${@:2}"
+    else
+        _LOGGING=plain echocmd "./$bin" "${@:2}"
+    fi
+}
+
 # deprecated
 pkginst()   { cmdlet.pkginst "$@";  }
 pkgfile()   { cmdlet.pkgfile "$@";  }

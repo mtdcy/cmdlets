@@ -370,6 +370,9 @@ _init() {
     if is_win64; then
         _BINEXT=".exe" || unset _BINEXT
 
+        export WINE="$(which wine 2>/dev/null)" || true
+
+        # enable binfmt support
         if test -n "$WINEPREFIX" && ! test -f /tmp/cmdlets_binfmt_ready; then
             # wine: '/wine' is not owned by you
             sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
