@@ -25,6 +25,8 @@ libs_args=(
 )
 
 libs_build() {
+    is_clang || export CFLAGS+=" -Wno-error"
+
     configure
 
     make
