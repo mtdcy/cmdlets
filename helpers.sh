@@ -92,7 +92,7 @@ configure() {
     cmdline+=( --prefix="$PREFIX" )
 
     if is_mingw && grep -q -- "--host" "${cmdline[0]}"; then
-        [[ "$*" =~ --build= ]] || cmdline+=( --build="$_TARGET" )
+        #[[ "$*" =~ --build= ]] || cmdline+=( --build="$_TARGET" )
         [[ "$*" =~ --host= ]]  || cmdline+=( --host="$_TARGET" )
     fi
 
