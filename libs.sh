@@ -289,33 +289,36 @@ _init() {
             -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
         )
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
-    else
-        # static linking => two '--' vs ldflags
-        FLAGS+=( --static )
+    elif is_mingw; then
+        # find out windows headers
+        echo "#include <windows.h>" > "$TEMPDIR/test.c"
+        local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
 
-        # tell compiler to place each function and data into its own section
-        is_msys || FLAGS+=(
+        FLAGS+=( -I"$inc" --static -ffunction-sections -fdata-sections )
+
+        LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic"
+
+        # mingw: always link with pthread
+        LDFLAGS+=" -pthread"
+    else
+        #1. static linking => two '--' vs ldflags
+        #2. tell compiler to place each function and data into its own section
+        FLAGS+=(
+            --static
             -ffunction-sections
             -fdata-sections
         )
 
-        LDFLAGS="-L$PREFIX/lib -static -static-libstdc++ -static-libgcc"
+        LDFLAGS="-L$PREFIX/lib "
 
         # remove unused sections, need -ffunction-sections and -fdata-sections
         LDFLAGS+=" -Wl,-gc-sections"
 
-        # pie => cause 'read-only segment has dynamic relocations' error
-        #  => use PIC instead, or let packages decide
-        #LDFLAGS+=" -fPIE -pie"
-
-        # link needed static libraries
-        is_msys || LDFLAGS+=" -Wl,--as-needed -Wl,-Bstatic"
-
         # Security: FULL RELRO
-        is_mingw || LDFLAGS+=" -Wl,-z,relro,-z,now"
+        LDFLAGS+=" -Wl,-z,relro,-z,now"
 
-        # mingw: always link with pthread
-        is_mingw && LDFLAGS+=" -pthread"
+        # disable dynamic linking and link used symbols only
+        LDFLAGS+=" -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic"
     fi
 
     CFLAGS="${FLAGS[*]}"
