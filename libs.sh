@@ -600,14 +600,20 @@ _prepare() {
             http://*|https://*)
                 local file="$(_package_name "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
-                slogcmd "$PATCH -p1 -N < $file" || die "patch < $file failed."
+
+                slogcmd "$PATCH" -Np1 -i "$file" ||
+                slogcmd "$PATCH" -Np0 -i "$file" ||
+                die "patch < $file failed."
                 ;;
             *)
-                slogcmd "$PATCH -p1 -N < $patch" || die "patch < $patch failed."
+                slogcmd "$PATCH" -Np1 -i "$patch" ||
+                slogcmd "$PATCH" -Np0 -i "$patch" ||
+                die "patch < $patch failed."
                 ;;
         esac
     done
 
+    # always patch with -p1
     if test -s "$TEMPDIR/$libs_name.patch"; then
         slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch" || die "patch inlined failed."
     fi
