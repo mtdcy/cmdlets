@@ -38,9 +38,39 @@ is_linux  && libs_args+=( "linux-$(uname -m)" )
 
 is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
 
+# https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-openssl/PKGBUILD
+if is_mingw; then
+    libs_args+=( mingw64 )
+
+    libs_patches=(
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/002-relocation.patch
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/004-arch-suffix.patch
+    )
+
+    libs_resources=(
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/pathtools.c
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/pathtools.h
+
+        # https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=mingw-w64-openssl
+        # clear bad commit: https://github.com/openssl/openssl/commit/4a7d9705f30842b402058324a6947938fe3486ec.patch
+        https://github.com/openssl/openssl/commit/4a7d9705f30842b402058324a6947938fe3486ec.patch
+    )
+fi
+
 libs_build() {
     # -static will disable OPENSSL_THREADS
     export LDFLAGS="${LDFLAGS//-static /}"
+
+    # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-openssl/PKGBUILD
+    if is_mingw; then
+        cp pathtools.c crypto/
+
+        # Use mingw cflags instead of hardcoded ones
+        sed -i Configurations/10-main.conf \
+            -e '/^"mingw"/ s/-fomit-frame-pointer -O3 -Wall/-O2 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions --param=ssp-buffer-size=4/'
+
+        slogcmd patch --reverse -p1 -i 4a7d9705f30842b402058324a6947938fe3486ec.patch
+    fi
 
     slogcmd ./Configure "${libs_args[@]}" || return 1
 
@@ -60,13 +90,13 @@ libs_build() {
     cmdlet.caveats << EOF
 prebuilt static openssl @ $libs_ver
 
-$(./apps/openssl version -a)
+$(run apps/openssl version -a)
 
-$(./apps/openssl list -providers)
+$(run apps/openssl list -providers)
 
     OR set env OPENSSL_MODULES instead
 
-$(./apps/openssl list -engines)
+$(run apps/openssl list -engines)
 
     OR set env OPENSSL_ENGINES instead
 EOF
