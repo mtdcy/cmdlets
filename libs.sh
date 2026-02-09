@@ -341,7 +341,7 @@ _init() {
     #  input: ENV wrapper.sh
     _command_wrapper() {
         eval export REAL_$1="\$$1"
-        export $1="$_ROOT/wrapper/$2"
+        export $1="$_ROOT/scripts/$2"
     }
 
     # pkg-config: some build system do not support pkg-config with parameters
