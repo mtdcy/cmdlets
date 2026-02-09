@@ -12,13 +12,12 @@ libs_url=(
     #https://zlib.net/zlib-$libs_ver.tar.gz
 )
 libs_sha=60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb
-libs_dep=()
 
-# types: app or cmdlet
-libs_type=cmdlet
+libs_deps=()
 
 # configure args
-libs_args=()
+libs_args=(
+)
 
 # resources: "url;sha"
 libs_resources=
@@ -27,7 +26,10 @@ libs_resources=
 libs_patches=()
 
 libs_build() {
-    configure --static && make || return 1
+    # non standard configure
+    configure --static
+
+    make CC="'$CC'" CFLAGS="'$CFLAGS'"
 
     cat <<EOF > zlib.pc
 prefix=$PREFIX
