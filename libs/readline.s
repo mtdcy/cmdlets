@@ -18,7 +18,16 @@ libs_patches=(
     https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-002
     https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-003
 )
-libs_patch_level=0
+
+# https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-readline
+if is_mingw; then
+    libs_patches+=(
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0001-sigwinch.patch
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0002-event-hook.patch
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0003-no-winsize.patch
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0004-locale.patch
+    )
+fi
 
 libs_args=(
     --disable-option-checking
@@ -37,9 +46,11 @@ libs_args=(
 )
 
 libs_build() {
-    # https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=mingw-w64-readline
-    # windows don't have struct winsize
-    is_mingw && sed -i '/^extern int _rl_tcgetwinsize/i struct winsize;' rlwinsize.h
+    # set ncurses cflags and ldflags
+    libs.requires ncurses
+
+    # hack: readline do not respect LDFLAGS
+    export CFLAGS="$CFLAGS $LDFLAGS"
 
     configure
 
@@ -47,7 +58,12 @@ libs_build() {
 
     make check
 
+    # check linkage by build a program
+    make readline
+
     pkgfile libreadline -- make install-static
+
+    cmdlet.install readline
 }
 
 
