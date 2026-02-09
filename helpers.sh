@@ -996,6 +996,10 @@ cmdlet.pkginst() {
             # reuse previous sub dir for other files
         esac
 
+        if [[ "$sub" =~ ^bin ]] && test -n "$_BINEXT" && [[ ! "$file" =~ $_BINEXT$ ]]; then
+            test -f "$file" || file="$file$_BINEXT"
+        fi
+
         echocmd cp -fv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
@@ -1010,7 +1014,7 @@ cmdlet.install() {
     local bin target alias=( "${@:3}" ) x
 
     # mingw: no extension in filename
-    if test -n "$_BINEXT" && [[ ! "$1" =~ $_BINEXT$ ]]; then
+    if test -n "$_BINEXT" && [ ! -f "$1" ] && [[ ! "$1" =~ $_BINEXT$ ]]; then
         bin="$1$_BINEXT"
         test -n "$2" && target="$2$_BINEXT" || target="${bin##*/}"
         alias=( "${alias[@]/%/$_BINEXT}" )
