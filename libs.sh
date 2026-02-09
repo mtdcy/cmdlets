@@ -229,6 +229,9 @@ _init() {
     export STRIP="${CC/%gcc/strip}"
     export PKG_CONFIG="${CC/%gcc/pkg-config}"
 
+    # Windows resource compiler
+    is_mingw && export WINDRES="${CC/%gcc/windres}"
+
     # STRIP
     #  libraries: strip local symbols but keep debug
     #  binaries: strip all and debug symbols
@@ -255,12 +258,6 @@ _init() {
         YASM:yasm
     )
 
-    # MSYS2
-    is_msys && host_tools+=(
-        # we are using MSYS shell, but still setup mingw32-make
-        MMAKE:mingw32-make.exe
-        RC:windres.exe
-    )
     _init_host_tools() {
         local k v x p
         for x in "$@"; do
@@ -291,10 +288,10 @@ _init() {
         LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip"
     elif is_mingw; then
         # find out windows headers
-        echo "#include <windows.h>" > "$TEMPDIR/test.c"
-        local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
-
-        FLAGS+=( -I"$inc" --static -ffunction-sections -fdata-sections )
+        #echo "#include <windows.h>" > "$TEMPDIR/test.c"
+        #local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
+        #FLAGS+=( -I"$inc" --static -ffunction-sections -fdata-sections )
+        FLAGS+=( --static -ffunction-sections -fdata-sections )
 
         LDFLAGS="-L$PREFIX/lib -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic"
 

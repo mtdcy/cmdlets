@@ -121,6 +121,15 @@ make.install() {
     slogcmd "$MAKE" install -j1 "$@" || die "make.install $libs_name failed."
 }
 
+_remove_ccache() {
+    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
+    # meson cross file do not accept ccache
+    CC="${CC#ccache }"
+    CXX="${CXX#ccache }"
+
+    export CC CXX
+}
+
 # setup cmake environments
 _cmake_init() {
     test -z "$_CMAKE_READY" || return 0
@@ -130,9 +139,8 @@ _cmake_init() {
 
     export LIBS_BUILDDIR
 
-    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-    export CC="${CC#ccache }"
-    export CXX="${CXX#ccache }"
+    _remove_ccache
+
     # asm
     is_arm64 || {
         export CMAKE_ASM_COMPILER="$NASM"
@@ -144,6 +152,7 @@ _cmake_init() {
     if _version_ge "$("$CMAKE" --version | grep -oE "[0-9.]+" -m1)" "4.0"; then
         export CMAKE_POLICY_VERSION_MINIMUM=3.5
     fi
+
     # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
     if [ -z "$CCACHE_DISABLE" ]; then
         export CMAKE_C_COMPILER_LAUNCHER=ccache
@@ -257,6 +266,28 @@ _meson_init() {
 
     export LIBS_BUILDDIR
 
+    _remove_ccache
+
+    # cross compile
+    if is_mingw; then
+        cat << EOF > mingw.txt
+[binaries]
+c = '$CC'
+cpp = '$CXX'
+ar = '$AR'
+strip = '$STRIP'
+windres = '$WINDRES'
+pkgconfig = '$PKG_CONFIG'
+exe_wrapper = 'wine'
+
+[host_machine]
+system = 'windows'          # Target operating system
+cpu_family = '$(uname -m)'  # Target CPU family
+cpu = '$(uname -m)'         # Specific CPU
+endian = 'little'           # Endianness
+EOF
+    fi
+
     export _MESON_READY=1
 }
 
@@ -278,6 +309,8 @@ meson() {
                 -Dbuildtype=release
                 -Ddefault_library=static    # prefer static internal project libraries
             )
+
+            is_mingw && std+=( --cross-file=mingw.txt )
 
             # prefer static external dependencies
             #is_darwin || std+=( --prefer-static )
@@ -307,6 +340,8 @@ meson.setup() {
         -Dbuildtype=release
         -Ddefault_library=static
     )
+
+    is_mingw && std+=( --cross-file=mingw.txt )
 
     # prefer static external dependencies
     #is_darwin || std+=( --prefer-static )
