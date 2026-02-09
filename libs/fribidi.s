@@ -31,9 +31,10 @@ libs_build() {
 
     echo "a _lsimple _RteST_o th_oat" > test.input || die
 
-    output=$(./bin/fribidi --charset=CapRTL --test test.input)
+    # CRLF(windows) vs LF(*nix) => sed CRLF to LF
+    output=$(./bin/fribidi$_BINEXT --charset=CapRTL --test test.input | sed 's/\r$//')
 
-    echo "$output"
+    echo "|$output|"
 
     [ "${output#*=> }" = "a simple TSet that" ] || die "simple test failed."
 }
