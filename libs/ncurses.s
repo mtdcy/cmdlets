@@ -54,6 +54,7 @@ libs_args=(
 if is_mingw; then
     libs_args+=(
         --disable-home-terminfo         # drop ~/.terminfo from terminfo search-path
+        --disable-symlinks
     )
  else
     # *nix system: avoid hardcoded PREFIX
@@ -72,6 +73,13 @@ fi
 libs_build() {
     # mingw
     if is_mingw; then
+        # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ncurses/PKGBUILD
+        # It passes X_OK to access() on Windows which isn't supported with ucrt
+        CFLAGS+=" -D__USE_MINGW_ACCESS"
+        # nanosleep is only defined in pthread library
+        export cf_cv_func_nanosleep=no
+
+
         export BUILD_EXEEXT="$_BINEXT"
         export PATH_SEPARATOR=";"
 
@@ -89,6 +97,8 @@ libs_build() {
     #  1. no rpath things
     sed -i misc/ncurses-config \
         -e 's/^RPATH_LIST=.*/RPATH_LIST=/'
+
+    pkgconf misc/ncurses.pc -DNCURSES_STATIC
 
     pkgfile libncurses  -- make install.libs
 
