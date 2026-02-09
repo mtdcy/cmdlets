@@ -214,6 +214,9 @@ DOCKER_ARGS += --security-opt apparmor=unconfined
 DOCKER_ARGS += -e PUID=$(USER)
 DOCKER_ARGS += -e PGID=$(GROUP)
 
+# bash history
+DOCKER_ARGS += -e HISTFILE=/tmp/history -v .history:/tmp/history
+
 #1. WSL bridge network has performance issue.
 #2. Wine in docker takes looong time to start with host network.
 DOCKER_NETWORK ?= host
@@ -237,7 +240,10 @@ else
 DOCKER_RUNC = docker run --rm -i $(DOCKER_ARGS) $(DOCKER_IMAGE)
 endif
 
-runc-docker:
+.history:
+	touch $@
+
+runc-docker: .history
 	$(DOCKER_RUNC) $(OPCODE)
 
 # TODO

@@ -15,3 +15,4 @@ ssh_id_rsa
 pkg-config.log
 .rustup
 .ssh_token
+.history
