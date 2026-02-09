@@ -28,14 +28,26 @@ libs.depends() {
 }
 
 libs.requires() {
+    local x y cflags=() cxxflags=()
+
     for x in "$@"; do
         "$PKG_CONFIG" --exists "$x" || die "$x not found."
 
-        CFLAGS+=" $($PKG_CONFIG --cflags "$x")"
+        for y in $($PKG_CONFIG --cflags "$x"); do
+            case "$y" in
+                -std=c++*|-std=gnu++*)  cxxflags+=( "$y" )  ;;
+                -fpermissive)           cxxflags+=( "$y" )  ;;
+                *)                      cflags+=( "$y" )    ;;
+            esac
+        done
+
         LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
     done
 
-    export CFLAGS LDFLAGS
+    CFLAGS+=" ${cflags[*]}"
+    CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
+
+    export CFLAGS CXXFLAGS LDFLAGS
 }
 
 libs.requires.c89() {
@@ -1110,7 +1122,8 @@ pkgconf() {
             -I*|-D*)    cflags+=( "$arg" )              ;;
             -l*|-L*)    ldflags+=( "$arg" )             ;;
             -framework) ldflags+=( "$arg" "$1" ); shift ;; # -framework AppKit
-            -*)         ldflags+=( "$arg" )             ;; # -pthread
+            -pthread)   ldflags+=( "$arg" )             ;; # -pthread
+            -*)         cflags+=( "$arg" )              ;; # -DXXX -std=xxx
             *)          requires+=( "$arg" )            ;;
         esac
     done
