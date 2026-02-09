@@ -279,6 +279,7 @@ _init() {
     cflags=(
         -g0 -Os             # optimize for size
         -fPIC -DPIC         # PIC
+        -Wno-error          # no warnings as errors
     )
     ldflags=(
         -L$PREFIX/lib       # prebuilts
