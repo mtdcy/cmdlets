@@ -26,4 +26,6 @@ libs_build() {
     pkgfile liburcu -- make install SUBDIRS="'include src'"
 }
 
+libs.depends ! is_mingw
+
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
