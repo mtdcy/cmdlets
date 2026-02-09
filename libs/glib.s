@@ -2,53 +2,83 @@
 
 # Core application library for GNOME and GTK
 # GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
+
+# patches are needed to build with mingw
+libs_stable_minor=1
+
 # shellcheck disable=SC2034
 libs_lic=LGPLv2.1+
-libs_ver=2.87.2
+libs_ver=2.86.3
 libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=d568110fd57e17eb29f8de5e67fc3b7f869a16b6bf8f896d7c47341e026b5704
+libs_sha=ad0718637e4b91bbf4732e609cea8b06117bfcea8ddc036477bebf43939aab9f
 libs_dep=( zlib pcre2 libiconv libffi )
 
-libs_args=(
-    # avoid hardcode PREFIX
-    -Dlocalstatedir=/var
-    -Druntime_dir=/var/run
-    -Dgio_module_dir=/usr/lib/gio/modules   # OR set env GIO_MODULE_DIR
+is_mingw && libs_dep+=( cppwinrt )
 
+libs_args=(
     # GLib libraries
     -Dglib_assert=true
     -Dglib_checks=true
-    -Dglib_debug=enabled
 
     # Disable dtrace; see https://trac.macports.org/ticket/30413
     # and https://gitlab.gnome.org/GNOME/glib/-/issues/653
     -Ddtrace=disabled
+    -Dsystemtap=disabled    # requires dtrace
 
     # no gobject-introspection
     #  => used to create language bindings for other programming languages like Python, JavaScript, Vala, and Lua.
     -Dintrospection=disabled
 
-    -Dbsymbolic_functions=false
-
+    # disabled features
     -Dnls=disabled
+    -Dselinux=disabled
     -Dsysprof=disabled
+    -Dlibmount=disabled
     -Dman-pages=disabled
+    -Dglib_debug=disabled
     -Dtests=false
 )
+
+# avoid hardcode PREFIX
+is_mingw || libs_args+=(
+    -Dlocalstatedir=/var
+    -Druntime_dir=/var/run
+    -Dgio_module_dir=/usr/lib/gio/modules   # OR set env GIO_MODULE_DIR
+)
+
+# https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-glib2/PKGBUILD
+if is_mingw; then
+    libs_args+=(
+        -Dlibelf=disabled
+        -Dfile_monitor_backend=win32
+    )
+
+    libs_patches=(
+        https://gitlab.gnome.org/GNOME/glib/-/commit/7e69f88480a4bf8d9653efd0310c4c25390a0c8b.patch
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0002-disable_glib_compile_schemas_warning.patch
+
+        # cppwinrt is cpp project but glib defines gwin32 codes as c code.
+        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0004-disable-explicit-ms-bitfields.patch
+    )
+fi
 
 # GFileMonitor backend: auto, inotify, kqueue, libinotify-kqueue, win32
 #is_linux && libs_args+=( -Dfile_monitor_backend=inotify ) || libs_args+=( -Dfile_monitor_backend=auto )
 
 # shellcheck disable=SC2086
 libs_build() {
-    # no gvdb
+    # ERROR: Subproject gvdb is buildable: NO
     rm -rf subprojects/gvdb
 
-    # ERROR: Dependency "iconv" not found
-    sed -e "s/dependency('iconv')/dependency('iconv', required: true, static: true)/" \
-        -i meson.build
-
     libs.requires iconv
+
+    if is_mingw; then
+        libs.requires libwinrt
+
+        # Dependency intl found: YES unknown (cached)
+        # meson.build:2345:2: ERROR: Assert failed: libintl.type_name() == 'internal'
+        sed -i '/assert(libintl.*internal.)/d' meson.build
+    fi
 
     meson.setup
 
