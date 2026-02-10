@@ -28,7 +28,7 @@ libs_build() {
 
     # install cmdlets and symlinks
     cmdlet.install bzip2 bzip2 bunzip2 bzcat
-    cmdlet.check bzip2 --version
+    cmdlet.check bzip2 --help
 
     # no shell scripts for windows
     if ! is_mingw; then
