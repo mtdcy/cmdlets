@@ -27,32 +27,29 @@ export LANG=C
 # toolchain prefix
 
 # set private vairables
-: "${_LOGGING:=$CMDLET_LOGGING}"
+_LOGGING="${CMDLET_LOGGING:-plain}"
 
 if [ "$_LOGGING" = "tty" ]; then
     test -t 1 && which tput &>/dev/null || _LOGGING=plain
 fi
 
-: "${_REPO:=$CMDLET_REPO}"
-: "${_REPO:=https://pub.mtdcy.top/cmdlets/latest}"
+# target, default: musl-gcc
+_TARGET="${CMDLET_TARGET:-$(uname -m)-$(uname -s | tr A-Z a-z)-musl}"
 
-# target
-: "${_TARGET:=$CMDLET_TARGET}"
-test -n "$_TARGET" && which "$_TARGET-gcc" &>/dev/null || unset _TARGET
+which "$_TARGET-gcc" &>/dev/null || unset _TARGET
 
-# check musl-gcc
-: "${_TARGET:=$(uname -m)-$(uname -s | tr A-Z a-z)-musl}"
-test -n "$_TARGET" && which "$_TARGET-gcc" &>/dev/null || unset _TARGET
+# pkgfiles repo
+_REPO="${CMDLET_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
-: "${_MIRRORS:=$CMDLET_MIRRORS}"
+_MIRRORS="${CMDLET_MIRRORS:-}"
 if test -n "$_MIRRORS"; then
     : "${_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
     : "${_GO_PROXY:=$_MIRRORS/gomods}"
 fi
 
 # build args
-: "${_NJOBS:=$CMDLET_BUILD_NJOBS}"
+_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 
 # clear envs => setup by _init
 unset _ROOT _WORKDIR PREFIX
@@ -63,19 +60,25 @@ unset _ROOT _WORKDIR PREFIX
 # check: otool -l <path_to_binary> | grep minos
 
 # help functions
-is_listed()     { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
+is_listed()         { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
+is_match()          { [[ " ${*:2} " =~ " "$1" " ]];     }   # is $1 in list ${@:2}?
 
 # target check: ready after _init, at least CC is set.
-is_msys()       { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";        }
-is_clang()      { is_listed clang   "${_VARIABLES[@]}";                 }
-is_darwin()     { is_listed apple   "${_VARIABLES[@]}";                 }
-is_linux()      { is_listed linux   "${_VARIABLES[@]}";                 }
-is_glibc()      { is_listed gnu     "${_VARIABLES[@]}";                 }
-is_musl()       { is_listed musl    "${_VARIABLES[@]}";                 }
-is_win64()      { is_listed w64     "${_VARIABLES[@]}";                 }
-is_mingw()      { is_listed mingw32 "${_VARIABLES[@]}";                 }
-is_arm64()      { is_listed arm64   "${_VARIABLES[@]}" || is_listed aarch64 "${_VARIABLES[@]}"; }
-is_intel()      { is_listed x86_64  "${_VARIABLES[@]}" || is_listed x86     "${_VARIABLES[@]}"; }
+is_msys()           { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";    } # deprecated
+is_clang()          { is_listed clang           "${_TARGETVARS[@]}";    }
+is_darwin()         { is_listed apple           "${_TARGETVARS[@]}";    }
+is_linux()          { is_listed linux           "${_TARGETVARS[@]}";    }
+is_glibc()          { is_listed gnu             "${_TARGETVARS[@]}";    }
+is_musl()           { is_listed musl            "${_TARGETVARS[@]}";    }
+is_win64()          { is_listed w64             "${_TARGETVARS[@]}";    }
+is_mingw()          { is_listed mingw32         "${_TARGETVARS[@]}";    }
+is_arm64()          { is_match  "arm64|aarch64" "${_TARGETVARS[@]}";    }
+is_intel()          { is_match  "x86_64|x86"    "${_TARGETVARS[@]}";    }
+is_posix()          { is_listed posix           "${_TARGETVARS[@]}";    }
+
+host.is_glibc()     { is_listed GLIBC           "${_HOSTVARS[@]}";      }
+host.is_linux()     { is_listed linux           "${_HOSTVARS[@]}";      }
+host.is_darwin()    { is_match  "darwin*"       "${_HOSTVARS[@]}";      }
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
@@ -213,24 +216,37 @@ _init() {
 
     test -n "$CC" && test -x "$CC" || die "missing gcc"
 
-    # for target checks
-    IFS=' :-()' read -r -a _VARIABLES < <({
-        "$CC" -dumpmachine          # target
-        "$CC" --version | head -n1  # version
-    } | xargs)
-
     # toolchain utils
-    export CXX="${CC/%gcc/g++}"
+    export CC
     export AR="${CC/%gcc/ar}"
     export AS="${CC/%gcc/as}"
     export LD="${CC/%gcc/ld}"
     export NM="${CC/%gcc/nm}"
-    export RANLIB="${CC/%gcc/ranlib}"
+    export CXX="${CC/%gcc/g++}"
     export STRIP="${CC/%gcc/strip}"
+    export RANLIB="${CC/%gcc/ranlib}"
     export PKG_CONFIG="${CC/%gcc/pkg-config}"
 
     # Windows resource compiler
-    is_mingw && export WINDRES="${CC/%gcc/windres}"
+    export WINDRES="${CC/%gcc/windres}"
+
+    # force posix compatible, e.g: libwinpthread
+    test -x "$CC-posix"  && export CC="$CC-posix"   || true
+    test -x "$CXX-posix" && export CXX="$CXX-posix" || true
+
+    # for target checks
+    IFS=' :-()' read -r -a _TARGETVARS < <({
+        "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
+    } | xargs)
+    IFS=' ' read -r -a _TARGETVARS < <( printf '%s\n' "${_TARGETVARS[@]}" | sort -u | xargs)
+
+    # for host checks (not --host for configure)
+    IFS=' :-()' read -r -a _HOSTVARS < <({
+        echo "$OSTYPE"
+        which gcc &>/dev/null && gcc --version | head -n1  # gcc version
+        which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
+    } | xargs)
+    IFS=' ' read -r -a _HOSTVARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
 
     # STRIP
     #  libraries: strip local symbols but keep debug
@@ -304,11 +320,15 @@ _init() {
 
         cflags+=( --static -ffunction-sections -fdata-sections )
 
+        is_posix && cflags+=( -D_POSIX )
+
         # XXX: allow link with certain dlls?
         ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
 
-        # mingw: always link with pthread
-        ldflags+=( -pthread )
+        # ucrt 
+        #"$CC" -dumpspecs > "$_WORKDIR/.specs"
+        #sed -i 's/-lmsvcrt/-lucrt/g' "$_WORKDIR/.specs"
+        #cflags+=( -specs="$_WORKDIR/.specs" -D_UCRT )
     else
         #1. static linking => two '--' vs ldflags
         #2. tell compiler to place each function and data into its own section
@@ -571,12 +591,12 @@ _fetch_unzip() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
 
-        if file "$zip" | grep -Fwq "text"; then
-            # copy ASCII text file directly
-            cp -f "$zip" .
-        else
+        if file "$zip" | grep -Fwq "compressed"; then
             # unzip to current fold
             _unzip "$zip" "${ZIP_SKIP:-}"
+        else
+            # copy ASCII text file directly
+            cp -f "$zip" .
         fi
     fi
 }
@@ -856,7 +876,8 @@ build() {
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
     echo ""
 
-    echo "${_VARIABLES[@]}"
+    echo "host   : ${_HOSTVARS[@]}"
+    echo "target : ${_TARGETVARS[@]}"
 
     # always fetch manifest
     _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
@@ -1078,6 +1099,10 @@ zip_files() {
 
 env() {
     /usr/bin/env | grep -v "^PROMPT"
+}
+
+gcc.macros() {
+    echo | "$CC" -dM -E -
 }
 
 clean() {
