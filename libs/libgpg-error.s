@@ -11,10 +11,14 @@ libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
 
-    --with-pic
+    # needed by some libraries, e.g: libgcrypt
+    --enable-install-gpg-error-config
+
     --disable-nls
     --disable-doc
     --disable-tests
+    --without-libintl-prefix
+    --without-libiconv-prefix
 
     # static only
     --disable-shared
@@ -26,7 +30,11 @@ libs_build() {
 
     make
 
-    pkgfile "$libs_name" -- make install bin_PROGRAMS=
+    # only gpgrt-config and always enable static
+    sed -i src/gpgrt-config \
+        -e '/^enable_static/s/=.*/=yes/'
+
+    pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=gpgrt-config
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
