@@ -11,14 +11,14 @@ libs_args=(
     --disable-dependency-tracking
     --disable-silent-rules
 
-    --with-pic
-    --disable-asm
     --disable-doc
 
     # static only
     --disable-shared
     --enable-static
 )
+    
+is_arm64 && libs_args+=( --disable-asm )
 
 libs_build() {
     configure
@@ -27,11 +27,11 @@ libs_build() {
 
     pkgfile "$libs_name" -- make install bin_PROGRAMS=
 
-    cmdlet ./src/hmac256
-    cmdlet ./src/dumpsexp
-    cmdlet ./src/mpicalc
+    cmdlet.install src/hmac256
+    cmdlet.install src/dumpsexp
+    cmdlet.install src/mpicalc
 
-    check hmac256
+    cmdlet.check hmac256
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
