@@ -28,6 +28,8 @@ libs_build() {
 
     cmake.build
 
+    pkgconf libde265/libde265.pc -DLIBDE265_STATIC_BUILD
+
     pkgfile libde265 -- cmake.install --install libde265
 
     cmdlet.install dec265/dec265
