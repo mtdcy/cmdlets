@@ -14,6 +14,9 @@ libs_args=(
     -DBUILD_STATIC_LIBS=ON
     -DBUILD_STATIC_CURL=ON
 
+    # use pkg-config to find dependencies and cflags
+    -DCURL_USE_PKGCONFIG=ON
+
     # ssl
     -DCURL_ENABLE_SSL=ON
     -DUSE_NGHTTP2=ON
@@ -50,13 +53,16 @@ libs_dep+=( openssl ) && libs_args+=( -DCURL_USE_OPENSSL=ON )
 # => Apple SecTrust is only supported with Openssl/GnuTLS
 is_darwin && libs_args+=( -DUSE_APPLE_SECTRUST=ON )
 
+# Use built-in CA store of OpenSSL
+is_listed openssl "${libs_dep[@]}" && libs_args+=( -DCURL_CA_FALLBACK=ON )
+
 libs_build() {
 
     cmake.setup
 
     cmake.build
 
-    slogcmd ./src/curl -fsIL https://www.google.com
+    slogcmd run src/curl -fvIL https://www.google.com || die "curl test failed"
 
     pkgfile libcurl -- cmake.install --component Unspecified
 

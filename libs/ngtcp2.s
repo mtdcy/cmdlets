@@ -32,6 +32,8 @@ libs_build() {
     # fix libngtcp2.pc
     is_listed openssl "${libs_dep[@]}" && pkgconf lib/libngtcp2.pc -lngtcp2_crypto_ossl || true
 
+    pkgconf lib/libngtcp2.pc -DNGTCP2_STATICLIB
+
     pkgfile libngtcp2 -- make.install
 }
 

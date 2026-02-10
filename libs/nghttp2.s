@@ -26,6 +26,8 @@ libs_build() {
 
     make -C lib V=1
 
+    pkgconf lib/libnghttp2.pc -DNGHTTP2_STATICLIB
+
     pkgfile libnghttp2 -- make.install
 }
 

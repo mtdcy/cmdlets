@@ -22,6 +22,8 @@ libs_build() {
 
     cmake.build
 
+    pkgconf lib/libnghttp3.pc -DNGHTTP3_STATICLIB
+
     pkgfile libnghttp3 -- cmake.install
 }
 
