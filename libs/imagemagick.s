@@ -82,7 +82,7 @@ libs_build() {
 
     # testing
     check_magick_format() {
-        ./utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
+        run utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
     }
 
     for x in "${libs_dep[@]}"; do
@@ -102,7 +102,7 @@ libs_build() {
     cmdlet.caveats << EOF
 static built ImageMagick
 
-$(./utilities/magick -version)
+$(run utilities/magick -version)
 
 Configuration and resource files:
 
