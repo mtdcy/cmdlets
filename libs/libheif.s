@@ -50,6 +50,9 @@ libs_args=(
 )
 
 libs_build() {
+    # bug: cmake ignores cflags of static libraries
+    libs.requires libde265
+
     cmake.setup
 
     cmake.build
