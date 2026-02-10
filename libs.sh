@@ -251,7 +251,7 @@ _init() {
         "TAR:gtar,tar"
     )
 
-    test -z "$PKG_CONFIG" || host_tools+=( PKG_CONFIG:pkg-config )
+    test -x "$PKG_CONFIG" || host_tools+=( PKG_CONFIG:pkg-config )
 
     is_arm64 || host_tools+=(
         NASM:nasm
