@@ -10,16 +10,13 @@ libs_sha=64b0c4ac76d39cca79501b3f53544af3fc5f72b536ac0f28d2928319bfab6def
 libs_dep=( glib )
 
 is_darwin && libs_patches=(
-https://raw.githubusercontent.com/Homebrew/homebrew-core/1cf441a0/Patches/libtool/configure-big_sur.diff
+    https://raw.githubusercontent.com/Homebrew/homebrew-core/1cf441a0/Patches/libtool/configure-big_sur.diff
 )
 
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
-
-    # pic
-    --with-pic
 
     # disabled features
     --without-gettext
@@ -31,7 +28,11 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return 1
+    configure 
+
+    make 
+
+    is_mingw && pkgconf lqr-1.pc -DLQR_DISABLE_DECLSPEC
 
     pkgfile liblqr -- make install
 }
