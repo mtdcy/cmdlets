@@ -22,6 +22,18 @@ libs_args=(
     --without-bash-malloc
 )
 
+is_mingw && libs_args+=(
+    bash_cv_type_intmax_t=yes
+
+    # no sys/resource.h
+    ac_cv_header_sys_resource_h=no
+    ac_cv_header_sys_wait_h=no
+    ac_cv_header_sys_times_h=no
+    ac_cv_header_sys_stream_h=no
+    ac_cv_header_sys_socket_h=no
+    ac_cv_header_sys_select_h=no
+)
+
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
@@ -40,14 +52,18 @@ libs_build() {
 
     export CFLAGS CPPFLAGS
 
-    configure &&
+    is_mingw && sed '/cross_cache=/d' -i configure
 
-    make &&
+    configure
+
+    make
 
     # install versioned bash
     cmdlet bash bash@${libs_ver%.*} bash@${libs_ver%%.*} &&
 
     check bash@3.2 --version
 }
+
+libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -4,20 +4,31 @@
 #   #1. DON'T use this version as default interpreter
 
 # shellcheck disable=SC2034
-libs_name="bash"
-libs_lic="GPL-3.0-or-later"
+libs_lic=GPLv3+
 libs_ver=5.3
-libs_url=https://github.com/bminor/bash/archive/refs/tags/bash-$libs_ver.tar.gz
-#https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+libs_url=(
+    https://github.com/bminor/bash/archive/refs/tags/bash-$libs_ver.tar.gz
+    https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+)
 
 libs_sha=6c377fd89688d0ce9bef112ce82c83418f1b6d5457ad6ea2ef2d8558bd552f2c
-libs_dep=(ncurses libiconv) # readline embbed
 
+libs_deps=( ncurses readline libiconv ) 
 libs_args=(
-    #--disable-option-checking -> make sure all options are recognized.
-    --enable-silent-rules
-    --disable-dependency-tracking
+    --disable-option-checking 
 
+    --with-curses
+    --enable-readline
+    --without-installed-readline
+    --without-included-gettext
+
+    --disable-nls
+
+    # https://github.com/robxu9/bash-static/blob/master/build.sh
+    --without-bash-malloc
+)
+
+is_mingw || libs_args+=(
     # enable features for HEAD version
     --enable-alias
     --enable-alt-array-implementation
@@ -45,23 +56,17 @@ libs_args=(
     --enable-progcomp
     --enable-select
     #--enalbe-prompt-string-decoding -> unrecognized
-
-    --with-curses
-    --enable-readline
-    --without-installed-readline
-    --with-included-gettext
-
-    --disable-nls
-
-    # https://github.com/robxu9/bash-static/blob/master/build.sh
-    --without-bash-malloc
 )
 
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
+is_mingw && libs_resources=(
+    https://mirrors.ustc.edu.cn/cygwin/x86_64/release/cygwin/cygwin-3.7.0-0.395.ga7c614986ab2-x86_64.tar.xz
+    https://mirrors.ustc.edu.cn/cygwin/x86_64/release/cygwin/cygwin-devel/cygwin-devel-3.7.0-0.395.ga7c614986ab2-x86_64.tar.xz
+)
+
 libs_build() {
-    libs.requires.c89 || true
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
@@ -75,17 +80,20 @@ libs_build() {
         # https://github.com/robxu9/bash-static/blob/master/custom/bash-musl-strtoimax-debian-1023053.patch
         sed -i 's/bash_cv_func_strtoimax =.*;/bash_cv_func_strtoimax = no;/' m4/strtoimax.m4
         autoconf -f
+    elif is_mingw; then
+        export CFLAGS+=" -I$PWD/usr/include -Dmain=WinMain"
+        export LDFLAGS+=" -L$PWD/usr/lib -lcygwin" 
     fi
 
-    configure &&
+    configure
 
-    make &&
+    make
 
     # install
-    cmdlet bash &&
+    cmdlet.install bash
 
-    # visual check
-    check bash --version
+    # check
+    cmdlet.check bash --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
