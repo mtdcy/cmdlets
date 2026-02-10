@@ -1059,13 +1059,26 @@ cmdlet.check() {
     echocmd file "$bin"
 
     # check linked libraries
-    if is_linux || is_mingw; then
+    if is_linux; then
         file "$bin" | grep -Fw "dynamically linked" && {
             echocmd ldd "$bin"
             die "$bin is dynamically linked."
         } || true
     elif is_darwin; then
         _LOGGING=plain echocmd otool -L "$bin" | grep -qE "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
+    elif is_mingw; then
+        local dll system32="system32"
+        while read -r dll; do
+            [[ "$dll" =~ KERNEL32.dll|msvcrt.dll ]] && continue
+
+            if test -n "$WINEPREFIX"; then
+                is_win64 || system32="syswow64"
+                find "$WINEPREFIX/drive_c/windows/$system32" -iname "$dll" || die "unexpected dll $dll"
+            else
+                [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
+            fi
+
+        done < <( objdump -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2 )
     elif is_msys; then
         echocmd ntldd "$bin"
     else
@@ -1074,7 +1087,7 @@ cmdlet.check() {
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
-        _LOGGING=plain echocmd "$bin" "${@:2}" 2>&1 | grep -qF "$libs_ver" || die "no version found"
+        _LOGGING=plain echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }
 
