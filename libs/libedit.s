@@ -19,11 +19,16 @@ libs_args=(
 is_linux && libs_args+=( --with-privsep-path=/var/lib/sshd )
 
 libs_build() {
+    # libedit do not use pkg-config
+    libs.requires ncurses
+
     configure
 
     make
 
     pkgfile libedit -- make install
 }
+
+libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
