@@ -34,4 +34,7 @@ libs_build() {
     pkgfile $libs_name -- make.install
 }
 
+# Windows requires Npcap or WinPcap
+libs.depends ! is_mingw
+
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
