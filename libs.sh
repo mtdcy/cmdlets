@@ -591,7 +591,7 @@ _fetch_unzip() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
 
-        if file "$zip" | grep -Fwq "compressed"; then
+        if file "$zip" | grep -Ewq "compressed|archive"; then
             # unzip to current fold
             _unzip "$zip" "${ZIP_SKIP:-}"
         else
