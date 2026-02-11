@@ -909,12 +909,12 @@ build() {
             [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
         done
 
-        pkgfiles "${pkgfiles[@]}" || true # ignore errors
+        test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
     fi
 
     slogi "BUILD" "$*"
 
-    test -z "${deps[*]}" || slogi ".DEPS" "$(_deps_status "${deps[@]}")"
+    test -z "${deps[*]}" || slogi ".DEPS" "$(_deps_status "${deps[@]}")" || true # ignore return value
 
     # check dependencies: rebuild targets
     for x in "${deps[@]}"; do
