@@ -1103,20 +1103,23 @@ cmdlet.caveats() {
     fi
 }
 
+# run command or die
 run() {
     local bin="$1"
 
     test -f "$bin" || bin="$bin$_BINEXT"
     test -f "$bin" || die "$1 not found."
 
-    if [[ "$bin" =~ $_BINEXT$ ]]; then
-        # CRLF(windows) vs LF(*nix) => sed CRLF to LF
-        _LOGGING=plain echocmd "$WINE" "$bin" "${@:2}" | sed 's/\r$//'
-    elif [[ "$bin" =~ ^[./] ]]; then
-        _LOGGING=plain echocmd "$bin" "${@:2}"
+    # > stderr, avoid grep by pipe commands
+    slogi "..Run" "$bin ${@:2}"
+
+    # capture only stderr to keep stdout as it is
+    if test -n "$WINEPREFIX"; then
+        "$WINE" "$bin" "${@:2}"
     else
-        _LOGGING=plain echocmd "./$bin" "${@:2}"
-    fi
+        # use shell to catch "Killed" or "Abort trap" messages
+        "$SHELL" -c "$bin ${*:2}"
+    fi 2> >(_LOGGING=plain _capture_stderr) || die "run $1 failed"
 }
 
 # deprecated
