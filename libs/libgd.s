@@ -15,6 +15,12 @@ libs_patches=(
     https://github.com/libgd/libgd/commit/f4bc1f5c26925548662946ed7cfa473c190a104a.patch?full_index=1
 )
 
+# https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-libgd
+is_mingw && libs_patches+=(
+    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-libgd/mingw-replace-posix_memalign.patch
+    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-libgd/mingw-getline-link.patch
+)
+
 libs_args=(
     --disable-option-checking
     --disable-dependency-tracking
@@ -45,7 +51,7 @@ libs_build() {
 
     make
 
-    pkgfile "$libs_name" -- make install bin_PROGRAMS=
+    pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
