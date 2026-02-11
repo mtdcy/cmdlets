@@ -16,6 +16,8 @@ export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
 
+unset TAG
+
 if which brew; then
     _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
     for x in "${_gnubin[@]}"; do
@@ -31,6 +33,7 @@ cmdlets=()
 if test -n "$1"; then
     cmdlets=( "$1" ) # build single library manually
 else
+    TAG="$(bash libs.sh arch)"
     while read -r line; do
         # file been deleted or renamed
         test -e "$line" || continue
@@ -40,7 +43,9 @@ else
 
         # excludes
         [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
-    done < <(git diff --name-only HEAD~1 HEAD | grep "^libs/.*\.s")
+    done < <(git diff --name-only "$(git rev-parse "$TAG")" HEAD | grep "^libs/.*\.s")
+
+    test -n "${cmdlets[*]}" || unset TAG
 
     # build cmdlet and rdepends by default
     rdepends=1
@@ -68,6 +73,16 @@ fi
 
 # for release actions
 bash libs.sh zip_files || true
+
+if test -n "$TAG" && [ "$ret" -eq 0 ]; then
+	git tag -a "$TAG" -m "$TAG" --force
+
+    # push only if no local changes
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if git diff --quiet "$branch" "origin/$branch"; then
+        git push origin "$TAG" --force
+    fi
+fi
 
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
