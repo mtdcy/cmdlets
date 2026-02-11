@@ -6,8 +6,8 @@ libs_lic='GPL-3.0-or-later'
 libs_ver=1.25.0
 libs_url=https://ftpmirror.gnu.org/gnu/wget/wget-$libs_ver.tar.gz
 libs_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
-libs_dep=( zlib libiconv libunistring libidn2 libpsl openssl )
 
+libs_deps=( zlib libiconv libunistring libidn2 libpsl openssl )
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
@@ -29,10 +29,8 @@ libs_args=(
     --with-libunistring-prefix="'$PREFIX'"
     --without-included-libunistring
 
-    # no regex
-    --disable-pcre
-    --disable-pcre2
-    --without-included-regex
+    # included regex - easy the build
+    --with-included-regex
 
     # included libraries
     #--enable-opie       # FTP opie
@@ -48,21 +46,24 @@ libs_args=(
 )
 
 libs_build() {
-    configure &&
+    # wget configure did not handle static libraries well
+    export LIBS="$($PKG_CONFIG --libs-only-l libcrypto)"
 
-    make &&
+    configure
+
+    make
 
     # fast check
-    ./src/wget -O /dev/null http://www.baidu.com &&
+    run src/wget -O /dev/null https://www.baidu.com || die "wget test failed."
 
     # no top level check: https://git.alpinelinux.org/aports/tree/main/wget/APKBUILD
     #make -C tests check
 
     #make -C src install-exec &&
-    cmdlet src/wget &&
+    cmdlet.install src/wget
 
     # verify
-    check wget --version
+    cmdlet.check wget --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
