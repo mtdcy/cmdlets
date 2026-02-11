@@ -425,17 +425,18 @@ _init() {
     fi
 }
 
+_CURL_OPTS=( -fsSL --connect-timeout 3 )
+
 # _curl source destination [options]
 _curl() {
     local source="$1"
 
     if test -n "$2"; then
-        curl -fsI "${@:3}" "$source" -o /dev/null &&
         # show errors
-        curl -fsSL "${@:3}" "$source" -o "$2"
+        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" -o "$2" | _capture
     else
         # silent curl output for stdout
-        curl -fsSL "${@:3}" "$source"
+        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
     fi
 }
 
@@ -724,7 +725,7 @@ compile() {
         set -eo pipefail
 
         # prepare source codes
-        _prepare || return $?
+        _prepare "$1" || return $?
 
         declare -F libs_build >/dev/null || {
             slogw "<<<<<" "Not supported or missing libs_build"
@@ -888,7 +889,7 @@ build() {
     echo "target : ${_TARGETVARS[@]}"
 
     # always fetch manifest
-    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST"
+    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST" || true
     echo ""
 
     local deps x i targets=() fails=()
@@ -1174,7 +1175,7 @@ _init || exit 110
 
 case "$0" in
     bash)       return 0    ;;
-    *libs.sh$)  "$@"        ;;
+    *libs.sh)   "$@"        ;;
     *)
         func="${0##*/}"
         declare -F $func &>/dev/null || die "$func not exists."
