@@ -51,6 +51,12 @@ libs_build() {
 
     make
 
+    # refer to src/gd.h
+    if is_mingw; then
+        sed 's/NONDLL/GD_STATIC_BUILD/g' -i src/gd.h
+        pkgconf config/gdlib.pc -DGD_STATIC_BUILD -DBGDWIN32
+    fi
+
     pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=
 }
 
