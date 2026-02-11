@@ -37,6 +37,7 @@ ENVS := CMDLET_NO_PKGFILES \
 		CMDLET_LOGGING     \
 		CMDLET_MIRRORS     \
 		CMDLET_CCACHE      \
+		CMDLET_REPO        \
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -49,7 +50,7 @@ vpath %.s libs
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 %+:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh dist $(@:+=)"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh check $(@:+=)"
 
 %-:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_NO_PKGFILES=1
