@@ -74,10 +74,19 @@ libs_build() {
 
     slogcmd ./Configure "${libs_args[@]}" || return 1
 
-    make clean || true
-
     # ossl-modules: reset MODULESDIR
     make ENGINESDIR= MODULESDIR=
+
+    # simple tests/ssl
+    echo | run apps/openssl s_client -connect google.com:443 | grep -q "Verification: OK" || die "openssl connect failed"
+
+    # crypto: common used ciphers
+    local txt="This is a secret message"
+    for cipher in aes-256-cbc aes-256-cfb chacha20; do
+        echo "$txt" | run apps/openssl enc -$cipher -a -salt -pass pass:passwd > encrypted.txt 
+        local decrypted="$(cat encrypted.txt | run apps/openssl enc -$cipher -a -d -salt -pass pass:passwd 2>/dev/null)"
+        [ "$decrypted" = "$txt" ] || die "openssl cipher $cipher failed: |$decrypted|"
+    done
 
     pkgfile libopenssl -- make install_dev
 
