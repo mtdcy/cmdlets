@@ -42,7 +42,10 @@ which "$_TARGET-gcc" &>/dev/null || unset _TARGET
 _REPO="${CMDLET_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
 
 # mirrors
-_MIRRORS="${CMDLET_MIRRORS:-}"
+_MIRRORS="${CMDLET_MIRRORS:-https://mirrors.mtdcy.top}"
+
+curl -fsIL --connect-timeout 1 "$_MIRRORS" -o /dev/null || unset _MIRRORS
+
 if test -n "$_MIRRORS"; then
     : "${_CARGO_REGISTRY:=$_MIRRORS/crates.io-index/}"
     : "${_GO_PROXY:=$_MIRRORS/gomods}"
@@ -115,6 +118,7 @@ die()   {
 }
 
 _capture() {
+    test -n "$_LOGFILE" || return 0
     case "$_LOGGING" in
         silent)
             cat >> "$_LOGFILE"
@@ -148,6 +152,7 @@ _tty_reset() {
 }
 
 _capture_stderr() {
+    test -n "$_LOGFILE" || return 0
     case "$_LOGGING" in
         plain)  tee -a "$_LOGFILE" ;;
         *)      cat >> "$_LOGFILE" ;;
@@ -325,7 +330,7 @@ _init() {
         # XXX: allow link with certain dlls?
         ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
 
-        # ucrt 
+        # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64 
         #"$CC" -dumpspecs > "$_WORKDIR/.specs"
         #sed -i 's/-lmsvcrt/-lucrt/g' "$_WORKDIR/.specs"
         #cflags+=( -specs="$_WORKDIR/.specs" -D_UCRT )
@@ -601,8 +606,58 @@ _fetch_unzip() {
     fi
 }
 
+# _load library
+_load() {
+    . helpers.sh
+
+    unset "${!libs_@}"
+
+    slogi ".Load" "libs/$1.s"
+
+    local file="libs/$1.s"
+    local name="${1##*/}"
+
+    # sed: delete all lines after __END__
+    sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
+
+    . "$TEMPDIR/$name"
+
+    # default values:
+    test -n "$libs_name" || libs_name="$name"
+
+    # update libs_dep to libs_deps, make old build compatible
+    test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
+
+    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+
+    # prepare logfile
+    mkdir -p "$_LOGFILES"
+    export _LOGFILE="$_LOGFILES/$libs_name.log"
+}
+
+_prepare_workdir() {
+    local workdir="$_WORKDIR/$libs_name-$libs_ver"
+
+    mkdir -p "$PREFIX"
+    mkdir -p "$workdir" && cd "$workdir" || die "prepare workdir failed."
+
+    slogi ".WDIR" "${PWD#"$_ROOT/"}"
+}
+
 # prepare source code or die
 _prepare() {
+    _load "$1"
+
+    if [ "$libs_type" = ".PHONY" ]; then
+        slogw "<<<<<" "skip dummy target $libs_name"
+        return 127
+    fi
+
+    test -n "$libs_url" || die "missing libs_url"
+
+    # enter working directory
+    _prepare_workdir
+
     # libs_url: support mirrors
     _fetch_unzip "$libs_sha" "${libs_url[@]}"
 
@@ -643,35 +698,6 @@ _prepare() {
     fi
 }
 
-# _load library
-_load() {
-    . helpers.sh
-
-    unset "${!libs_@}"
-
-    slogi ".Load" "libs/$1.s"
-
-    local file="libs/$1.s"
-    local name="${1##*/}"
-
-    # sed: delete all lines after __END__
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
-
-    . "$TEMPDIR/$name"
-
-    # default values:
-    test -n "$libs_name" || libs_name="$name"
-
-    # update libs_dep to libs_deps, make old build compatible
-    test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
-
-    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
-
-    # prepare logfile
-    mkdir -p "$_LOGFILES"
-    export _LOGFILE="$_LOGFILES/$libs_name.log"
-}
-
 # compile target
 compile() {
     # initial build args
@@ -697,30 +723,16 @@ compile() {
 
         set -eo pipefail
 
-        _load "$1"
-
-        # clear logfiles
-        test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
-
-        if [ "$libs_type" = ".PHONY" ]; then
-            slogw "<<<<<" "skip dummy target $libs_name"
-            return 0
-        fi
+        # prepare source codes
+        _prepare || return $?
 
         declare -F libs_build >/dev/null || {
             slogw "<<<<<" "Not supported or missing libs_build"
             return 0
         }
 
-        test -n "$libs_url" || die "missing libs_url"
-
-        # prepare work directories
-        local workdir="$_WORKDIR/$libs_name-$libs_ver"
-
-        mkdir -p "$PREFIX"
-        mkdir -p "$workdir" && cd "$workdir"
-
         # clear and log all environments
+        test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
         {
             echo -e "**** start build $libs_name ****\n$(date)\n"
             echo -e "PATH: $PATH\n"
@@ -728,10 +740,6 @@ compile() {
             env
             echo -e "----\n"
         } > "$_LOGFILE"
-
-        slogi ".Path" "${PWD#"$_ROOT/"}"
-
-        _prepare # or die
 
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
@@ -920,6 +928,7 @@ build() {
         echo ""
         IFS=' ' read -r -a deps < <(depends "${targets[i]}")
         slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${deps[@]}") )" || {
+            true # ignore return value
             slogw "<<<<<" "dependencies not ready"
             fails+=( "${targets[i]}" )
             continue
@@ -1052,7 +1061,7 @@ search() {
             echo "LDFLAGS : $($PKG_CONFIG --static --libs "$x"   )"
         elif [[ ! "$x" =~ ^lib ]] && $PKG_CONFIG --exists --print-errors --short-errors "lib$x"; then
             slogi ".Found lib$x @ $($PKG_CONFIG --modversion "lib$x")"
-            echo "PREFIX  : $($PKG_CONFIG --variable=PREFIX="$PREFIX" "lib$x" )"
+            echo "PREFIX  : $($PKG_CONFIG --variable=prefix "lib$x" )"
             echo "CFLAGS  : $($PKG_CONFIG --cflags "lib$x" )"
             echo "LDFLAGS : $($PKG_CONFIG --static --libs "lib$x"   )"
         fi
@@ -1086,6 +1095,14 @@ fetch() {
     done
 }
 
+# prepare libraries source codes
+prepare() {
+    slogi "prepare $*"
+    for x in "$@"; do
+        ( _prepare "$x"; )
+    done
+}
+
 arch() {
     echo "$_ARCH"
 }
@@ -1114,7 +1131,7 @@ distclean() {
     rm -rf "$PREFIX" && clean || true
 }
 
-dist() {
+check() {
     local list=() x
 
     IFS=' ' read -r -a list < <(rdepends "$@")
@@ -1155,8 +1172,15 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 _init || exit 110
 
-if [[ "$0" =~ libs.sh$ ]]; then
-    "$@" && wait || exit $?
-fi
+case "$0" in
+    bash)       return 0    ;;
+    *libs.sh$)  "$@"        ;;
+    *)
+        func="${0##*/}"
+        declare -F $func &>/dev/null || die "$func not exists."
+        "$func" "$@"
+        ;;
+esac
+exit $?
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
