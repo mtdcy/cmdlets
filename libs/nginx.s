@@ -35,7 +35,6 @@ libs_args=(
     --http-log-path=/var/log/nginx/access.log
     --error-log-path=/var/log/nginx/error.log
 
-    --with-threads
     --with-compat
     --with-debug
     --with-ipv6
@@ -80,6 +79,8 @@ libs_args=(
     --add-module=ngx-fancyindex-$NGX_FANCYINDEX_VER
 )
 
+is_mingw || libs_args+=( --with-threads )
+
 # geoip2: requires maxminddb
 if [ $WITH_GEOIP2 -ne 0 ]; then
     libs_dep+=( libmaxminddb )
@@ -90,27 +91,13 @@ if [ $WITH_GEOIP2 -ne 0 ]; then
     )
 fi
 
+is_mingw && libs_args+=( --crossbuild=win32 )
+
 libs_build() {
-
     # nginx config for shared only, we have to add static libraries manually
-    STATIC_LIBS=( zlib libpcre2-8 libxcrypt openssl gdlib )
-
-    # fix libxml2/libxslt
-    STATIC_LIBS+=( libxslt )
-    sed -i auto/lib/libxslt/conf \
-        -e "s%ngx_feature_path=.*$%ngx_feature_path=\"$PREFIX\"%"  \
-        &&
-        #-e "s%ngx_feature_libs=.*$%ngx_feature_libs=\"$CFLAGS $STATIC_LIBS\"%" \
-
     # append libexslt: try fix xsltApplyStylesheet() failed
     #  => exsltRegisterAll()
-    STATIC_LIBS+=( libexslt )
-
-    # CFLAGS
-    CFLAGS+=" $($PKG_CONFIG --cflags "${STATIC_LIBS[@]}")"
-
-    # LDFLAGS
-    LDFLAGS+=" $($PKG_CONFIG --libs "${STATIC_LIBS[@]}")"
+    libs.requires zlib libpcre2-8 libxcrypt openssl gdlib libexslt
 
     libs_args+=(
         # for NGX_CC_OPT
@@ -123,6 +110,20 @@ libs_build() {
     export CC_AUX_FLAGS="$CFLAGS $LDFLAGS"
     # configure all unknown toolchain as gcc
     sed -i '/gcc)/i unknown) . auto/cc/gcc;;' auto/cc/conf
+
+    if is_mingw; then
+        sed -i auto/feature \
+            -e 's/-x \$NGX_AUTOTEST/&.exe/g' \
+            -e 's/-c \$NGX_AUTOTEST/&.exe/g' \
+            || die "hack mingw exe failed."
+
+        sed -e 's/win32/xxx/' \
+            -i auto/lib/openssl/conf \
+            -i auto/lib/pcre/conf \
+            -i auto/lib/zlib/conf \
+            || die "hack for mingw failed."
+    fi
+
 
     configure
 
@@ -145,5 +146,7 @@ defaults:
 
 EOF
 }
+
+libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
