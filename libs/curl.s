@@ -64,6 +64,8 @@ libs_build() {
 
     slogcmd run src/curl -fvIL https://www.google.com || die "curl test failed"
 
+    pkgconf libcurl.pc -DCURL_STATICLIB
+
     pkgfile libcurl -- cmake.install --component Unspecified
 
     cmdlet.install src/curl
