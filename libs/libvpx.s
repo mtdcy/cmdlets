@@ -27,10 +27,14 @@ libs_args=(
 )
     #--disable-libyuv
 
-libs_build() {
-    configure && make || return $?
+is_mingw && libs_args+=( --target=x86_64-win64-gcc )
 
-    pkgfile libvpx -- make install
+libs_build() {
+    configure 
+
+    make 
+
+    pkgfile libvpx -- make.install
 }
 
 #if [[ "$OSTYPE" == "darwin"* ]]; then
