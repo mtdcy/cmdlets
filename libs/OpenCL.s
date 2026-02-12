@@ -22,6 +22,10 @@ libs_build() {
         # build OpenCL Headers
         pushd OpenCL-Headers-$libs_ver || die
 
+        # set right place for pkgconfig file
+        sed -i cmake/Package.cmake \
+            -e '/pkg_config_location/s/CMAKE_INSTALL_DATADIR/CMAKE_INSTALL_LIBDIR/'
+
         cmake.setup
 
         cmake.build
@@ -30,10 +34,19 @@ libs_build() {
 
     ) || die "Build OpenCL Headers failed."
 
+    if is_mingw; then
+        # always build as libOpenCL.a
+        sed -i CMakeLists.txt \
+            -e '/OpenCL PROPERTIES PREFIX ""/d' 
+    fi
+
     # build OpenCL ICD Loader
     cmake.setup
 
     cmake.build
+
+    # fix linked win32 libraries
+    is_mingw && pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
 
     pkgfile libOpenCL -- cmake.install
 }
