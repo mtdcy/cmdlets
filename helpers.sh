@@ -93,25 +93,22 @@ bootstrap() {
 configure() {
     _setup
 
-    local cmdline
+    local cmd std=()
 
-    test -f configure && cmdline=( ./configure ) || cmdline=( ../configure )
+    test -f configure && cmd="./configure" || cmd="../configure"
 
-    test -f "$cmdline" || { bootstrap && cmdline=( ./configure ); }
+    test -f "$cmd" || { bootstrap && cmd="./configure"; }
 
-    test -f "$cmdline" || die "configure not found."
+    test -f "$cmd" || die "configure not found."
 
-    cmdline+=( --prefix="$PREFIX" )
+    std+=( --prefix="$PREFIX" )
 
-    if is_mingw && grep -q -- "--host" "${cmdline[0]}"; then
-        #[[ "$*" =~ --build= ]] || cmdline+=( --build="$_TARGET" )
-        [[ "$*" =~ --host= ]]  || cmdline+=( --host="$_TARGET" )
+    if test -n "$_TARGET"; then
+        # some libraries use --target instead of --host, e.g: libvpx
+        { "$cmd" --help || true; } | grep -q -- "--host=" && std+=( --host="$_TARGET" ) || true
     fi
 
-    # append user args
-    cmdline+=( "${libs_args[@]}" "$@" )
-
-    slogcmd "${cmdline[@]}" || die "configure $libs_name failed."
+    slogcmd "$cmd" "${std[@]}" "${libs_args[@]}" "$@" || die "configure $libs_name failed."
 }
 
 make() {
