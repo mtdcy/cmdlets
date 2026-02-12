@@ -150,6 +150,13 @@ _cmake_init() {
 
     _remove_ccache
 
+    if test -n "$_TARGET"; then
+        case "$_TARGET" in
+            *-linux-*)  export CMAKE_SYSTEM_NAME=Linux      ;;
+            *-mingw*)   export CMAKE_SYSTEM_NAME=Windows    ;;
+        esac
+    fi
+
     # asm
     is_arm64 || {
         export CMAKE_ASM_COMPILER="$NASM"
@@ -181,6 +188,12 @@ _cmake_init() {
         # rpath is meaningless for static libraries and executables
         -DCMAKE_SKIP_RPATH=TRUE
         -DCMAKE_VERBOSE_MAKEFILE=ON
+    )
+
+    # alway search -lxxx for libxxx.a
+    is_mingw && _CMAKE_STD+=(
+        -DCMAKE_STATIC_LIBRARY_PREFIX="lib"
+        -DCMAKE_STATIC_LIBRARY_SUFFIX=".a"
     )
 
     # sysroot
