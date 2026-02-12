@@ -3,6 +3,9 @@
 # shellcheck disable=SC2034,SC2154
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
+# ffmpeg did not handle static libraries well.
+FFMPEG_ELIBS=()
+
 libs_dep+=(
     # basic libs
     zlib bzip2 xz libiconv
@@ -24,7 +27,6 @@ libs_dep+=(
 
 libs_args+=(
     --enable-pic
-    --enable-pthreads
     --enable-hardcoded-tables
     --extra-version=cmdlets
 
@@ -32,7 +34,6 @@ libs_args+=(
     --cc="'$CC'"
     --cxx="'$CXX'"
     --objcc="'$CC'"
-    --host_ldflags="'$LDFLAGS'"
 
     # use extra- to avoid override default flags
     --extra-cflags="'$CFLAGS'"
@@ -41,10 +42,28 @@ libs_args+=(
 
     #--disable-stripping        # result in larger size
     #--enable-shared
+)
+
+if test -n "$_TARGET"; then
+    libs_args+=( --host-cc="gcc" )
+
+    case "$_TARGET" in
+        *-mingw32)  libs_args+=( --target-os=mingw32 )  ;;
+        *-darwin*)  libs_args+=( --target-os=darwin )   ;;
+        *)          libs_args+=( --target-os=linux )    ;;
+    esac
+fi
+
+
+# pthreads or winpthread(mingw/win32)
+libs_args+=( --enable-pthreads )
+is_mingw && is_posix && libs_args+=( --disable-w32threads )
+
+libs_args+=(
     --enable-zlib
     --enable-bzlib
     --enable-lzma
-    --enable-iconv --extra-libs=-liconv
+    --enable-iconv 
     #--enable-libzimg
     --enable-ffmpeg
     --enable-ffprobe
@@ -87,10 +106,6 @@ if is_darwin; then
         --enable-videotoolbox       # video codecs
     )
 else
-    # Fix: libstdc++.a: linker input file unused because linking not done
-    libs_args+=( --extra-libs=-lstdc++ )
-    export LDFLAGS+=" -static-libstdc++"
-
     libs_dep+=( openssl )
     libs_args+=( --enable-openssl ) # TLS
 fi
@@ -98,9 +113,6 @@ fi
 is_linux && libs_args+=( --enable-libdrm ) && libs_dep+=( libdrm )
 
 is_arm64 && libs_args+=( --enable-neon )
-
-# read kvazaar's README
-is_msys && libs_args+=( --extra-cflags=-DKVZ_STATIC_LIB )
 
 libs_lic="BSD"
 for v in ${FFMPEG_VARS//,/ }; do
@@ -137,28 +149,27 @@ for v in ${FFMPEG_VARS//,/ }; do
             )
             ;;
         hwaccels)
-            # platform hw accel
+            # platform hwaccels
             # https://trac.ffmpeg.org/wiki/HWAccelIntro
             libs_args+=( --enable-hwaccels )
 
             if is_linux; then
+                # VAAPI by Intel, support Linux & Intel|AMD(UVD/VCE)
                 libs_dep+=( libva )
-                libs_args+=(
-                    #--enable-opengl
-                    #--enable-vdpau
-                    --enable-vaapi
-                )
-            elif is_msys; then
-                libs_dep+=( libva )
-                libs_args+=(
-                    --enable-d3d11va
-                    --enable-dxva2
-                )
+                libs_args+=( --enable-vaapi )
+            elif is_win64 || is_mingw; then
+                # DXVA2 by Microsoft, support Windows & Intel|AMD|NVIDIA
+                libs_args+=( --enable-dxva2 )
             fi
+            # always enable hwaccels for darwin
 
-            # opencl
+            # opencl for all
             libs_dep+=( OpenCL )
             libs_args+=( --enable-opencl )
+
+            is_mingw && FFMPEG_ELIBS+=( OpenCL )
+
+            # TODO: Vulkan
             ;;
         ffplay)
             libs_dep+=(sdl2)
@@ -185,5 +196,7 @@ for v in ${FFMPEG_VARS//,/ }; do
             ;;
     esac
 done
+
+test -z "${FFMPEG_ELIBS[*]}" || libs_args+=( --extra-libs="'$($PKG_CONFIG --libs-only-l "${FFMPEG_ELIBS[@]}")'" )
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
