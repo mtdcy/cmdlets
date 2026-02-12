@@ -47,6 +47,12 @@ libs_build() {
     cmdlet.install ffplay
 
     cmdlet.check ffmpeg -version
+
+    cmdlet.caveats <<EOF
+static build ffmpeg @ $libs_ver
+
+$(run ffmpeg -hide_banner -hwaccels)
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
