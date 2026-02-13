@@ -253,15 +253,6 @@ _init() {
     } | xargs)
     IFS=' ' read -r -a _HOSTVARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
 
-    # STRIP
-    #  libraries: strip local symbols but keep debug
-    #  binaries: strip all and debug symbols
-    if "$STRIP" --version 2>/dev/null | grep -qFw Binutils; then
-        export BIN_STRIP="$STRIP --strip-all"
-    else
-        export BIN_STRIP="$STRIP"
-    fi
-
     local host_tools=(
         "MAKE:gmake,make"
         "CMAKE:cmake"
@@ -270,6 +261,7 @@ _init() {
         "PATCH:patch"
         "INSTALL:install"
         "TAR:gtar,tar"
+        "FILE:file"
     )
 
     test -x "$PKG_CONFIG" || host_tools+=( PKG_CONFIG:pkg-config )
@@ -597,13 +589,11 @@ _fetch_unzip() {
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
 
-        if file "$zip" | grep -Ewq "compressed|archive"; then
-            # unzip to current fold
-            _unzip "$zip" "${ZIP_SKIP:-}"
-        else
-            # copy ASCII text file directly
-            cp -f "$zip" .
-        fi
+        case "$("$FILE" -b "$zip")" in
+            *"compressed data"*)    _unzip "$zip" "${ZIP_SKIP:-}"   ;;
+            *"archive data"*)       _unzip "$zip" "${ZIP_SKIP:-}"   ;;
+            *)                      cp -f "$zip" .                  ;; # copy to workdir
+        esac
     fi
 }
 
@@ -680,15 +670,10 @@ _prepare() {
             http://*|https://*)
                 local file="$(_package_name "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
-
-                slogcmd "$PATCH" -Np1 -i "$file" ||
-                slogcmd "$PATCH" -Np0 -i "$file" ||
-                die "patch < $file failed."
+                slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
             *)
-                slogcmd "$PATCH" -Np1 -i "$patch" ||
-                slogcmd "$PATCH" -Np0 -i "$patch" ||
-                die "patch < $patch failed."
+                slogcmd "$PATCH" -Np1 -i "$patch" || die "patch < $patch failed."
                 ;;
         esac
     done
