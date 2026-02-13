@@ -27,6 +27,26 @@ libs.depends() {
     eval -- "$*" || { unset libs_dep libs_args libs_build; }
 }
 
+# find samples by name
+samples() {
+    find "$_ROOT/samples" -type f -name "$*" | xargs
+}
+
+# locate executable in workdir
+_locate_exe() {
+    if test -f "$1"; then
+        echo "$1"
+    elif [[ ! "$1" =~ $_BINEXT$ ]]; then
+        echo "$1$_BINEXT"
+    fi
+}
+
+# locate executable in workdir or PREFIX
+_locate_bin() {
+    local bin="$(_locate_exe "$1")"
+    test -f "$bin" && echo "$bin" || _locate_exe "$PREFIX/bin/$1"
+}
+
 libs.requires() {
     local x y cflags=() cxxflags=()
 
@@ -510,7 +530,7 @@ cargo.setup() {
     local rustflags=()
     while [ $# -gt 0 ]; do
         case "$1" in
-            -l)     rustflags+=( -l "static=$2" )           ;;
+            -l)     rustflags+=( -l "static=$2" ); shift 1  ;;
             -l*)    rustflags+=( -l "static=${1#-l}" )      ;;
             -L)     rustflags+=( -L "$2" ); shift 1         ;;
             -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
@@ -853,25 +873,29 @@ _pack() {
                 sed -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" \
                     -i "$x"
                 ;;
-            bin/*-config)
-                # libraries config scripts
-                if file "$x" | grep -Fwq "shell script"; then
-                    # replace hardcoded PREFIX with env
-                    #1. prefix may be single quoted => replace prefix= first
-                    #2. replace others with ${prefix}
-                    sed -i "$x" \
-                        -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
-                        -e "s%$PREFIX%\${prefix}%g"
-                elif test -x "$x"; then
-                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
-                fi
-                ;;
             bin/*)
-                test -f "$x" || x="$x$_BINEXT"
+                test -f "$x" || x="$x$_BINEXT"  # tar will report error if not exists
 
-                if test -x "$x"; then
-                    test -n "$BIN_STRIP" && echocmd "$BIN_STRIP" "$x" || echocmd "$STRIP" "$x"
-                fi
+                # strip binary executables
+                case "$("$FILE" -b "$x")" in
+                    PE32+*)             echocmd "$STRIP" --strip-all "$x"   ;;
+                    ELF*)               echocmd "$STRIP" --strip-all "$x"   ;;
+                    Mach-O*executable)  echocmd "$STRIP" "$x"               ;;
+
+                    *"shell script"*)
+                        case "$x" in
+                            # libraries config scripts
+                            *-config)
+                                # replace hardcoded PREFIX with env
+                                #1. prefix may be single quoted => replace prefix= first
+                                #2. replace others with ${prefix}
+                                sed -i "$x" \
+                                    -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
+                                    -e "s%$PREFIX%\${prefix}%g"
+                                ;;
+                        esac
+                    ;;
+                esac
                 ;;
         esac
         files+=( "$x" )
@@ -880,16 +904,6 @@ _pack() {
     slogi ".Pack" "$1 < ${files[*]}"
 
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
-}
-
-# link source target
-_ln() {
-    #echo "link: $1 => $2" >&2
-    if is_msys; then
-        echocmd cp -vf "$1" "$2"
-    else
-        echocmd ln -srvf "$1" "$2"
-    fi
 }
 
 # create a pkgfile with given files
@@ -934,21 +948,25 @@ cmdlet.pkgfile() {
     # create a version file
     grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
+    _pkglink() {
+        echocmd ln -srf "$@"
+    }
+
     # v2/pkginfo
-    _ln "$pkgvern" "$libs_name/$name@latest"
-    _ln "$pkginfo" "$libs_name/pkginfo@latest"
+    _pkglink "$pkgvern" "$libs_name/$name@latest"
+    _pkglink "$pkginfo" "$libs_name/pkginfo@latest"
 
     if [ "$version" != "$libs_ver" ]; then
-        _ln "$pkgvern" "$libs_name/$name@$version"
-        _ln "$pkginfo" "$libs_name/pkginfo@$version"
+        _pkglink "$pkgvern" "$libs_name/$name@$version"
+        _pkglink "$pkginfo" "$libs_name/pkginfo@$version"
     fi
 
     # v3/manifest is ready, keep v2/pkgfile package() only
     #  => read cmdlete.sh:package() for more details
     #if [ "$version" != "$libs_ver" ]; then
-    #    _ln "$libs_name/$name@$version" "$name@$version"
+    #    _make_link "$libs_name/$name@$version" "$name@$version"
     #else
-    #    _ln "$libs_name/$name@latest"   "$name@latest"
+    #    _make_link "$libs_name/$name@latest"   "$name@latest"
     #fi
 
     # v3/manifest: name pkgfile sha build
@@ -1021,25 +1039,36 @@ cmdlet.pkginst() {
 cmdlet.install() {
     slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
-    local bin target alias=( "${@:3}" ) x
+    # executable
+    local bin="$(_locate_exe "$1")" ext
+    test -f "$bin" || die "$bin not found."
+    test -n "$_BINEXT" && [[ "$bin" =~ $_BINEXT$ ]] && ext="$_BINEXT"
 
-    # mingw: no extension in filename
-    if test -n "$_BINEXT" && [ ! -f "$1" ] && [[ ! "$1" =~ $_BINEXT$ ]]; then
-        bin="$1$_BINEXT"
-        test -n "$2" && target="$2$_BINEXT" || target="${bin##*/}"
-        alias=( "${alias[@]/%/$_BINEXT}" )
+    # target
+    local target="$PREFIX/bin/${2:-"${bin##*/}"}"
+    [[ "$target" =~ $ext$ ]] || target="$target$ext"
+    echocmd "$INSTALL" -m755 "$bin" "$target" || die "install $libs_name failed"
+
+    if is_mingw; then
+        # no symbolic links for win32
+        _install_alias() {
+            echocmd cp -f "$1" "$2"
+        }
     else
-        bin="$1"
-        target="${2:-"${bin##*/}"}"
+        _install_alias() {
+            echocmd ln -srf "$1" "$2"
+        }
     fi
-    target="$PREFIX/bin/$target"
 
-    echocmd "$INSTALL" -v -m755 "$bin" "$target" || die "install $libs_name failed"
-
-    for x in "${alias[@]}"; do
-        _ln "$target" "$PREFIX/bin/$x"
+    # alias
+    local alias=( "${@:3}" ) lnk
+    test -z "$ext" || alias=( "${alias[@]/%/$ext}" )
+    for lnk in "${alias[@]}"; do
+        rm -f "$PREFIX/bin/$lnk" || true
+        _install_alias "$target" "$PREFIX/bin/$lnk"
     done
 
+    # pack
     cmdlet.pkgfile "${target##*/}" "$target" "${alias[@]/#/$PREFIX\/bin\/}"
 }
 
@@ -1047,30 +1076,16 @@ cmdlet.install() {
 cmdlet.check() {
     slogi "..Run" "check $*"
 
-    local bin
+    local bin="$(_locate_bin "$1")"
 
-    # mingw: no extension in filename
-    if test -n "$_BINEXT" && [[ ! "$1" =~ $_BINEXT$ ]] ; then
-        bin="$PREFIX/bin/$1$_BINEXT"
-        test -f "$bin" || bin="$1$_BINEXT"
-        test -f "$bin" || unset bin
-    fi
-
-    if test -z "$bin"; then
-        # try prebuilts first
-        bin="$PREFIX/bin/$1"
-        # try local file again
-        test -f "$bin" || bin="$1"
-    fi
-
-    test -f "$bin" || die "check $* failed, $bin not found."
+    test -f "$bin" || die "check failed, $1 not found."
 
     # check file type
-    echocmd file "$bin"
+    echocmd "$FILE" -b "$bin"
 
     # check linked libraries
     if is_linux; then
-        file "$bin" | grep -Fw "dynamically linked" && {
+        "$FILE" -b "$bin" | grep -Fw "dynamically linked" && {
             echocmd ldd "$bin"
             die "$bin is dynamically linked."
         } || true
@@ -1097,7 +1112,7 @@ cmdlet.check() {
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
-        _LOGGING=plain echocmd "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
+        run "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
     fi
 }
 
@@ -1115,21 +1130,33 @@ cmdlet.caveats() {
 
 # run command or die
 run() {
-    local bin="$1"
+    local bin="$(_locate_bin "$1")"
 
-    test -f "$bin" || bin="$bin$_BINEXT"
     test -f "$bin" || die "$1 not found."
 
-    # > stderr, avoid grep by pipe commands
-    slogi "..Run" "$bin ${@:2}"
+    _run() {
+        # > stderr, avoid grep by pipe commands
+        echo "$@" | _LOGGING=silent _capture_stderr
+
+        # do not redirect stderr to stdout, vice versa
+        #  always logging as plain for piping
+        "$@" 2> >(_LOGGING=plain _capture_stderr) | _LOGGING=plain _capture
+    }
 
     # capture only stderr to keep stdout as it is
     if test -n "$WINEPREFIX"; then
-        "$WINE" "$bin" "${@:2}"
+        case "$("$FILE" -b "$bin")" in
+            PE32+*)
+                _run "$WINE" "$bin" "${@:2}"
+                ;;
+            *)
+                _run "$SHELL" -c "$bin ${*:2}"
+                ;;
+        esac 
     else
         # use shell to catch "Killed" or "Abort trap" messages
-        "$SHELL" -c "$bin ${*:2}"
-    fi 2> >(_LOGGING=plain _capture_stderr) || die "run $1 failed"
+        _run "$SHELL" -c "$bin ${*:2}"
+    fi
 }
 
 # deprecated
@@ -1155,7 +1182,7 @@ inspect() {
 
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
-pkgconf() {
+cmdlet.pkgconf() {
     local name="${1%.pc}"; shift
 
     local cflags=()
@@ -1199,6 +1226,20 @@ EOF
         -e "/Cflags:/s%$% ${cflags[*]}%"        \
         -e "/Libs:/s%$% ${ldflags[*]}%"         \
 
+}
+pkgconf() { cmdlet.pkgconf "$@";  }
+
+# create static library archive
+cmdlet.archive() {
+    local name="${1%.a}"; shift
+
+    slogi "...AR" "$name < $@"
+
+    if is_darwin; then
+        echocmd libtool -static -o "$name.a" "$@"
+    else
+        echocmd "$AR" rcs "$name.a" "$@"
+    fi
 }
 
 # hack local symbols: append function with a random(pid) suffix
