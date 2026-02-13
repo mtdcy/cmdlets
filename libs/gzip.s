@@ -1,8 +1,7 @@
 # shellcheck disable=SC2034
-libs_name=gzip
 libs_desc="Popular GNU data compression program"
 
-libs_lic='GPL-3.0-or-later'
+libs_lic=GPLv3+
 libs_ver=1.14
 libs_url=(
     https://ftpmirror.gnu.org/gnu/gzip/gzip-$libs_ver.tar.xz
@@ -28,24 +27,29 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make &&  make check || return $?
+    configure 
 
-    pkginst libgzip gzip.h lzw.h lib/libgzip.a &&
+    make 
 
-    cmdlet gzip   &&
-    cmdlet gunzip &&
-    cmdlet gzexe  &&
-    cmdlet zcat   &&
-    cmdlet zcmp   &&
-    cmdlet zdiff  &&
-    cmdlet zgrep  &&
-    cmdlet zegrep &&
-    cmdlet zfgrep &&
-    cmdlet zmore  &&
-    cmdlet zless  &&
-    cmdlet znew   &&
+    # make check in mingw do not respect $EXEEXT
+    is_mingw || make check
 
-    check gzip
+    pkginst libgzip gzip.h lzw.h lib/libgzip.a
+
+    cmdlet.install gzip   
+    cmdlet.install gunzip 
+    cmdlet.install gzexe  
+    cmdlet.install zcat   
+    cmdlet.install zcmp   
+    cmdlet.install zdiff  
+    cmdlet.install zgrep  
+    cmdlet.install zegrep 
+    cmdlet.install zfgrep 
+    cmdlet.install zmore  
+    cmdlet.install zless  
+    cmdlet.install znew   
+
+    cmdlet.check gzip
 }
 
 
