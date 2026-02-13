@@ -1,13 +1,14 @@
 # Implementation of the file(1) command
 
 # shellcheck disable=SC2034
-libs_ver=5.46
-libs_url=(
-    "https://astron.com/pub/file/file-$libs_ver.tar.gz"
-)
-libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
 libs_lic="BSD-2-Clause"
-libs_dep=( zlib bzip2 xz )
+libs_ver=5.46
+libs_url=https://astron.com/pub/file/file-$libs_ver.tar.gz
+libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
+
+libs_deps=( zlib bzip2 xz zstd )
+
+is_mingw && libs_deps+=( libgnurx )
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
 libs_resources=(
@@ -18,8 +19,11 @@ libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order
     debian/patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
     debian/patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
+)
+
+is_mingw || libs_patches+=(
     debian/patches/1741021322.FILE5_46-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
-    debian/patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
+    #debian/patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
     debian/patches/1742492756.FILE5_46-69-g280e121f.remove-superfluous-christoph-biedl.patch
     debian/patches/1742492810.FILE5_46-70-g4e2c7d3d.fix-msdosdate-endianess.patch
 
@@ -39,6 +43,12 @@ libs_args=(
     --enable-static
 )
 
+is_listed zlib  "${libs_deps[@]}" && libs_args+=( --enable-zlib    ) || libs_args+=( --disable-zlib    )
+is_listed bzip2 "${libs_deps[@]}" && libs_args+=( --enable-bzlib   ) || libs_args+=( --disable-bzlib   )
+is_listed xz    "${libs_deps[@]}" && libs_args+=( --enable-xzlib   ) || libs_args+=( --disable-xzlib   )
+is_listed zstd  "${libs_deps[@]}" && libs_args+=( --enable-zstdlib ) || libs_args+=( --disable-zstdlib )
+is_listed lzip  "${libs_deps[@]}" && libs_args+=( --enable-lzlib   ) || libs_args+=( --disable-lzlib   )
+
 # usage of the new file cmd
 #
 # option 1: file -m path/to/magic.mgc
@@ -47,9 +57,9 @@ libs_args=(
 # version mismatched magic.mgc may not work
 
 libs_build() {
-    MAGIC_PATH="share/misc"
+    MAGIC_INSTALL_PATH="share/misc"
 
-    configure || return 1
+    configure 
 
     # 1. user magic ~/.magic.mgc or ~/.magic or ~/.magic/magic.mgc
     # 2. relative .magic.mgc in current dir
@@ -60,21 +70,15 @@ libs_build() {
     # it seems the dependencies checking is broken
     touch src/magic.c
 
-    make &&
+    make
 
-    inspect make install &&
+    cmdlet.pkgfile libmagic -- make.install -C src bin_PROGRAMS=
 
-    pkgfile libmagic                  \
-            include/magic.h           \
-            lib/libmagic.a            \
-            lib/pkgconfig/libmagic.pc \
-            &&
+    cmdlet.pkginst magic.mgc "$MAGIC_INSTALL_PATH" magic/magic.mgc
 
-    pkgfile magic.mgc "$MAGIC_PATH/magic.mgc" &&
+    cmdlet.install src/file 
 
-    cmdlet ./src/file &&
-
-    check file --version
+    cmdlet.check file --version
 
     caveats << EOF
 file @ $libs_ver
@@ -84,7 +88,7 @@ magic file from ~/.magic.mgc:.magic.mgc only
 file needs magic.mgc to work properly:
 
 cmdlets.sh install magic.mgc
-cmdlets.sh link $MAGIC_PATH/magic.mgc ~/.magic.mgc
+cmdlets.sh link $MAGIC_INSTALL_PATH/magic.mgc ~/.magic.mgc
 EOF
 }
 
