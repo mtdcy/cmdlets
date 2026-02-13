@@ -20,13 +20,19 @@ libs_args=(
 )
 
 libs_build() {
-    make "${libs_args[@]}" &&
+    make "${libs_args[@]}"
 
-    pkgfile liblz4 -- make install -C lib "${libs_args[@]}" &&
+    cmdlet.pkgfile liblz4 -- make install -C lib "${libs_args[@]}"
 
-    cmdlet ./programs/lz4 lz4 unlz4 lz4c lz4cat &&
+    cmdlet.install programs/lz4 lz4 unlz4 lz4c lz4cat
 
-    check lz4 --version
+    cmdlet.check lz4 --version
+    
+    echo "test" > foo && rm -f foo.lz4
+    run lz4 foo                                 || die "lz4 compress failed."
+    run lz4 -t foo.lz4                          || die "lz4 integrity test failed."
+    run lz4 --list foo.lz4 | grep -Fwq foo      || die "lz4 list contents failed."
+    run lz4 -d -c foo.lz4 | grep -Eq "^test$"   || die "lz4 decompress failed."
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -36,6 +36,12 @@ libs_build() {
         cmdlet.install bzgrep bzgrep bzegrep bzfgrep
         cmdlet.install bzmore bzmore bzless
     fi
+
+    echo "test" > foo && rm -f foo.bz2
+    run bzip2 foo                               || die "bzip2 compress failed."
+    run bzip2 -t foo.bz2                        || die "bzip2 integrity test failed."
+    run bunzip2 -c foo.bz2 | grep -Eq "^test$"  || die "bunzip2 decompress failed."
+    run bzcat foo.bz2 | grep -Eq "^test$"       || die "bzcat failed."
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

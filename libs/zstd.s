@@ -1,13 +1,12 @@
 # Zstandard is a real-time compression algorithm
 # shellcheck disable=SC2034
 
-libs_name=zstd
-libs_lic="BSD or GPLv2"
+libs_lic="BSD|GPLv2"
 libs_ver=1.5.7
 libs_url=https://github.com/facebook/zstd/releases/download/v$libs_ver/zstd-$libs_ver.tar.gz
 libs_sha=eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3
-libs_dep=(zlib xz lz4)
 
+libs_deps=(zlib xz lz4)
 libs_args=(
     -DZSTD_BUILD_CONTRIB=ON
     -DZSTD_LEGACY_SUPPORT=ON
@@ -21,19 +20,24 @@ libs_args=(
 )
 
 libs_build() {
-    cd build/cmake &&
+    pushd build/cmake 
 
-    cmake . &&
+    cmake .
 
-    make &&
+    make tests
 
-    make tests &&
+    cmdlet.pkgfile libzstd -- make install -C lib
 
-    pkgfile libzstd -- make install -C lib &&
+    cmdlet.pkgfile zstd    -- make install -C programs
 
-    pkgfile zstd    -- make install -C programs &&
-
-    check zstd --version
+    cmdlet.check zstd --version
+    
+    # simple test 
+    echo "test" > foo && rm -f foo.zst
+    run zstd foo                                || die "zstd compress failed."
+    run zstd -t foo.zst                         || die "zstd integrity test failed."
+    run zstd -l foo.zst | grep -Fwq foo         || die "zstd list contents failed."
+    run zstd -d -c foo.zst | grep -Eq "^test$"  || die "zstd decompress failed."
 }
 
 
