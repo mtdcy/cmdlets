@@ -40,6 +40,13 @@ libs_build() {
 
     # visual verify
     check xz --version
+    
+    # simple test 
+    echo "test" > foo && rm -f foo.xz
+    run xz foo                                  || die "xz compress failed."
+    run xz -t foo.xz                            || die "xz integrity test failed."
+    run xz -l foo.xz | grep -Fwq foo            || die "xz list contents failed."
+    run xz -d -c foo.xz | grep -Eq "^test$"     || die "xz decompress failed."
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
