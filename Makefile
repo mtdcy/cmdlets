@@ -7,8 +7,8 @@ all: shell
 .PHONY: all
 
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
-#CMDLET_BUILD_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
-CMDLET_BUILD_NJOBS 	?= $(shell nproc)
+#CMDLET_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
+CMDLET_NJOBS 	?= $(shell nproc)
 CMDLET_MIRRORS 		?= https://mirrors.mtdcy.top
 CMDLET_LOGGING 		?= tty
 CMDLET_CCACHE 		?= 1
@@ -31,13 +31,14 @@ cmdlets.env:
 
 ##############################################################################
 # host environment variables => docker/remote
-ENVS := CMDLET_NO_PKGFILES \
-		CMDLET_BUILD_NJOBS \
-		CMDLET_TARGET      \
-		CMDLET_LOGGING     \
-		CMDLET_MIRRORS     \
-		CMDLET_CCACHE      \
-		CMDLET_REPO        \
+ENVS := CMDLET_NJOBS    \
+		CMDLET_CHECK    \
+		CMDLET_PKGFILES \
+		CMDLET_TARGET   \
+		CMDLET_LOGGING  \
+		CMDLET_MIRRORS  \
+		CMDLET_CCACHE   \
+		CMDLET_REPO     \
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -50,10 +51,10 @@ vpath %.s libs
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 %+:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh check $(@:+=)"
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:+=)" CMDLET_CHECK=1
 
 %-:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_NO_PKGFILES=1
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_PKGFILES=0
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
@@ -202,7 +203,7 @@ endif
 
 # custom entrypoint
 #DOCKER_ARGS += --entrypoint=''
-#DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/entrypoint.sh
+DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/entrypoint.sh
 
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)

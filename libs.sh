@@ -13,16 +13,17 @@ set -e -o pipefail
 umask  0022
 export LANG=C
 
-# public options      =
-        CMDLET_LOGGING=${CMDLET_LOGGING:-tty}       # tty,plain,silent
-        CMDLET_MIRRORS=${CMDLET_MIRRORS:-}          # package mirrors, and go/cargo/etc
-         CMDLET_CCACHE=${CMDLET_CCACHE:-0}          # enable ccache or not
-           CMDLET_REPO=${CMDLET_REPO:-}             # cmdlet pkgfiles repo
-         CMDLET_TARGET=${CMDLET_TARGET:-}
+# public options    =
+      CMDLET_LOGGING=${CMDLET_LOGGING:-tty}     # tty,plain,silent
+      CMDLET_MIRRORS=${CMDLET_MIRRORS:-}        # package mirrors, and go/cargo/etc
+       CMDLET_CCACHE=${CMDLET_CCACHE:-0}        # enable ccache or not
+         CMDLET_REPO=${CMDLET_REPO:-}           # cmdlet pkgfiles repo
+       CMDLET_TARGET=${CMDLET_TARGET:-}
 
-# public build options  =
-      CMDLET_BUILD_NJOBS=${CMDLET_BUILD_NJOBS:-1}   # no parallel build by default
-      CMDLET_NO_PKGFILES=${CMDLET_NO_PKGFILES:-0}   # force build dependencies
+# build options     =
+        CMDLET_NJOBS=${CMDLET_NJOBS:-1}         # no parallel build by default
+     CMDLET_PKGFILES=${CMDLET_PKGFILES:-1}      # use pkgfiles as deps
+        CMDLET_CHECK=${CMDLET_CHECK:-0}         # build/check rdepends
 
 # toolchain prefix
 
@@ -52,7 +53,7 @@ if test -n "$_MIRRORS"; then
 fi
 
 # build args
-_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
+_NJOBS="${CMDLET_NJOBS:-1}"
 
 # clear envs => setup by _init
 unset _ROOT _WORKDIR PREFIX
@@ -61,6 +62,14 @@ unset _ROOT _WORKDIR PREFIX
 # defaults
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
+
+_opt_yes() {
+    local opt="$1"
+    case "${!opt}" in
+        1|yes)  return 0 ;;
+        *)      return 1 ;;
+    esac
+}
 
 # help functions
 is_listed()         { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
@@ -107,9 +116,9 @@ _slog() {
     return $ret
 }
 
-slogi() { _slog info  "$@";             }
-slogw() { _slog warn  "$@";             }
-sloge() { _slog error "$@"; return 1;   }
+slogi() { _slog info  "$@"; }
+slogw() { _slog warn  "$@"; }
+sloge() { _slog error "$@"; }
 
 die()   {
     _tty_reset # in case Ctrl-C happens
@@ -796,13 +805,13 @@ depends() {
     local list=() libs deps x
     while IFS=' ' read -r libs deps; do
         test -n "$deps" || continue
-        is_listed "$libs" "$@" || continue
+        #is_listed "$libs" "$@" || continue
 
         for x in $(depends $deps) $deps; do
             is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
+    done < <(IFS='|'; grep -Ew "^($*)" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -848,8 +857,11 @@ _deps_sort() {
 _deps_status() {
     _deps_init
 
+    local deps
+    IFS=' ' read -r -a deps < <(depends "$@")
+
     local sep="" sign x ret=0
-    for x in "$@"; do
+    for x in "${deps[@]}"; do
         if test -f "$PREFIX/.$x.d"; then
             sign="\\033[32m✔\\033[39m"
         else
@@ -864,6 +876,36 @@ _deps_status() {
     return $ret
 }
 
+# 
+_deps_fetch() {
+    # no pkgfiles
+    _opt_yes CMDLET_PKGFILES || return 0
+
+    local deps
+    IFS=' ' read -r -a deps < <(depends "$@")
+
+    local pkgfiles=() x
+
+    # check dependencies: libraries updated or not ready
+    for x in "${deps[@]}"; do
+        test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
+        [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+    done
+
+    test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
+}
+
+_deps_missing() {
+    local deps x list=()
+    IFS=' ' read -r -a deps < <(depends "$@")
+    for x in "${deps[@]}"; do
+        test -e "$PREFIX/.$x.d" || list+=( "$x" )
+    done
+
+    # ready to compile => always sort here
+    _deps_sort "${list[@]}"
+}
+
 # build targets and its dependencies
 # build <lib list>
 build() {
@@ -873,57 +915,57 @@ build() {
     echo "host   : ${_HOSTVARS[@]}"
     echo "target : ${_TARGETVARS[@]}"
 
-    # always fetch manifest
-    _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST" || true
-    echo ""
-
-    local deps x i targets=() fails=()
-
-    IFS=' ' read -r -a deps < <(depends "$@")
-
-    # always sort dependencies
-    IFS=' ' read -r -a deps < <(_deps_sort "${deps[@]}")
-
-    # pull dependencies
-    if [ "$CMDLET_NO_PKGFILES" -eq 0 ]; then
-        local pkgfiles=()
-
-        # check dependencies: libraries updated or not ready
-        for x in "${deps[@]}"; do
-            test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
-            [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
-        done
-
-        test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
-    fi
+    _deps_fetch "$@"
 
     slogi "BUILD" "$*"
 
-    test -z "${deps[*]}" || slogi ".DEPS" "$(_deps_status "${deps[@]}")" || true # ignore return value
+    local targets=() x
 
     # check dependencies: rebuild targets
-    for x in "${deps[@]}"; do
+    for x in $(_deps_missing "$@"); do
         test -e "$PREFIX/.$x.d" || targets+=( "$x" )
     done
+
+    slogi "+DEPS" "${targets[*]}"
 
     # sort and append targets
     targets+=( $(_deps_sort "$@") )
 
     # continue on error
-    for i in "${!targets[@]}"; do
-        echo ""
-        IFS=' ' read -r -a deps < <(depends "${targets[i]}")
-        slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${deps[@]}") )" || {
-            true # ignore return value
-            slogw "<<<<<" "dependencies not ready"
-            fails+=( "${targets[i]}" )
-            continue
+    _compile_targets() {
+        local targets=( "$@" ) fails=() i
+        for i in "${!targets[@]}"; do
+            echo ""
+            slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${targets[i]}") )" || {
+                true # ignore return value
+                slogw "<<<<<" "${targets[i]}: missing dependencies"
+                fails+=( "${targets[i]}" )
+                continue
+            }
+
+            time compile "${targets[i]}" || fails+=( "${targets[i]}" )
+        done
+
+        test -z "${fails[*]}" || {
+            slogw "failed targets: ${fails[*]}"
+            return ${#fails[@]}
         }
+    }
+    _compile_targets "${targets[@]}" || {
+        sloge "build failed #$?." || true # always return errno 127
+        return 127
+    }
 
-        time compile "${targets[i]}" || fails+=( "${targets[i]}" )
-    done
+    # build rdepends
+    _opt_yes CMDLET_CHECK || return 0
 
-    test -z "${fails[*]}" || sloge "build failed: ${fails[*]}"
+    IFS=' ' read -r -a targets < <( rdepends "$@" )
+
+    slogi "rDEPS" "${targets[*]}"
+    # always use pkgfiles for rdepends
+    CMDLET_PKGFILES=1 _deps_fetch "${targets[@]}"
+
+    _compile_targets "${targets[@]}" || sloge "build rdepends failed #$?."
 }
 
 # v3/git releases
@@ -951,6 +993,12 @@ _fetch_unzip_pkgfile() {
 }
 
 _fetch_pkgfile() {
+    # always fetch manifest
+    if ! test -f "$TEMPDIR/manifest"; then
+        _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST" || die "fetch manifest failed."
+        true > "$TEMPDIR/manifest"
+    fi
+
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
@@ -1117,14 +1165,6 @@ distclean() {
     rm -rf "$PREFIX" && clean || true
 }
 
-check() {
-    local list=() x
-
-    IFS=' ' read -r -a list < <(rdepends "$@")
-
-    build "$@" "${list[@]}"
-}
-
 # update libs to new version or die
 #  input: name version
 update() {
@@ -1159,11 +1199,10 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 _init || exit 110
 
 case "$0" in
-    bash)       return 0    ;;
     *libs.sh)   "$@"        ;;
     *)
         func="${0##*/}"
-        declare -F $func &>/dev/null || die "$func not exists."
+        declare -F $func &>/dev/null || return 0
         "$func" "$@"
         ;;
 esac

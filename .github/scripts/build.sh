@@ -11,7 +11,7 @@ bash --version
 
 export CMDLET_LOGGING=silent
 export CMDLET_CCACHE=0
-export CMDLET_BUILD_NJOBS="${CMDLET_BUILD_NJOBS:-1}"
+export CMDLET_NJOBS="${CMDLET_NJOBS:-1}"
 
 # need to run configure as root
 export FORCE_UNSAFE_CONFIGURE=1
@@ -34,6 +34,10 @@ if test -n "$1"; then
     cmdlets=( "$1" ) # build single library manually
 else
     TAG="$(bash libs.sh arch)"
+
+    : "${OLDHEAD:="$(git tag -l "$TAG")"}"
+    : "${OLDHEAD:="HEAD~1"}"
+
     while read -r line; do
         # file been deleted or renamed
         test -e "$line" || continue
@@ -43,7 +47,7 @@ else
 
         # excludes
         [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
-    done < <(git diff --name-only "$(git rev-parse "$TAG")" HEAD | grep "^libs/.*\.s")
+    done < <(git diff --name-only "$(git rev-parse "$OLDHEAD")" HEAD | grep "^libs/.*\.s")
 
     test -n "${cmdlets[*]}" || unset TAG
 
@@ -63,10 +67,11 @@ ret=0
 info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
-    export CMDLET_NO_PKGFILES=1
+    export CMDLET_PKGFILES=0
     bash libs.sh build "${cmdlets[@]%-}" || ret=$?
 elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
-    bash libs.sh check "${cmdlets[@]%+}" || ret=$?
+    export CMDLET_CHECK=1
+    bash libs.sh build "${cmdlets[@]%+}" || ret=$?
 else
     bash libs.sh build "${cmdlets[@]}" || ret=$?
 fi
@@ -74,7 +79,8 @@ fi
 # for release actions
 bash libs.sh zip_files || true
 
-if test -n "$TAG" && [ "$ret" -eq 0 ]; then
+# 127: build cmdlets fails instead of rdepends
+if test -n "$TAG" && [ "$ret" -eq 0 -o "$ret" -ne 127 ]; then
 	git tag -a "$TAG" -m "$TAG" --force
 
     # push only if no local changes
