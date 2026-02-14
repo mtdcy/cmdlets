@@ -13,7 +13,7 @@ libs_url=(
 libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
 libs_deps=( ncurses )
 
-libs_patches=(
+libs_resources=(
     https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-001
     https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-002
     https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-003
@@ -46,6 +46,11 @@ libs_args=(
 )
 
 libs_build() {
+    # patch manually
+    slogcmd patch -Np0 -i readline83-001 || die "patch readline83-001 failed."
+    slogcmd patch -Np0 -i readline83-002 || die "patch readline83-002 failed."
+    slogcmd patch -Np0 -i readline83-003 || die "patch readline83-003 failed."
+
     # set ncurses cflags and ldflags
     libs.requires ncurses
 
