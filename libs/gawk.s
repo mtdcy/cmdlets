@@ -1,5 +1,8 @@
 # GNU awk utility
 
+# TODO: https://github.com/mbuilov/gawk-windows
+libs_targets=( linux darwin )
+
 # shellcheck disable=SC2034
 libs_lic=GPLv3+
 libs_ver=5.3.2
@@ -45,8 +48,5 @@ libs_build() {
     # visual verify
     cmdlet.check gawk --version
 }
-
-# TODO: https://github.com/mbuilov/gawk-windows
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

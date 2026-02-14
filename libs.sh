@@ -107,6 +107,9 @@ host.is_glibc()     { is_listed GLIBC           _HOSTVARS;      }
 host.is_linux()     { is_listed linux           _HOSTVARS;      }
 host.is_darwin()    { is_match  "darwin*"       _HOSTVARS;      }
 
+# supported targets
+_TARGET_NAMES=( linux darwin windows )
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local ret=$?
@@ -244,6 +247,12 @@ _init() {
     which xcrun &>/dev/null && CC="$(xcrun --find "$CC")" || CC="$(which "$CC")"
 
     test -n "$CC" && test -x "$CC" || die "missing gcc"
+
+    case $("$CC" -dumpmachine) in
+        *-w64-*)    _TARGET_NAME=windows    ;;
+        *-darwin*)  _TARGET_NAME=darwin     ;;
+        *)          _TARGET_NAME=linux      ;;
+    esac
 
     # toolchain utils
     export CC
@@ -643,6 +652,9 @@ _load() {
     # update libs_dep to libs_deps, make old build compatible
     test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
 
+    # targets
+    test -n "$libs_targets" || libs_targets=( "${_TARGET_NAMES[@]}" )
+
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
@@ -934,39 +946,58 @@ build() {
 
     slogi "BUILD" "$*"
 
-    local targets=() x
+    local libs=() x
 
-    # check dependencies: rebuild targets
+    # check dependencies: rebuild libs
     for x in $(_deps_missing "$@"); do
-        test -e "$PREFIX/.$x.d" || targets+=( "$x" )
+        test -e "$PREFIX/.$x.d" || libs+=( "$x" )
     done
 
-    slogi "+DEPS" "${targets[*]}"
+    slogi "+DEPS" "${libs[*]}"
 
-    # sort and append targets
-    targets+=( $(_deps_sort "$@") )
+    # sort and append inputs
+    libs+=( $(_deps_sort "$@") )
+
+    _targets_load() {( _load "$1" &>/dev/null; echo "${libs_targets[@]}"; )}
 
     # continue on error
     _compile_targets() {
-        local targets=( "$@" ) fails=() i
-        for i in "${!targets[@]}"; do
+        local libs=( "$@" ) fails=() i
+        for i in "${!libs[@]}"; do
+            local name="${libs[i]}"
+
             echo ""
-            slogi ">>>>>" "#$((i+1))/${#targets[@]} ${targets[i]} ( depends: $(_deps_status "${targets[i]}") )" || {
+            slogi ">>>>>" "#$((i+1))/${#libs[@]} $name"
+
+            # check for supported targets
+            local x supported
+            for x in "$name" $(depends "$name"); do
+                IFS=' ' read -r -a supported < <( _targets_load "$x" )
+                is_listed "$_TARGET_NAME" supported || {
+                    slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
+                    unset supported
+                    break
+                }
+            done
+            test -n "$supported" || continue
+
+            slogi ".DEPS" "$(_deps_status "$name")" || {
                 true # ignore return value
-                slogw "<<<<<" "${targets[i]}: missing dependencies"
-                fails+=( "${targets[i]}" )
+                slogw "<<<<<" "$name: missing dependencies"
+                fails+=( "$name" )
                 continue
             }
 
-            time compile "${targets[i]}" || fails+=( "${targets[i]}" )
+            time compile "$name" || fails+=( "$name" )
         done
 
         test -z "${fails[*]}" || {
-            slogw "failed targets: ${fails[*]}"
+            slogw "failed build: ${fails[*]}"
             return ${#fails[@]}
         }
     }
-    _compile_targets "${targets[@]}" || {
+
+    _compile_targets "${libs[@]}" || {
         sloge "build failed #$?." || true # always return errno 127
         return 127
     }
@@ -974,13 +1005,13 @@ build() {
     # build rdepends
     _opt_yes CMDLET_CHECK || return 0
 
-    IFS=' ' read -r -a targets < <( rdepends "$@" )
+    IFS=' ' read -r -a libs < <( rdepends "$@" )
 
-    slogi "rDEPS" "${targets[*]}"
+    slogi "rDEPS" "${libs[*]}"
     # always use pkgfiles for rdepends
-    CMDLET_PKGFILES=1 _deps_fetch "${targets[@]}"
+    CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
 
-    _compile_targets "${targets[@]}" || sloge "build rdepends failed #$?."
+    _compile_targets "${libs[@]}" || sloge "build rdepends failed #$?."
 }
 
 # v3/git releases
