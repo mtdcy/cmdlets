@@ -9,11 +9,9 @@ libs_stable_minor=1 # update revision only
 libs_ver=9.20.18
 libs_url=https://downloads.isc.org/isc/bind9/9.20.18/bind-9.20.18.tar.xz
 libs_sha=dfc546c990ac4515529cd45c4dd995862b18ae8a2d0cb29208e8896a5d325331
-libs_dep=( zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc )
+libs_dep=( zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc urcu )
 
 is_linux && libs_dep+=( libcap )
-
-is_mingw || libs_dep+=( urcu )
 
 libs_args=(
     --disable-dependency-tracking
@@ -85,5 +83,8 @@ libs_build() {
 
     check dig www.google.com
 }
+
+# disable as urcu no ready for mingw
+libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
