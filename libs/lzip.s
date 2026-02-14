@@ -7,7 +7,7 @@ libs_url=http://download.savannah.gnu.org/releases/lzip/lzip-$libs_ver.tar.gz
 libs_sha=09418a6d8fb83f5113f5bd856e09703df5d37bae0308c668d0f346e3d3f0a56f
 libs_dep=()
 
-is_mingw && CXXFLAGS+= '-D__USE_MINGW_ANSI_STDIO'
+is_mingw && CXXFLAGS+='-D__USE_MINGW_ANSI_STDIO'
 
 # non-standard configure
 libs_args=(
