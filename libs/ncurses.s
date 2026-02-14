@@ -1,14 +1,19 @@
 # Text-based UI library
 #
 # shellcheck disable=SC2034
-
-libs_name=ncurses
-libs_lic='MIT'
+libs_lic=MIT
 libs_ver=6.6
 libs_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
 #https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
 libs_sha=355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11
-libs_dep=()
+
+is_mingw && libs_deps+=( libgnurx )
+
+libs_patches=(
+    # do not leak build-time LDFLAGS into the pkgconfig files:
+    # https://bugs.archlinux.org/task/68523
+    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-ncurses/ncurses-6.3-pkgconfig.patch
+)
 
 # build a simple and fast ncurses library
 libs_args=(
@@ -18,6 +23,10 @@ libs_args=(
 
     --disable-overwrite         # put headers in subdir, omit link to -lcurses
 
+    # terminfo
+    # The system's tic program is used to install the terminal database, even for cross-compiles.
+    --without-database             # terminfo database
+    --enable-termcap
     # --datadir                 # terminfo location
 
     # terminfo(ncurses) vs termcap(obsolete)
@@ -26,8 +35,6 @@ libs_args=(
     # pure-terminfo mode, no termcap => makes the ncurses library smaller and faster
     --disable-termcap           # enable termcap for fallbacks => needs infocmp
     --without-fallbacks         # no fallback to termcap
-    # The system's tic program is used to install the terminal database, even for cross-compiles.
-    --without-database          # terminfo database
 
     # libncurses with widec support
     --enable-widec
@@ -56,7 +63,7 @@ if is_mingw; then
         --disable-home-terminfo         # drop ~/.terminfo from terminfo search-path
         --disable-symlinks
     )
- else
+else
     # *nix system: avoid hardcoded PREFIX
     libs_args+=(
         # we are building static executable, cann't ship hardcoded prebuilts path into executables.
