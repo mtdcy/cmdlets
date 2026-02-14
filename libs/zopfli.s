@@ -25,11 +25,11 @@ libs_build() {
 
     pkgfile libzopfli -- cmake.install
 
-    cmdlet ./build/zopfli
+    cmdlet.install zopfli
 
-    cmdlet ./build/zopflipng
+    cmdlet.install zopflipng
 
-    check zopfli
+    cmdlet.check zopfli
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
