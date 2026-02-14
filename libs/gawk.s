@@ -1,7 +1,7 @@
 # GNU awk utility
 
 # shellcheck disable=SC2034
-libs_lic='GPL-3.0-or-later'
+libs_lic=GPLv3+
 libs_ver=5.3.2
 libs_url=https://ftpmirror.gnu.org/gnu/gawk/gawk-$libs_ver.tar.xz
 libs_sha=f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc
@@ -12,45 +12,41 @@ libs_args=(
     --enable-silent-rules
     --disable-dependency-tracking
 
-    # enable explicitly
-    --with-readline
-    --with-mpfr
-
-    --without-selinux
-    --disable-rpath
-
     # disable these for single static executables.
     --disable-nls
+    --without-selinux
     --without-libintl-prefix
+    --without-libiconv-prefix
+
+    --disable-extensions
 
     --disable-doc
     --disable-man
 )
 
-[[ ${libs_dep[*]} =~ mpfr ]] || libs_args+=(--without-mpfr)
-
-[[ ${libs_dep[*]} =~ readline ]] || libs_args+=(--without-readline)
+is_listed mpfr      "${libs_dep[@]}" && libs_args+=( --with-mpfr     ) || libs_args+=( --without-mpfr     )
+is_listed readline  "${libs_dep[@]}" && libs_args+=( --with-readline ) || libs_args+=( --without-readline )
 
 libs_build() {
     # refer to: https://github.com/macports/macports-ports/blob/master/lang/gawk/Portfile
-    if is_darwin; then
-        sed -i 's:-Xlinker -no_pie::' configure
-    fi
+    is_darwin && sed -i 's:-Xlinker -no_pie::' configure
 
     configure
 
-    make
+    make gawk$_BINEXT
 
     # check => XXX: there always 5 FAILs
     #make check &&
-    [ "HelloHello" = "$(./gawk '{ gsub(/World/, "Hello"); print }' <<< "HelloWorld")" ] || die "test failed"
+    [ "HelloHello" = "$(run gawk '{ gsub(/World/, "Hello"); print }' <<< "HelloWorld")" ] || die "test failed"
 
     #make install-exec &&
-    cmdlet ./gawk gawk awk
+    cmdlet.install gawk gawk awk
 
     # visual verify
-    check gawk --version
+    cmdlet.check gawk --version
 }
 
+# TODO: https://github.com/mbuilov/gawk-windows
+libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
