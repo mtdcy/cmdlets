@@ -46,7 +46,7 @@ jobs:
 
           export CMDLET_TARGET="$(uname -m)-w64-mingw32"
 
-          which nproc && export CMDLET_BUILD_NJOBS=$(nproc) || true
+          which nproc && export CMDLET_NJOBS=$(nproc) || true
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
