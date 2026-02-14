@@ -418,25 +418,11 @@ _cargo_init() {
     # host act runner won't inherit envs from host and
     # $_ROOT will be deleted when jobs finished.
 
-    # rustup and cargo
+    # find out rustup: $_ROOT > $HOME > system
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
-    : "${CARGO_HOME:=$HOME/.cargo}"
 
-    # a writable cargo home needed, refer to cargo.requires()
-    test -w "$CARGO_HOME" || CARGO_HOME="$_WORKDIR/.cargo"
-
-    mkdir -pv "$CARGO_HOME/bin"
-
-    export PATH="$CARGO_HOME/bin:$PATH"
-
-    # find out right rustup home
-    which rustup &>/dev/null || test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
-
-    # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-    #  choose _WORKDIR instead of HOME for docker buildings
-    test -f rust-toolchain.toml && RUSTUP_HOME="$_WORKDIR/.rustup" || true
-
-    mkdir -p "$RUSTUP_HOME"
+    test -f "$HOME/.rustup/settings.toml"  && RUSTUP_HOME="$HOME/.rustup"
+    test -f "$_ROOT/.rustup/settings.toml" && RUSTUP_HOME="$_ROOT/.rustup"
 
     # set mirrors for toolchain download
     if test -n "$_MIRRORS"; then
@@ -445,7 +431,15 @@ _cargo_init() {
         export RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT
     fi
 
+    # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
+    #  choose _WORKDIR instead of HOME for docker buildings
+    if test -f rust-toolchain.toml; then
+        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_ROOT/.rustup"
+    fi
+
     if ! which rustup &>/dev/null; then
+        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
+
         RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
         if which rustup-init &>/dev/null; then
             _LOGGING=silent echocmd rustup-init "${RUSTUP_INIT_OPTS[@]}"
@@ -454,21 +448,34 @@ _cargo_init() {
         fi
     fi
 
+    # find out cargo: $_ROOT > $HOME > $RUSTUP_HOME/cargo
+    : "${CARGO_HOME:=$RUSTUP_HOME/cargo}"
+
+    test -x "$HOME/.cargo/bin/cargo"  && CARGO_HOME="$HOME/.cargo"
+    test -x "$_ROOT/.cargo/bin/cargo" && CARGO_HOME="$_ROOT/.cargo"
+
     # docker image RUSTUP_HOME may not be writable
     if test -w "$RUSTUP_HOME"; then
         _LOGGING=silent echocmd rustup default ||
         _LOGGING=silent echocmd rustup default stable
     fi
 
+    export PATH="$CARGO_HOME/bin:$PATH"
+
     CARGO="$(rustup which cargo)" || die "missing host tool cargo"
     RUSTC="$(rustup which rustc)" || die "missing host tool rustc"
 
+    # a writable CARGO_HOME is required, refer to cargo.requires()
+    # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
+    #   => set CARGO_HOME again for local crates and cache
+    test -w "$CARGO_HOME" || CARGO_HOME="$_ROOT/.cargo"
+
     export CARGO_HOME RUSTUP_HOME CARGO RUSTC
 
-    # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
-    # set CARGO_HOME again for local crates and cache
-    #export CARGO_HOME="$_ROOT/.cargo"
     export CARGO_BUILD_JOBS="$_NJOBS"
+
+    # cargo logging
+    export CARGO_LOG=cargo::core::compiler::fingerprint=trace
 
     # search for libraries in PREFIX
     CARGO_BUILD_RUSTFLAGS="-L native=$PREFIX/lib -C linker=$LD"
@@ -476,13 +483,20 @@ _cargo_init() {
     if is_linux; then
         # static linked C runtime
         CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
-
+        # musl
         CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
-        rustup target add "$CARGO_BUILD_TARGET"
-
-        # error: toolchain 'stable-xxxx-unknown-linux-musl' may not be able to run on this system
-        #rustup default "stable-$CARGO_BUILD_TARGET"
+    elif is_mingw; then
+        [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
+        CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
+        # win32
+        #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
+        #  *-windows-gnu => msvcrt
+        CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
     fi
+
+    # error: toolchain 'stable-xxxx-unknown-linux-musl' may not be able to run on this system
+    #rustup default "stable-$CARGO_BUILD_TARGET"
+    test -z "$CARGO_BUILD_TARGET" || slogcmd rustup target add "$CARGO_BUILD_TARGET"
 
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
 
@@ -539,11 +553,9 @@ cargo.setup() {
         shift 1
     done
 
-    test -n "${rustflags[*]}" || return 0
-
-    RUSTFLAGS+=" $CARGO_BUILD_RUSTFLAGS ${rustflags[*]}"
-
-    export RUSTFLAGS
+    #export RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS $RUSTFLAGS ${rustflags[*]}"
+    export RUSTFLAGS+="${rustflags[*]}"
+    # RUSTFLAGS will append to CARGO_BUILD_RUSTFLAGS when cargo build
 }
 
 cargo.build() {
@@ -556,7 +568,15 @@ cargo.build() {
 
     # If the --target flag (or build.target) is used, then
     # the build.rustflags will only be passed to the compiler for the target.
-    test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
+    #test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
+
+    # remember envs
+    {
+        echo -e "\n---"
+        echo -e "cargo envs:"
+        env | grep -E "CARGO|RUST"
+        echo -e "---\n"
+    } | _LOGGING=silent _capture
 
     slogcmd "$CARGO" build "${std[@]}" "${libs_args[@]}" "$@" || die "cargo.build $libs_name failed."
 }
@@ -585,6 +605,14 @@ cargo.requires.rustc() {
     _cargo_init
 
     _version_ge "$("$RUSTC" --version | cut -d' ' -f2)" "$1" || slogcmd rustup update
+}
+
+cargo.locate() {
+    local targets=() x
+    for x in "$@"; do
+        targets+=( $(_locate_exe "target/$CARGO_BUILD_TARGET/release/$x") )
+    done
+    echo "${targets[@]}"
 }
 
 _go_init() {
@@ -1152,7 +1180,7 @@ run() {
             *)
                 _run "$SHELL" -c "$bin ${*:2}"
                 ;;
-        esac 
+        esac
     else
         # use shell to catch "Killed" or "Abort trap" messages
         _run "$SHELL" -c "$bin ${*:2}"
