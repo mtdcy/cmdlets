@@ -8,19 +8,19 @@ libs_sha=25cee4500f359cf5cad3b51ed62059aadfc0939b05150c1f19c7e2829123631c
 libs_dep=( openssl )
 
 libs_args=(
+    -DENABLE_SSL=ON
+
+    -DDISABLE_TESTS=ON
+    
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
-    deparallelize
+    cmake.setup
 
-    # no shared libraries
-    sed -i Makefile \
-        -e '/^install:/s/\$(DYLIBNAME)//' \
-        -e '/\$(DYLIBNAME)/d' \
-        -e '/^install-ssl:/s/\$(SSL_DYLIBNAME)//' \
-        -e '/\$(SSL_DYLIBNAME)/d' \
+    cmake.build
 
-    pkgfile libhiredis -- make install PREFIX="'$PREFIX'" USE_SSL=1
+    pkgfile libhiredis -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
