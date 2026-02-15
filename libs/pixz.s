@@ -33,3 +33,23 @@ Usage:
     tar -I pixz -cf archive.tar.xz -C /opt
 EOF
 }
+
+__END__
+--- a/src/cpu.c   2026-02-15 09:07:57.270156784 +0800
++++ b/src/cpu.c   2026-02-15 09:09:05.617752924 +0800
+@@ -1,5 +1,15 @@
++#if defined(_WIN32)
++#include <windows.h>
++
++size_t num_threads(void) {
++    SYSTEM_INFO sysinfo;
++    GetSystemInfo(&sysinfo);
++    int numCPU = sysinfo.dwNumberOfProcessors;
++}
++#else
+ #include <unistd.h>
+
+ size_t num_threads(void) {
+     return sysconf(_SC_NPROCESSORS_ONLN);
+ }
++#endif
