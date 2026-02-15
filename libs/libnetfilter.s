@@ -1,6 +1,8 @@
 # netfilter libraries
 
 # shellcheck disable=SC2034
+libs_targets=( linux ) # libnetfiler/libnf is linux only
+
 libs_lic='LGPLv2+'
 
 # use libnftnl version as pkgvern
@@ -65,7 +67,5 @@ libs_build() {
     libnetfilter libnetfilter_cttimeout 1.0.1
     libnetfilter libnetfilter_cthelper 1.0.1
 }
-
-libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

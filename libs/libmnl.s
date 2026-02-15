@@ -1,5 +1,7 @@
 # libmnl is a minimalistic user-space library oriented to Netlink developers.
 
+libs_targets=( linux ) # linux only
+
 # shellcheck disable=SC2034
 libs_lic='LGPLv2.1+'
 libs_ver=1.0.5
@@ -22,7 +24,5 @@ libs_build() {
 
     pkgfile libmnl -- make.install
 }
-
-libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
