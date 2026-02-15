@@ -72,25 +72,40 @@ _opt_yes() {
 }
 
 # help functions
-is_listed()         { [[ " ${*:2} " == *" $1 "* ]];     }   # is $1 in list ${@:2}?
-is_match()          { [[ " ${*:2} " =~ " "$1" " ]];     }   # is $1 in list ${@:2}?
+is_listed() {
+    if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
+        declare -n list="$2"
+        [[ " ${list[*]} " == *" $1 "* ]]
+    else
+        [[ " ${*:2} " == *" $1 "* ]]
+    fi
+}
+
+is_match() {
+    if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
+        declare -n list="$2"
+        [[ " ${list[*]} " =~ " "$1" " ]];
+    else
+        [[ " ${*:2} " =~ " "$1" " ]];
+    fi
+}
 
 # target check: ready after _init, at least CC is set.
 is_msys()           { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";    } # deprecated
-is_clang()          { is_listed clang           "${_TARGETVARS[@]}";    }
-is_darwin()         { is_listed apple           "${_TARGETVARS[@]}";    }
-is_linux()          { is_listed linux           "${_TARGETVARS[@]}";    }
-is_glibc()          { is_listed gnu             "${_TARGETVARS[@]}";    }
-is_musl()           { is_listed musl            "${_TARGETVARS[@]}";    }
-is_win64()          { is_listed w64             "${_TARGETVARS[@]}";    }
-is_mingw()          { is_listed mingw32         "${_TARGETVARS[@]}";    }
-is_arm64()          { is_match  "arm64|aarch64" "${_TARGETVARS[@]}";    }
-is_intel()          { is_match  "x86_64|x86"    "${_TARGETVARS[@]}";    }
-is_posix()          { is_listed posix           "${_TARGETVARS[@]}";    }
+is_clang()          { is_listed clang           _TARGETVARS;    }
+is_darwin()         { is_listed apple           _TARGETVARS;    }
+is_linux()          { is_listed linux           _TARGETVARS;    }
+is_glibc()          { is_listed gnu             _TARGETVARS;    }
+is_musl()           { is_listed musl            _TARGETVARS;    }
+is_win64()          { is_listed w64             _TARGETVARS;    }
+is_mingw()          { is_listed mingw32         _TARGETVARS;    }
+is_posix()          { is_listed posix           _TARGETVARS;    }
+is_arm64()          { is_match  "arm64|aarch64" _TARGETVARS;    }
+is_intel()          { is_match  "x86_64|x86"    _TARGETVARS;    }
 
-host.is_glibc()     { is_listed GLIBC           "${_HOSTVARS[@]}";      }
-host.is_linux()     { is_listed linux           "${_HOSTVARS[@]}";      }
-host.is_darwin()    { is_match  "darwin*"       "${_HOSTVARS[@]}";      }
+host.is_glibc()     { is_listed GLIBC           _HOSTVARS;      }
+host.is_linux()     { is_listed linux           _HOSTVARS;      }
+host.is_darwin()    { is_match  "darwin*"       _HOSTVARS;      }
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
@@ -331,7 +346,7 @@ _init() {
         # XXX: allow link with certain dlls?
         ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
 
-        # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64 
+        # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64
         #"$CC" -dumpspecs > "$_WORKDIR/.specs"
         #sed -i 's/-lmsvcrt/-lucrt/g' "$_WORKDIR/.specs"
         #cflags+=( -specs="$_WORKDIR/.specs" -D_UCRT )
@@ -876,7 +891,7 @@ _deps_status() {
     return $ret
 }
 
-# 
+#
 _deps_fetch() {
     # no pkgfiles
     _opt_yes CMDLET_PKGFILES || return 0
