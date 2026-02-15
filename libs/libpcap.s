@@ -1,5 +1,9 @@
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+#
 # Portable library for network traffic capture
+
+# disable libpcap for now, until Npcap is ready
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
