@@ -198,7 +198,13 @@ _cmake_init() {
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 
-    env | _LOGGING=silent _capture
+    # remember envs
+    {
+        echo -e "\n---"
+        echo -e "cmake envs:"
+        env | grep -E "CMAKE"
+        echo -e "---\n"
+    } | _LOGGING=silent _capture
 
     # extend CMAKE with compile tools
     _CMAKE_STD=(

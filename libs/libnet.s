@@ -1,5 +1,7 @@
 # C library for creating IP packets
 
+libs_targets=( linux darwin )
+
 # shellcheck disable=SC2034
 libs_lic='BSD-2-Clause'
 libs_ver=1.3
