@@ -439,10 +439,15 @@ _init() {
 
         export WINE="$(which wine 2>/dev/null)" || true
 
+        # no wine debug infomations
+        export WINEDEBUG=-all
+
         # enable binfmt support
         if test -n "$WINEPREFIX" && ! test -f /tmp/cmdlets_binfmt_ready; then
             # wine: '/wine' is not owned by you
-            sudo chown "$(id -u):$(id -g)" "$WINEPREFIX"
+            #  : workflows start with --entrypoint=''
+            [ "$(stat -c %u "$WINEPREFIX")" -eq $(id -u) ] || 
+            sudo chown -R $(id -u ) "$WINEPREFIX"
 
             # enable binfmt support
             if ! test -e /proc/sys/fs/binfmt_misc; then
@@ -451,7 +456,7 @@ _init() {
 
             if ! test -e /proc/sys/fs/binfmt_misc/wine; then
                 sudo update-binfmts --import wine
-                sudo update-binfmts --enable wine
+                sudo update-binfmts --enable wine &>/dev/null
             fi
 
             slogi "Wine binfmt status:"
