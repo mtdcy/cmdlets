@@ -714,9 +714,14 @@ _prepare() {
         esac
     done
 
-    # always patch with -p1
+    # always patch with -p0: 
+    #  `diff -u main.c.orig main.c' will create patch working with -p0
     if test -s "$TEMPDIR/$libs_name.patch"; then
-        slogcmd "$PATCH -p1 -N < $TEMPDIR/$libs_name.patch" || die "patch inlined failed."
+        if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
+            slogcmd "$PATCH" -Np1 -i $TEMPDIR/$libs_name.patch || die "patch inlined failed."
+        else
+            slogcmd "$PATCH" -Np0 -i $TEMPDIR/$libs_name.patch || die "patch inlined failed."
+        fi
     fi
 }
 

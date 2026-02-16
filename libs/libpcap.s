@@ -69,8 +69,8 @@ libs_build() {
 __END__
 
 # build static libpcap only not working with cmake
---- a/CMakeLists.txt	2026-02-15 13:51:53.047779429 +0800
-+++ b/CMakeLists.txt	2026-02-15 13:51:58.423193036 +0800
+--- CMakeLists.txt.orig	2026-02-15 13:51:53.047779429 +0800
++++ CMakeLists.txt	    2026-02-15 13:51:58.423193036 +0800
 @@ -3248,10 +3248,12 @@
          # For compatibility, build the shared library without the "lib" prefix on
          # MinGW as well.
@@ -84,8 +84,8 @@ __END__
          set_target_properties(${LIBRARY_NAME}_static PROPERTIES
              OUTPUT_NAME "${LIBRARY_NAME}"
          )
---- a/rpcapd/CMakeLists.txt	2026-02-15 15:30:56.287293530 +0800
-+++ b/rpcapd/CMakeLists.txt	2026-02-15 16:14:52.971445456 +0800
+--- rpcapd/CMakeLists.txt.orig	2026-02-15 15:30:56.287293530 +0800
++++ rpcapd/CMakeLists.txt	    2026-02-15 16:14:52.971445456 +0800
 @@ -92,7 +92,7 @@
    endif()
  
