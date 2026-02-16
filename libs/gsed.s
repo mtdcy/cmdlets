@@ -2,7 +2,7 @@
 #
 # shellcheck disable=SC2034
 
-libs_lic='GPL-3.0-or-later'
+libs_lic=GPLv3+
 libs_ver=4.9
 libs_url=(
     https://mirrors.ustc.edu.cn/gnu/sed/sed-$libs_ver.tar.xz
@@ -35,14 +35,27 @@ libs_args=(
 )
 
 libs_build() {
+    if is_mingw; then
+        export LIBS="-lbcrypt"
+
+        sed -i Makefile.in \
+            -e '/SEDBIN =/s/$/&\$(EXEEXT)/'
+    fi
+
     configure
 
     make
 
     # install as gsed and symlink to sed
-    cmdlet ./sed/sed gsed sed
+    cmdlet.install sed/sed gsed sed
 
-    check gsed --version
+    cmdlet.check gsed --version
+
+    # simple test
+    echo "HelloWorld" > hello.txt
+    echo "s/World/Hello/g" > sub.sed
+
+    [ "$(run sed -f sub.sed hello.txt)" = "HelloHello" ] || die "sed test failed."
 }
 
 

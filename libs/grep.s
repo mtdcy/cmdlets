@@ -32,14 +32,14 @@ libs_build() {
 
     make
 
-    # check: grep with pcre
-    echo FOO | run src/grep -P '(?i)foo' || die "check grep with pcre failed"
-
     # install grep
     cmdlet.install src/grep
 
     # verify
     cmdlet.check grep --version
+
+    # check: grep with pcre
+    echo FOO | run grep -P '(?i)foo' || die "check grep with pcre failed"
 }
 
 
