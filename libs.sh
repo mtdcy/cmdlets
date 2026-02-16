@@ -71,6 +71,21 @@ _opt_yes() {
     esac
 }
 
+# escape arguments(single quoted) and reuse as shell input again
+escape.args() {
+    local x sep=""
+    for x in "$@"; do
+        "$PRINTF" "%s%q" "$sep" "$x"
+        sep=" "
+    done
+    "$PRINTF" '\n'
+}
+
+# CRLF(windows) => LF(unix)
+escape.crlf() {
+    sed 's/\r//g'
+}
+
 # help functions
 is_listed() {
     if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
@@ -295,6 +310,7 @@ _init() {
         "INSTALL:install"
         "TAR:gtar,tar"
         "FILE:file"
+        "PRINTF:printf" # supersedes shell's printf
     )
 
     test -x "$PKG_CONFIG" || host_tools+=( PKG_CONFIG:pkg-config )

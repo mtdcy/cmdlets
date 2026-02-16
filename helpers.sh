@@ -1181,15 +1181,17 @@ run() {
     if test -n "$WINEPREFIX"; then
         case "$("$FILE" -b "$bin")" in
             PE32+*)
-                _run "$WINE" "$bin" "${@:2}"
+                # escape won't work for wine/cmd, which do not treat ' as quotation marks
+                #_run "$WINE" "$bin" $(escape.args "${@:2}") | escape.crlf
+                _run "$WINE" "$bin" "${@:2}" | escape.crlf
                 ;;
             *)
-                _run "$SHELL" -c "$bin ${*:2}"
+                _run "$SHELL" -c "$bin $(escape.args "${@:2}")"
                 ;;
         esac
     else
         # use shell to catch "Killed" or "Abort trap" messages
-        _run "$SHELL" -c "$bin ${*:2}"
+        _run "$SHELL" -c "$bin $(escape.args "${@:2}")"
     fi
 }
 
