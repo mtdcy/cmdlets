@@ -38,6 +38,7 @@ else
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"
     : "${OLDHEAD:="HEAD~1"}"
 
+    OLDHEAD="$(git rev-parse "$OLDHEAD")"
     while read -r line; do
         # file been deleted or renamed
         test -e "$line" || continue
@@ -46,8 +47,8 @@ else
         [ "${line%/*}" = "libs" ] && line="${line#*/}" || continue
 
         # excludes
-        [[ "$line" =~ ^[.@_] ]] || cmdlets+=( "${line%.s}" )
-    done < <(git diff --name-only "$(git rev-parse "$OLDHEAD")" HEAD | grep "^libs/.*\.s")
+        [[ "$line" =~ ^_ ]] || cmdlets+=( "${line%.s}" )
+    done < <(git diff --name-only $OLDHEAD..HEAD | grep "^libs/.*\.s")
 
     test -n "${cmdlets[*]}" || unset TAG
 
