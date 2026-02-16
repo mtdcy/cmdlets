@@ -7,7 +7,8 @@ libs_lic='MIT'
 libs_ver=0.18.2
 libs_url=https://github.com/dandavison/delta/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=64717c3b3335b44a252b8e99713e080cbf7944308b96252bc175317b10004f02
-libs_dep=( zlib libgit2 ) # oniguruma
+
+libs_deps=( zlib libgit2 pcre2 oniguruma )
 
 libs_patches=(
     # support libgit2 1.9, https://github.com/dandavison/delta/pull/1930
@@ -20,19 +21,13 @@ libs_args=(
 )
 
 libs_build() {
-    # use libgit2 in PREFIX
-    export LIBGIT2_NO_VENDOR=1
+    cargo.setup
 
-    # use static libonig in PREFIX => cargo build fails the first time
-    #export RUSTONIG_SYSTEM_LIBONIG=1
-    #export LIBONIG_STATIC=1
-    #export RUSTONIG_STATIC_LIBONIG=1 # => fails
+    cargo.build
 
-    cargo build
+    cmdlet.install "$(cargo.locate delta)"
 
-    cmdlet "$(find target -name delta)"
-
-    check delta --version
+    cmdlet.check delta --version
 
     caveats <<EOF
 delta @ $libs_ver

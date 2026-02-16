@@ -34,7 +34,7 @@ is_listed pcre2     libs_deps && libs_args+=( -DREGEX_BACKEND=pcre2 ) || libs_ar
 
 libs_build() {
     # pcre static: -DPCRE2_STATIC
-    libs.requires -DPCRE2_STATIC
+    libs.requires -DPCRE2_STATIC 
 
     # could not resolve dl
     #  => cmake/FindPkgLibraries.cmake

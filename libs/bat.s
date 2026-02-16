@@ -12,17 +12,11 @@ libs_args=(
 )
 
 libs_build() {
-    # use installed libgit2
-    export LIBGIT2_NO_VENDOR=1
-    # use installed static onig
-    export RUSTONIG_SYSTEM_LIBONIG=1
-    export RUSTONIG_DYNAMIC_LIBONIG=0
-
     cargo.setup
 
     cargo.build
 
-    cmdlet.install "$(find target -name $libs_name)"
+    cmdlet.install "$(cargo.locate $libs_name)"
 
     cmdlet.check "$libs_name"
 }

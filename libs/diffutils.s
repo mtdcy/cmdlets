@@ -13,9 +13,11 @@ libs_args=(
 )
 
 libs_build() {
+    cargo.setup
+
     cargo.build
 
-    cmdlet.install "$(find target -name diffutils)" diffutils cmp diff
+    cmdlet.install "$(cargo.locate diffutils)" diffutils cmp diff
 
     cmdlet.check diffutils
 }

@@ -17,7 +17,7 @@ libs_build() {
 
     cargo.build
 
-    cmdlet.install "$(find target -name $libs_name)"
+    cmdlet.install "$(cargo.locate $libs_name)"
 
     cmdlet.check "$libs_name" --version
 }

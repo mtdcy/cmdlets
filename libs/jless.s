@@ -1,5 +1,8 @@
 # Command-line pager for JSON data
 
+# err: failed to read `/data/cmdlets/out/x86_64-w64-mingw32/jless-0.9.0/target/x86_64-pc-windows-gnu/release/.fingerprint/jless-282fe945ee5c104a/bin-jless`
+libs_targets=( linux macos )
+
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=0.9.0
@@ -14,13 +17,13 @@ libs_args=(
 
 libs_build() {
     # fix dependencies of static libxcb
-    #export RUSTFLAGS="-L $PREFIX/lib -l static=Xau -l static=Xdmcp"
-    cargo.setup \
-        $($PKG_CONFIG --libs xcb)
+    export RUSTFLAGS="-L $PREFIX/lib -l static=Xau -l static=Xdmcp"
+
+    cargo.setup 
 
     cargo.build
 
-    cmdlet.install "$(find target -name $libs_name)"
+    cmdlet.install "$(cargo.locate $libs_name)"
 
     cmdlet.check "$libs_name"
 }
