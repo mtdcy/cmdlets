@@ -122,6 +122,9 @@ host.is_glibc()     { is_listed GLIBC           _HOSTVARS;      }
 host.is_linux()     { is_listed linux           _HOSTVARS;      }
 host.is_darwin()    { is_match  "darwin*"       _HOSTVARS;      }
 
+# cross building?
+is_xbuild() { ! "$CC" -dumpmachine | grep -qi "$(uname -s)";    }
+
 # supported targets
 _TARGET_NAMES=( linux darwin windows )
 
@@ -302,6 +305,7 @@ _init() {
     IFS=' ' read -r -a _HOSTVARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
 
     local host_tools=(
+        "HOSTCC:gcc,cc"
         "MAKE:gmake,make"
         "CMAKE:cmake"
         "MESON:meson"
@@ -334,6 +338,9 @@ _init() {
     }
 
     _init_host_tools "${host_tools[@]}"
+
+    # autotools envs
+    export CC_FOR_BUILD="$HOSTCC"
 
     local cflags ldflags
 
