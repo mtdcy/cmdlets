@@ -345,6 +345,10 @@ cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
 EOF
+
+        # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
+        #  => set find_program extensions
+        export PATHEXT=".exe"
     fi
 
     export _MESON_READY=1
@@ -391,9 +395,17 @@ meson() {
 meson.setup() {
     _meson_init
 
+    local x std=()
+
+    for x in "${libs_deps[@]}"; do
+        case "$x" in
+            glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
+        esac
+    done
+
     # meson builtin options: https://mesonbuild.com/Builtin-options.html
     #  libdir: some package prefer install to lib/<machine>/
-    local std=(
+    std+=(
         -Dprefix="'$PREFIX'"
         -Dlibdir=lib
         -Dbuildtype=release
