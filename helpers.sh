@@ -51,17 +51,28 @@ libs.requires() {
     local x y cflags=() cxxflags=()
 
     for x in "$@"; do
-        "$PKG_CONFIG" --exists "$x" || die "$x not found."
+        case "$x" in
+            -l*|-L*|-pthread|-Wl,*)
+                ldflags+=( "$x" )
+                ;;
+            -*)
+                cflags+=( "$x" )
+                cxxflags+=( "$x" )
+                ;;
+            *)
+                "$PKG_CONFIG" --exists "$x" || die "$x not found."
 
-        for y in $($PKG_CONFIG --cflags "$x"); do
-            case "$y" in
-                -std=c++*|-std=gnu++*)  cxxflags+=( "$y" )  ;;
-                -fpermissive)           cxxflags+=( "$y" )  ;;
-                *)                      cflags+=( "$y" )    ;;
-            esac
-        done
+                for y in $($PKG_CONFIG --cflags "$x"); do
+                    case "$y" in
+                        -std=c++*|-std=gnu++*)  cxxflags+=( "$y" )  ;;
+                        -fpermissive)           cxxflags+=( "$y" )  ;;
+                        *)                      cflags+=( "$y" )    ;;
+                    esac
+                done
 
-        LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+                LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+                ;;
+        esac
     done
 
     CFLAGS+=" ${cflags[*]}"
