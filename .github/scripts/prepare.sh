@@ -36,6 +36,8 @@ test -n "${cmdlets[*]}" || {
     info "*** no cmdlets, exit ***"
     exit 0
 }
+    
+cmdlets=( $(printf '%s\n' "${cmdlets[@]}" | sort -u) )
 
 [[ "${cmdlets[*]}" =~ ALL ]] && cmdlets=( $(bash libs.sh _deps_get ALL) ) || true
 

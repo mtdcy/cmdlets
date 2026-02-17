@@ -50,8 +50,6 @@ else
         [[ "$line" =~ ^_ ]] || cmdlets+=( "${line%.s}" )
     done < <(git diff --name-only $OLDHEAD..HEAD | grep "^libs/.*\.s")
 
-    test -n "${cmdlets[*]}" || unset TAG
-
     # build cmdlet and rdepends by default
     rdepends=1
 fi
@@ -62,6 +60,8 @@ test -n "${cmdlets[*]}" || {
     info "*** no cmdlets, exit ***"
     exit 0
 }
+
+cmdlets=( $(printf '%s\n' "${cmdlets[@]}" | sort -u) )
 
 ret=0
 

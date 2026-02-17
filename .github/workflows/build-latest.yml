@@ -16,7 +16,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.machine }}
+    runs-on: ubuntu-latest
     container:
       image: ${{ matrix.builder }}
       options: --privileged
@@ -26,8 +26,8 @@ jobs:
       matrix:
         include:
           # for x86_64-w64-mingw32
-          - machine: ubuntu-host
-            builder: lcr.io/mtdcy/builder:mingw64-latest
+          - builder: lcr.io/mtdcy/builder:mingw64-latest
+          - builder: lcr.io/mtdcy/builder:ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -44,7 +44,10 @@ jobs:
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
-          export CMDLET_TARGET="$(uname -m)-w64-mingw32"
+          case "${{ matrix.builder }}" in
+            *mingw64*)  export CMDLET_TARGET="$(uname -m)-w64-mingw32"  ;;
+            *)          export CMDLET_TARGET="$(uname -m)-linux-musl"   ;;
+          esac
 
           which nproc && export CMDLET_NJOBS=$(nproc) || true
 
