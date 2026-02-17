@@ -1,5 +1,7 @@
 # A standalone library to implement GNU libc's obstack
-#
+
+libs_targets=( linux )
+
 # shellcheck disable=SC2034
 libs_ver=1.2.3
 libs_url=https://github.com/void-linux/musl-obstack/archive/refs/tags/v1.2.3.tar.gz
@@ -24,7 +26,5 @@ libs_build() {
 
     pkgfile libobstack -- make.install
 }
-
-libs.depends is_musl
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

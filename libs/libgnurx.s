@@ -1,5 +1,7 @@
 # regex functionality from glibc 2.22 extracted for Win32.
 
+libs_targets=( windows )
+
 # shellcheck disable=SC2034
 libs_lic=LGPLv2.1
 libs_ver=2.6.1
@@ -24,7 +26,5 @@ libs_build() {
     # libgnurx do not honor DESTDIR, use pkginst instead
     pkginst libgnurx regex.h libgnurx.a libgnurx.pc
 }
-
-libs.depends is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

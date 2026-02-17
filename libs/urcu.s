@@ -1,5 +1,7 @@
 # Library for userspace RCU (read-copy-update)
 
+libs_targets=( linux macos )
+
 # shellcheck disable=SC2034
 libs_lic='MIT'
 libs_ver=0.15.6
@@ -19,13 +21,15 @@ libs_args=(
 )
 
 libs_build() {
+    export CFLAGS+=" -D__CYGWIN__"
+
+    bootstrap
+
     configure
 
     make
 
     pkgfile liburcu -- make install SUBDIRS="'include src'"
 }
-
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

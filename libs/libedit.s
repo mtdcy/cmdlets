@@ -1,5 +1,7 @@
 # BSD-style licensed readline alternative
 
+libs_targets=( linux macos )
+
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=3.1
@@ -28,7 +30,5 @@ libs_build() {
 
     pkgfile libedit -- make install
 }
-
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

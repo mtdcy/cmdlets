@@ -1,5 +1,7 @@
 # C++ language projection for Windows Runtime (WinRT) APIs (mingw-w64)
 
+libs_targets=( windows )
+
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=2.0.250303.1
@@ -27,7 +29,5 @@ libs_build() {
 
     cmdlet.check cppwinrt.exe
 }
-
-libs.depends is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
