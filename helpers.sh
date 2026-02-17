@@ -1304,7 +1304,20 @@ cmdlet.pkgconf() {
 
     slogi "..Fix" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
-    if ! test -f "$name.pc"; then
+    if test -f "$name.pc"; then
+        # append missing fields
+        local x
+        for x in Cflags Libs Requires; do
+            grep -Eq "^$x:" "$name.pc" || echo "$x:" >> "$name.pc"
+        done
+        
+        # amend arguments to pc file
+        sed -i "$name.pc"                           \
+            -e "/Requires:/s%$% ${requires[*]}%"    \
+            -e "/Cflags:/s%$% ${cflags[*]}%"        \
+            -e "/Libs:/s%$% ${ldflags[*]}%"         \
+            || die "fix $name.pc failed"
+    else
         cat <<EOF > "$name.pc"
 prefix=\${PREFIX}
 exec_prefix=\${prefix}
@@ -1315,17 +1328,11 @@ Name: ${name##*/}
 Description: ${name##*/} static library
 Version: $libs_ver
 
-Requires:
-Cflags: -I\${includedir}
-Libs: -L\${libdir}
+Requires: ${requires[@]}
+Cflags: -I\${includedir} ${cflags[@]}
+Libs: -L\${libdir} ${ldflags[@]}
 EOF
     fi
-
-    # amend arguments to pc file
-    sed -i "$name.pc"                           \
-        -e "/Requires:/s%$% ${requires[*]}%"    \
-        -e "/Cflags:/s%$% ${cflags[*]}%"        \
-        -e "/Libs:/s%$% ${ldflags[*]}%"         \
 
 }
 pkgconf() { cmdlet.pkgconf "$@";  }
