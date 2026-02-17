@@ -1,25 +1,35 @@
-# Drop-in replacement of diffutils in Rust
+# File comparison utilities
 
 # shellcheck disable=SC2034
-libs_desc="Drop-in replacement of diffutils in Rust"
 
-libs_lic='MIT'
-libs_ver=0.5.0
-libs_url=https://github.com/uutils/diffutils/archive/refs/tags/v0.5.0.tar.gz
-libs_sha=4c05d236ebddef7738446980a59cd13521b6990ea02242db6b32321dd93853ca
-libs_dep=()
+libs_lic=GPLv3+
+libs_ver=3.12
+libs_url=(
+    https://mirrors.tuna.tsinghua.edu.cn/gnu/diffutils/diffutils-3.12.tar.xz
+    https://ftpmirror.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz
+)
+libs_sha=7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd
+
+libs_deps=()
 
 libs_args=(
+    --disable-dependency-tracking
 )
 
 libs_build() {
-    cargo.setup
+    # disclaim rust diffutils versions
+    cmdlet.disclaim 0.5.0
 
-    cargo.build
+    configure 
 
-    cmdlet.install "$(cargo.locate diffutils)" diffutils cmp diff
+    make
 
-    cmdlet.check diffutils
+    for x in cmp diff diff3; do
+        cmdlet.install "src/$x"
+    done
+
+    # rust diffutils has no `--version'
+    cmdlet.check diff --version
 }
 
 
