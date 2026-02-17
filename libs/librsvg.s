@@ -21,9 +21,6 @@ libs_args=(
 libs_build() {
     cargo.requires cargo-c
 
-    # respect CARGO_BUILD_TARGET
-    #test -z "$CARGO_BUILD_TARGET" || libs_args+=( -Dtriplet=$CARGO_BUILD_TARGET )
-
     meson.setup
 
     # hack: something went wrong with meson+rustc build system

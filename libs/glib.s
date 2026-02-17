@@ -77,6 +77,7 @@ libs_build() {
 
         # Dependency intl found: YES unknown (cached)
         # meson.build:2345:2: ERROR: Assert failed: libintl.type_name() == 'internal'
+        #  => build fails after internal libintl installed
         sed -i '/assert(libintl.*internal.)/d' meson.build
     fi
 

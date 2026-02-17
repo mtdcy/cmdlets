@@ -5,7 +5,8 @@ libs_lic="LGPLv2.1+"
 libs_ver=2.44.5
 libs_url=https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.5.tar.xz
 libs_sha=69b93e09139b80c0ee661503d60deb5a5874a31772b5184b9cd5462a4100ab68
-libs_dep=( glib libjpeg-turbo libpng libtiff )
+
+libs_deps=( glib libjpeg-turbo libpng libtiff )
 
 # configure args
 libs_args=(
@@ -26,17 +27,19 @@ libs_args=(
     -Dinstalled_tests=false
 )
 
-for x in "${libs_dep[@]}"; do
-    case "$x" in
-        libpng        ) libs_args+=( -Dpng=enabled  ) ;;
-        libtiff       ) libs_args+=( -Dtiff=enabled ) ;;
-        libjpeg-turbo ) libs_args+=( -Djpeg=enabled ) ;;
-    esac
-done
+is_listed libpng        libs_deps && libs_args+=( -Dpng=enabled  ) || libs_args+=( -Dpng=disabled  )
+is_listed libtiff       libs_deps && libs_args+=( -Dtiff=enabled ) || libs_args+=( -Dtiff=disabled )
+is_listed libjpeg-turbo libs_deps && libs_args+=( -Djpeg=enabled ) || libs_args+=( -Djpeg=disabled )
 
 libs_build() {
     # no subprojects, remove them in case someting went wrong.
     rm -rf subprojects
+
+    if is_mingw; then
+        # find_program with PATHEXT not working
+        sed -i meson.build \
+            -e 's/glib-compile-resources/&.exe/g'
+    fi
 
     meson.setup
 

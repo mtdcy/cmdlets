@@ -10,42 +10,47 @@ libs_dep=( zlib expat brotli inih libiconv )
 
 # configure args
 libs_args=(
-    -Diconv=enabled
-    -Dinih=enabled
+    # features
+    -DEXIV2_ENABLE_INIH=ON
+    -DEXIV2_ENABLE_BROTLI=ON
+    -DEXIV2_ENABLE_PNG=ON
 
-    -Dpng=enabled       # Build with PNG support (requires zlib)
-    -Dbrotli=enabled    # Google brotli
-    -Dxmp=enabled       # Build with BMFF support
+    #-Diconv=enabled
 
     # BMFF types such as AVIF, CR3, HEIF and HEIC
-    -Dbmff=true
+    -DEXIV2_ENABLE_BMFF=ON
+    #-DEXIV2_ENABLE_EXTERNAL_XMP=ON
+    -DEXIV2_ENABLE_XMP=ON
 
     # Support of video files is limited. Currently exiv2 only has some rudimentary support to read metadata from quicktime, matroska and riff based video files
-    -Dvideo=false
+    -DEXIV2_ENABLE_VIDEO=OFF
 
     # no webready => keep it simple
-    -Dwebready=false
+    -DEXIV2_ENABLE_WEBREADY=OFF
 
-    -Dnls=disabled
-    -DunitTests=disabled
+    # disabled features
+    -DDEXIV2_ENABLE_NLS=OFF
+    -DDEXIV2_BUILD_SAMPLES=OFF
+
+    # static only
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 # shellcheck disable=SC2086
 libs_build() {
     # ERROR: Dependency "iconv" not found
-    export LDFLAGS+=" -liconv"
+    #export LDFLAGS+=" -liconv"
 
-    meson.setup
+    cmake.setup
 
-    meson.compile
+    cmake.build
 
     # Fix libiconv dependency
-    sed -e '/Requires:/s/$/& libiconv/' \
-        -i meson-private/exiv2.pc || die
+    pkgconf -liconv
 
-    pkgfile libexiv2 -- meson.install --tags devel
+    pkgfile libexiv2 -- cmake.install
 
-    cmdlet.install exiv2
+    cmdlet.install bin/exiv2
 
     cmdlet.check exiv2 --version --verbose
 }

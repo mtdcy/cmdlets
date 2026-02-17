@@ -1,5 +1,7 @@
 # Pluggable Authentication Modules for Linux
-#
+
+libs_targets=( linux )
+
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=1.7.2
@@ -46,7 +48,5 @@ libs_build() {
 
     pkgfile libpam -- meson install -C build
 }
-
-libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

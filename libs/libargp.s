@@ -4,7 +4,9 @@
 libs_ver=1.5.0
 libs_url=https://github.com/argp-standalone/argp-standalone/archive/refs/tags/1.5.0.tar.gz
 libs_sha=c29eae929dfebd575c38174f2c8c315766092cec99a8f987569d0cad3c6d64f6
-libs_dep=( )
+
+# libintl from glib, otherwise intl from libc
+is_mingw && libs_deps=( glib )
 
 # configure args
 libs_args=(

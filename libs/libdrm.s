@@ -1,5 +1,7 @@
 # Library for accessing the direct rendering manager
 
+libs_targets=( linux )
+
 # shellcheck disable=SC2034
 libs_lic="MIT"
 libs_ver=2.4.131
@@ -20,7 +22,5 @@ libs_build() {
 
     pkgfile libdrm -- meson.install --tags devel
 }
-
-libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
