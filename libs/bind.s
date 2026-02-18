@@ -1,5 +1,8 @@
 # Implementation of the DNS protocols
 
+# 
+libs_targets=( macos )
+
 # shellcheck disable=SC2034
 libs_lic='MPL-2.0'
 
@@ -42,11 +45,7 @@ libs_build() {
     # Apply macOS 15+ libxml2 deprecation to all macOS versions.
     # This allows our macOS 14-built Intel bottle to work on macOS 15+
     # and also cover the case where a user on macOS 14- updates to macOS 15+.
-    is_darwin && CFLAGS+=" -DLIBXML_HAS_DEPRECATED_MEMORY_ALLOCATION_FUNCTIONS"
-
-    CFLAGS+=" -Wno-error=implicit-function-declaration"
-
-    export CFLAGS
+    is_darwin && libs.requires -DLIBXML_HAS_DEPRECATED_MEMORY_ALLOCATION_FUNCTIONS
 
     # static json-c
     export JSON_C_CFLAGS="$($PKG_CONFIG --cflags json-c)"
@@ -70,7 +69,7 @@ libs_build() {
         {} +
 
     # add this line before configure will cause gcc test fails, why?
-    export LDFLAGS+=" -Wl,--undefined=hook_isc__initialize"
+    libs.requires -Wl,--undefined=hook_isc__initialize
 
     pkgfile bind-libs -- make -C lib install
 
@@ -83,8 +82,5 @@ libs_build() {
 
     check dig www.google.com
 }
-
-# disable as urcu no ready for mingw
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
