@@ -3,8 +3,11 @@ libs_desc="LZMA lossless data compressor"
 
 libs_lic=GPLv2+
 libs_ver=1.25
-libs_url=http://download.savannah.gnu.org/releases/lzip/lzip-$libs_ver.tar.gz
-libs_sha=09418a6d8fb83f5113f5bd856e09703df5d37bae0308c668d0f346e3d3f0a56f
+libs_url=(
+    https://download-mirror.savannah.gnu.org/releases/lzip/lzip-1.25.tar.lz
+    https://mirror.kumi.systems/nongnu/lzip/lzip-1.25.tar.lz
+)
+libs_sha=04d6ad5381e1763a0993cd20fe113b1aeb5ab59077fe85b1aec2268c6892b7a0
 libs_dep=()
 
 is_mingw && CXXFLAGS+='-D__USE_MINGW_ANSI_STDIO'
