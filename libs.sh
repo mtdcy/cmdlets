@@ -285,6 +285,7 @@ _init() {
 
     # Windows resource compiler
     export WINDRES="${CC/%gcc/windres}"
+    export DLLTOOL="${CC/%gcc/dlltool}"
 
     # force posix compatible, e.g: libwinpthread
     test -x "$CC-posix"  && export CC="$CC-posix"   || true
