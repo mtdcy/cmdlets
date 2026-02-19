@@ -34,10 +34,21 @@ if [ "$_LOGGING" = "tty" ]; then
     test -t 1 && which tput &>/dev/null || _LOGGING=plain
 fi
 
+# target variables: 
+#
+#   _TARGET         : target triplet for compiler prefix
+#
+#   _TARGET_ARCH    : target architecture triplet
+#   _TARGET_NAME    : target name like linux, windows, macos
+#   _TARGET_VARS    : target variables for is_xxx
+#
+#   _TARGET_NAMES   : supported targets name
+#
 # target, default: musl-gcc
-_TARGET="${CMDLET_TARGET:-$(uname -m)-$(uname -s | tr A-Z a-z)-musl}"
+_TARGET="${CMDLET_TARGET:-$(uname -m)-linux-musl}"
 
-which "$_TARGET-gcc" &>/dev/null || unset _TARGET
+# supported targets
+_TARGET_NAMES=( linux darwin windows )
 
 # pkgfiles repo
 _REPO="${CMDLET_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
@@ -109,26 +120,23 @@ is_match() {
 
 # target check: ready after _init, at least CC is set.
 is_msys()           { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";    } # deprecated
-is_clang()          { is_listed clang           _TARGETVARS;    }
-is_darwin()         { is_listed apple           _TARGETVARS;    }
-is_linux()          { is_listed linux           _TARGETVARS;    }
-is_glibc()          { is_listed gnu             _TARGETVARS;    }
-is_musl()           { is_listed musl            _TARGETVARS;    }
-is_win64()          { is_listed w64             _TARGETVARS;    }
-is_mingw()          { is_listed mingw32         _TARGETVARS;    }
-is_posix()          { is_listed posix           _TARGETVARS;    }
-is_arm64()          { is_match  "arm64|aarch64" _TARGETVARS;    }
-is_intel()          { is_match  "x86_64|x86"    _TARGETVARS;    }
+is_clang()          { is_listed clang           _TARGET_VARS;   }
+is_darwin()         { is_listed apple           _TARGET_VARS;   }
+is_linux()          { is_listed linux           _TARGET_VARS;   }
+is_glibc()          { is_listed gnu             _TARGET_VARS;   }
+is_musl()           { is_listed musl            _TARGET_VARS;   }
+is_win64()          { is_listed w64             _TARGET_VARS;   }
+is_mingw()          { is_listed mingw32         _TARGET_VARS;   }
+is_posix()          { is_listed posix           _TARGET_VARS;   }
+is_arm64()          { is_match  "arm64|aarch64" _TARGET_VARS;   }
+is_intel()          { is_match  "x86_64|x86"    _TARGET_VARS;   }
 
-host.is_glibc()     { is_listed GLIBC           _HOSTVARS;      }
-host.is_linux()     { is_listed linux           _HOSTVARS;      }
-host.is_darwin()    { is_match  "darwin*"       _HOSTVARS;      }
+host.is_glibc()     { is_listed GLIBC           _HOST_VARS;     }
+host.is_linux()     { is_listed linux           _HOST_VARS;     }
+host.is_darwin()    { is_match  "darwin*"       _HOST_VARS;     }
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
-
-# supported targets
-_TARGET_NAMES=( linux darwin windows )
 
 # slog [error|info|warn] "leading" "message"
 _slog() {
@@ -234,24 +242,32 @@ _init() {
 
     _ROOT="$(pwd -P)"
 
+    # sanity check
     if test -n "$_TARGET"; then
-        _ARCH="$_TARGET"
+        which "$_TARGET-gcc" &>/dev/null || {
+            slogw "$_TARGET-gcc not found, bad target: $_TARGET."
+            unset _TARGET
+        }
+    fi
+
+    if test -n "$_TARGET"; then
+        _TARGET_ARCH="$_TARGET"
     elif [ "$(uname -s)" = Darwin ]; then
-        _ARCH="$(uname -m)-apple-darwin"
+        _TARGET_ARCH="$(uname -m)-apple-darwin"
     else
-        _ARCH="$(uname -m)-$OSTYPE"
+        _TARGET_ARCH="$(uname -m)-$OSTYPE"
     fi
 
     # compatible
-    [[ "$_ARCH" =~ -musl$ ]] && _ARCH="${_ARCH/%-musl/-gnu}"
+    [[ "$_TARGET_ARCH" =~ -musl$ ]] && _TARGET_ARCH="${_TARGET_ARCH/%-musl/-gnu}"
 
     # prepare variables
-    PREFIX="$_ROOT/prebuilts/$_ARCH"
+    PREFIX="$_ROOT/prebuilts/$_TARGET_ARCH"
 
     # private variables
-    _WORKDIR="$_ROOT/out/$_ARCH"
+    _WORKDIR="$_ROOT/out/$_TARGET_ARCH"
     _PACKAGES="$_ROOT/packages"
-    _LOGFILES="$_ROOT/logs/$_ARCH"
+    _LOGFILES="$_ROOT/logs/$_TARGET_ARCH"
     _MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX" "$_WORKDIR" "$_PACKAGES" "$_LOGFILES"
@@ -296,18 +312,10 @@ _init() {
     test -x "$CXX-posix" && export CXX="$CXX-posix" || true
 
     # for target checks
-    IFS=' :-()' read -r -a _TARGETVARS < <({
+    IFS=' :-()' read -r -a _TARGET_VARS < <({
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
     } | xargs)
-    IFS=' ' read -r -a _TARGETVARS < <( printf '%s\n' "${_TARGETVARS[@]}" | sort -u | xargs)
-
-    # for host checks (not --host for configure)
-    IFS=' :-()' read -r -a _HOSTVARS < <({
-        echo "$OSTYPE"
-        which gcc &>/dev/null && gcc --version | head -n1  # gcc version
-        which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
-    } | xargs)
-    IFS=' ' read -r -a _HOSTVARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
+    IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
     local host_tools=(
         "HOSTCC:gcc,cc"
@@ -343,6 +351,14 @@ _init() {
     }
 
     _init_host_tools "${host_tools[@]}"
+
+    # for host checks (not --host for configure)
+    IFS=' :-()' read -r -a _HOST_VARS < <({
+        echo "$OSTYPE"
+        "$HOSTCC" --version | head -n1  # gcc version
+        which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
+    } | xargs)
+    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
 
     # autotools envs
     export CC_FOR_BUILD="$HOSTCC"
@@ -448,7 +464,7 @@ _init() {
     # ccache settings
     which ccache &>/dev/null    || CCACHE_DISABLE=1
     is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
-    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
+    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_TARGET_ARCH"
 
     export CCACHE_DISABLE CCACHE_DIR
 
@@ -687,7 +703,7 @@ _load() {
     # sed: delete all lines after __END__
     sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
 
-    . "$TEMPDIR/$name"
+    . "$TEMPDIR/$name" || return $?
 
     # default values:
     test -n "$libs_name" || libs_name="$name"
@@ -827,7 +843,7 @@ compile() {
 }
 
 # load libs_deps
-_deps_load() {( _load "$1" &>/dev/null; echo "${libs_deps[@]}"; )}
+_deps_load() {( _load "$1" &>/dev/null && echo "${libs_deps[@]}" )}
 
 # generate or update dependencies map
 _deps_init() {
@@ -972,8 +988,8 @@ build() {
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
     echo ""
 
-    echo "host   : ${_HOSTVARS[@]}"
-    echo "target : ${_TARGETVARS[@]}"
+    echo "host   : ${_HOST_VARS[@]}"
+    echo "target : ${_TARGET_VARS[@]}"
 
     _deps_fetch "$@"
 
@@ -989,7 +1005,7 @@ build() {
     # sort and append required
     libs+=( $(_deps_sort "$@") )
 
-    _targets_load() {( _load "$1" &>/dev/null; echo "${libs_targets[@]}"; )}
+    _targets_load() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
 
     # continue on error
     _compile_targets() {
@@ -1007,7 +1023,7 @@ build() {
 
             # check for supported targets
             for x in "$name" $(depends "$name"); do
-                IFS=' ' read -r -a supported < <( _targets_load "$x" )
+                IFS=' ' read -r -a supported < <( _targets_load "$x" ) || die "_targets_load failed."
                 is_listed "$_TARGET_NAME" supported || {
                     slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
                     supported=0
@@ -1060,11 +1076,11 @@ _fetch_unzip_pkgfile() {
     mkdir -p "${zip%/*}"
 
     if _is_flat_repo; then
-        slogi "💫 $_REPO/$_ARCH/${1##*/}"
-        _curl "${_REPO#flat+}/$_ARCH/${1##*/}" "$zip" || return 1
+        slogi "💫 $_REPO/$_TARGET_ARCH/${1##*/}"
+        _curl "${_REPO#flat+}/$_TARGET_ARCH/${1##*/}" "$zip" || return 1
     else
-        slogi "💫 $_REPO/$_ARCH/$1"
-        _curl "$_REPO/$_ARCH/$1" "$zip" || return 1
+        slogi "💫 $_REPO/$_TARGET_ARCH/$1"
+        _curl "$_REPO/$_TARGET_ARCH/$1" "$zip" || return 1
     fi
 
     if [[ "$zip" =~ \.tar\..*$ ]]; then
@@ -1219,12 +1235,12 @@ prepare() {
 }
 
 target() {
-    echo "$_ARCH"
+    echo "$_TARGET_ARCH"
 }
 
 # list changed cmdlets for target
 list.changed() {
-    local target="${1:-$_ARCH}" list=() libs
+    local target="${1:-$_TARGET_ARCH}" list=() libs
 
     : "${OLDHEAD:="$(git tag -l "$target")"}"
     : "${OLDHEAD:="HEAD~1"}"
