@@ -102,7 +102,9 @@ escape.crlf() {
 # help functions
 is_listed() {
     if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
-        declare -n _lref="$2"
+        # declare -n _lref="$2" #=> bash 4+
+        local _lname="$2"
+        eval "local _lref=( \"\${$_lname[@]}\" )"
         [[ " ${_lref[*]} " == *" $1 "* ]]
     else
         [[ " ${*:2} " == *" $1 "* ]]
@@ -111,8 +113,10 @@ is_listed() {
 
 is_match() {
     if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
-        declare -n list="$2"
-        [[ " ${list[*]} " =~ " "$1" " ]];
+        #declare -n _lref="$2"
+        local _lname="$2"
+        eval "local _lref=( \"\${$_lname[@]}\" )"
+        [[ " ${_lref[*]} " =~ " "$1" " ]];
     else
         [[ " ${*:2} " =~ " "$1" " ]];
     fi
