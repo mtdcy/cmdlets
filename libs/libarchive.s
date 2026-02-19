@@ -3,48 +3,85 @@
 libs_desc="Multi-format archive and compression library"
 libs_lic='BSD-2-Clause'
 libs_ver=3.8.5
-libs_url=(
-    https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
-)
+libs_url=https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
 libs_sha=d68068e74beee3a0ec0dd04aee9037d5757fcc651591a6dcf1b6d542fb15a703
-libs_dep=( libb2 lz4 xz zstd bzip2 expat zlib libiconv )
+
+libs_deps=( libb2 lz4 xz zstd bzip2 expat zlib libiconv pcre2 )
 
 libs_args=(
-    # our libiconv has no pc file
-    -DENABLE_ICONV=ON
-    -DLIBICONV_PATH="'$PREFIX'"
+    --disable-option-checking
+    --enable-silent-rules
+    --disable-dependency-tracking
 
-    -DENABLE_LZO=OFF        # Use lzop binary instead of lzo2 due to GPL
+    --with-libiconv
 
-    # hashing options
-    -DENABLE_EXPAT=ON       # best xar hashing option
-    -DENABLE_NETTLE=OFF     # xar hashing option but GPLv3
-    -DENABLE_LIBXML2=OFF    # xar hashing option but tricky dependencies
-    -DENABLE_OPENSSL=OFF    # mtree hashing now possible without OpenSSL
+    --without-lzo2      # Use lzop binary instead of lzo2 due to GPL
 
-    # no executables
-    -DENABLE_TAR=OFF
-    -DENABLE_CPIO=OFF
-    -DENABLE_CAT=OFF
-    -DENABLE_UNZIP=OFF
+    # programs
+    --enable-bsdtar=static
+    --enable-bsdcpio=static
+    --enable-bsdunzip=static
 
-    -DENABLE_ACL=OFF
-    -DENABLE_TEST=OFF
+    # disabled features
+    --disable-largefile
+    --without-selinux
+    --disable-acl
+    --disable-nls
 
     # static only
-    -DBUILD_SHARED_LIBS=OFF
-    -DBUILD_STATIC_LIBS=ON
+    --disable-shared
+    --enable-static
 )
+   
+# use pcre2 intead of libc/libgnurx regex for all targets
+is_listed pcre2 libs_deps && libs_args+=( --enable-posix-regex-lib=libpcre2posix )
 
+# hashing options
+is_listed expat   libs_deps && libs_args+=( --with-expat   ) || libs_args+=( --without-expat   ) # best xar hashing option
+is_listed libxml2 libs_deps && libs_args+=( --with-xml2    ) || libs_args+=( --without-xml2    ) # xar hashing option but tricky dependencies
+is_listed nettle  libs_deps && libs_args+=( --with-nettle  ) || libs_args+=( --without-nettle  ) # xar hashing option but GPLv3
+is_listed openssl libs_deps && libs_args+=( --with-openssl ) || libs_args+=( --without-openssl ) # mtree hashing now possible without OpenSSL
+
+# archive files
+is_listed zlib     libs_deps && libs_args+=( --with-zlib   ) || libs_args+=( --without-zlib   )
+is_listed libb2    libs_deps && libs_args+=( --with-libb2  ) || libs_args+=( --without-libb2  )
+is_listed bzip2    libs_deps && libs_args+=( --with-bz2lib ) || libs_args+=( --without-bz2lib )
+is_listed lz4      libs_deps && libs_args+=( --with-lz4    ) || libs_args+=( --without-lz4    )
+is_listed xz       libs_deps && libs_args+=( --with-lzma   ) || libs_args+=( --without-lzma   )
+is_listed zstd     libs_deps && libs_args+=( --with-zstd   ) || libs_args+=( --without-zstd   )
+
+is_listed libiconv libs_deps && libs_args+=( --with-iconv  ) || libs_args+=( --without-iconv  )
+
+# cmake build can't not handle static libraries properly
 libs_build() {
-    # XXX: configure build system has problem to link with libiconv.a
+    # configure has problem with static pcre2
+    export LIBS="$($PKG_CONFIG --libs-only-l libpcre2-posix)"
 
-    cmake -S . -B build
+    bootstrap
 
-    cmake --build build
+    configure
 
-    # fix for libiconv
-    sed -i '/^Libs.private/s/$/& -liconv/' build/build/pkgconfig/libarchive.pc || die
+    make
 
-    pkgfile libarchive -- cmake --install build
+    cmdlet.pkgfile libarchive -- make install bin_PROGRAMS= man_MANS=
+
+    for x in tar cpio; do
+        cmdlet.install bsd$x
+    done
+
+    cmdlet.check bsdtar --help
 }
+
+__END__
+# ./configure: line 4269: -D__MINGW_USE_VC2005_COMPAT: command not found
+
+--- configure.ac.orig	2026-02-19 12:18:24.620009233 +0800
++++ configure.ac	2026-02-19 12:18:57.405844913 +0800
+@@ -104,7 +104,7 @@
+ dnl Defines that are required for specific platforms (e.g. -D_POSIX_SOURCE, etc)
+ PLATFORMCPPFLAGS=
+ case "$host_os" in
+-  *mingw* ) PLATFORMCPPFLAGS=-D__USE_MINGW_ANSI_STDIO -D__MINGW_USE_VC2005_COMPAT ;;
++  *mingw* ) PLATFORMCPPFLAGS="-D__USE_MINGW_ANSI_STDIO -D__MINGW_USE_VC2005_COMPAT" ;;
+ esac
+ AC_SUBST(PLATFORMCPPFLAGS)

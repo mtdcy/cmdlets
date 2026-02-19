@@ -24,6 +24,8 @@ libs_args=(
     --enable-static
 )
 
+is_linux && libs_args+=( --enable-openmp ) || libs_args+=( --disable-openmp )
+
 # SSE detection is broken on arm64 macos
 # https://github.com/BLAKE2/libb2/issues/36
 is_arm64 || libs_args+=( --enable-fat )
@@ -33,5 +35,7 @@ libs_build() {
 
     make
 
-    pkgfile libb2 -- make install
+    is_linux && cmdlet.pkgconf libb2.pc -lgomp
+
+    cmdlet.pkgfile libb2 -- make install
 }

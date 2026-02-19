@@ -21,7 +21,7 @@ libs_build() {
 
     cmdlet.archive libgnurx.a regex.o
 
-    cmdlet.pkgconf libgnurx.pc -lregex 
+    cmdlet.pkgconf libgnurx.pc -lgnurx
 
     # libgnurx do not honor DESTDIR, use pkginst instead
     pkginst libgnurx regex.h libgnurx.a libgnurx.pc
