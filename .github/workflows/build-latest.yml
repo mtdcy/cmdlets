@@ -15,7 +15,55 @@ on:
         description: Which cmdlets to build
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch packages
+        shell: bash
+        run: |-
+          set -ex
+
+          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
+
+          targets=(
+            x86_64-linux-gnu
+            x86_64-w64-mingw32
+          )
+
+          if test -n "${{ github.event.inputs.cmdlets }}"; then
+            ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
+          else
+            for x in "${targets[@]}"; do
+              CMDLET_TARGET="$x" ./.github/scripts/prepare.sh
+            done
+          fi
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: |
+            packages
+
+      - name: Deploy packages
+        # uses: burnett01/rsync-deployments@7.0.1
+        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        with:
+          switches: -avc
+          path: packages/
+          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
+          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
+          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
+          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
+          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+
   build:
+    needs: prepare
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.builder }}
@@ -36,10 +84,17 @@ jobs:
           token: ${{ secrets.COMMIT_TOKEN }}
           fetch-depth: 0
 
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: packages
+          path: |
+            packages
+
       - name: Build
         shell: bash
         run: |-
-          set -ex 
+          set -ex
 
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"

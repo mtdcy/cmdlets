@@ -81,7 +81,7 @@ shell:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
 
 # tag to HEAD
-ARCH ?= $(shell bash libs.sh arch)
+ARCH ?= $(shell bash libs.sh target)
 tag:
 	git tag -a $(ARCH) -m $(ARCH) --force
 	git push origin $(ARCH) --force

@@ -101,8 +101,8 @@ escape.crlf() {
 # help functions
 is_listed() {
     if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
-        declare -n list="$2"
-        [[ " ${list[*]} " == *" $1 "* ]]
+        declare -n _lref="$2"
+        [[ " ${_lref[*]} " == *" $1 "* ]]
     else
         [[ " ${*:2} " == *" $1 "* ]]
     fi
@@ -684,8 +684,6 @@ _load() {
 
     unset "${!libs_@}"
 
-    slogi ".Load" "libs/$1.s"
-
     local file="libs/$1.s"
     local name="${1##*/}"
 
@@ -721,7 +719,9 @@ _prepare_workdir() {
 
 # prepare source code or die
 _prepare() {
-    _load "$1"
+    slogi ".Load" "libs/$1.s"
+
+    _load "$1" || die "load $1 failed."
 
     if [ "$libs_type" = ".PHONY" ]; then
         slogw "<<<<<" "skip dummy target $libs_name"
@@ -1231,12 +1231,12 @@ prepare() {
 }
 
 target() {
-    echo "$_TARGET_ARCH"
+    echo "$_ARCH"
 }
 
 # list changed cmdlets for target
 list.changed() {
-    local target="${1:-$_TARGET_ARCH}" list=() libs
+    local target="${1:-$_ARCH}" list=() libs
 
     : "${OLDHEAD:="$(git tag -l "$target")"}"
     : "${OLDHEAD:="HEAD~1"}"
@@ -1250,7 +1250,7 @@ list.changed() {
         [ "${libs%/*}" = "libs" ] && libs="${libs#*/}" || continue
 
         # exclude _xxx
-        [[ "$libs" =~ ^_ ]] && continue
+        [[ "$libs" =~ ^_ ]] && continue 
 
         is_listed "${libs%.s}" list || list+=( "${libs%.s}" )
     done < <(git diff --name-only $OLDHEAD..HEAD | grep "^libs/.*\.s")
@@ -1306,7 +1306,7 @@ update() {
 
 _on_exit() {
     # show ccache statistics
-    test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s
+    test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s 1>&2
 
     rm -rf "$TEMPDIR"
 }
