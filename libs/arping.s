@@ -21,6 +21,10 @@ libs_build() {
 
     configure
 
+    # error: redefinition of 'struct prctl_mm_map'
+    #  musl-gcc: linux/prctl.h and sys/prctl.h both define prctl_mm_map
+    is_musl && sed -i '/HAVE_LINUX_PRCTL_H/d' config.h
+
     # not build fuzz code
     make -C src arping
 
