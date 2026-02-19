@@ -63,13 +63,15 @@ unset _ROOT _WORKDIR PREFIX
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
 
-_opt_yes() {
+is_true() {
     local opt="$1"
     case "${!opt}" in
         1|yes)  return 0 ;;
-        *)      return 1 ;;
+        0|no)   return 1 ;;
+        *)      test -n "${!opt}" ;;
     esac
 }
+is_false() { ! is_true "$1"; }
 
 # escape arguments(single quoted) and reuse as shell input again
 escape.args() {
@@ -407,12 +409,10 @@ _init() {
     CFLAGS="${cflags[*]}"
     CXXFLAGS="${cflags[*]}"
     OBJCFLAGS="${cflags[*]}"
-    OBJC="$CC"
-    CPP="$CC -E"
     CPPFLAGS="-I$PREFIX/include"
     LDFLAGS="${ldflags[*]}"
 
-    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
+    export CFLAGS OBJCFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 
     # command wrapper
     #  input: ENV wrapper.sh
@@ -421,8 +421,15 @@ _init() {
         export $1="$_ROOT/scripts/$2"
     }
 
-    # pkg-config: some build system do not support pkg-config with parameters
+    # no all build system support command with arguments
+    _command_wrapper CC         cc.sh
+    _command_wrapper CXX        cxx.sh
     _command_wrapper PKG_CONFIG pkg_config.sh
+    
+    OBJC="$CC"
+    CPP="$CC -E"
+    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
+
     # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
     PKG_CONFIG_LIBDIR="$PREFIX/lib"
     PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
@@ -437,6 +444,13 @@ _init() {
     # rpath is meaningless for static libraries and executables, and
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
+    
+    # ccache settings
+    which ccache &>/dev/null    || CCACHE_DISABLE=1
+    is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
+    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
+
+    export CCACHE_DISABLE CCACHE_DIR
 
     # macos
     export MACOSX_DEPLOYMENT_TARGET
@@ -758,23 +772,6 @@ _prepare() {
 
 # compile target
 compile() {
-    # initial build args
-    if test -z "$CCACHE_DISABLE"; then
-        # only compile job need ccache
-        which ccache &>/dev/null    || CCACHE_DISABLE=1
-        [ "$CMDLET_CCACHE" -ne 0 ]  || CCACHE_DISABLE=1
-
-    fi
-
-    if test -z "$CCACHE_DISABLE" && test -z "$CCACHE_DIR"; then
-        CC="ccache $CC"
-        CXX="ccache $CXX"
-        # make clean should not clear ccache
-        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
-        export CC CXX CCACHE_DIR
-    fi
-    export CCACHE_DISABLE
-
     ( # always start subshell before _load()
 
         trap _tty_reset EXIT
@@ -942,7 +939,7 @@ _deps_status() {
 #
 _deps_fetch() {
     # no pkgfiles
-    _opt_yes CMDLET_PKGFILES || return 0
+    is_true CMDLET_PKGFILES || return 0
 
     local deps
     IFS=' ' read -r -a deps < <(depends "$@")
@@ -1041,7 +1038,7 @@ build() {
     }
 
     # build rdepends
-    _opt_yes CMDLET_CHECK || return 0
+    is_true CMDLET_CHECK || return 0
 
     IFS=' ' read -r -a libs < <( _deps_sort $(rdepends "$@") )
 
