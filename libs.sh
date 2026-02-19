@@ -123,7 +123,7 @@ host.is_linux()     { is_listed linux           _HOSTVARS;      }
 host.is_darwin()    { is_match  "darwin*"       _HOSTVARS;      }
 
 # cross building?
-is_xbuild() { ! "$CC" -dumpmachine | grep -qi "$(uname -s)";    }
+is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
 
 # supported targets
 _TARGET_NAMES=( linux darwin windows )
@@ -284,8 +284,10 @@ _init() {
     export PKG_CONFIG="${CC/%gcc/pkg-config}"
 
     # Windows resource compiler
-    export WINDRES="${CC/%gcc/windres}"
-    export DLLTOOL="${CC/%gcc/dlltool}"
+    if is_mingw; then
+        export WINDRES="${CC/%gcc/windres}"
+        export DLLTOOL="${CC/%gcc/dlltool}"
+    fi
 
     # force posix compatible, e.g: libwinpthread
     test -x "$CC-posix"  && export CC="$CC-posix"   || true
@@ -983,13 +985,11 @@ build() {
     local libs=() x
 
     # check dependencies: rebuild libs
-    for x in $(_deps_missing "$@"); do
-        test -e "$PREFIX/.$x.d" || libs+=( "$x" )
-    done
+    IFS=' ' read -r -a libs < <( _deps_missing "$@" )
 
     slogi "+DEPS" "${libs[*]}"
 
-    # sort and append inputs
+    # sort and append required
     libs+=( $(_deps_sort "$@") )
 
     _targets_load() {( _load "$1" &>/dev/null; echo "${libs_targets[@]}"; )}
@@ -1003,20 +1003,24 @@ build() {
             echo ""
             slogi ">>>>>" "#$((i+1))/${#libs[@]} $name"
 
+            local x ready=1 supported=1
+
+            # show dependencies status
+            slogi ".DEPS" "$(_deps_status "$name")" || ready=0
+
             # check for supported targets
-            local x supported
             for x in "$name" $(depends "$name"); do
                 IFS=' ' read -r -a supported < <( _targets_load "$x" )
                 is_listed "$_TARGET_NAME" supported || {
                     slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
-                    unset supported
+                    supported=0
                     break
                 }
             done
-            test -n "$supported" || continue
+            is_true supported || continue
 
-            slogi ".DEPS" "$(_deps_status "$name")" || {
-                true # ignore return value
+            # if dependencies not meet, mark failure
+            is_true ready || {
                 slogw "<<<<<" "$name: missing dependencies"
                 fails+=( "$name" )
                 continue
@@ -1039,7 +1043,7 @@ build() {
     # build rdepends
     _opt_yes CMDLET_CHECK || return 0
 
-    IFS=' ' read -r -a libs < <( rdepends "$@" )
+    IFS=' ' read -r -a libs < <( _deps_sort $(rdepends "$@") )
 
     slogi "rDEPS" "${libs[*]}"
     # always use pkgfiles for rdepends
