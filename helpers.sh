@@ -249,9 +249,6 @@ _cmake_init() {
         _CMAKE_STD+=( -DCMAKE_SYSTEM_PROCESSOR=$(uname -m) )
     fi
 
-    # cmake using a mixed path style with MSYS Makefiles, why???
-    is_msys && _CMAKE_STD+=( -G"'MSYS Makefiles'" )
-
     export _CMAKE_READY=1
 }
 
@@ -923,7 +920,7 @@ _make_install() {
             *)      DESTDIR="$DESTDIR" "$@" ;;
         esac || die "$* failed."
 
-        _rm_libtool_archive DESTDIR
+        _rm_libtool_archive DESTDIR || true
 
         # copy files to PREFIX
         local dest
@@ -1203,8 +1200,6 @@ cmdlet.check() {
             fi
 
         done < <( objdump -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2 )
-    elif is_msys; then
-        echocmd ntldd "$bin"
     else
         slogw "FIXME: $OSTYPE"
     fi

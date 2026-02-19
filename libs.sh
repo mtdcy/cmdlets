@@ -119,7 +119,6 @@ is_match() {
 }
 
 # target check: ready after _init, at least CC is set.
-is_msys()           { [[ "$OSTYPE" =~ msys ]] || test -n "$MSYSTEM";    } # deprecated
 is_clang()          { is_listed clang           _TARGET_VARS;   }
 is_darwin()         { is_listed apple           _TARGET_VARS;   }
 is_linux()          { is_listed linux           _TARGET_VARS;   }
