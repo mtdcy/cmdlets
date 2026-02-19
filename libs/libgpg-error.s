@@ -1,9 +1,9 @@
 # Cryptographic library based on the code from GnuPG
 #
 # shellcheck disable=SC2034
-libs_ver=1.58
+libs_ver=1.59
 libs_url=https://github.com/gpg/libgpg-error/archive/refs/tags/libgpg-error-$libs_ver.tar.gz
-libs_sha=ccf0dfe0c782670a1604da1f39631e518cb0d0949bf7b15a491687f6ab7d7b21
+libs_sha=6f69a2eaf688a91d806142080d4a4638cf3e936647fdcaac02e93ea4daee0858
 libs_dep=( )
 
 libs_args=(
