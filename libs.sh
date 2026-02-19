@@ -34,6 +34,16 @@ if [ "$_LOGGING" = "tty" ]; then
     test -t 1 && which tput &>/dev/null || _LOGGING=plain
 fi
 
+# target variables:
+#
+#   _TARGET         : target triplet for compiler prefix
+#
+#   _TARGET_ARCH    : target architecture triplet
+#   _TARGET_NAME    : target name like linux, windows, macos
+#   _TARGET_VARS    : target variables for is_xxx
+#
+#   _TARGET_NAMES   : supported targets name
+#
 # target, default: musl-gcc
 _TARGET="${CMDLET_TARGET:-$(uname -m)-$(uname -s | tr A-Z a-z)-musl}"
 
@@ -63,13 +73,15 @@ unset _ROOT _WORKDIR PREFIX
 : "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
 # check: otool -l <path_to_binary> | grep minos
 
-_opt_yes() {
+is_true() {
     local opt="$1"
     case "${!opt}" in
         1|yes)  return 0 ;;
-        *)      return 1 ;;
+        0|no)   return 1 ;;
+        *)      test -n "${!opt}" ;;
     esac
 }
+is_false() { ! is_true "$1"; }
 
 # escape arguments(single quoted) and reuse as shell input again
 escape.args() {
@@ -407,12 +419,10 @@ _init() {
     CFLAGS="${cflags[*]}"
     CXXFLAGS="${cflags[*]}"
     OBJCFLAGS="${cflags[*]}"
-    OBJC="$CC"
-    CPP="$CC -E"
     CPPFLAGS="-I$PREFIX/include"
     LDFLAGS="${ldflags[*]}"
 
-    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
+    export CFLAGS OBJCFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 
     # command wrapper
     #  input: ENV wrapper.sh
@@ -421,8 +431,15 @@ _init() {
         export $1="$_ROOT/scripts/$2"
     }
 
-    # pkg-config: some build system do not support pkg-config with parameters
+    # no all build system support command with arguments
+    _command_wrapper CC         cc.sh
+    _command_wrapper CXX        cxx.sh
     _command_wrapper PKG_CONFIG pkg_config.sh
+
+    OBJC="$CC"
+    CPP="$CC -E"
+    export CFLAGS OBJCFLAGS CXXFLAGS OBJC CPP CPPFLAGS LDFLAGS
+
     # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
     PKG_CONFIG_LIBDIR="$PREFIX/lib"
     PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
@@ -456,7 +473,7 @@ _init() {
         if test -n "$WINEPREFIX" && ! test -f /tmp/cmdlets_binfmt_ready; then
             # wine: '/wine' is not owned by you
             #  : workflows start with --entrypoint=''
-            [ "$(stat -c %u "$WINEPREFIX")" -eq $(id -u) ] || 
+            [ "$(stat -c %u "$WINEPREFIX")" -eq $(id -u) ] ||
             sudo chown -R $(id -u ) "$WINEPREFIX"
 
             # enable binfmt support
@@ -745,7 +762,7 @@ _prepare() {
         esac
     done
 
-    # always patch with -p0: 
+    # always patch with -p0:
     #  `diff -u main.c.orig main.c' will create patch working with -p0
     if test -s "$TEMPDIR/$libs_name.patch"; then
         if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
@@ -758,22 +775,14 @@ _prepare() {
 
 # compile target
 compile() {
-    # initial build args
-    if test -z "$CCACHE_DISABLE"; then
-        # only compile job need ccache
+    # ccache settings
+    if [ -z "$CCACHE_DISABLE" ] && [ -z "$CCACHE_DIR" ]; then
         which ccache &>/dev/null    || CCACHE_DISABLE=1
-        [ "$CMDLET_CCACHE" -ne 0 ]  || CCACHE_DISABLE=1
-
+        is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
+        is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_TARGET_ARCH"
     fi
 
-    if test -z "$CCACHE_DISABLE" && test -z "$CCACHE_DIR"; then
-        CC="ccache $CC"
-        CXX="ccache $CXX"
-        # make clean should not clear ccache
-        CCACHE_DIR="$_ROOT/.ccache/$_ARCH"
-        export CC CXX CCACHE_DIR
-    fi
-    export CCACHE_DISABLE
+    export CCACHE_DISABLE CCACHE_DIR
 
     ( # always start subshell before _load()
 
@@ -942,7 +951,7 @@ _deps_status() {
 #
 _deps_fetch() {
     # no pkgfiles
-    _opt_yes CMDLET_PKGFILES || return 0
+    is_true CMDLET_PKGFILES || return 0
 
     local deps
     IFS=' ' read -r -a deps < <(depends "$@")
@@ -1041,7 +1050,7 @@ build() {
     }
 
     # build rdepends
-    _opt_yes CMDLET_CHECK || return 0
+    is_true CMDLET_CHECK || return 0
 
     IFS=' ' read -r -a libs < <( _deps_sort $(rdepends "$@") )
 
@@ -1221,8 +1230,32 @@ prepare() {
     done
 }
 
-arch() {
-    echo "$_ARCH"
+target() {
+    echo "$_TARGET_ARCH"
+}
+
+# list changed cmdlets for target
+list.changed() {
+    local target="${1:-$_TARGET_ARCH}" list=() libs
+
+    : "${OLDHEAD:="$(git tag -l "$target")"}"
+    : "${OLDHEAD:="HEAD~1"}"
+
+    OLDHEAD="$(git rev-parse "$OLDHEAD")"
+    while read -r libs; do
+        # file been deleted or renamed
+        test -e "$libs" || continue
+
+        # only top dir
+        [ "${libs%/*}" = "libs" ] && libs="${libs#*/}" || continue
+
+        # exclude _xxx
+        [[ "$libs" =~ ^_ ]] && continue
+
+        is_listed "${libs%.s}" list || list+=( "${libs%.s}" )
+    done < <(git diff --name-only $OLDHEAD..HEAD | grep "^libs/.*\.s")
+
+    echo "${list[@]}"
 }
 
 # zip files for release actions
