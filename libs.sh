@@ -300,11 +300,14 @@ _init() {
     export RANLIB="${CC/%gcc/ranlib}"
     export PKG_CONFIG="${CC/%gcc/pkg-config}"
 
-    # Windows resource compiler
-    if is_mingw; then
-        export WINDRES="${CC/%gcc/windres}"
-        export DLLTOOL="${CC/%gcc/dlltool}"
-    fi
+    # target specific toolchain utils
+    case "$("$CC" -dumpmachine)" in
+        *-w64-*|*-mingw32)
+            # Windows resource compiler
+            export WINDRES="${CC/%gcc/windres}"
+            export DLLTOOL="${CC/%gcc/dlltool}"
+            ;;
+    esac
 
     # force posix compatible, e.g: libwinpthread
     test -x "$CC-posix"  && export CC="$CC-posix"   || true
