@@ -52,7 +52,7 @@ libs.requires() {
 
     for x in "$@"; do
         case "$x" in
-            -l*|-L*|-pthread|-Wl,*)
+            -l*|-L*|-pthread|-W*)
                 ldflags+=( "$x" )
                 ;;
             -*)
@@ -922,16 +922,17 @@ _make_install() {
 
         _rm_libtool_archive DESTDIR || true
 
-        # copy files to PREFIX
-        local dest
+        # install files to PREFIX
+        local file dest
         while read -r file; do
             dest="${file#DESTDIR}"      # remove leading DESTDIR
             dest="${dest#"$PREFIX"}"    # remove leading $PREFIX
             dest="${dest#/}"            # remove leading /
 
-            mkdir -pv "$PREFIX/$(dirname "$dest")"
+            mkdir -pv "$PREFIX/${dest%/*}"
 
-            echocmd cp -fv "$file" "$PREFIX/$dest"
+            # silent logging to speed up the process in case installed huge amount of files
+            cp -fv "$file" "$PREFIX/$dest" | _LOGGING=silent _capture
 
             echo "$dest" >> .pkgfile
         done < <(find DESTDIR ! -type d)
@@ -939,7 +940,7 @@ _make_install() {
 }
 
 # create pkgfile
-_pack() {
+_make_pkfile() {
     local files=()
 
     # preprocessing installed files
@@ -997,7 +998,7 @@ _pack() {
         files+=( "$x" )
     done
 
-    slogi ".Pack" "$1 < ${files[*]}"
+    slogi "..TAR" "$1 < ${files[*]}"
 
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
@@ -1032,7 +1033,7 @@ cmdlet.pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    _pack "$pkgfile" "${files[@]}"
+    _make_pkfile "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
