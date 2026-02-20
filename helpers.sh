@@ -48,12 +48,16 @@ _locate_bin() {
 }
 
 libs.requires() {
-    local x y cflags=() cxxflags=()
+    declare -a cflags cxxflags cppflags
 
+    local x y 
     for x in "$@"; do
         case "$x" in
             -l*|-L*|-pthread|-W*)
                 ldflags+=( "$x" )
+                ;;
+            -I*)
+                cppflags+=( "$x" )
                 ;;
             -*)
                 cflags+=( "$x" )
@@ -77,8 +81,9 @@ libs.requires() {
 
     CFLAGS+=" ${cflags[*]}"
     CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
+    CPPFLAGS+=" ${cppflags[*]}"
 
-    export CFLAGS CXXFLAGS LDFLAGS
+    export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 }
 
 libs.requires.c89() {
@@ -132,7 +137,7 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    std+=( --prefix="$PREFIX" )
+    is_match "--prefix=.*" "$@" || std+=( --prefix="$PREFIX" )
 
     if is_xbuild; then
         # some libraries use --target instead of --host, e.g: libvpx
@@ -1112,20 +1117,22 @@ cmdlet.pkginst() {
             *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
 
             # set sub dir for known directories
-            include|include/*|lib|lib/*|share|share/*|bin|bin/*)
-                sub="$file"
-                mkdir -pv "$PREFIX/$sub"
-                continue
+            include|include/*|lib|lib/*|share|share/*|bin)
+                if test -z "$sub" || [[ ! "$file" =~ ^$sub ]]; then
+                    sub="$file"
+                    mkdir -pv "$PREFIX/$sub"
+                    continue
+                fi
                 ;;
-
-            # reuse previous sub dir for other files
+            *)
+                # treat as normal files and install to sub
+                test -n "$sub" || die "pkginst without subdir"
+                ;;
         esac
 
-        if [[ "$sub" =~ ^bin ]] && test -n "$_BINEXT" && [[ ! "$file" =~ $_BINEXT$ ]]; then
-            test -f "$file" || file="$file$_BINEXT"
-        fi
+        [[ "$sub" =~ ^bin ]] && file="$(_locate_exe "$file")"
 
-        echocmd cp -fv "$file" "$PREFIX/$sub" || die "install $file failed."
+        echocmd cp -rfv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 

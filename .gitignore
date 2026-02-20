@@ -16,3 +16,4 @@ pkg-config.log
 .rustup
 .ssh_token
 .history
+toolchain.log
