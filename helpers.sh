@@ -619,9 +619,6 @@ cargo.setup() {
                 ;;
         esac
     done
-
-    # cargo fetch do not respect CARGO_BUILD_TARGET
-    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 }
 
 cargo.build() {
@@ -635,6 +632,9 @@ cargo.build() {
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
     } | _LOGGING=silent _capture
+
+    # cargo fetch do not respect CARGO_BUILD_TARGET
+    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 
     # _NJOBS => CARGO_BUILD_JOBS
     local std=(
