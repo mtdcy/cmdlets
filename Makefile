@@ -203,7 +203,7 @@ endif
 
 # custom entrypoint
 #DOCKER_ARGS += --entrypoint=''
-DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/entrypoint.sh
+#DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/opt/entrypoint.sh
 
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
