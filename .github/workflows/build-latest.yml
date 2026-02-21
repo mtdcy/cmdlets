@@ -34,14 +34,15 @@ jobs:
             x86_64-linux-gnu
             x86_64-w64-mingw32
           )
-
-          if test -n "${{ github.event.inputs.cmdlets }}"; then
-            ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
-          else
+          cmdlets=( "${{ github.event.inputs.cmdlets }}" )
+          if test -z "${cmdlets[*]}"; then
             for x in "${targets[@]}"; do
-              CMDLET_TARGET="$x" ./.github/scripts/prepare.sh
+              cmdlets+=( $(bash libs.sh list.changed "$x") )
             done
+            IFS=' ' read -r -a cmdlets < <(printf '%s\n' "${cmdlets[@]}" | sort -u | xargs)
           fi
+
+          ./.github/scripts/prepare.sh "${cmdlets[@]}"
 
       - name: Upload packages
         uses: actions/upload-artifact@v3

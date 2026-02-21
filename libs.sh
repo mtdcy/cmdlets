@@ -1300,11 +1300,9 @@ target() {
 
 # list changed cmdlets for target
 list.changed() {
-    _init_target
+    local tagname="${1:-$(target)}" list=() libs
 
-    local target="${1:-$_TARGET_ARCH}" list=() libs
-
-    : "${OLDHEAD:="$(git tag -l "$target")"}"
+    : "${OLDHEAD:="$(git tag -l "$tagname")"}"
     : "${OLDHEAD:="HEAD~1"}"
 
     OLDHEAD="$(git rev-parse "$OLDHEAD")"
