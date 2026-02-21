@@ -1297,9 +1297,10 @@ target() {
 
 # list changed cmdlets for target
 list.changed() {
-    _init_target
-
     local target="${1:-$_TARGET_ARCH}" list=() libs
+
+    # historic: linux-musl <=> linux-gnu
+    [[ "$target" =~ -musl$ ]] && target="${target/%-musl/-gnu}"
 
     : "${OLDHEAD:="$(git tag -l "$target")"}"
     : "${OLDHEAD:="HEAD~1"}"

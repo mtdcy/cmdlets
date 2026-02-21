@@ -13,7 +13,7 @@ cmdlets=()
 if test -n "$1"; then
     cmdlets=( "$1" ) # build single library manually
 else
-    IFS=' ' read -r -a cmdlets < <( bash libs.sh list.changed "$TARGET" )
+    IFS=' ' read -r -a cmdlets < <( bash libs.sh list.changed "$CMDLET_TARGET" )
 
     # build cmdlet and rdepends by default
     rdepends=1
