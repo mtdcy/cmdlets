@@ -597,6 +597,12 @@ cargo.setup() {
     # debug
     #export RUSTC_LOG=rustc_codegen_ssa::back::link=info
 
+    # /usr/bin/ld: cannot find -lxcb: No such file or directory
+    # XXX: -lxxx in LDFLAGS will append to rsut cc before RUSTFLAGS, and the -Lyyy will be ignored.
+    #  => which cause libs.requires and LDFLAGS not working as expected.
+    #   => pollute RUSTFLAGS with LDFLAGS
+    set -- $LDFLAGS "$@"
+
     local rustflags=() x
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -604,7 +610,7 @@ cargo.setup() {
             -l*)    rustflags+=( -l "static=${1#-l}" )      ;;
             -L)     rustflags+=( -L "$2" ); shift 1         ;;
             -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
-            *)
+            *)      ;; # ignore other flags
         esac
         shift 1
     done
@@ -638,7 +644,7 @@ cargo.build() {
     # remember envs
     {
         echo -e "\n---\ncargo envs:"
-        env | grep -E "CARGO|RUST"
+        env #| grep -E "CARGO|RUST"
         echo -e "\n---\nrustc cfgs:"
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
