@@ -900,8 +900,7 @@ compile() {
 
             mv "$_LOGFILE" "$_LOGFILE.fail"
             tail -v "$_LOGFILE.fail"
-
-            wait && exit 127
+            exit 127
         }
 
         # update tracking file
@@ -1408,6 +1407,8 @@ update() {
 }
 
 _on_exit() {
+    wait
+
     # show ccache statistics
     test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s 1>&2
 
