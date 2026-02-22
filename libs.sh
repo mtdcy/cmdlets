@@ -566,7 +566,10 @@ _init_target() {
         export WINE WINEDEBUG XDG_RUNTIME_DIR
 
         # start wineserver if not exists
-        pgrep wineserver &>/dev/null || wineserver -p
+        # pgrep wineserver &>/dev/null || wineserver -p
+
+        # FIXME: libarchive hanges up at: config.status: executing mkdirs commands
+        pgrep wineserver &>/dev/null && wineserver -k || true
     fi
 }
 
