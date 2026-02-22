@@ -10,6 +10,12 @@
 
 set -e -o pipefail
 
+# bash 3.2
+{
+    export BASH_COMPAT=3.2  # bash 4.3
+    shopt -s compat32       # bash 5.0
+} 2>/dev/null || true
+
 umask  0022
 export LANG=C
 
