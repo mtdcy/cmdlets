@@ -1,3 +1,4 @@
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 # Distributed revision control system
 
 # shellcheck disable=SC2034,SC2154
@@ -6,47 +7,42 @@ libs_lic=GPLv2
 libs_ver=2.52.0
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
 libs_sha=3cd8fee86f69a949cb610fee8cd9264e6873d07fa58411f6060b3d62729ed7c5
-libs_dep=( zlib pcre2 libiconv expat curl )
+libs_deps=( zlib pcre2 libiconv expat curl )
 
-is_darwin || libs_dep+=( openssl )
+is_darwin || libs_deps+=( openssl )
 
-libs.requires.c89
+#is_mingw && libs_deps+=( libgnurx )
 
 libs_args=(
-    prefix="'$PREFIX'"
-
     # no /etc/gitconfig
-    ETC_GITCONFIG=/no-etc-gitconfig
+    -Dgitconfig=/no-etc-gitconfig
 
-    CC="'$CC'"
-    CFLAGS="'$CFLAGS $CPPFLAGS'"
-    LDFLAGS="'$LDFLAGS'"
+    # disabled features
+    -Dperl=enabled      # need by netrc
+    -Dgitweb=disabled
+    -Dpython=disabled
+    -Dgettext=disabled
+    -Ddocs=''
+    -Dtests=false
+    -Dregex=disabled # system regex
 
-    NO_GETTEXT=1 # no translation
-    NO_PERL=1
-    NO_GITWEB=1
-    NO_PYTHON=1
-    NO_TCLTK=1
-    NO_FINK=1
-    NO_DARWIN_PORTS=1
-
-    # pcre2
-    USE_LIBPCRE2=1
-    # use our libiconv both for Linux and macOS
-    NEEDS_LIBICONV=1
-
-    INSTALL_SYMLINKS=1
+    # contrib
+    -Dcontrib=subtree
 )
 
-is_darwin && libs_args+=(
-    NO_OPENSSL=1
-    APPLE_COMMON_CRYPTO=1
-) || libs_args+=(
-    NO_APPLE_COMMON_CRYPTO=1
-)
+# helpers
+if is_darwin; then
+    libs_args+=( -Dcredential_helpers=osxkeychain )
+elif is_mingw; then
+    libs_args+=( -Dcredential_helpers=wincred )
+else
+    libs_args+=( -Dcredential_helpers=netrc )
+fi
 
-# "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
-is_musl && libs_args+=( NO_REGEX=NeedsStartEnd )
+is_listed pcre2    libs_deps && libs_args+=( -Dpcre2=enabled         ) || libs_args+=( -Dpcre2=disabled     )
+is_listed expat    libs_deps && libs_args+=( -Dexpat=enabled         ) || libs_args+=( -Dexpat=disabled     )
+is_listed libiconv libs_deps && libs_args+=( -Diconv=enabled         ) || libs_args+=( -Diconv=disabled     )
+is_listed openssl  libs_deps && libs_args+=( -Dhttps_backend=openssl ) || libs_args+=( -Dhttps_backend=auto )
 
 #1. avoid hardcode PREFIX into git commands
 #2. avoid system libexec
@@ -55,22 +51,25 @@ is_musl && libs_args+=( NO_REGEX=NeedsStartEnd )
 #
 # exec-cmd.c:setup_path => GIT_EXEC_PATH > PATH
 # => disable libexec and use PATH instead
-libs_args+=( gitexecdir='/no-git-libexec' )
+libs_args+=( -Dlibexecdir='/no-git-libexec' )
 
 libs_build() {
-    # no pkg-config outside libs_build
+    #libs.requires libgnurx
 
-    # curl & expat for git-http-*
-    libs_args+=(
-        CURL_CFLAGS="'$($PKG_CONFIG --cflags libcurl)'"
-        CURL_LDFLAGS="'$($PKG_CONFIG --libs libcurl)'"
-        EXPAT_LIBEXPAT="'$($PKG_CONFIG --libs expat)'"
-    )
+    # always find tools in host
+    sed -i '/Program Files/d' meson.build
 
-    # git build system prefer hard link, disable it
-    sed -i '/ln \$< \$@/d' Makefile || true
+    # posix winpthread instead win32 thread
+    if is_posix; then
+        sed -i '/win32\/pthread.c/d' meson.build
+        rm -f compat/win32/pthread.h
+    fi
 
-    make "${libs_args[@]}"
+    cargo.setup # libgitcore requires cargo/rust
+
+    meson.setup
+
+    meson.compile
 
     # standalone cmds: binaries and bash scripts
     local cmds=(
@@ -88,53 +87,54 @@ libs_build() {
         git-request-pull
     )
 
-    make -C contrib/subtree "${libs_args[@]}"
-    cmds+=( contrib/subtree/git-subtree )
-
     if is_darwin; then
-        make -C contrib/credential/osxkeychain "${libs_args[@]}"
         cmds+=( contrib/credential/osxkeychain/git-credential-osxkeychain )
+    elif is_mingw; then
+        cmds+=( contrib/credential/wincred/git-credential-wincred )
     else
-        make -C contrib/credential/netrc "${libs_args[@]}"
         cmds+=( contrib/credential/netrc/git-credential-netrc )
     fi
 
-    # git-sh-setup: NO_GETTEXT
-    sed -i git-sh-setup                                 \
-        -e '/git-sh-i18n/d'                             \
-        -e 's/eval_gettextln/eval echo/g'               \
-        -e 's/eval_gettext/eval echo/g'                 \
-        -e 's/gettextln/echo/g'                         \
-        || die "modify git-sh-setup failed."
+    if ! is_mingw; then
+        cmds+=( contrib/subtree/git-subtree )
 
-    # git-mergetool:
-    sed -i git-mergetool                                \
-        -e 's/git-sh-setup/$(which git-sh-setup)/'      \
-        -e '/git-mergetool--lib/r git-mergetool--lib'   \
-        -e '/git-mergetool--lib/d'                      \
-        || die "modify git-mergetool failed."
+        # git-sh-setup: NO_GETTEXT
+        sed -i git-sh-setup                                 \
+            -e '/git-sh-i18n/d'                             \
+            -e 's/eval_gettextln/eval echo/g'               \
+            -e 's/eval_gettext/eval echo/g'                 \
+            -e 's/gettextln/echo/g'                         \
+            || die "modify git-sh-setup failed."
 
-    # git-difftool--helper:
-    #  #1. GIT_EXTERNAL_DIFF=echo git diff
-    #  #2. git difftool --extcmd echo
-    #  #3. git difftool --tool vscode
-    sed -i git-difftool--helper                         \
-        -e '/git-mergetool--lib/r git-mergetool--lib'   \
-        -e '/git-mergetool--lib/d'                      \
-        || die "modify git-difftool--helper failed."
+        # git-mergetool:
+        sed -i git-mergetool                                \
+            -e 's/git-sh-setup/$(which git-sh-setup)/'      \
+            -e '/git-mergetool--lib/r git-mergetool--lib'   \
+            -e '/git-mergetool--lib/d'                      \
+            || die "modify git-mergetool failed."
+
+        # git-difftool--helper:
+        #  #1. GIT_EXTERNAL_DIFF=echo git diff
+        #  #2. git difftool --extcmd echo
+        #  #3. git difftool --tool vscode
+        sed -i git-difftool--helper                         \
+            -e '/git-mergetool--lib/r git-mergetool--lib'   \
+            -e '/git-mergetool--lib/d'                      \
+            || die "modify git-difftool--helper failed."
+    fi
 
     for x in "${cmds[@]}"; do
         IFS=':' read -r bin links <<< "$x"
-        cmdlet.install "./$bin" "${bin##*/}" ${links//:/ }
+        cmdlet.install "$bin" "${bin##*/}" ${links//:/ }
     done
 
     # pack all git tools into one pkgfile
     cmdlet.pkgfile git bin/git bin/git-*
 
     # mergetools: env MERGE_TOOLS_DIR
-    cmdlet.pkginst mergetools share/mergetools mergetools/*
+    cmdlet.pkginst mergetools share/mergetools ../mergetools/*
 
-    cmdlet.check git --version
+    cmdlet.check git
 
     cmdlet.caveats << EOF
 static built $(./git --version) without libexec or i18n
@@ -166,4 +166,18 @@ EOF
     fi
 }
 
-# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
+__END__
+# cargo-meson.sh do not handle cargo target
+
+--- src/cargo-meson.sh.orig	2026-02-20 20:12:52.005811118 +0800
++++ src/cargo-meson.sh	2026-02-20 20:13:25.055634498 +0800
+@@ -33,7 +33,7 @@
+ 		LIBNAME=libgitcore.a;;
+ esac
+
+-if ! cmp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
++if ! cmp "$BUILD_DIR/$CARGO_BUILD_TARGET/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a" >/dev/null 2>&1
+ then
+-	cp "$BUILD_DIR/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a"
++	cp "$BUILD_DIR/$CARGO_BUILD_TARGET/$BUILD_TYPE/$LIBNAME" "$BUILD_DIR/libgitcore.a"
+ fi

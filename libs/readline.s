@@ -11,6 +11,7 @@ libs_url=(
     https://ftpmirror.gnu.org/gnu/readline/readline-$libs_ver.tar.gz
 )
 libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
+
 libs_deps=( ncurses )
 
 libs_resources=(
@@ -57,6 +58,9 @@ libs_build() {
     # hack: readline do not respect LDFLAGS
     export CFLAGS="$CFLAGS $LDFLAGS"
 
+    # force ncurses: --with-curses not working
+    is_listed ncurses libs_deps && export bash_cv_termcap_lib=libncurses
+
     configure
 
     make
@@ -69,6 +73,8 @@ libs_build() {
     pkgfile libreadline -- make install-static
 
     cmdlet.install readline
+
+    cmdlet.check readline
 }
 
 

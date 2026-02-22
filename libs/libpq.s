@@ -6,7 +6,7 @@ libs_lic='PostgreSQL'
 libs_ver=18.0
 libs_url=https://github.com/postgres/postgres/archive/refs/tags/REL_18_0.tar.gz
 libs_sha=d9071ab45c2c45a3c8371495539ea7d2ed4d8035f72de20cb7cddfe23081cb82
-libs_dep=( zlib libxslt openssl krb5 )
+libs_dep=( zlib readline libxslt openssl krb5 )
 
 libs_args=(
     --disable-dependency-tracking
@@ -19,6 +19,7 @@ libs_args=(
     --with-openssl
 
     --without-icu
+    --disable-nls
     --disable-debug
 
     # static only
@@ -27,10 +28,13 @@ libs_args=(
 )
 
 libs_build() {
-    deparallelize
+    # remove unneeded flags
+    export CFLAGS="${CFLAGS//-Wno-implicit-function-declaration/}"
 
     # fix static krb5
     export LIBS="$($PKG_CONFIG --libs-only-l krb5-gssapi)"
+
+    #libs.requires krb5-gssapi
 
     # FIXME: krb5support been filter out somewhere
     #export LDFLAGS+=" -lkrb5support"
@@ -52,23 +56,12 @@ libs_build() {
     make -C src/port MAKELEVEL=0
     make -C src/interfaces MAKELEVEL=0
 
-    # fix pkgconfig files, refer to src/common/Makefile
-    find src/interfaces -name "*.pc" -exec sed -i \
-        -e 's/-lpgcommon /-lpgcommon_shlib /g' \
-        {} +
+    # install only static client libraries
+    #cmdlet.pkgfile libpq-headers -- make.install -C src/include
+    cmdlet.pkgfile libpqcommon -- make.install -C src/common
+    cmdlet.pkgfile libpgport   -- make.install -C src/port
+    cmdlet.pkgfile libpq       -- make.install -C src/interfaces
 
-    make -C src/include install
-    make -C src/interfaces install
-    make -C src/common install
-    make -C src/port install
-
-    # fix installed pkgconfig files
-    LIBS="$($PKG_CONFIG --libs libpq krb5-gssapi | sed 's/^.*-lpq //')"
-
-    sed -i "$PREFIX/lib/pkgconfig/libpq.pc" \
-        -e "s%^Libs.private:.*%Libs.private: $LIBS%"
-
-#   # install only static client libraries
 #   for x in src/include src/interfaces src/common src/port; do
 #       make -C "$x" install \
 #           libdir="'$PREFIX/lib'" \

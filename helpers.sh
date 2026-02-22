@@ -29,7 +29,7 @@ libs.depends() {
 
 # find samples by name
 samples() {
-    find "$_ROOT/samples" -type f -name "$*" | xargs
+    find "$_ROOT_/samples" -type f -name "$*" | xargs
 }
 
 # locate executable in workdir
@@ -47,13 +47,50 @@ _locate_bin() {
     test -f "$bin" && echo "$bin" || _locate_exe "$PREFIX/bin/$1"
 }
 
-libs.requires() {
-    local x y cflags=() cxxflags=()
+_cflags_for_c89() {
+    local flags=()
 
+    if is_clang; then
+        flags+=(
+            -Wno-int-conversion
+            -Wno-implicit-int
+            -Wno-incompatible-pointer-types
+            -Wno-implicit-function-declaration
+        )
+    else
+        flags+=(
+            -Wno-error=int-conversion
+            -Wno-error=implicit-int
+            -Wno-error=incompatible-pointer-types
+            -Wno-error=implicit-function-declaration
+        )
+    fi
+
+    echo "${flags[@]}"
+}
+
+libs.requires() {
+    declare -a cflags cxxflags cppflags
+
+    local x y
     for x in "$@"; do
         case "$x" in
+            -std=c++*|-std=gnu++*)
+                cxxflags+=( "$x" )
+                ;;
+            -std=*)
+                cflags+=( "$x" )
+                case "$x" in
+                    -std=c89|-std=ansi|-std=gnu89)
+                        cflags+=( $(_cflags_for_c89) )
+                        ;;
+                esac
+                ;;
             -l*|-L*|-pthread|-Wl,*)
                 ldflags+=( "$x" )
+                ;;
+            -I*)
+                cppflags+=( "$x" )
                 ;;
             -*)
                 cflags+=( "$x" )
@@ -77,30 +114,9 @@ libs.requires() {
 
     CFLAGS+=" ${cflags[*]}"
     CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
+    CPPFLAGS+=" ${cppflags[*]}"
 
-    export CFLAGS CXXFLAGS LDFLAGS
-}
-
-libs.requires.c89() {
-    local flags=()
-
-    if is_clang; then
-        flags+=(
-            -Wno-int-conversion
-            -Wno-implicit-int
-            -Wno-incompatible-pointer-types
-            -Wno-implicit-function-declaration
-        )
-    else
-        flags+=(
-            -Wno-error=int-conversion
-            -Wno-error=implicit-int
-            -Wno-error=incompatible-pointer-types
-            -Wno-error=implicit-function-declaration
-        )
-    fi
-
-    export CFLAGS+=" ${flags[*]}"
+    export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 }
 
 # return 0 if $1 >= $2
@@ -132,7 +148,7 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    std+=( --prefix="$PREFIX" )
+    is_match "--prefix=.*" "$@" || std+=( --prefix="$PREFIX" )
 
     if is_xbuild; then
         # some libraries use --target instead of --host, e.g: libvpx
@@ -161,15 +177,6 @@ make.install() {
     slogcmd "$MAKE" install -j1 "$@" || die "make.install $libs_name failed."
 }
 
-_remove_ccache() {
-    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-    # meson cross file do not accept ccache
-    CC="${CC#ccache }"
-    CXX="${CXX#ccache }"
-
-    export CC CXX
-}
-
 # setup cmake environments
 _cmake_init() {
     test -z "$_CMAKE_READY" || return 0
@@ -178,8 +185,6 @@ _cmake_init() {
     : "${LIBS_BUILDDIR:=build-$PPID}"
 
     export LIBS_BUILDDIR
-
-    _remove_ccache
 
     if test -n "$_TARGET"; then
         case "$_TARGET" in
@@ -322,8 +327,6 @@ _meson_init() {
 
     export LIBS_BUILDDIR
 
-    _remove_ccache
-
     # cross compile
     if is_mingw; then
         cat << EOF > mingw.txt
@@ -440,11 +443,11 @@ meson.install() {
 _cargo_init() {
     test -z "$_CARGO_READY" || return 0
 
-    # find out rustup: $_WORKDIR > $HOME > system
+    # find out rustup: $_TARGET_WORKDIR > $HOME > system
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
 
     test -f "$HOME/.rustup/settings.toml"     && RUSTUP_HOME="$HOME/.rustup"
-    test -f "$_WORKDIR/.rustup/settings.toml" && RUSTUP_HOME="$_WORKDIR/.rustup"
+    test -f "$_TARGET_WORKDIR/.rustup/settings.toml" && RUSTUP_HOME="$_TARGET_WORKDIR/.rustup"
 
     # set mirrors for toolchain download
     if test -n "$_MIRRORS"; then
@@ -454,9 +457,9 @@ _cargo_init() {
     fi
 
     # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-    #  choose _WORKDIR instead of HOME for docker buildings
+    #  choose _TARGET_WORKDIR instead of HOME for docker buildings
     if test -f rust-toolchain.toml; then
-        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_WORKDIR/.rustup"
+        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_TARGET_WORKDIR/.rustup"
     fi
 
     if ! which rustup &>/dev/null; then
@@ -470,11 +473,11 @@ _cargo_init() {
         fi
     fi
 
-    # find out cargo: $_WORKDIR > $HOME > $RUSTUP_HOME/cargo
+    # find out cargo: $_TARGET_WORKDIR > $HOME > $RUSTUP_HOME/cargo
     : "${CARGO_HOME:=$RUSTUP_HOME/cargo}"
 
     test -x "$HOME/.cargo/bin/cargo"     && CARGO_HOME="$HOME/.cargo"
-    test -x "$_WORKDIR/.cargo/bin/cargo" && CARGO_HOME="$_WORKDIR/.cargo"
+    test -x "$_TARGET_WORKDIR/.cargo/bin/cargo" && CARGO_HOME="$_TARGET_WORKDIR/.cargo"
 
     # docker image RUSTUP_HOME may not be writable
     if test -w "$RUSTUP_HOME"; then
@@ -490,7 +493,7 @@ _cargo_init() {
     # a writable CARGO_HOME is required, refer to cargo.requires()
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     #   => set CARGO_HOME again for local crates and cache
-    test -w "$CARGO_HOME" || CARGO_HOME="$_WORKDIR/.cargo"
+    test -w "$CARGO_HOME" || CARGO_HOME="$_TARGET_WORKDIR/.cargo"
 
     export CARGO_HOME RUSTUP_HOME CARGO RUSTC
 
@@ -502,15 +505,15 @@ _cargo_init() {
     export CARGO_LOG=cargo::core::compiler=trace
     export CC_ENABLE_DEBUG_OUTPUT=1
 
-    # not all options/envs works with 'ccache gcc'
-    _remove_ccache
-
     # search for libraries in PREFIX
     #  => linker=$LD fails for some crates
     CARGO_BUILD_RUSTFLAGS="--verbose -L native=$PREFIX/lib -C linker=$CC"
 
     if is_darwin; then
         CARGO_BUILD_TARGET="$(uname -m)-apple-darwin"
+
+        # rustc use aarch64 instead of arm64 for macos
+        CARGO_BUILD_TARGET="${CARGO_BUILD_TARGET/arm64/aarch64}"
     elif is_mingw; then
         [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
         CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
@@ -578,6 +581,12 @@ cargo.setup() {
     # debug
     #export RUSTC_LOG=rustc_codegen_ssa::back::link=info
 
+    # /usr/bin/ld: cannot find -lxcb: No such file or directory
+    # XXX: -lxxx in LDFLAGS will append to rsut cc before RUSTFLAGS, and the -Lyyy will be ignored.
+    #  => which cause libs.requires and LDFLAGS not working as expected.
+    #   => pollute RUSTFLAGS with LDFLAGS
+    set -- $LDFLAGS "$@"
+
     local rustflags=() x
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -585,7 +594,7 @@ cargo.setup() {
             -l*)    rustflags+=( -l "static=${1#-l}" )      ;;
             -L)     rustflags+=( -L "$2" ); shift 1         ;;
             -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
-            *)
+            *)      ;; # ignore other flags
         esac
         shift 1
     done
@@ -593,7 +602,7 @@ cargo.setup() {
     #export RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS $RUSTFLAGS ${rustflags[*]}"
     export RUSTFLAGS+="${rustflags[*]}"
     # RUSTFLAGS will append to CARGO_BUILD_RUSTFLAGS when cargo build
-   
+
     # set env for static libraries
     for x in "${libs_deps[@]}"; do
         case "$x" in
@@ -611,9 +620,6 @@ cargo.setup() {
                 ;;
         esac
     done
-
-    # cargo fetch do not respect CARGO_BUILD_TARGET
-    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 }
 
 cargo.build() {
@@ -622,11 +628,14 @@ cargo.build() {
     # remember envs
     {
         echo -e "\n---\ncargo envs:"
-        env | grep -E "CARGO|RUST"
+        env #| grep -E "CARGO|RUST"
         echo -e "\n---\nrustc cfgs:"
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
     } | _LOGGING=silent _capture
+
+    # cargo fetch do not respect CARGO_BUILD_TARGET
+    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 
     # _NJOBS => CARGO_BUILD_JOBS
     local std=(
@@ -741,11 +750,11 @@ _go_init() {
     test -z "$GOROOT" || export PATH="$GOROOT/bin:$PATH"
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  using _ROOT_/.go when build with docker =>  go cache can be reused. otherwise
     #  set GOPATH in host profile
-    export GOPATH="${GOPATH:-$_ROOT/.go}"
-    #export GOCACHE="$_ROOT/.go/go-build"
-    export GOMODCACHE="$_ROOT/.go/pkg/mod" # OR pkg installed to workdir
+    export GOPATH="${GOPATH:-$_ROOT_/.go}"
+    #export GOCACHE="$_ROOT_/.go/go-build"
+    export GOMODCACHE="$_ROOT_/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -922,16 +931,17 @@ _make_install() {
 
         _rm_libtool_archive DESTDIR || true
 
-        # copy files to PREFIX
-        local dest
+        # install files to PREFIX
+        local file dest
         while read -r file; do
             dest="${file#DESTDIR}"      # remove leading DESTDIR
             dest="${dest#"$PREFIX"}"    # remove leading $PREFIX
             dest="${dest#/}"            # remove leading /
 
-            mkdir -pv "$PREFIX/$(dirname "$dest")"
+            mkdir -pv "$PREFIX/${dest%/*}"
 
-            echocmd cp -fv "$file" "$PREFIX/$dest"
+            # silent logging to speed up the process in case installed huge amount of files
+            cp -fv "$file" "$PREFIX/$dest" | _LOGGING=silent _capture
 
             echo "$dest" >> .pkgfile
         done < <(find DESTDIR ! -type d)
@@ -939,7 +949,7 @@ _make_install() {
 }
 
 # create pkgfile
-_pack() {
+_make_pkfile() {
     local files=()
 
     # preprocessing installed files
@@ -997,7 +1007,7 @@ _pack() {
         files+=( "$x" )
     done
 
-    slogi ".Pack" "$1 < ${files[*]}"
+    slogi "..TAR" "$1 < ${files[*]}"
 
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
@@ -1032,7 +1042,7 @@ cmdlet.pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    _pack "$pkgfile" "${files[@]}"
+    _make_pkfile "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -1067,9 +1077,9 @@ cmdlet.pkgfile() {
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
-    sed -i "\#^$1 $pkgfile #d" "$_MANIFEST"
+    sed -i "\#^$1 $pkgfile #d" "$_TARGET_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_TARGET_MANIFEST"
 
     popd || die "popd failed."
 }
@@ -1079,7 +1089,7 @@ cmdlet.pkgfile() {
 cmdlet.disclaim() {
     local x
     for x in "$@"; do
-        sed -i "\#\ $libs_name/.*@$x#d" "$_MANIFEST" || true
+        sed -i "\#\ $libs_name/.*@$x#d" "$_TARGET_MANIFEST" || true
     done
 }
 
@@ -1111,20 +1121,20 @@ cmdlet.pkginst() {
             *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
 
             # set sub dir for known directories
-            include|include/*|lib|lib/*|share|share/*|bin|bin/*)
+            include|include/*|lib|lib/*|share|share/*|bin)
                 sub="$file"
                 mkdir -pv "$PREFIX/$sub"
                 continue
                 ;;
-
-            # reuse previous sub dir for other files
+            *)
+                # treat as normal files and install to sub
+                test -n "$sub" || die "pkginst without subdir"
+                ;;
         esac
 
-        if [[ "$sub" =~ ^bin ]] && test -n "$_BINEXT" && [[ ! "$file" =~ $_BINEXT$ ]]; then
-            test -f "$file" || file="$file$_BINEXT"
-        fi
+        [[ "$sub" =~ ^bin ]] && file="$(_locate_exe "$file")"
 
-        echocmd cp -fv "$file" "$PREFIX/$sub" || die "install $file failed."
+        echocmd cp -rfv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 
@@ -1305,7 +1315,7 @@ cmdlet.pkgconf() {
         for x in Cflags Libs Requires; do
             grep -Eq "^$x:" "$name.pc" || echo "$x:" >> "$name.pc"
         done
-        
+
         # amend arguments to pc file
         sed -i "$name.pc"                           \
             -e "/Requires:/s%$% ${requires[*]}%"    \
