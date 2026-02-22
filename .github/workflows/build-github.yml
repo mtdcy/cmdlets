@@ -79,7 +79,7 @@ jobs:
 
           export CMDLET_REPO=flat+https://github.com/mtdcy/cmdlets/releases/download
 
-          arch="$(bash libs.sh arch)"
+          arch="$(bash libs.sh target)"
           echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
 
           # fix: detected dubious ownership in repository

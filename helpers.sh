@@ -48,12 +48,16 @@ _locate_bin() {
 }
 
 libs.requires() {
-    local x y cflags=() cxxflags=()
+    declare -a cflags cxxflags cppflags
 
+    local x y
     for x in "$@"; do
         case "$x" in
-            -l*|-L*|-pthread|-Wl,*)
+            -l*|-L*|-pthread|-W*)
                 ldflags+=( "$x" )
+                ;;
+            -I*)
+                cppflags+=( "$x" )
                 ;;
             -*)
                 cflags+=( "$x" )
@@ -77,8 +81,9 @@ libs.requires() {
 
     CFLAGS+=" ${cflags[*]}"
     CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
+    CPPFLAGS+=" ${cppflags[*]}"
 
-    export CFLAGS CXXFLAGS LDFLAGS
+    export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 }
 
 libs.requires.c89() {
@@ -132,7 +137,7 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    std+=( --prefix="$PREFIX" )
+    is_match "--prefix=.*" "$@" || std+=( --prefix="$PREFIX" )
 
     if is_xbuild; then
         # some libraries use --target instead of --host, e.g: libvpx
@@ -511,6 +516,9 @@ _cargo_init() {
 
     if is_darwin; then
         CARGO_BUILD_TARGET="$(uname -m)-apple-darwin"
+
+        # rustc use aarch64 instead of arm64 for macos
+        CARGO_BUILD_TARGET="${CARGO_BUILD_TARGET/arm64/aarch64}"
     elif is_mingw; then
         [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
         CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
@@ -593,7 +601,7 @@ cargo.setup() {
     #export RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS $RUSTFLAGS ${rustflags[*]}"
     export RUSTFLAGS+="${rustflags[*]}"
     # RUSTFLAGS will append to CARGO_BUILD_RUSTFLAGS when cargo build
-   
+
     # set env for static libraries
     for x in "${libs_deps[@]}"; do
         case "$x" in
@@ -611,9 +619,6 @@ cargo.setup() {
                 ;;
         esac
     done
-
-    # cargo fetch do not respect CARGO_BUILD_TARGET
-    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 }
 
 cargo.build() {
@@ -627,6 +632,9 @@ cargo.build() {
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
     } | _LOGGING=silent _capture
+
+    # cargo fetch do not respect CARGO_BUILD_TARGET
+    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
 
     # _NJOBS => CARGO_BUILD_JOBS
     local std=(
@@ -922,16 +930,17 @@ _make_install() {
 
         _rm_libtool_archive DESTDIR || true
 
-        # copy files to PREFIX
-        local dest
+        # install files to PREFIX
+        local file dest
         while read -r file; do
             dest="${file#DESTDIR}"      # remove leading DESTDIR
             dest="${dest#"$PREFIX"}"    # remove leading $PREFIX
             dest="${dest#/}"            # remove leading /
 
-            mkdir -pv "$PREFIX/$(dirname "$dest")"
+            mkdir -pv "$PREFIX/${dest%/*}"
 
-            echocmd cp -fv "$file" "$PREFIX/$dest"
+            # silent logging to speed up the process in case installed huge amount of files
+            cp -fv "$file" "$PREFIX/$dest" | _LOGGING=silent _capture
 
             echo "$dest" >> .pkgfile
         done < <(find DESTDIR ! -type d)
@@ -939,7 +948,7 @@ _make_install() {
 }
 
 # create pkgfile
-_pack() {
+_make_pkfile() {
     local files=()
 
     # preprocessing installed files
@@ -997,7 +1006,7 @@ _pack() {
         files+=( "$x" )
     done
 
-    slogi ".Pack" "$1 < ${files[*]}"
+    slogi "..TAR" "$1 < ${files[*]}"
 
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
@@ -1032,7 +1041,7 @@ cmdlet.pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    _pack "$pkgfile" "${files[@]}"
+    _make_pkfile "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -1111,20 +1120,20 @@ cmdlet.pkginst() {
             *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
 
             # set sub dir for known directories
-            include|include/*|lib|lib/*|share|share/*|bin|bin/*)
+            include|include/*|lib|lib/*|share|share/*|bin)
                 sub="$file"
                 mkdir -pv "$PREFIX/$sub"
                 continue
                 ;;
-
-            # reuse previous sub dir for other files
+            *)
+                # treat as normal files and install to sub
+                test -n "$sub" || die "pkginst without subdir"
+                ;;
         esac
 
-        if [[ "$sub" =~ ^bin ]] && test -n "$_BINEXT" && [[ ! "$file" =~ $_BINEXT$ ]]; then
-            test -f "$file" || file="$file$_BINEXT"
-        fi
+        [[ "$sub" =~ ^bin ]] && file="$(_locate_exe "$file")"
 
-        echocmd cp -fv "$file" "$PREFIX/$sub" || die "install $file failed."
+        echocmd cp -rfv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=( "$sub/${file##*/}" )
     done
 
@@ -1305,7 +1314,7 @@ cmdlet.pkgconf() {
         for x in Cflags Libs Requires; do
             grep -Eq "^$x:" "$name.pc" || echo "$x:" >> "$name.pc"
         done
-        
+
         # amend arguments to pc file
         sed -i "$name.pc"                           \
             -e "/Requires:/s%$% ${requires[*]}%"    \

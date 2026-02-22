@@ -81,7 +81,7 @@ shell:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
 
 # tag to HEAD
-ARCH ?= $(shell bash libs.sh arch)
+ARCH ?= $(shell bash libs.sh target)
 tag:
 	git tag -a $(ARCH) -m $(ARCH) --force
 	git push origin $(ARCH) --force
@@ -203,7 +203,7 @@ endif
 
 # custom entrypoint
 #DOCKER_ARGS += --entrypoint=''
-DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/entrypoint.sh
+#DOCKER_ARGS += -v ../Dockerfiles/builder/entrypoint.sh:/opt/entrypoint.sh
 
 # name the docker container => nameless allow multiple instances
 #DOCKER_ARGS += --name $(DOCKER_IMAGE)
