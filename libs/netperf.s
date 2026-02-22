@@ -1,5 +1,7 @@
 # Netperf is a benchmark that can be used to measure the performance of many different types of networking.
 
+libs_targets=( linux macos )
+
 # shellcheck disable=SC2034
 libs_lic='MIT'
 libs_ver=2.7.0
@@ -9,29 +11,25 @@ libs_dep=( )
 
 libs_args=(
     --disable-dependency-tracking
-    --disable-silent-rules
-    --disable-dependency-tracking
 
-    --disable-debug
-    --disable-doxygen-doc
+    # multiple definition of `loc_nodelay'; nettest_omni.o
+    --enable-omni=no
 
     --disable-shared
-    --enable-static
 )
 
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
 
 libs_build() {
-    libs.requires.c89
-
     configure
 
     make
 
-    cmdlet ./src/netperf
+    cmdlet.install src/netserver
+    cmdlet.install src/netperf
 
-    check netperf -V
+    cmdlet.check netperf -V
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

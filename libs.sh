@@ -431,6 +431,8 @@ _init_target() {
     # macOS does not support statically linked binaries
     if is_darwin; then
         cflags+=(
+            # ISO C99 and later do not support implicit function declarations
+            -Wno-implicit-function-declaration
             -Wno-deprecated-non-prototype
             -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
         )

@@ -40,8 +40,6 @@ libs_args=(
 )
 
 libs_build() {
-    libs.requires.c89
-
     if is_darwin; then
         grep "defined OSTYPE_FREEBSD" . -Rl | xargs sed -i 's/defined OSTYPE_FREEBSD/& || defined OSTYPE_DARWIN/g'
         sed -i '/pcap.h/i #include <net/bpf.h>' libpcap_stuff.c

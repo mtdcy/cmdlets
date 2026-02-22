@@ -47,13 +47,46 @@ _locate_bin() {
     test -f "$bin" && echo "$bin" || _locate_exe "$PREFIX/bin/$1"
 }
 
+_cflags_for_c89() {
+    local flags=()
+
+    if is_clang; then
+        flags+=(
+            -Wno-int-conversion
+            -Wno-implicit-int
+            -Wno-incompatible-pointer-types
+            -Wno-implicit-function-declaration
+        )
+    else
+        flags+=(
+            -Wno-error=int-conversion
+            -Wno-error=implicit-int
+            -Wno-error=incompatible-pointer-types
+            -Wno-error=implicit-function-declaration
+        )
+    fi
+
+    echo "${flags[@]}"
+}
+
 libs.requires() {
     declare -a cflags cxxflags cppflags
 
     local x y
     for x in "$@"; do
         case "$x" in
-            -l*|-L*|-pthread|-W*)
+            -std=c++*|-std=gnu++*)
+                cxxflags+=( "$x" )
+                ;;
+            -std=*)
+                cflags+=( "$x" )
+                case "$x" in
+                    -std=c89|-std=ansi|-std=gnu89)
+                        cflags+=( $(_cflags_for_c89) )
+                        ;;
+                esac
+                ;;
+            -l*|-L*|-pthread|-Wl,*)
                 ldflags+=( "$x" )
                 ;;
             -I*)
@@ -84,28 +117,6 @@ libs.requires() {
     CPPFLAGS+=" ${cppflags[*]}"
 
     export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
-}
-
-libs.requires.c89() {
-    local flags=()
-
-    if is_clang; then
-        flags+=(
-            -Wno-int-conversion
-            -Wno-implicit-int
-            -Wno-incompatible-pointer-types
-            -Wno-implicit-function-declaration
-        )
-    else
-        flags+=(
-            -Wno-error=int-conversion
-            -Wno-error=implicit-int
-            -Wno-error=incompatible-pointer-types
-            -Wno-error=implicit-function-declaration
-        )
-    fi
-
-    export CFLAGS+=" ${flags[*]}"
 }
 
 # return 0 if $1 >= $2
