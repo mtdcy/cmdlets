@@ -63,7 +63,7 @@ libs_args+=(
     --enable-zlib
     --enable-bzlib
     --enable-lzma
-    --enable-iconv 
+    --enable-iconv
     #--enable-libzimg
     --enable-ffmpeg
     --enable-ffprobe
@@ -164,7 +164,7 @@ for v in ${FFMPEG_VARS//,/ }; do
             # always enable hwaccels for darwin
 
             # opencl for all
-            libs_dep+=( OpenCL )
+            is_darwin || libs_dep+=( OpenCL ) # use OpenCL.framework for darwin
             libs_args+=( --enable-opencl )
 
             is_mingw && FFMPEG_ELIBS+=( OpenCL )
