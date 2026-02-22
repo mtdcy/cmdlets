@@ -262,12 +262,20 @@ _init_host() {
 
     _ROOT="$(pwd -P)"
 
+    # default _TARGET
+    if test -z "$_TARGET" && test -n "$BUILDER_NAME"; then
+        case "$BUILDER_NAME" in
+            linux/*)    _TARGET="$(uname -m)-linux-musl"   ;;
+            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"  ;;
+        esac
+    fi
+
     # => target arch triplet
     if test -n "$_TARGET"; then
         _TARGET_ARCH="$_TARGET"
     else
         case "$OSTYPE" in
-            linux-*)    _TARGET_ARCH="$(uname -m)-linux-musl"   ;;
+            linux-*)    _TARGET_ARCH="$(uname -m)-linux-gnu"    ;;
             darwin*)    _TARGET_ARCH="$(uname -m)-apple-darwin" ;;
             *)          _TARGET_ARCH="$(uname -m)-$OSTYPE"      ;;
         esac
@@ -352,15 +360,7 @@ _init_target() {
     test -z "$_TARGET_READY" || return 0
 
     # find out CC
-    if test -n "$_TARGET"; then
-        CC="$_TARGET-gcc"
-    else
-        case "$BUILDER_NAME" in
-            linux/*)    CC="$(uname -m)-linux-musl-gcc" ;;
-            mingw/*)    CC="$(uname -m)-w64-mingw32"    ;;
-            *)          CC=gcc                          ;;
-        esac
-    fi
+    test -n "$_TARGET" && CC="$_TARGET-gcc" || CC=gcc
 
     case "$OSTYPE" in
         darwin*)    CC="$(xcrun --find "$CC")" ;;
@@ -1315,8 +1315,6 @@ prepare() {
 }
 
 target() {
-    _init_target
-
     echo "$_TARGET_ARCH"
 }
 
