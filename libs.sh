@@ -1090,24 +1090,21 @@ build() {
             echo ""
             slogi ">>>>>" "#$((i+1))/${#libs[@]} $name"
 
-            local x ready=1 supported=1
-
-            # show dependencies status
-            slogi ".DEPS" "$(_deps_status "$name")" || ready=0
+            local x supported
 
             # check for supported targets
             for x in "$name" $(depends "$name"); do
                 IFS=' ' read -r -a supported < <( _load_targets "$x" ) || die "load targets failed."
                 is_listed "$_TARGET_NAME" supported || {
                     slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
-                    supported=0
+                    unset supported
                     break
                 }
             done
             is_true supported || continue
 
-            # if dependencies not meet, mark failure
-            is_true ready || {
+            # show dependencies status
+            slogi ".DEPS" "$(_deps_status "$name")" || {
                 slogw "<<<<<" "$name: missing dependencies"
                 fails+=( "$name" )
                 continue
