@@ -535,6 +535,9 @@ _init_target() {
         XDG_RUNTIME_DIR=/run/user/$(id -u)
 
         export WINE WINEDEBUG XDG_RUNTIME_DIR
+
+        # start wineserver if not exists
+        pgrep wineserver &>/dev/null || wineserver -p
     fi
 
     export _TARGET_READY=1
