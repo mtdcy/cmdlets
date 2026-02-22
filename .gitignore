@@ -2,7 +2,7 @@ prebuilts/
 packages/
 out/
 logs/
-cmdlets.env
+cmdlets.env*
 .ccache
 *.swp
 .DS_Store
