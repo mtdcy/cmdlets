@@ -1320,11 +1320,21 @@ target() {
     echo "$_TARGET_ARCH"
 }
 
-# list changed cmdlets for target
-list.changed() {
-    local tagname="${1:-$(target)}" list=() libs
+# make target tag on given commit or HEAD
+#  inputs: <target name> [commit id]
+target.tag() {
+    local TAG="${1:-$(target)}"
+    local HEAD="${2:-HEAD}"
 
-    : "${OLDHEAD:="$(git tag -l "$tagname")"}"
+	git tag -a "$TAG" -m "$TAG" --force "$HEAD"
+	git push origin "$TAG" --force
+}
+
+# list changed cmdlets for target
+target.changed() {
+    local TAG="${1:-$(target)}" list=() libs
+
+    : "${OLDHEAD:="$(git tag -l "$TAG")"}"
     : "${OLDHEAD:="HEAD~1"}"
 
     OLDHEAD="$(git rev-parse "$OLDHEAD")"

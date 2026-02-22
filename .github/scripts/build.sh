@@ -35,7 +35,7 @@ if test -n "$1"; then
 else
     TAG="$(bash libs.sh target)"
 
-    IFS=' ' read -r -a cmdlets < <(bash libs.sh list.changed "$TAG")
+    IFS=' ' read -r -a cmdlets < <(bash libs.sh target.changed "$TAG")
 
     # build cmdlet and rdepends by default
     rdepends=1
