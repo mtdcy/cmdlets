@@ -74,7 +74,7 @@ fi
 _NJOBS="${CMDLET_NJOBS:-1}"
 
 # clear envs => setup by _init
-unset _ROOT _WORKDIR PREFIX
+unset PREFIX _ROOT_ CC
 # => PREFIX is a widely used variable
 
 # defaults
@@ -258,9 +258,9 @@ slogcmd() {
 }
 
 _init_host() {
-    test -z "$_ROOT" || return 0
+    test -z "$_ROOT_" || return 0
 
-    _ROOT="$(pwd -P)"
+    _ROOT_="$(pwd -P)"
 
     # default _TARGET
     if test -z "$_TARGET" && test -n "$BUILDER_NAME"; then
@@ -287,18 +287,19 @@ _init_host() {
     _TARGET_REPO="$_TARGET_REPO/$_TARGET_ARCH"
 
     # prepare variables
-    PREFIX="$_ROOT/prebuilts/$_TARGET_ARCH"
+    PREFIX="$_ROOT_/prebuilts/$_TARGET_ARCH"
 
     # private variables
-    _WORKDIR="$_ROOT/out/$_TARGET_ARCH"
-    _PACKAGES="$_ROOT/packages"
-    _LOGFILES="$_ROOT/logs/$_TARGET_ARCH"
-    _MANIFEST="$PREFIX/cmdlets.manifest"
+    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET_ARCH"
+    _TARGET_PACKAGES="$_ROOT_/packages"
+    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET_ARCH"
+    _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
 
-    mkdir -p "$PREFIX" "$_WORKDIR" "$_PACKAGES" "$_LOGFILES"
+    mkdir -p "$PREFIX" "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
 
-    export PREFIX _ROOT _WORKDIR _PACKAGES _LOGFILES _MANIFEST
+    # PREFIX is a well known env
+    export PREFIX _ROOT_ "${!_TARGET@}"
 
     local host_tools=(
         "HOSTCC:gcc,cc"
@@ -357,7 +358,7 @@ _init_host() {
 }
 
 _init_target() {
-    test -z "$_TARGET_READY" || return 0
+    test -z "$CC" || return 0
 
     # find out CC
     test -n "$_TARGET" && CC="$_TARGET-gcc" || CC=gcc
@@ -455,9 +456,9 @@ _init_target() {
         ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
 
         # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64
-        #"$CC" -dumpspecs > "$_WORKDIR/.specs"
-        #sed -i 's/-lmsvcrt/-lucrt/g' "$_WORKDIR/.specs"
-        #cflags+=( -specs="$_WORKDIR/.specs" -D_UCRT )
+        #"$CC" -dumpspecs > "$_TARGET_WORKDIR/.specs"
+        #sed -i 's/-lmsvcrt/-lucrt/g' "$_TARGET_WORKDIR/.specs"
+        #cflags+=( -specs="$_TARGET_WORKDIR/.specs" -D_UCRT )
     else
         #1. static linking => two '--' vs ldflags
         #2. tell compiler to place each function and data into its own section
@@ -505,7 +506,7 @@ _init_target() {
     # ccache settings
     which ccache &>/dev/null    || CCACHE_DISABLE=1
     is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
-    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_TARGET_ARCH"
+    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT_/.ccache/$_TARGET_ARCH"
 
     export CCACHE_DISABLE CCACHE_DIR
 
@@ -515,7 +516,7 @@ _init_target() {
     # toolchain scripts, for debugging and options embedding
     _init_script() {
         eval -- export REAL_$1="\$$2"
-        export $2="$_ROOT/scripts/$1"
+        export $2="$_ROOT_/scripts/$1"
     }
 
     # no all build system support command with arguments
@@ -564,8 +565,6 @@ _init_target() {
         # start wineserver if not exists
         pgrep wineserver &>/dev/null || wineserver -p
     fi
-
-    export _TARGET_READY=1
 }
 
 _CURL_OPTS=( -fsSL --connect-timeout 3 )
@@ -595,7 +594,7 @@ _fetch() {
 
     #1. try local file first
     if [ -f "$zip" ]; then
-        slogi ".FILE" "${zip#"$_ROOT/"}"
+        slogi ".FILE" "${zip#"$_ROOT_/"}"
 
         # verify sha only if it exists
         test -n "$sha" || return 0
@@ -634,7 +633,7 @@ _fetch() {
 # unzip file to current dir, or exit program
 # _unzip <file> [strip]
 _unzip() {
-    slogi ".Zipx" "${1#"$_ROOT/"} => ${PWD#"$_ROOT/"}"
+    slogi ".Zipx" "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -721,7 +720,7 @@ _zipfile() {
     [[ "${1##*/}" =~ ^[vr]?[0-9.]{2} ]] && tar="$libs_name-$tar"
 
     # full path
-    echo "$_PACKAGES/$libs_name/$tar"
+    echo "$_TARGET_PACKAGES/$libs_name/$tar"
 }
 
 # unzip url to workdir or die
@@ -773,17 +772,17 @@ _load() {
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
-    mkdir -p "$_LOGFILES"
-    export _LOGFILE="$_LOGFILES/$libs_name.log"
+    mkdir -p "$_TARGET_LOGFILES"
+    export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
 }
 
 _prepare_workdir() {
-    local workdir="$_WORKDIR/$libs_name-$libs_ver"
+    local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
 
     mkdir -p "$PREFIX"
     mkdir -p "$workdir" && cd "$workdir" || die "prepare workdir failed."
 
-    slogi ".WDIR" "${PWD#"$_ROOT/"}"
+    slogi ".WDIR" "${PWD#"$_ROOT_/"}"
 }
 
 # prepare source code or die
@@ -850,7 +849,7 @@ compile() {
     if [ -z "$CCACHE_DISABLE" ] && [ -z "$CCACHE_DIR" ]; then
         which ccache &>/dev/null    || CCACHE_DISABLE=1
         is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
-        is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT/.ccache/$_TARGET_ARCH"
+        is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT_/.ccache/$_TARGET_ARCH"
     fi
 
     export CCACHE_DISABLE CCACHE_DIR
@@ -883,14 +882,14 @@ compile() {
         rm -rf "$PREFIX/$libs_name"
 
         # v3/manifest: name pkgfile sha build=1
-        touch "$_MANIFEST"
+        touch "$_TARGET_MANIFEST"
 
         # read pkgbuild before clear
-        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
+        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
         test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
-        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_MANIFEST"
+        sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_TARGET_MANIFEST"
 
         # build library
         ( libs_build ) || {
@@ -918,7 +917,7 @@ _deps_init() {
 
     test -z "$_DEPS_READY" || return 0
 
-    export _DEPS_FILE="$_WORKDIR/.dependencies"
+    export _DEPS_FILE="$_TARGET_WORKDIR/.dependencies"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
@@ -1034,7 +1033,7 @@ _deps_fetch() {
     # check dependencies: libraries updated or not ready
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
-        [ "$_ROOT/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+        [ "$_ROOT_/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
     done
 
     test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
@@ -1166,7 +1165,7 @@ _fetch_unzip_pkgfile() {
 _fetch_pkgfile() {
     # always fetch manifest
     if ! test -f "$TEMPDIR/manifest"; then
-        _fetch_unzip_pkgfile cmdlets.manifest "$_MANIFEST" || die "fetch manifest failed."
+        _fetch_unzip_pkgfile cmdlets.manifest "$_TARGET_MANIFEST" || die "fetch manifest failed."
         true > "$TEMPDIR/manifest"
     fi
 
@@ -1193,7 +1192,7 @@ _fetch_pkgfile() {
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
                 slogw "🟠 no package found"
                 return 1
@@ -1201,7 +1200,7 @@ _fetch_pkgfile() {
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_MANIFEST" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
     fi
 
     test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
@@ -1251,15 +1250,15 @@ search() {
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
+        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
 
         # libraries?
         slogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
 
         # headers?
         slogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
@@ -1355,8 +1354,8 @@ target.changed() {
 # zip files for release actions
 zip_files() {
     # log files
-    test -n "$(ls -A "$_LOGFILES")" || return 0
-    "$TAR" -C "$_LOGFILES" -cf "$_LOGFILES-logs.tar.gz" .
+    test -n "$(ls -A "$_TARGET_LOGFILES")" || return 0
+    "$TAR" -C "$_TARGET_LOGFILES" -cf "$_TARGET_LOGFILES-logs.tar.gz" .
 }
 
 env() {
@@ -1370,7 +1369,7 @@ gcc.macros() {
 }
 
 clean() {
-    rm -rf "$_WORKDIR" "$_LOGFILES"
+    rm -rf "$_TARGET_WORKDIR" "$_TARGET_LOGFILES"
     exit 0 # always exit here
 }
 

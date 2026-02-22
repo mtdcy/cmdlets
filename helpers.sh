@@ -29,7 +29,7 @@ libs.depends() {
 
 # find samples by name
 samples() {
-    find "$_ROOT/samples" -type f -name "$*" | xargs
+    find "$_ROOT_/samples" -type f -name "$*" | xargs
 }
 
 # locate executable in workdir
@@ -456,11 +456,11 @@ meson.install() {
 _cargo_init() {
     test -z "$_CARGO_READY" || return 0
 
-    # find out rustup: $_WORKDIR > $HOME > system
+    # find out rustup: $_TARGET_WORKDIR > $HOME > system
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
 
     test -f "$HOME/.rustup/settings.toml"     && RUSTUP_HOME="$HOME/.rustup"
-    test -f "$_WORKDIR/.rustup/settings.toml" && RUSTUP_HOME="$_WORKDIR/.rustup"
+    test -f "$_TARGET_WORKDIR/.rustup/settings.toml" && RUSTUP_HOME="$_TARGET_WORKDIR/.rustup"
 
     # set mirrors for toolchain download
     if test -n "$_MIRRORS"; then
@@ -470,9 +470,9 @@ _cargo_init() {
     fi
 
     # XXX: if rust-toolchain.toml exists, writable RUSTUP_HOME is needed
-    #  choose _WORKDIR instead of HOME for docker buildings
+    #  choose _TARGET_WORKDIR instead of HOME for docker buildings
     if test -f rust-toolchain.toml; then
-        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_WORKDIR/.rustup"
+        test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_TARGET_WORKDIR/.rustup"
     fi
 
     if ! which rustup &>/dev/null; then
@@ -486,11 +486,11 @@ _cargo_init() {
         fi
     fi
 
-    # find out cargo: $_WORKDIR > $HOME > $RUSTUP_HOME/cargo
+    # find out cargo: $_TARGET_WORKDIR > $HOME > $RUSTUP_HOME/cargo
     : "${CARGO_HOME:=$RUSTUP_HOME/cargo}"
 
     test -x "$HOME/.cargo/bin/cargo"     && CARGO_HOME="$HOME/.cargo"
-    test -x "$_WORKDIR/.cargo/bin/cargo" && CARGO_HOME="$_WORKDIR/.cargo"
+    test -x "$_TARGET_WORKDIR/.cargo/bin/cargo" && CARGO_HOME="$_TARGET_WORKDIR/.cargo"
 
     # docker image RUSTUP_HOME may not be writable
     if test -w "$RUSTUP_HOME"; then
@@ -506,7 +506,7 @@ _cargo_init() {
     # a writable CARGO_HOME is required, refer to cargo.requires()
     # XXX: set CARGO_HOME differ from where cargo is will cause rustup update fails
     #   => set CARGO_HOME again for local crates and cache
-    test -w "$CARGO_HOME" || CARGO_HOME="$_WORKDIR/.cargo"
+    test -w "$CARGO_HOME" || CARGO_HOME="$_TARGET_WORKDIR/.cargo"
 
     export CARGO_HOME RUSTUP_HOME CARGO RUSTC
 
@@ -766,11 +766,11 @@ _go_init() {
     test -z "$GOROOT" || export PATH="$GOROOT/bin:$PATH"
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    #  using _ROOT/.go when build with docker =>  go cache can be reused. otherwise
+    #  using _ROOT_/.go when build with docker =>  go cache can be reused. otherwise
     #  set GOPATH in host profile
-    export GOPATH="${GOPATH:-$_ROOT/.go}"
-    #export GOCACHE="$_ROOT/.go/go-build"
-    export GOMODCACHE="$_ROOT/.go/pkg/mod" # OR pkg installed to workdir
+    export GOPATH="${GOPATH:-$_ROOT_/.go}"
+    #export GOCACHE="$_ROOT_/.go/go-build"
+    export GOMODCACHE="$_ROOT_/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -1093,9 +1093,9 @@ cmdlet.pkgfile() {
 
     # v3/manifest: name pkgfile sha build
     # clear versioned records
-    sed -i "\#^$1 $pkgfile #d" "$_MANIFEST"
+    sed -i "\#^$1 $pkgfile #d" "$_TARGET_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_TARGET_MANIFEST"
 
     popd || die "popd failed."
 }
@@ -1105,7 +1105,7 @@ cmdlet.pkgfile() {
 cmdlet.disclaim() {
     local x
     for x in "$@"; do
-        sed -i "\#\ $libs_name/.*@$x#d" "$_MANIFEST" || true
+        sed -i "\#\ $libs_name/.*@$x#d" "$_TARGET_MANIFEST" || true
     done
 }
 
