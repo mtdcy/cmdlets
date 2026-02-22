@@ -794,11 +794,6 @@ _prepare() {
 
     _load "$1" || die "load $1 failed."
 
-    if [ "$libs_type" = ".PHONY" ]; then
-        slogw "<<<<<" "skip dummy target $libs_name"
-        return 127
-    fi
-
     test -n "$libs_url" || die "missing libs_url"
 
     # enter working directory
