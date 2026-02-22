@@ -1337,6 +1337,11 @@ target.changed() {
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"
     : "${OLDHEAD:="HEAD~1"}"
 
+    # is tag point at HEAD?
+    if test -n "$TAG" && git tag --points-at HEAD | grep -qF "$TAG"; then
+        OLDHEAD="HEAD~1"
+    fi
+
     OLDHEAD="$(git rev-parse "$OLDHEAD")"
     while read -r libs; do
         # file been deleted or renamed
