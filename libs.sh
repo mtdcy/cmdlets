@@ -221,6 +221,9 @@ _capture() {
 _tty_reset() {
     [ "$_LOGGING" = "tty" ] || return 0
 
+    # bash 3.2: wait for all jobs
+    wait
+
     tput ed         # clear to end of screen
     tput smam       # line break on
     tput sgr0       # reset colors
