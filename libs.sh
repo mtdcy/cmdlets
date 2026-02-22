@@ -1366,6 +1366,8 @@ env() {
 }
 
 gcc.macros() {
+    _init_target
+
     echo | "$CC" -dM -E -
 }
 
