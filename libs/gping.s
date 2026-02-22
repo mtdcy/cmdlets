@@ -2,7 +2,7 @@
 libs_desc="Ping, but with a graph"
 
 # rust-lld: warning: /data/cmdlets/out/x86_64-w64-mingw32/gping-1.20.1/target/release/build/libz-sys-9495903dea35b1c1/out/lib/libz.a: archive member 'f0389296f42960e9-compress.o' is neither ET_REL nor LLVM bitcode
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 libs_lic='MIT'
 libs_ver=1.20.1

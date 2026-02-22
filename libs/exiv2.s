@@ -3,7 +3,7 @@
 
 # meson.build:23:4: ERROR: Problem encountered: Non UCRT MinGW is unsupported. Please update toolchain
 #  TODO: prepare ucrt
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic="GPLv2.0+"

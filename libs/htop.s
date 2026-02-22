@@ -1,6 +1,6 @@
 # Improved top (interactive process viewer)
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_name=htop

@@ -1,6 +1,6 @@
 # Bourne-Again SHell, a UNIX command interpreter
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic="GPL-3.0-or-later"

@@ -1,7 +1,7 @@
 # Command-line pager for JSON data
 
 # err: failed to read `/data/cmdlets/out/x86_64-w64-mingw32/jless-0.9.0/target/x86_64-pc-windows-gnu/release/.fingerprint/jless-282fe945ee5c104a/bin-jless`
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic=MIT

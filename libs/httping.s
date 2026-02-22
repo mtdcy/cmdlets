@@ -2,7 +2,7 @@
 
 # fatal error: sys/socket.h: No such file or directory
 #  depends on posix socket
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic='AGPL'

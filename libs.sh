@@ -45,7 +45,7 @@ fi
 #   _TARGET         : target triplet for compiler prefix
 #
 #   _TARGET_ARCH    : target architecture triplet
-#   _TARGET_NAME    : target name like linux, windows, macos
+#   _TARGET_NAME    : target name like linux, darwin, windows
 #   _TARGET_VARS    : target variables for is_xxx
 #   _TARGET_REPO    : target pkgfiles repo
 #

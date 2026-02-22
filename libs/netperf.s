@@ -1,6 +1,6 @@
 # Netperf is a benchmark that can be used to measure the performance of many different types of networking.
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
