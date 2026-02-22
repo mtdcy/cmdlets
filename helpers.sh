@@ -177,15 +177,6 @@ make.install() {
     slogcmd "$MAKE" install -j1 "$@" || die "make.install $libs_name failed."
 }
 
-_remove_ccache() {
-    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-    # meson cross file do not accept ccache
-    CC="${CC#ccache }"
-    CXX="${CXX#ccache }"
-
-    export CC CXX
-}
-
 # setup cmake environments
 _cmake_init() {
     test -z "$_CMAKE_READY" || return 0
@@ -194,8 +185,6 @@ _cmake_init() {
     : "${LIBS_BUILDDIR:=build-$PPID}"
 
     export LIBS_BUILDDIR
-
-    _remove_ccache
 
     if test -n "$_TARGET"; then
         case "$_TARGET" in
@@ -337,8 +326,6 @@ _meson_init() {
     : "${LIBS_BUILDDIR:=build-$PPID}"
 
     export LIBS_BUILDDIR
-
-    _remove_ccache
 
     # cross compile
     if is_mingw; then
@@ -517,9 +504,6 @@ _cargo_init() {
     #export CARGO_LOG=cargo::core::compiler::fingerprint=trace,cargo_util::paths=trace
     export CARGO_LOG=cargo::core::compiler=trace
     export CC_ENABLE_DEBUG_OUTPUT=1
-
-    # not all options/envs works with 'ccache gcc'
-    _remove_ccache
 
     # search for libraries in PREFIX
     #  => linker=$LD fails for some crates
