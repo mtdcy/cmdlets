@@ -348,10 +348,12 @@ _init_target() {
     # find out CC
     if test -n "$_TARGET"; then
         CC="$_TARGET-gcc"
-    elif host.is_linux && which $(uname -m)-linux-musl-gcc &>/dev/null; then
-        CC="$(uname -m)-linux-musl-gcc"
     else
-        CC=gcc
+        case "$BUILDER_NAME" in
+            linux/*)    CC="$(uname -m)-linux-musl-gcc" ;;
+            mingw/*)    CC="$(uname -m)-w64-mingw32"    ;;
+            *)          CC=gcc                          ;;
+        esac
     fi
 
     case "$OSTYPE" in
@@ -491,7 +493,7 @@ _init_target() {
     # rpath is meaningless for static libraries and executables, and
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
-    
+
     # ccache settings
     which ccache &>/dev/null    || CCACHE_DISABLE=1
     is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
