@@ -9,15 +9,6 @@ FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
 . libs/ffmpeg/common.s
 
-install_ffmpeg_libs() {
-    pkgconf "$1" -l"$1"
-
-    cmdlet.pkginst lib$1                \
-        include/lib$1   lib$1/*.h       \
-        lib             lib$1/lib$1.a   \
-        lib/pkgconfig   $1.pc
-}
-
 libs_build() {
     if version.ge 7.1.3; then
         # bug since 7.1.3, see libavcodec/vlc.c:530
@@ -30,16 +21,29 @@ libs_build() {
         die "configure ffmpeg failed."
     }
 
+    # no docs
+    sed -i Makefile \
+        -e '/doc\/Makefile/d' \
+        -e '/doc\/examples\/Makefile/d' \
+
 	make
 
-    # install libs headers progs
-    install_ffmpeg_libs avutil
-    install_ffmpeg_libs avformat
-    install_ffmpeg_libs avcodec
-    install_ffmpeg_libs swscale
-    install_ffmpeg_libs swresample
-    install_ffmpeg_libs avfilter
-    install_ffmpeg_libs avdevice
+    # support install seperate libraries
+    sed -i ffbuild/common.mak \
+        -e '/^FFLIBS /{
+                s/:=/=/;
+                s/\$(FFLIBS)//;
+            }'
+
+    # skip unneeded files
+    sed -i Makefile \
+        -e '/tools\/Makefile/d' \
+        -e '/fftools\/Makefile/d' \
+        -e '/tests\/Makefile/d' \
+
+    for x in avutil avcodec avformat swscale swresample avfilter avdevice; do
+        cmdlet.pkgfile "lib$x" -- make.install FFLIBS="$x"
+    done
 
     # install tools
     cmdlet.install ffmpeg
