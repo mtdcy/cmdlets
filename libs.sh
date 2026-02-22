@@ -702,21 +702,18 @@ _fetch_git() {
     fi
 }
 
-_package_name() {
-    local package
-    # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
-    if [[ "${1##*/}" =~ ^v?[0-9.]{2} ]]; then
-        local path
-        IFS=':/' read -r _ _ _ _ path <<< "$1"
-        package="$_PACKAGES/$libs_name/${path//\//_}"
-    else
-        package="$_PACKAGES/$libs_name/${1##*/}"
-    fi
+# extract zip file name from url
+_zipfile() {
+    local tar="${1##*/}"
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
-    package="${package%\?*}"
+    tar="${tar%\?*}"
 
-    echo "$package"
+    # https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
+    [[ "${1##*/}" =~ ^[vr]?[0-9.]{2} ]] && tar="$libs_name-$tar"
+
+    # full path
+    echo "$_PACKAGES/$libs_name/$tar"
 }
 
 # unzip url to workdir or die
@@ -727,7 +724,7 @@ _fetch_unzip() {
         _fetch_git "${@:2}" "${2##*/}"
     else
         # assemble zip name from url
-        local zip="$(_package_name "$2")"
+        local zip="$(_zipfile "$2")"
 
         # download zip file
         _fetch "$zip" "$1" "${@:2}"
@@ -816,7 +813,7 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                local file="$(_package_name "$patch")"
+                local file="$(_zipfile "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
@@ -1289,14 +1286,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_package_name "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "$libs_url"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _fetch "$(_package_name "$url")" "$sha" "$url"
+                _fetch "$(_zipfile "$url")" "$sha" "$url"
             done
         fi
     done
@@ -1380,9 +1377,9 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _fetch "$(_package_name "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
+    _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
 
-    IFS=' ' read -r sha _ < <(sha256sum "$(_package_name "$libs_url")")
+    IFS=' ' read -r sha _ < <(sha256sum "$(_zipfile "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
     slogw "<<<<< updated $libs_name => $libs_ver >>>>>"
