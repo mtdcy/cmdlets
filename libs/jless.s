@@ -1,6 +1,6 @@
 # Command-line pager for JSON data
 
-# err: failed to read `/data/cmdlets/out/x86_64-w64-mingw32/jless-0.9.0/target/x86_64-pc-windows-gnu/release/.fingerprint/jless-282fe945ee5c104a/bin-jless`
+# jless depends termion, which is *nix only
 libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
@@ -9,17 +9,21 @@ libs_ver=0.9.0
 libs_url=https://github.com/PaulJuliusMartinez/jless/archive/refs/tags/v0.9.0.tar.gz
 libs_sha=43527a78ba2e5e43a7ebd8d0da8b5af17a72455c5f88b4d1134f34908a594239
 
-is_linux && libs_dep+=( libxcb )
+is_linux && libs_deps+=( libxcb )
 
 # configure args
 libs_args=(
+    --release
 )
 
 libs_build() {
     # fix dependencies of static libxcb
-    export RUSTFLAGS="-L $PREFIX/lib -l static=Xau -l static=Xdmcp"
+    #export RUSTFLAGS="-L $PREFIX/lib -l static=Xau -l static=Xdmcp"
+    is_listed libxcb libs_deps && libs.requires xcb
 
-    cargo.setup 
+    cargo.requires
+
+    cargo.setup
 
     cargo.build
 
