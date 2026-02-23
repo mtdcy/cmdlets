@@ -315,7 +315,6 @@ _init_host() {
         "TAR:gtar,tar"
         "FILE:file"
         "PRINTF:printf" # supersedes shell's printf
-        "PKG_CONFIG:pkg-config"
     )
 
     is_arm64 || host_tools+=(
@@ -384,25 +383,39 @@ _init_target() {
 
     # toolchain utils
     export CC
-    export AR="${CC/%gcc/ar}"
-    export AS="${CC/%gcc/as}"
-    export LD="${CC/%gcc/ld}"
-    export NM="${CC/%gcc/nm}"
     export CXX="${CC/%gcc/g++}"
-    export STRIP="${CC/%gcc/strip}"
-    export RANLIB="${CC/%gcc/ranlib}"
+
+    # binutils
+    local binutils=(
+        AR:ar
+        AS:as
+        LD:ld
+        NM:nm
+        STRIP:strip
+        RANLIB:ranlib
+        PKG_CONFIG:pkg-config
+    )
 
     # target specific toolchain utils
     case "$("$CC" -dumpmachine)" in
-        *-w64-*|*-mingw32)
-            # Windows resource compiler
-            export WINDRES="${CC/%gcc/windres}"
-            export DLLTOOL="${CC/%gcc/dlltool}"
-            ;;
+        *-w64-*|*-mingw32)  binutils+=( WINDRES:windres DLLTOOL:dlltool ) ;;
     esac
 
-    # target pkg-config
-    test -x "${CC/%gcc/pkg-config}" && export PKG_CONFIG="${CC/%gcc/pkg-config}"  || true
+    # XXX: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ar: No such file or directory
+    _init_target_binutils() {
+        local x k v
+        for x in "$@"; do
+            IFS=':' read -r k v <<< "$x"
+            eval $k="\${CC/%gcc/$v}"
+            if ! test -x "${!k}"; then
+                slogw ".Init" "${!k} not found."
+                eval $k="\$(which $v)"
+            fi
+            test -x "${!k}" || sloge ".Init" "$v not found."
+            export $k
+        done
+    }
+    _init_target_binutils "${binutils[@]}"
 
     # force posix compatible, e.g: libwinpthread
     test -x "$CC-posix"  && export CC="$CC-posix"   || true
