@@ -871,7 +871,7 @@ _prepare() {
 }
 
 # compile target
-compile() {
+_compile() {
     _init_target
 
     # ccache settings
@@ -941,32 +941,26 @@ _deps_load() {( _load "$1" &>/dev/null && echo "${libs_deps[@]}" )}
 
 # generate or update dependencies map
 _deps_init() {
-    _init_target
-
     test -z "$_DEPS_READY" || return 0
 
-    export _DEPS_FILE="$_TARGET_WORKDIR/.dependencies"
+    _init_target
+
+    export _DEPS_FILE="$_TARGET_WORKDIR/.deps"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
     local libs
     if test -s "$_DEPS_FILE"; then
+        # update dependencies
         while IFS='/.' read -r _ libs _; do
-            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
-
-            # update dependency
-            sed -i "/^$libs/d" "$_DEPS_FILE"
-            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
-        done < <(find libs -maxdepth 1 -type f -newer "$_DEPS_FILE")
+            sed -i "/^$libs:/d" "$_DEPS_FILE"
+            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s" )
     else
-        for libs in libs/*.s; do
-            IFS='/.' read -r _ libs _ <<< "$libs"
-
-            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
-
-            # write dependency
-            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
-        done
+        # write dependencies
+        while IFS='/.' read -r _ libs _; do
+            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <( find libs -maxdepth 1 -type f -name "*.s" )
     fi
     export _DEPS_READY=1
 }
@@ -977,7 +971,7 @@ depends() {
     _deps_init
 
     local list=() libs deps x
-    while IFS=' ' read -r libs deps; do
+    while IFS=': ' read -r libs deps; do
         test -n "$deps" || continue
         #is_listed "$libs" "$@" || continue
 
@@ -985,7 +979,7 @@ depends() {
             is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "^($*)" "$_DEPS_FILE")
+    done < <(IFS='|'; grep -E "^($*):" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -997,13 +991,13 @@ rdepends() {
     _deps_init
 
     local list=() libs x
-    while IFS=' ' read -r libs _; do
+    while IFS=': ' read -r libs _; do
         is_listed "$libs" "$@" && continue
 
         for x in "$libs" $(rdepends "$libs"); do
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
+    done < <(IFS='|'; grep -E " ($*)" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -1148,7 +1142,7 @@ build() {
                 continue
             }
 
-            time compile "$name" || fails+=( "$name" )
+            time _compile "$name" || fails+=( "$name" )
         done
 
         test -z "${fails[*]}" || {
@@ -1318,11 +1312,6 @@ search() {
     done
 }
 
-# load libname
-load() {
-    _load "$1"
-}
-
 # fetch libname
 fetch() {
     test -n "$*" || set -- $(_target_ls_changed)
@@ -1353,7 +1342,8 @@ prepare() {
 
     _init_target
 
-    slogi "prepare $*"
+    _deps_fetch "$@"
+
     for x in "$@"; do
         ( _prepare "$x"; )
     done

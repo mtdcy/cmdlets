@@ -123,8 +123,8 @@ libs.requires() {
 _version_ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
 _version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
 
-version.ge() { _version_ge "$libs_ver" "$1"; }
-version.le() { _version_le "$libs_ver" "$1"; }
+version.ge()  { _version_ge "$libs_ver" "$1";                            }
+version.le()  { _version_le "$libs_ver" "$1";                            }
 
 bootstrap() {
     if test -f autogen.sh; then
@@ -133,6 +133,42 @@ bootstrap() {
         slogcmd ./bootstrap     || die "bootstrap failed."
     elif test -f configure.ac; then
         slogcmd autoreconf -fiv || die "autoreconf failed."
+    fi
+}
+
+# invoke just before configure or xxx.setup
+# shellcheck disable=SC2016
+_setup() {
+    # env for xxx-config
+    if test -x "$PREFIX/bin/krb5-config"; then
+        export KRB5_CONFIG="$PREFIX/bin/krb5-config"
+    fi
+
+    if test -x "$PREFIX/bin/xml2-config"; then
+        export XML2_CONFIG="$PREFIX/bin/xml2-config"
+    fi
+
+    if test -x "$PREFIX/bin/pcre2-config"; then
+        export PCRE_CONFIG="$PREFIX/bin/pcre2-config"
+    fi
+
+    if test -f configure; then
+        sed -i configure                            \
+            -e 's/\<pkg-config\>/\$PKG_CONFIG/g'    \
+            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'       \
+            || die "setup configure failed."
+        #1. replace pkg-config with PKG_CONFIG env
+        #2. replace PKGCONFIG with PKG_CONFIG
+
+        # apply PCRE_CONFIG if pcre2-config been used directly
+        if grep -Fwq pcre2-config configure && ! grep -Fwq PCRE_CONFIG configure; then
+            #1. $(pcre2-config --cflags-posix) => ngrep
+            #2. `pcre2-config --cflags-posix`
+            sed -i configure                                                        \
+                -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g'   \
+                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g'     \
+                || die "setup configure failed."
+        fi
     fi
 }
 
@@ -949,7 +985,7 @@ _make_install() {
 }
 
 # create pkgfile
-_make_pkfile() {
+_make_pkgfile() {
     local files=()
 
     # preprocessing installed files
@@ -971,13 +1007,15 @@ _make_pkfile() {
                 ;;
             *.pc)
                 # shellcheck disable=SC2016
-                sed -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
-                    -e "s%$PREFIX%\${prefix}%g" \
-                    -i "$x"
+                sed -i "$x"                                     \
+                    -e 's%^prefix=.*$%prefix=\${PREFIX}%'       \
+                    -e "s%$PREFIX%\${prefix}%g"                 \
+                    || die "update $x failed."
                 ;;
             *.cmake)
-                sed -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" \
-                    -i "$x"
+                sed -i "$x"                                     \
+                    -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g"   \
+                    || die "update $x failed."
                 ;;
             bin/*)
                 test -f "$x" || x="$x$_BINEXT"  # tar will report error if not exists
@@ -995,9 +1033,10 @@ _make_pkfile() {
                                 # replace hardcoded PREFIX with env
                                 #1. prefix may be single quoted => replace prefix= first
                                 #2. replace others with ${prefix}
-                                sed -i "$x" \
-                                    -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
-                                    -e "s%$PREFIX%\${prefix}%g"
+                                sed -i "$x"                                         \
+                                    -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%"  \
+                                    -e "s%$PREFIX%\${prefix}%g"                     \
+                                    || die "update $x failed."
                                 ;;
                         esac
                     ;;
@@ -1042,7 +1081,7 @@ cmdlet.pkgfile() {
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
 
-    _make_pkfile "$pkgfile" "${files[@]}"
+    _make_pkgfile "$pkgfile" "${files[@]}"
 
     # there is a '*' when run sha256sum in msys
     #sha256sum "$pkgfile" >> "$pkginfo"
@@ -1422,40 +1461,6 @@ hack.pcre2() {
                 s/--cflags(.*)/--cflags libpcre2\1/g;
                 s/--libs(.*)/--libs libpcre2\1/g;
             }'
-}
-
-# invoke just before configure or xxx.setup
-# shellcheck disable=SC2016
-_setup() {
-    # env for xxx-config
-    if test -x "$PREFIX/bin/krb5-config"; then
-        export KRB5_CONFIG="$PREFIX/bin/krb5-config"
-    fi
-
-    if test -x "$PREFIX/bin/xml2-config"; then
-        export XML2_CONFIG="$PREFIX/bin/xml2-config"
-    fi
-
-    if test -x "$PREFIX/bin/pcre2-config"; then
-        export PCRE_CONFIG="$PREFIX/bin/pcre2-config"
-    fi
-
-    if test -f configure; then
-        sed -i configure \
-            -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
-            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'
-        #1. replace pkg-config with PKG_CONFIG env
-        #2. replace PKGCONFIG with PKG_CONFIG
-
-        # apply PCRE_CONFIG if pcre2-config been used directly
-        if grep -Fwq pcre2-config configure && ! grep -Fwq PCRE_CONFIG configure; then
-            #1. $(pcre2-config --cflags-posix) => ngrep
-            #2. `pcre2-config --cflags-posix`
-            sed -i configure \
-                -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g' \
-                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g'
-        fi
-    fi
 }
 
 visibility.hidden() {
