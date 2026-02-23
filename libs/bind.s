@@ -1,7 +1,7 @@
 # Implementation of the DNS protocols
 
 # 
-libs_targets=( macos )
+libs_targets=( darwin )
 
 # shellcheck disable=SC2034
 libs_lic='MPL-2.0'

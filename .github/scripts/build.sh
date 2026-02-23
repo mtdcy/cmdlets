@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 info() {
     echo -e "🐳\\033[34m [$(date '+%Y/%m/%d %H:%M:%S')] $* \\033[0m" >&2
@@ -35,7 +35,7 @@ if test -n "$1"; then
 else
     TAG="$(bash libs.sh target)"
 
-    IFS=' ' read -r -a cmdlets < <(bash libs.sh list.changed "$TAG")
+    IFS=' ' read -r -a cmdlets < <(bash libs.sh target.changed "$TAG")
 
     # build cmdlet and rdepends by default
     rdepends=1
@@ -64,17 +64,6 @@ fi
 
 # for release actions
 bash libs.sh zip_files || true
-
-# 127: build cmdlets fails instead of rdepends
-if test -n "$TAG" && [ "$ret" -eq 0 -o "$ret" -ne 127 ]; then
-	git tag -a "$TAG" -m "$TAG" --force
-
-    # push only if no local changes
-    branch=$(git rev-parse --abbrev-ref HEAD)
-    if git diff --quiet "$branch" "origin/$branch"; then
-        git push origin "$TAG" --force
-    fi
-fi
 
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed

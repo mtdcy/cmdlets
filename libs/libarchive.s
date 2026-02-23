@@ -32,7 +32,7 @@ libs_args=(
     --disable-shared
     --enable-static
 )
-   
+
 # use pcre2 intead of libc/libgnurx regex for all targets
 is_listed pcre2 libs_deps && libs_args+=( --enable-posix-regex-lib=libpcre2posix )
 
@@ -55,7 +55,7 @@ is_listed libiconv libs_deps && libs_args+=( --with-iconv  ) || libs_args+=( --w
 # cmake build can't not handle static libraries properly
 libs_build() {
     # configure has problem with static pcre2
-    export LIBS="$($PKG_CONFIG --libs-only-l libpcre2-posix)"
+    export LIBS="$($PKG_CONFIG --libs-only-l libpcre2-posix libiconv)"
 
     bootstrap
 

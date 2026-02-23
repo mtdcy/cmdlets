@@ -6,7 +6,7 @@ on:
     paths:
       - libs/**.s
     branches:
-      - mingw64
+      - main
 
   workflow_dispatch:
     inputs:
@@ -31,17 +31,24 @@ jobs:
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
 
           targets=(
+            # apple
+            arm64-apple-darwin 
+            # x86_64-apple-darwin
+            # linux
             x86_64-linux-gnu
+            aarch64-linux-gnu
+            # windows
             x86_64-w64-mingw32
           )
-
-          if test -n "${{ github.event.inputs.cmdlets }}"; then
-            ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
-          else
+          cmdlets=( "${{ github.event.inputs.cmdlets }}" )
+          if test -z "${cmdlets[*]}"; then
             for x in "${targets[@]}"; do
-              CMDLET_TARGET="$x" ./.github/scripts/prepare.sh
+              cmdlets+=( $(bash libs.sh target.changed "$x") )
             done
+            IFS=' ' read -r -a cmdlets < <(printf '%s\n' "${cmdlets[@]}" | sort -u | xargs)
           fi
+
+          ./.github/scripts/prepare.sh "${cmdlets[@]}"
 
       - name: Upload packages
         uses: actions/upload-artifact@v3
@@ -50,7 +57,7 @@ jobs:
           path: |
             packages
 
-      - name: Deploy packages
+      - name: Deploy (rsync)
         # uses: burnett01/rsync-deployments@7.0.1
         uses: https://git.mtdcy.top/actions/rsync@7.0.1
         with:
@@ -64,7 +71,7 @@ jobs:
 
   build:
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.machine }}
     container:
       image: ${{ matrix.builder }}
       options: --privileged
@@ -73,9 +80,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # for arm64-apple-darwin or x86_64-apple-darwin
+          - machine: macos-latest
+          # for x86_64-linux-gnu
+          - machine: ubuntu-latest
+            builder: lcr.io/mtdcy/builder:ubuntu-22.04
+          # for aarch64-linux-gnu
+          - machine: ubuntu-latest-arm
+            builder: lcr.io/mtdcy/builder:ubuntu-22.04
           # for x86_64-w64-mingw32
-          - builder: lcr.io/mtdcy/builder:mingw64-latest
-          - builder: lcr.io/mtdcy/builder:ubuntu-22.04
+          - machine: ubuntu-latest
+            builder: lcr.io/mtdcy/builder:mingw64-latest
 
     steps:
       - name: Checkout
@@ -98,13 +113,6 @@ jobs:
 
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
           export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
-
-          case "${{ matrix.builder }}" in
-            *mingw64*)  export CMDLET_TARGET="$(uname -m)-w64-mingw32"  ;;
-            *)          export CMDLET_TARGET="$(uname -m)-linux-musl"   ;;
-          esac
-
-          which nproc && export CMDLET_NJOBS=$(nproc) || true
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'

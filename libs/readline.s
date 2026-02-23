@@ -3,20 +3,23 @@
 # BE CAREFUL: macOS provide libedit
 libs_stable=1
 
+READLINE_URL=https://mirrors.tuna.tsinghua.edu.cn/gnu/readline
+
 # shellcheck disable=SC2034
 libs_lic='GPLv3.0+'
 libs_ver=8.3
 libs_url=(
-    https://mirrors.ustc.edu.cn/gnu/readline/readline-$libs_ver.tar.gz
+    $READLINE_URL/readline-$libs_ver.tar.gz
     https://ftpmirror.gnu.org/gnu/readline/readline-$libs_ver.tar.gz
 )
 libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
+
 libs_deps=( ncurses )
 
 libs_resources=(
-    https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-001
-    https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-002
-    https://ftp.gnu.org/gnu/readline/readline-8.3-patches/readline83-003
+    $READLINE_URL/readline-$libs_ver-patches/readline83-001
+    $READLINE_URL/readline-$libs_ver-patches/readline83-002
+    $READLINE_URL/readline-$libs_ver-patches/readline83-003
 )
 
 # https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-readline
@@ -57,6 +60,9 @@ libs_build() {
     # hack: readline do not respect LDFLAGS
     export CFLAGS="$CFLAGS $LDFLAGS"
 
+    # force ncurses: --with-curses not working
+    is_listed ncurses libs_deps && export bash_cv_termcap_lib=libncurses
+
     configure
 
     make
@@ -69,6 +75,8 @@ libs_build() {
     pkgfile libreadline -- make install-static
 
     cmdlet.install readline
+
+    cmdlet.check readline
 }
 
 

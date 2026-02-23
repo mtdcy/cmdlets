@@ -1,6 +1,6 @@
 # Library for userspace RCU (read-copy-update)
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic='MIT'

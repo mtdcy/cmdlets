@@ -26,9 +26,27 @@ jobs:
       - name: Fetch packages
         shell: bash
         run: |-
+          set -ex
+
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
 
-          ./.github/scripts/prepare.sh "${{ github.event.inputs.cmdlets }}"
+          targets=(
+            # apple
+            arm64-apple-darwin 
+            # x86_64-apple-darwin
+            # linux
+            x86_64-linux-gnu
+            aarch64-linux-gnu
+          )
+          cmdlets=( "${{ github.event.inputs.cmdlets }}" )
+          if test -z "${cmdlets[*]}"; then
+            for x in "${targets[@]}"; do
+              cmdlets+=( $(bash libs.sh target.changed "$x") )
+            done
+            IFS=' ' read -r -a cmdlets < <(printf '%s\n' "${cmdlets[@]}" | sort -u | xargs)
+          fi
+
+          ./.github/scripts/prepare.sh "${cmdlets[@]}"
 
       - name: Upload packages
         uses: actions/upload-artifact@v4
@@ -79,15 +97,12 @@ jobs:
 
           export CMDLET_REPO=flat+https://github.com/mtdcy/cmdlets/releases/download
 
-          arch="$(bash libs.sh arch)"
-          echo "arch=$arch" | tee -a "$GITHUB_OUTPUT"
-
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
           git config user.name "bot"
           git config user.email "bot@noreply.mtdcy.top"
 
-          make tag  # always tag as release is always
+          echo "arch=$(bash libs.sh target)" | tee -a "$GITHUB_OUTPUT"
 
           ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
 

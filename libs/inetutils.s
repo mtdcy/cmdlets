@@ -1,5 +1,7 @@
 # GNU utilities for networking
 
+libs_targets=( ! windows )
+
 # shellcheck disable=SC2034
 libs_lic='GPL-3.0+'
 libs_ver=2.7
