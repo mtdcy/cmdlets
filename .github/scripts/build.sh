@@ -65,17 +65,6 @@ fi
 # for release actions
 bash libs.sh zip_files || true
 
-# 127: build cmdlets fails instead of rdepends
-if test -n "$TAG" && [ "$ret" -eq 0 -o "$ret" -ne 127 ]; then
-	git tag -a "$TAG" -m "$TAG" --force
-
-    # push only if no local changes
-    branch=$(git rev-parse --abbrev-ref HEAD)
-    if git diff --quiet "$branch" "origin/$branch"; then
-        git push origin "$TAG" --force
-    fi
-fi
-
 if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---

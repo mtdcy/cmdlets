@@ -1125,6 +1125,8 @@ build() {
         return 127
     }
 
+    target.tag
+
     # build rdepends
     is_true CMDLET_CHECK || return 0
 
@@ -1290,7 +1292,7 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
@@ -1322,9 +1324,22 @@ target() {
 target.tag() {
     local TAG="${1:-$(target)}"
     local HEAD="${2:-HEAD}"
+    local branch=$(git rev-parse --abbrev-ref "$HEAD")
+
+    if git ls-remote --exit-code origin "$branch" &>/dev/null; then
+        slogi "MKTAG" "$TAG => $HEAD"
+    else
+        slogw "MKTAG" "no tag to local branch"
+        return 0 # no error code
+    fi
 
 	git tag -a "$TAG" -m "$TAG" --force "$HEAD"
-	git push origin "$TAG" --force
+
+    # push if no local changes
+    if git diff --quiet "$branch" "origin/$branch"; then
+        slogi ".PUSH" "$TAG => origin/$branch"
+        git push origin "$TAG" --force
+    fi
 }
 
 # list changed cmdlets for target
