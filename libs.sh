@@ -972,6 +972,8 @@ _deps_init() {
 }
 
 depends() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _deps_init
 
     local list=() libs deps x
@@ -990,6 +992,8 @@ depends() {
 
 # dependence (reverse dependencies)
 rdepends() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _deps_init
 
     local list=() libs x
@@ -1081,6 +1085,13 @@ _deps_missing() {
 # build targets and its dependencies
 # build <lib list>
 build() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
+    if test -z "$*"; then
+        slogw "*** no cmdlets to build ***"
+        return
+    fi
+
     _init_target
 
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
@@ -1314,6 +1325,8 @@ load() {
 
 # fetch libname
 fetch() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     slogi "fetch packages $*"
     local libs x
     for libs in "$@"; do
@@ -1336,6 +1349,8 @@ fetch() {
 
 # prepare libraries source codes
 prepare() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _init_target
 
     slogi "prepare $*"
@@ -1361,7 +1376,8 @@ _git_ls_remote() {
 _git_ls_local() {
     local HEAD="${1:-$(git branch --show-current)}"
 
-    ! git diff --name-only --exit-code "$HEAD" "origin/HEAD"
+    # no origin/HEAD in workflows, why?
+    ! git diff --name-only --exit-code "$HEAD" "origin/main"
 }
 
 # make target tag on given commit or HEAD
@@ -1388,7 +1404,7 @@ _make_target_tag() {
 }
 
 # list changed cmdlets for target
-target.changed() {
+_target_ls_changed() {
     local TAG="${1:-$(target)}" list=() libs
 
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"

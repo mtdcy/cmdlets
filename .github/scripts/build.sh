@@ -35,22 +35,11 @@ if test -n "$1"; then
 else
     TAG="$(bash libs.sh target)"
 
-    IFS=' ' read -r -a cmdlets < <(bash libs.sh target.changed "$TAG")
-
     # build cmdlet and rdepends by default
     rdepends=1
 fi
 
-# default test target
-#[ -n "${cmdlets[*]}" ] || cmdlets=(ALL)
-test -n "${cmdlets[*]}" || {
-    info "*** no cmdlets, exit ***"
-    exit 0
-}
-
 ret=0
-
-info "*** build cmdlets: ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
     export CMDLET_PKGFILES=0

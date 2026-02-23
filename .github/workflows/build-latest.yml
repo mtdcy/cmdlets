@@ -43,7 +43,7 @@ jobs:
           cmdlets=( "${{ github.event.inputs.cmdlets }}" )
           if test -z "${cmdlets[*]}"; then
             for x in "${targets[@]}"; do
-              cmdlets+=( $(bash libs.sh target.changed "$x") )
+              cmdlets+=( $(bash libs.sh _target_ls_changed "$x") )
             done
             IFS=' ' read -r -a cmdlets < <(printf '%s\n' "${cmdlets[@]}" | sort -u | xargs)
           fi
