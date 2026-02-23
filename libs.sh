@@ -1125,6 +1125,8 @@ build() {
         return 127
     }
 
+    _make_target_tag || true
+
     # build rdepends
     is_true CMDLET_CHECK || return 0
 
@@ -1290,7 +1292,7 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "$libs_url"
+        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
@@ -1317,14 +1319,43 @@ target() {
     echo "$_TARGET_ARCH"
 }
 
+# print remote branch hash
+# return 0 if remote exists
+_git_ls_remote() {
+    local HEAD="${1:-$(git branch --show-current)}"
+
+    git ls-remote --exit-code origin "$HEAD" | awk '{print $1}'
+}
+
+# print local changes
+# return 0 if change exists
+_git_ls_local() {
+    local HEAD="${1:-$(git branch --show-current)}"
+
+    ! git diff --name-only --exit-code "$HEAD" "origin/HEAD"
+}
+
 # make target tag on given commit or HEAD
 #  inputs: <target name> [commit id]
-target.tag() {
+_make_target_tag() {
     local TAG="${1:-$(target)}"
     local HEAD="${2:-HEAD}"
 
+    # tag if remote branch exists
+    if ! _git_ls_remote >/dev/null; then
+        slogw "MKTAG" "no local branch tag"
+        return 0 # no error code
+    fi
+
+    slogi "MKTAG" "$TAG => $HEAD"
+
 	git tag -a "$TAG" -m "$TAG" --force "$HEAD"
-	git push origin "$TAG" --force
+
+    # push if no local changes
+    if ! _git_ls_local >/dev/null; then
+        slogi ".PUSH" "$TAG => origin"
+        git push origin "$TAG" --force
+    fi
 }
 
 # list changed cmdlets for target
@@ -1334,24 +1365,17 @@ target.changed() {
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"
     : "${OLDHEAD:="HEAD~1"}"
 
-    # is tag point at HEAD?
-    if test -n "$TAG" && git tag --points-at HEAD | grep -qF "$TAG"; then
-        OLDHEAD="HEAD~1"
-    fi
-
     OLDHEAD="$(git rev-parse "$OLDHEAD")"
-    while read -r libs; do
+
+    # is tag point at HEAD?
+    [ "$OLDHEAD" = "$(git rev-parse HEAD)" ] && OLDHEAD="HEAD~1" || true
+
+    while IFS='/' read -r _ libs; do
         # file been deleted or renamed
-        test -e "$libs" || continue
+        test -e "libs/$libs" || continue
 
-        # only top dir
-        [ "${libs%/*}" = "libs" ] && libs="${libs#*/}" || continue
-
-        # exclude _xxx
-        [[ "$libs" =~ ^_ ]] && continue
-
-        is_listed "${libs%.s}" list || list+=( "${libs%.s}" )
-    done < <(git diff --name-only $OLDHEAD..HEAD | grep "^libs/.*\.s")
+        list+=( "${libs%.s}" )
+    done < <( _git_ls_local "$OLDHEAD" | grep -E "^libs/[^/]+\.s" )
 
     echo "${list[@]}"
 }
