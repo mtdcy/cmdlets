@@ -1,5 +1,7 @@
 # X.Org: Interface to the X Window System protocol
 
+libs_targets=( linux darwin )
+
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=1.17.0
