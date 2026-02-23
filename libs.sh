@@ -1093,20 +1093,18 @@ build() {
 
     slogi "BUILD" "$*"
 
-    local libs=() rdeps=() x
+    local libs=() x
 
     # check dependencies: rebuild libs
     IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
-    IFS=' ' read -r -a rdeps < <( rdepends "$@" )
 
     # dependencies
     slogi "-DEPS" "${libs[*]}"
 
-    # reverse dependencies
-    slogi "+DEPS" "${rdeps[*]}"
-
     # sort and append requested libs
-    libs+=( $(_deps_sort "$@") )
+    libs+=( "$@" )
+
+    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
     _load_targets() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
 
@@ -1158,14 +1156,17 @@ build() {
     # build rdepends
     is_true CMDLET_CHECK || return 0
 
-    IFS=' ' read -r -a rdeps < <( _deps_sort "${rdeps[@]}" )
+    # reverse dependencies
+    IFS=' ' read -r -a libs < <( rdepends "$@" )
 
-    slogi "BUILD" "rdepends: ${rdeps[*]}"
+    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
+
+    slogi "+DEPS" "${libs[*]}"
 
     # always use pkgfiles for rdepends
-    CMDLET_PKGFILES=1 _deps_fetch "${rdeps[@]}"
+    CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
 
-    _compile_targets "${rdeps[@]}" || sloge "build rdepends failed #$?."
+    _compile_targets "${libs[@]}" || sloge "build rdepends failed #$?."
 }
 
 # v3/git releases
