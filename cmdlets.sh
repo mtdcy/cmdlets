@@ -37,6 +37,7 @@ curl -fsIL --connect-timeout 1 -o /dev/null "$REPO" || unset REPO
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
 
 INSTALLERS=(
+    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/v1.0.x/cmdlets.sh"
     "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
     "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
 )
