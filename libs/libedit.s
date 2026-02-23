@@ -1,6 +1,6 @@
 # BSD-style licensed readline alternative
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'

@@ -1,5 +1,8 @@
 # OpenCL ICD Loader
-#
+
+# darwin: use OpenCL.framework instead
+libs_targets=( linux windows )
+
 # shellcheck disable=SC2034
 libs_lic="GPL"
 libs_ver=2025.07.22
@@ -37,7 +40,7 @@ libs_build() {
     if is_mingw; then
         # always build as libOpenCL.a
         sed -i CMakeLists.txt \
-            -e '/OpenCL PROPERTIES PREFIX ""/d' 
+            -e '/OpenCL PROPERTIES PREFIX ""/d'
     fi
 
     # build OpenCL ICD Loader

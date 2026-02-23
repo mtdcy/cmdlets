@@ -1,6 +1,6 @@
 # Improved top (interactive process viewer)
 
-libs_targets=( linux macos )
+libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_name=htop
@@ -20,15 +20,19 @@ libs_args=(
 )
 
 libs_build() {
-    # wrong htop_git_version
+    #1. wrong htop_git_version
     sed -i configure.ac \
         -e 's/\[git describe.*\]/[echo '']/'
 
+    #2. no -static LDFLAGS for darwin
+    #   => BUILD_STATIC is enough for darwin
+    is_darwin && sed -i '/FLAGS -static/d' configure.ac
+
     bootstrap
 
-    configure 
+    configure
 
-    make 
+    make
 
     cmdlet.install htop
 

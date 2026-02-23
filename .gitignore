@@ -2,7 +2,7 @@ prebuilts/
 packages/
 out/
 logs/
-cmdlets.env
+cmdlets.env*
 .ccache
 *.swp
 .DS_Store
@@ -16,3 +16,4 @@ pkg-config.log
 .rustup
 .ssh_token
 .history
+toolchain.log
