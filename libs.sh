@@ -750,6 +750,21 @@ _fetch_unzip() {
     fi
 }
 
+# filter libs_tar
+_supported_targets() {
+    if test -z "$*"; then
+        echo "${_TARGET_NAMES[@]}"
+    elif [ "$1" != "!" ]; then
+        echo "$@"
+    else
+        local list=( "${_TARGET_NAMES[@]}" ) x
+        for x in "${@:2}"; do
+            list=( "${list[@]/$x}" )
+        done
+        echo "${list[@]}"
+    fi
+}
+
 # _load library
 _load() {
     _init_target
@@ -772,8 +787,8 @@ _load() {
     # update libs_dep to libs_deps, make old build compatible
     test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
 
-    # targets
-    test -n "$libs_targets" || libs_targets=( "${_TARGET_NAMES[@]}" )
+    # supported targets
+    IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}" )
 
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
