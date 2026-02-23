@@ -176,7 +176,7 @@ _setup() {
 configure() {
     _setup
 
-    local cmd std=()
+    local cmd
 
     test -f configure && cmd="./configure" || cmd="../configure"
 
@@ -184,14 +184,16 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    is_match "--prefix=.*" "$@" || std+=( --prefix="$PREFIX" )
+    local args=( "${libs_args[@]}" "$@" )
+
+    list_has args "--prefix=.*" || args+=( --prefix="$PREFIX" )
 
     if is_xbuild; then
         # some libraries use --target instead of --host, e.g: libvpx
-        { "$cmd" --help || true; } | grep -q -- "--host=" && std+=( --host="$_TARGET" ) || true
+        { "$cmd" --help || true; } | grep -q -- "--host=" && args+=( --host="$_TARGET" ) || true
     fi
 
-    slogcmd "$cmd" "${std[@]}" "${libs_args[@]}" "$@" || die "configure $libs_name failed."
+    slogcmd "$cmd" "${args[@]}" || die "configure $libs_name failed."
 }
 
 make() {
@@ -670,22 +672,13 @@ cargo.build() {
         echo -e "---\n"
     } | _LOGGING=silent _capture
 
-    # cargo fetch do not respect CARGO_BUILD_TARGET
-    slogcmd "$CARGO" fetch --locked --target "$CARGO_BUILD_TARGET" || die "cargo.setup $libs_name failed."
-
-    # _NJOBS => CARGO_BUILD_JOBS
-    local std=(
-        -vvv
-        #--message-format=human
-    )
-
     # std < libs_args < user args
     std+=( "${libs_args[@]}" "$@" )
 
     # default: release
-    is_match "--release|--profile" std || std+=( --release )
+    list_has std "--release|--profile" || std+=( --release )
 
-    is_match "-j|--jobs" std || std+=( -j "$_NJOBS" )
+    list_has std "-j|--jobs" || std+=( -j "$_NJOBS" )
 
     # If the --target flag (or build.target) is used, then
     # the build.rustflags will only be passed to the compiler for the target.

@@ -12,8 +12,8 @@ set -e -o pipefail
 
 # bash 3.2
 {
-    export BASH_COMPAT=3.2  # bash 4.3
-    shopt -s compat32       # bash 5.0
+    export BASH_COMPAT=3.2  # bash 4.3+
+    shopt -s compat32       # bash 5.0+
 } 2>/dev/null || true
 
 umask  0022
@@ -118,14 +118,22 @@ is_listed() {
     fi
 }
 
-is_match() {
-    if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
-        #declare -n _lref="$2"
-        local _lname="$2"
-        eval "local _lref=( \"\${$_lname[@]}\" )"
-        [[ " ${_lref[*]} " =~ " "$1" " ]];
+# list element test
+#   list_has LIST ELEM            # single match
+#   list_has LIST "ELEM=.*"       # regex match
+#   list_has LIST "ELEM1|ELEM2"   # OR match
+#   list_has LIST ELEM1 ELEM2 ... # AND match
+list_has() {
+    #declare -n _lref="$1" # bash 4.3+
+    local _lname="$1" e
+    eval "local _lref=( \"\${$_lname[@]}\" )"
+
+    if [ $# -eq 2 ]; then
+        [[ " ${_lref[*]} " =~ " "$2" " ]]
     else
-        [[ " ${*:2} " =~ " "$1" " ]];
+        for e in "${@:2}"; do
+            [[ " ${_lref[*]} " =~ " "$e" " ]] || return 1
+        done
     fi
 }
 
@@ -138,12 +146,13 @@ is_musl()           { is_listed musl            _TARGET_VARS;   }
 is_win64()          { is_listed w64             _TARGET_VARS;   }
 is_mingw()          { is_listed mingw32         _TARGET_VARS;   }
 is_posix()          { is_listed posix           _TARGET_VARS;   }
-is_arm64()          { is_match  "arm64|aarch64" _TARGET_VARS;   }
-is_intel()          { is_match  "x86_64|x86"    _TARGET_VARS;   }
 
-host.is_glibc()     { is_listed GLIBC           _HOST_VARS;     }
-host.is_linux()     { is_listed linux           _HOST_VARS;     }
-host.is_darwin()    { is_match  "darwin*"       _HOST_VARS;     }
+is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64";    }
+is_intel()          { list_has _TARGET_VARS     "x86_64|x86";       }
+
+host.is_glibc()     { is_listed GLIBC           _HOST_VARS;         }
+host.is_linux()     { is_listed linux           _HOST_VARS;         }
+host.is_darwin()    { list_has _HOST_VARS       "darwin.*";         }
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
