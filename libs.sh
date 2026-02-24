@@ -895,6 +895,7 @@ _compile() {
     ( # always start subshell before _load()
 
         trap _tty_reset EXIT
+        trap 'exit 1'   INT     # ctrl-c
 
         set -eo pipefail
 
@@ -1481,7 +1482,10 @@ _on_exit() {
     rm -rf "$TEMPDIR"
 }
 
-TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
+TEMPDIR="$(mktemp -d)"
+
+trap _on_exit EXIT
+trap 'exit 1' INT   # ctrl-c
 
 _init_host || exit 110
 
