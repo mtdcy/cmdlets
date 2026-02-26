@@ -119,6 +119,15 @@ libs.requires() {
     export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 }
 
+_libs_init() {
+    local x
+    for x in "${libs_deps[@]}"; do
+        case "$x" in
+            #glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
+        esac
+    done
+}
+
 # return 0 if $1 >= $2
 _version_ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
 _version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
@@ -218,6 +227,8 @@ make.install() {
 # setup cmake environments
 _cmake_init() {
     test -z "$_CMAKE_READY" || return 0
+
+    _libs_init
 
     # defaults:
     : "${LIBS_BUILDDIR:=build-$PPID}"
@@ -361,6 +372,8 @@ cmake.install() {
 _meson_init() {
     test -z "$_MESON_READY" || return 0
 
+    _libs_init
+
     : "${LIBS_BUILDDIR:=build-$PPID}"
 
     export LIBS_BUILDDIR
@@ -435,12 +448,6 @@ meson.setup() {
 
     local x std=()
 
-    for x in "${libs_deps[@]}"; do
-        case "$x" in
-            glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
-        esac
-    done
-
     # meson builtin options: https://mesonbuild.com/Builtin-options.html
     #  libdir: some package prefer install to lib/<machine>/
     std+=(
@@ -480,6 +487,8 @@ meson.install() {
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
 _cargo_init() {
     test -z "$_CARGO_READY" || return 0
+
+    _libs_init
 
     # find out rustup: $_TARGET_WORKDIR > $HOME > system
     : "${RUSTUP_HOME:=$HOME/.rustup}"   # toolchain and configurations
@@ -723,6 +732,8 @@ cargo.locate() {
 
 _go_init() {
     test -z "$_GO_READY" || return 0
+
+    _libs_init
 
     # defaults:
     # CGO_ENABLED=0 is necessary for build static binaries except macOS
