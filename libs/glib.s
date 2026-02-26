@@ -11,7 +11,7 @@ libs_lic=LGPLv2.1+
 libs_ver=2.86.3
 libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=ad0718637e4b91bbf4732e609cea8b06117bfcea8ddc036477bebf43939aab9f
-libs_dep=( zlib pcre2 libiconv libffi )
+libs_dep=( zlib pcre2 libiconv libffi libintl )
 
 is_mingw && libs_dep+=( cppwinrt )
 
@@ -70,16 +70,19 @@ libs_build() {
     # ERROR: Subproject gvdb is buildable: NO
     rm -rf subprojects/gvdb
 
+    # sed -i '/libintl_deps/d' glib/meson.build
     libs.requires iconv
 
     if is_mingw; then
         libs.requires libwinrt
 
-        # Dependency intl found: YES unknown (cached)
-        # meson.build:2345:2: ERROR: Assert failed: libintl.type_name() == 'internal'
-        #  => build fails after internal libintl installed
-        sed -i '/assert(libintl.*internal.)/d' meson.build
     fi
+
+    # stub libintl:
+    # Dependency intl found: YES unknown (cached)
+    # meson.build:2345:2: ERROR: Assert failed: libintl.type_name() == 'internal'
+    #  => build fails after internal libintl installed
+    sed -i '/assert(libintl.*internal.)/d' meson.build
 
     meson.setup
 
@@ -87,8 +90,9 @@ libs_build() {
 
     # TODO: update meson.build instead
     # Fix libiconv dependency
-    sed -e '/Requires:/s/$/& libiconv/' \
-        -i meson-private/glib-2.0.pc || die
+    #sed -e '/Requires:/s/$/& libiconv/' \
+    #    -i meson-private/glib-2.0.pc || die
+    pkgconf meson-private/glib-2.0.pc libiconv
 
     pkgfile libglib -- meson.install --tags devel
 
