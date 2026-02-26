@@ -12,8 +12,8 @@ set -e -o pipefail
 
 # bash 3.2
 {
-    export BASH_COMPAT=3.2  # bash 4.3
-    shopt -s compat32       # bash 5.0
+    export BASH_COMPAT=3.2  # bash 4.3+
+    shopt -s compat32       # bash 5.0+
 } 2>/dev/null || true
 
 umask  0022
@@ -118,14 +118,22 @@ is_listed() {
     fi
 }
 
-is_match() {
-    if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
-        #declare -n _lref="$2"
-        local _lname="$2"
-        eval "local _lref=( \"\${$_lname[@]}\" )"
-        [[ " ${_lref[*]} " =~ " "$1" " ]];
+# list element test
+#   list_has LIST ELEM            # single match
+#   list_has LIST "ELEM=.*"       # regex match
+#   list_has LIST "ELEM1|ELEM2"   # OR match
+#   list_has LIST ELEM1 ELEM2 ... # AND match
+list_has() {
+    #declare -n _lref="$1" # bash 4.3+
+    local _lname="$1" e
+    eval "local _lref=( \"\${$_lname[@]}\" )"
+
+    if [ $# -eq 2 ]; then
+        [[ " ${_lref[*]} " =~ " "$2" " ]]
     else
-        [[ " ${*:2} " =~ " "$1" " ]];
+        for e in "${@:2}"; do
+            [[ " ${_lref[*]} " =~ " "$e" " ]] || return 1
+        done
     fi
 }
 
@@ -138,12 +146,13 @@ is_musl()           { is_listed musl            _TARGET_VARS;   }
 is_win64()          { is_listed w64             _TARGET_VARS;   }
 is_mingw()          { is_listed mingw32         _TARGET_VARS;   }
 is_posix()          { is_listed posix           _TARGET_VARS;   }
-is_arm64()          { is_match  "arm64|aarch64" _TARGET_VARS;   }
-is_intel()          { is_match  "x86_64|x86"    _TARGET_VARS;   }
 
-host.is_glibc()     { is_listed GLIBC           _HOST_VARS;     }
-host.is_linux()     { is_listed linux           _HOST_VARS;     }
-host.is_darwin()    { is_match  "darwin*"       _HOST_VARS;     }
+is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64";    }
+is_intel()          { list_has _TARGET_VARS     "x86_64|x86";       }
+
+host.is_glibc()     { is_listed GLIBC           _HOST_VARS;         }
+host.is_linux()     { is_listed linux           _HOST_VARS;         }
+host.is_darwin()    { list_has _HOST_VARS       "darwin.*";         }
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
@@ -825,13 +834,13 @@ _prepare() {
 
     _load "$1" || die "load $1 failed."
 
-    test -n "$libs_url" || die "missing libs_url"
-
     # enter working directory
     _prepare_workdir
 
-    # libs_url: support mirrors
-    _fetch_unzip "$libs_sha" "${libs_url[@]}"
+    if test -n "$libs_url"; then
+        # libs_url: support mirrors
+        _fetch_unzip "$libs_sha" "${libs_url[@]}"
+    fi
 
     local x patch
 
@@ -871,7 +880,7 @@ _prepare() {
 }
 
 # compile target
-compile() {
+_compile() {
     _init_target
 
     # ccache settings
@@ -886,6 +895,7 @@ compile() {
     ( # always start subshell before _load()
 
         trap _tty_reset EXIT
+        trap 'exit 1'   INT     # ctrl-c
 
         set -eo pipefail
 
@@ -941,41 +951,37 @@ _deps_load() {( _load "$1" &>/dev/null && echo "${libs_deps[@]}" )}
 
 # generate or update dependencies map
 _deps_init() {
-    _init_target
-
     test -z "$_DEPS_READY" || return 0
 
-    export _DEPS_FILE="$_TARGET_WORKDIR/.dependencies"
+    _init_target
+
+    export _DEPS_FILE="$_TARGET_WORKDIR/.deps"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
     local libs
     if test -s "$_DEPS_FILE"; then
+        # update dependencies
         while IFS='/.' read -r _ libs _; do
-            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
-
-            # update dependency
-            sed -i "/^$libs/d" "$_DEPS_FILE"
-            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
-        done < <(find libs -maxdepth 1 -type f -newer "$_DEPS_FILE")
+            sed -i "/^$libs:/d" "$_DEPS_FILE"
+            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s" )
     else
-        for libs in libs/*.s; do
-            IFS='/.' read -r _ libs _ <<< "$libs"
-
-            [[ "$libs" =~ ^_ || "$libs" == ALL ]] && continue
-
-            # write dependency
-            echo "$libs $(_deps_load "$libs")" >> "$_DEPS_FILE"
-        done
+        # write dependencies
+        while IFS='/.' read -r _ libs _; do
+            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+        done < <( find libs -maxdepth 1 -type f -name "*.s" )
     fi
     export _DEPS_READY=1
 }
 
 depends() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _deps_init
 
     local list=() libs deps x
-    while IFS=' ' read -r libs deps; do
+    while IFS=': ' read -r libs deps; do
         test -n "$deps" || continue
         #is_listed "$libs" "$@" || continue
 
@@ -983,23 +989,25 @@ depends() {
             is_listed "$x" "$@" && continue
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "^($*)" "$_DEPS_FILE")
+    done < <(IFS='|'; grep -E "^($*):" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
 
 # dependence (reverse dependencies)
 rdepends() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _deps_init
 
     local list=() libs x
-    while IFS=' ' read -r libs _; do
+    while IFS=': ' read -r libs _; do
         is_listed "$libs" "$@" && continue
 
         for x in "$libs" $(rdepends "$libs"); do
             is_listed "$x" "${list[@]}" || list+=( "$x" )
         done
-    done < <(IFS='|'; grep -Ew "$*" "$_DEPS_FILE")
+    done < <(IFS='|'; grep -E " ($*)" "$_DEPS_FILE")
 
     echo "${list[@]}"
 }
@@ -1081,6 +1089,13 @@ _deps_missing() {
 # build targets and its dependencies
 # build <lib list>
 build() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
+    if test -z "$*"; then
+        slogw "*** no cmdlets to build ***"
+        return
+    fi
+
     _init_target
 
     slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
@@ -1096,7 +1111,7 @@ build() {
     local libs=() x
 
     # check dependencies: rebuild libs
-    IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
+    IFS=' ' read -r -a libs  < <( _deps_missing compat "$@" )
 
     # dependencies
     slogi "-DEPS" "${libs[*]}"
@@ -1137,7 +1152,7 @@ build() {
                 continue
             }
 
-            time compile "$name" || fails+=( "$name" )
+            time _compile "$name" || fails+=( "$name" )
         done
 
         test -z "${fails[*]}" || {
@@ -1151,7 +1166,7 @@ build() {
         return 127
     }
 
-    target.tag
+    _make_target_tag || true
 
     # build rdepends
     is_true CMDLET_CHECK || return 0
@@ -1307,13 +1322,10 @@ search() {
     done
 }
 
-# load libname
-load() {
-    _load "$1"
-}
-
 # fetch libname
 fetch() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     slogi "fetch packages $*"
     local libs x
     for libs in "$@"; do
@@ -1336,9 +1348,12 @@ fetch() {
 
 # prepare libraries source codes
 prepare() {
+    test -n "$*" || set -- $(_target_ls_changed)
+
     _init_target
 
-    slogi "prepare $*"
+    _deps_fetch "$@"
+
     for x in "$@"; do
         ( _prepare "$x"; )
     done
@@ -1361,12 +1376,13 @@ _git_ls_remote() {
 _git_ls_local() {
     local HEAD="${1:-$(git branch --show-current)}"
 
-    ! git diff --name-only --exit-code "$HEAD" "origin/HEAD"
+    # no origin/HEAD in workflows, why?
+    ! git diff --name-only --exit-code "$HEAD" "origin/main"
 }
 
 # make target tag on given commit or HEAD
 #  inputs: <target name> [commit id]
-target.tag() {
+_make_target_tag() {
     local TAG="${1:-$(target)}"
     local HEAD="${2:-HEAD}"
 
@@ -1388,7 +1404,7 @@ target.tag() {
 }
 
 # list changed cmdlets for target
-target.changed() {
+_target_ls_changed() {
     local TAG="${1:-$(target)}" list=() libs
 
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"
@@ -1466,7 +1482,10 @@ _on_exit() {
     rm -rf "$TEMPDIR"
 }
 
-TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
+TEMPDIR="$(mktemp -d)"
+
+trap _on_exit EXIT
+trap 'exit 1' INT   # ctrl-c
 
 _init_host || exit 110
 

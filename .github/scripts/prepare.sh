@@ -14,7 +14,7 @@ info "*** $CMDLET_TARGET: prepare ${cmdlets[*]} ***"
 
 if [[ "$cmdlets" =~ -$ ]]; then
     bash libs.sh fetch $(bash libs.sh depends "${cmdlets[@]%-}") "${cmdlets[@]%-}"
-elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
+elif [[ "$cmdlets" =~ \+$ ]]; then
     bash libs.sh fetch "${cmdlets[@]%+}" $(bash libs.sh rdepends "${cmdlets[@]%+}")
 else
     bash libs.sh fetch "${cmdlets[@]}"
