@@ -1111,7 +1111,7 @@ build() {
     local libs=() x
 
     # check dependencies: rebuild libs
-    IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
+    IFS=' ' read -r -a libs  < <( _deps_missing compat "$@" )
 
     # dependencies
     slogi "-DEPS" "${libs[*]}"

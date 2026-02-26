@@ -11,7 +11,6 @@ libs_dep=( zlib bzip2 zstd xz )
 
 # musl missing some glibc features
 if is_musl; then
-    libs_dep+=( libargp musl-fts musl-obstack )
 
     # patches from alpine
     # https://gitlab.alpinelinux.org/alpine/aports/-/tree/master/main/elfutils
