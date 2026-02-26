@@ -834,13 +834,13 @@ _prepare() {
 
     _load "$1" || die "load $1 failed."
 
-    test -n "$libs_url" || die "missing libs_url"
-
     # enter working directory
     _prepare_workdir
 
-    # libs_url: support mirrors
-    _fetch_unzip "$libs_sha" "${libs_url[@]}"
+    if test -n "$libs_url"; then
+        # libs_url: support mirrors
+        _fetch_unzip "$libs_sha" "${libs_url[@]}"
+    fi
 
     local x patch
 
