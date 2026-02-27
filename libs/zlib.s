@@ -1,22 +1,19 @@
-#!/bin/bash
-# A Massively Spiffy Yet Delicately Unobtrusive Compression Library
-#   (Also Free, Not to Mention Unencumbered by Patents)
+# zlib replacement with optimizations for "next generation" systems.
 
 # shellcheck disable=SC2034
-libs_name=zlib
-libs_lic="zlib"
-libs_ver=1.3.1
-libs_url=(
-    # has different sha vs office package
-    https://mirrors.wikimedia.org/ubuntu/pool/main/z/zlib/zlib_${libs_ver%.*}.dfsg+really$libs_ver.orig.tar.gz
-    #https://zlib.net/zlib-$libs_ver.tar.gz
-)
-libs_sha=60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb
+libs_lic="Zlib"
+libs_ver=2.3.3
+libs_url=https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.3.3.tar.gz
+libs_sha=f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1
 
 libs_deps=()
 
 # configure args
 libs_args=(
+    -DZLIB_COMPAT=ON
+    -DWITH_GTEST=ON
+
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 # resources: "url;sha"
@@ -26,37 +23,14 @@ libs_resources=
 libs_patches=()
 
 libs_build() {
-    # non standard configure
-    configure --static
+    # disclaim old zlib versions
+    cmdlet.disclaim 1.3.1
 
-    make CC="'$CC'" CFLAGS="'$CFLAGS'"
+    cmake.setup
 
-    cat <<EOF > zlib.pc
-prefix=$PREFIX
-exec_prefix=\${prefix}
-libdir=\${exec_prefix}/lib
-sharedlibdir=\${libdir}
-includedir=\${prefix}/include
+    cmake.build
 
-Name: zlib
-Description: zlib compression library
-Version: $libs_ver
-
-Requires:
-Libs: -L\${libdir} -L\${sharedlibdir} -lz
-Cflags: -I\${includedir}
-EOF
-
-    cmdlet minigzip &&
-
-    pkginst libz \
-            include zlib.h zconf.h \
-            lib libz.a \
-            lib/pkgconfig zlib.pc &&
-
-    # shellcheck source=SCRIPTDIR/libs.sh
-    check minigzip
-
+    cmdlet.pkgfile libz -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
