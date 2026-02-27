@@ -84,9 +84,9 @@ unset PREFIX _ROOT_ CC
 is_true() {
     local opt="$1"
     case "${!opt}" in
-        1|yes)  return 0 ;;
-        0|no)   return 1 ;;
-        *)      test -n "${!opt}" ;;
+        1|yes)  return 0            ;;
+        0|no)   return 1            ;;
+        *)      test -n "${!opt}"   ;;
     esac
 }
 is_false() { ! is_true "$1"; }
@@ -128,31 +128,29 @@ list_has() {
     local _lname="$1" e
     eval "local _lref=( \"\${$_lname[@]}\" )"
 
-    if [ $# -eq 2 ]; then
-        [[ " ${_lref[*]} " =~ " "$2" " ]]
-    else
-        for e in "${@:2}"; do
-            [[ " ${_lref[*]} " =~ " "$e" " ]] || return 1
-        done
-    fi
+    for e in "${@:2}"; do
+        # shellcheck disable=SC2027
+        [[ " ${_lref[*]} " =~ " "$e" " ]] || return 1
+    done
+    return 0
 }
 
 # target check: ready after _init, at least CC is set.
-is_clang()          { is_listed clang           _TARGET_VARS;   }
-is_darwin()         { is_listed apple           _TARGET_VARS;   }
-is_linux()          { is_listed linux           _TARGET_VARS;   }
-is_glibc()          { is_listed gnu             _TARGET_VARS;   }
-is_musl()           { is_listed musl            _TARGET_VARS;   }
-is_win64()          { is_listed w64             _TARGET_VARS;   }
-is_mingw()          { is_listed mingw32         _TARGET_VARS;   }
-is_posix()          { is_listed posix           _TARGET_VARS;   }
+is_clang()          { list_has _TARGET_VARS     clang;           }
+is_darwin()         { list_has _TARGET_VARS     apple;           }
+is_linux()          { list_has _TARGET_VARS     linux;           }
+is_glibc()          { list_has _TARGET_VARS     gnu;             }
+is_musl()           { list_has _TARGET_VARS     musl;            }
+is_win64()          { list_has _TARGET_VARS     w64;             }
+is_mingw()          { list_has _TARGET_VARS     "mingw.*";       }
+is_posix()          { list_has _TARGET_VARS     posix;           }
+is_amd64()          { list_has _TARGET_VARS     x86_64;          }
+is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64"; }
+is_intel()          { list_has _TARGET_VARS     "x86_64|x86";    }
 
-is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64";    }
-is_intel()          { list_has _TARGET_VARS     "x86_64|x86";       }
-
-host.is_glibc()     { is_listed GLIBC           _HOST_VARS;         }
-host.is_linux()     { is_listed linux           _HOST_VARS;         }
-host.is_darwin()    { list_has _HOST_VARS       "darwin.*";         }
+host.is_glibc()     { list_has _HOST_VARS       GLIBC;           }
+host.is_linux()     { list_has _HOST_VARS       linux;           }
+host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
@@ -1137,7 +1135,7 @@ build() {
             # check for supported targets
             for x in "$name" $(depends "$name"); do
                 IFS=' ' read -r -a supported < <( _load_targets "$x" ) || die "load targets failed."
-                is_listed "$_TARGET_NAME" supported || {
+                list_has supported "$_TARGET_NAME" || {
                     slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
                     unset supported
                     break
