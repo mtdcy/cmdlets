@@ -22,7 +22,6 @@ export LANG=C
 # public options    =
       CMDLET_LOGGING=${CMDLET_LOGGING:-tty}     # tty,plain,silent
       CMDLET_MIRRORS=${CMDLET_MIRRORS:-}        # package mirrors, and go/cargo/etc
-       CMDLET_CCACHE=${CMDLET_CCACHE:-0}        # enable ccache or not
          CMDLET_REPO=${CMDLET_REPO:-}           # cmdlet pkgfiles repo
        CMDLET_TARGET=${CMDLET_TARGET:-}
 
@@ -526,13 +525,6 @@ _init_target() {
     # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
     # will help find out the mistakes.
 
-    # ccache settings
-    which ccache &>/dev/null    || CCACHE_DISABLE=1
-    is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
-    is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT_/.ccache/$_TARGET_ARCH"
-
-    export CCACHE_DISABLE CCACHE_DIR
-
     # macos
     export MACOSX_DEPLOYMENT_TARGET
 
@@ -880,15 +872,6 @@ _prepare() {
 # compile target
 _compile() {
     _init_target
-
-    # ccache settings
-    if [ -z "$CCACHE_DISABLE" ] && [ -z "$CCACHE_DIR" ]; then
-        which ccache &>/dev/null    || CCACHE_DISABLE=1
-        is_true CMDLET_CCACHE       || CCACHE_DISABLE=1
-        is_true CCACHE_DISABLE      || CCACHE_DIR="$_ROOT_/.ccache/$_TARGET_ARCH"
-    fi
-
-    export CCACHE_DISABLE CCACHE_DIR
 
     ( # always start subshell before _load()
 
@@ -1473,9 +1456,6 @@ update() {
 
 _on_exit() {
     wait
-
-    # show ccache statistics
-    test -z "$CCACHE_DIR" || ccache -d "$CCACHE_DIR" -s 1>&2
 
     rm -rf "$TEMPDIR"
 }

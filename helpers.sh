@@ -254,12 +254,6 @@ _cmake_init() {
         export CMAKE_POLICY_VERSION_MINIMUM=3.5
     fi
 
-    # extend CC will break cmake build, set CMAKE_C_COMPILER_LAUNCHER instead
-    if [ -z "$CCACHE_DISABLE" ]; then
-        export CMAKE_C_COMPILER_LAUNCHER=ccache
-        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
-    fi
-
     # this env depends on generator, set MAKE or others instead
     #export CMAKE_MAKE_PROGRAM="$MAKE"
 

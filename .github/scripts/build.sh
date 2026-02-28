@@ -10,7 +10,6 @@ pwd -P
 bash --version
 
 export CMDLET_LOGGING=silent
-export CMDLET_CCACHE=0
 export CMDLET_NJOBS="${CMDLET_NJOBS:-1}"
 
 # need to run configure as root

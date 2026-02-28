@@ -11,7 +11,6 @@ all: shell
 CMDLET_NJOBS 	?= $(shell nproc)
 CMDLET_MIRRORS 		?= https://mirrors.mtdcy.top
 CMDLET_LOGGING 		?= tty
-CMDLET_CCACHE 		?= 1
 
 MAKEFLAGS 	+= --always-make
 
@@ -37,7 +36,6 @@ ENVS := CMDLET_NJOBS    \
 		CMDLET_TARGET   \
 		CMDLET_LOGGING  \
 		CMDLET_MIRRORS  \
-		CMDLET_CCACHE   \
 		CMDLET_REPO     \
 
 ##############################################################################
@@ -107,7 +105,7 @@ prepare: prepare-host
 endif
 
 mrproper:
-	rm -rf out prebuilts logs packages .cargo .go .ccache .pip .rustup node_modules
+	rm -rf out prebuilts logs packages .cargo .go .pip .rustup node_modules
 
 .PHONY: clean distclean shell prepare runc test mrproper
 
