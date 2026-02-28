@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
 export CMDLET_LOGGING=silent
-export CMDLET_CCACHE=0
 
 commits="$(mktemp)"
 

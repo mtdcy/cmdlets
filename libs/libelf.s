@@ -1,5 +1,8 @@
 # ELF object file access library
-#
+
+# Linux uses elfutils
+libs_targets=( darwin )
+
 # shellcheck disable=SC2034
 libs_lic=LGPLv2+
 libs_ver=0.8.13
@@ -33,8 +36,5 @@ libs_build() {
             lib             lib/libelf.a \
             lib/pkgconfig   libelf.pc
 }
-
-# Linux use elfutils
-libs.depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
