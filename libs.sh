@@ -329,12 +329,12 @@ _init_host() {
     )
 
     _init_host_tools() {
-        local k v x p
+        local k v x y p
         for x in "$@"; do
             IFS=':' read -r k v <<< "$x"
 
-            for x in ${v//,/ }; do
-                p="$(which "$x" 2>/dev/null)" && break
+            for y in ${v//,/ }; do
+                p="$(which "$y" 2>/dev/null)" && break
             done
 
             test -n "$p" && export "$k=$p" || slogw ".Init" "missing host tool $v"
@@ -349,7 +349,7 @@ _init_host() {
         "$HOSTCC" --version | head -n1  # gcc version
         which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
     } | xargs)
-    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOSTVARS[@]}" | sort -u | xargs)
+    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOST_VARS[@]}" | sort -u | xargs)
 
     # autotools envs
     export CC_FOR_BUILD="$HOSTCC"
