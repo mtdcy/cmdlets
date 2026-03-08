@@ -18,7 +18,7 @@ echo ""
 
 # Cleanup
 rm -rf "$TEST_DIR"
-mkdir -p "$TEST_DIR"
+mkdir -p "$TEST_DIR/prebuilts"
 
 # Copy cmdlet.bat to test directory
 cp "$CMDLET_BAT" "$TEST_DIR/"
@@ -27,18 +27,21 @@ cp "$CMDLET_BAT" "$TEST_DIR/"
 docker run --rm --platform linux/amd64 \
     -v "$TEST_DIR:/workspace" \
     -w /workspace \
-    --privileged \
     lcr.io/mtdcy/builder:mingw64-latest \
     bash -c "
         set -e
+        export WINEDEBUG=-all
+        export HOME=/workspace
+        
         echo '=== Environment ==='
         echo 'OS: Windows (via Wine)'
+        echo 'ARCH: x86_64-windows-gnu'
         echo 'PWD: /workspace'
         echo ''
         
-        # Fetch package
+        # Fetch package using wine
         echo '=== Fetching $TEST_PKG ==='
-        cmd /c cmdlet.bat fetch $TEST_PKG
+        wine cmd.exe /c cmdlet.bat fetch $TEST_PKG
         
         echo ''
         echo '=== Results ==='
