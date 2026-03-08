@@ -20,8 +20,6 @@ REM    cmdlets.bat search curl
 REM    cmdlets.bat remove curl
 REM =============================================================================
 
-setlocal EnableDelayedExpansion
-
 REM Version
 set VERSION=1.0.0
 
@@ -32,259 +30,163 @@ set TEMP_DIR=%TEMP%\cmdlets_%RANDOM%
 
 REM Repository
 if not defined REPO set REPO=https://pub.mtdcy.top/cmdlets/latest
-if not defined ARCH set ARCH=x86_64-windows-gnu
 
-REM Colors (Windows 10+ supports ANSI)
-set "GREEN=[32m"
-set "YELLOW=[33m"
-set "RED=[31m"
-set "CYAN=[36m"
-set "RESET=[39m"
+REM Target Architecture (fixed for Windows)
+set ARCH=x86_64-w64-mingw32
+
+REM Jump to main code (skip function definitions)
+goto :main
 
 REM =============================================================================
 REM Helper Functions
 REM =============================================================================
 
 :info
-echo %GREEN%!RESET!
+echo %~1
 goto :eof
 
 :warn
-echo %YELLOW%!RESET!
+echo %~1
 goto :eof
 
 :die
-echo %RED%!RESET!
+echo %~1
 exit /b 1
 
 :curl
-REM Download file with curl
-set "URL=%~1"
-set "DEST=%~2"
-
-if not defined DEST set "DEST=%TEMP_DIR%\%~n1"
-
+set URL=%~1
+set DEST=%~2
+if not defined DEST set DEST=%TEMP_DIR%\%~n1
 mkdir "%~dp2" 2>nul
-
-echo !info!== curl < !URL!!reset!
-curl -fsL -o "!DEST!" "!URL!"
-if errorlevel 1 (
-    call :die "Failed to download: !URL!"
-)
-echo >> "!DEST!"
+echo == curl < %URL%
+curl -fsL -o "%DEST%" "%URL%"
+if errorlevel 1 call :die "Failed to download: %URL%"
 goto :eof
 
 :unzip
-REM Extract tar.gz file
-set "ARCHIVE=%~1"
-set "DEST=%PREBUILTS%"
-
-echo !info!== Extract !ARCHIVE! to !DEST!!reset!
-tar -xf "!ARCHIVE!" -C "!DEST!"
-if errorlevel 1 (
-    call :die "Failed to extract: !ARCHIVE!"
-)
+set ARCHIVE=%~1
+set DEST=%PREBUILTS%
+echo == Extract %ARCHIVE% to %DEST%
+tar -xf "%ARCHIVE%" -C "%DEST%"
+if errorlevel 1 call :die "Failed to extract: %ARCHIVE%"
 goto :eof
 
 :search_manifest
-REM Search for package in manifest (v3 format)
-set "PATTERN=%~1"
-set "MANIFEST=%PREBUILTS%\.manifest"
-
-if not exist "!MANIFEST!" (
-    call :die "Manifest not found: !MANIFEST!"
-)
-
-findstr /I "!PATTERN!" "!MANIFEST!"
+set PATTERN=%~1
+set MANIFEST=%PREBUILTS%\.manifest
+if not exist "%MANIFEST%" call :die "Manifest not found: %MANIFEST%"
+findstr /I "%PATTERN%" "%MANIFEST%"
 goto :eof
 
-REM =============================================================================
-REM Main Functions
-REM =============================================================================
-
 :fetch
-REM Fetch cmdlet: name
-set "TARGET=%~1"
-
-REM Create temp directory
+set TARGET=%~1
 mkdir "%TEMP_DIR%" 2>nul
-
-REM Parse package name and version
-set "PKGNAME=%TARGET%"
-set "PKGVER="
-set "PKGPATH="
-
-REM Check for version (@version)
-echo "!TARGET!" | findstr "@" >nul
+set PKGNAME=%TARGET%
+set PKGVER=
+set PKGPATH=
+echo %TARGET% | findstr "@" >nul
 if not errorlevel 1 (
-    for /f "tokens=1,2 delims=@" %%A in ("!TARGET!") do (
-        set "PKGNAME=%%A"
-        set "PKGVER=%%B"
+    for /f "tokens=1,2 delims=@" %%A in ("%TARGET%") do (
+        set PKGNAME=%%A
+        set PKGVER=%%B
     )
 )
-
-REM Check for path (pkgname/file)
-echo "!PKGNAME!" | findstr "/" >nul
+echo %PKGNAME% | findstr "/" >nul
 if not errorlevel 1 (
-    for /f "tokens=1,2 delims=/" %%A in ("!PKGNAME!") do (
-        set "PKGPATH=%%A"
-        set "PKGNAME=%%B"
+    for /f "tokens=1,2 delims=/" %%A in ("%PKGNAME%") do (
+        set PKGPATH=%%A
+        set PKGNAME=%%B
     )
 )
-
-REM Build package file name
-if defined PKGVER (
-    set "PKGFILE=!PKGNAME!@!PKGVER!.tar.gz"
-) else (
-    set "PKGFILE=!PKGNAME!.tar.gz"
-)
-
-if defined PKGPATH (
-    set "PKGFILE=!PKGPATH!/!PKGFILE!"
-)
-
-REM Try v3 (manifest-based) first
+if defined PKGVER (set PKGFILE=%PKGNAME%@%PKGVER%.tar.gz) else (set PKGFILE=%PKGNAME%.tar.gz)
+if defined PKGPATH (set PKGFILE=%PKGPATH%/%PKGFILE%)
 if exist "%PREBUILTS%\.manifest" (
-    call :search_manifest "!PKGNAME!" > "%TEMP_DIR%\search.txt"
+    call :search_manifest "%PKGNAME%" > "%TEMP_DIR%\search.txt"
     if exist "%TEMP_DIR%\search.txt" (
-        for /f "tokens=2" %%A in ("%TEMP_DIR%\search.txt") do set "PKGFILE=%%A"
-        if defined PKGFILE (
-            echo !info!#3 Fetch !TARGET! < !PKGFILE!!reset!
-            call :fetch_v3
-            goto :fetch_done
-        )
+        for /f "tokens=2" %%A in ("%TEMP_DIR%\search.txt") do set PKGFILE=%%A
+        if defined PKGFILE (echo #3 Fetch %TARGET% < %PKGFILE% & call :fetch_v3 & goto :fetch_done)
     )
 )
-
-REM Fallback: direct download
-echo !info!#2 Fetch !TARGET!< !PKGFILE!!reset!
+echo #2 Fetch %TARGET% < %PKGFILE%
 call :fetch_direct
-goto :fetch_done
+:fetch_done
+echo %TARGET% >> "%PREBUILTS%\.cmdlets"
+rmdir /s /q "%TEMP_DIR%" 2>nul
+echo ✅ Fetch completed: %TARGET%
+goto :eof
 
 :fetch_v3
-REM Fetch v3 format
-set "PKGURL=!REPO!/!ARCH!/!PKGFILE!"
-call :curl "!PKGURL!" "%TEMP_DIR%\!PKGFILE!"
-call :unzip "%TEMP_DIR%\!PKGFILE!"
+set PKGURL=%REPO%/%ARCH%/%PKGFILE%
+call :curl "%PKGURL%" "%TEMP_DIR%\%PKGFILE%"
+call :unzip "%TEMP_DIR%\%PKGFILE%"
 goto :eof
 
 :fetch_direct
-REM Direct download from repo
-set "PKGURL=!REPO!/!ARCH!/!PKGFILE!"
-call :curl "!PKGURL!" "%TEMP_DIR%\!PKGFILE!"
-call :unzip "%TEMP_DIR%\!PKGFILE!"
-goto :eof
-
-:fetch_done
-REM Update installed list
-echo !TARGET! >> "%PREBUILTS%\.cmdlets"
-
-REM Cleanup
-rmdir /s /q "%TEMP_DIR%" 2>nul
-
-echo !info!✅ Fetch completed: !TARGET!!reset!
+set PKGURL=%REPO%/%ARCH%/%PKGFILE%
+call :curl "%PKGURL%" "%TEMP_DIR%\%PKGFILE%"
+call :unzip "%TEMP_DIR%\%PKGFILE%"
 goto :eof
 
 :list
-REM List installed packages or files
-set "PKGNAME=%~1"
-
-if not exist "%PREBUILTS%\.cmdlets" (
-    echo No packages installed.
-    goto :eof
-)
-
+set PKGNAME=%~1
+if not exist "%PREBUILTS%\.cmdlets" (echo No packages installed. & goto :eof)
 if defined PKGNAME (
-    REM List files for specific package
-    echo === Files for !PKGNAME! ===
-    findstr /B "!PKGNAME! " "%PREBUILTS%\.cmdlets" >nul
-    if errorlevel 1 (
-        echo Package not found: !PKGNAME!
-    ) else (
-        REM List bin directory for this package
-        if exist "%PREBUILTS%\bin\!PKGNAME!*" (
-            dir /b "%PREBUILTS%\bin\!PKGNAME!*" 2>nul
-        )
+    echo === Files for %PKGNAME% ===
+    findstr /B "%PKGNAME% " "%PREBUILTS%\.cmdlets" >nul
+    if errorlevel 1 (echo Package not found: %PKGNAME%) else (
+        if exist "%PREBUILTS%\bin\%PKGNAME%*" (dir /b "%PREBUILTS%\bin\%PKGNAME%*" 2>nul)
     )
 ) else (
-    REM List all installed packages
     echo === Installed Packages ===
     type "%PREBUILTS%\.cmdlets"
-    
     echo.
     echo === Binaries ===
-    if exist "%PREBUILTS%\bin" (
-        dir /b "%PREBUILTS%\bin\*.exe" 2>nul
-    )
+    if exist "%PREBUILTS%\bin" (dir /b "%PREBUILTS%\bin\*.exe" 2>nul)
 )
 goto :eof
 
 :search
-REM Search for packages
-set "PATTERN=%~1"
-
-if not defined PATTERN (
-    call :die "Usage: cmdlets.bat search ^<pattern^]"
-)
-
-echo === Searching for "!PATTERN!" ===
+set PATTERN=%~1
+if not defined PATTERN call :die "Usage: cmdlets.bat search ^<pattern^>"
+echo === Searching for "%PATTERN%" ===
 echo.
-
-REM Search in manifest if exists
 if exist "%PREBUILTS%\.manifest" (
     echo From manifest:
-    findstr /I "!PATTERN!" "%PREBUILTS%\.manifest" | findstr /V "^#" || echo (no matches)
+    findstr /I "%PATTERN%" "%PREBUILTS%\.manifest" | findstr /V "^#" || echo (no matches)
 )
-
 echo.
-echo Repository: !REPO!/!ARCH!/
+echo Repository: %REPO%/%ARCH%/
 echo Note: For full search, visit the repository URL
 goto :eof
 
 :remove
-REM Remove installed package
-set "PKGNAME=%~1"
-
-if not defined PKGNAME (
-    call :die "Usage: cmdlets.bat remove ^<cmdlet^]"
-)
-
-if not exist "%PREBUILTS%\.cmdlets" (
-    call :die "No packages installed"
-)
-
-echo === Removing !PKGNAME! ===
-
-REM Find and remove files
-set "FOUND=0"
+set PKGNAME=%~1
+if not defined PKGNAME call :die "Usage: cmdlets.bat remove ^<cmdlet^>"
+if not exist "%PREBUILTS%\.cmdlets" call :die "No packages installed"
+echo === Removing %PKGNAME% ===
+set FOUND=0
 for /f "tokens=1,*" %%A in ("%PREBUILTS%\.cmdlets") do (
-    if "%%A"=="!PKGNAME!" (
-        set "FOUND=1"
-        echo Removing: %%A
-    )
+    if "%%A"=="%PKGNAME%" (set FOUND=1 & echo Removing: %%A)
 )
-
-if !FOUND! equ 0 (
-    echo Package not found: !PKGNAME!
-    goto :eof
-)
-
-REM Remove from .cmdlets list
-findstr /V "^!PKGNAME! " "%PREBUILTS%\.cmdlets" > "%TEMP_DIR%\cmdlets.tmp"
+if %FOUND% equ 0 (echo Package not found: %PKGNAME% & goto :eof)
+findstr /V "^%PKGNAME% " "%PREBUILTS%\.cmdlets" > "%TEMP_DIR%\cmdlets.tmp"
 move /y "%TEMP_DIR%\cmdlets.tmp" "%PREBUILTS%\.cmdlets" >nul
-
-REM Remove bin files (best effort)
-if exist "%PREBUILTS%\bin\!PKGNAME!*" (
-    del /q "%PREBUILTS%\bin\!PKGNAME!*" 2>nul
-    echo Removed binaries
-)
-
-echo !info!✅ Removed: !PKGNAME!!reset!
+if exist "%PREBUILTS%\bin\%PKGNAME%*" (del /q "%PREBUILTS%\bin\%PKGNAME%*" 2>nul & echo Removed binaries)
+echo ✅ Removed: %PKGNAME%
 goto :eof
 
-REM =============================================================================
-REM Command Dispatcher
-REM =============================================================================
+:main
+if "%~1"=="" goto :help
+set CMD=%~1
+shift
+if /i "%CMD%"=="fetch" (if "%~1"=="" (call :die "Usage: cmdlets.bat fetch ^<cmdlet^]") & call :fetch %* & goto :end)
+if /i "%CMD%"=="list" (call :list %* & goto :end)
+if /i "%CMD%"=="search" (call :search %* & goto :end)
+if /i "%CMD%"=="remove" (call :remove %* & goto :end)
+if /i "%CMD%"=="help" (call :help & goto :end)
+call :die "Unknown command: %CMD%"
+:end
+exit /b 0
 
 :help
 echo cmdlets.bat %VERSION%
@@ -308,46 +210,8 @@ echo   cmdlets.bat remove curl
 echo.
 echo Environment Variables:
 echo   REPO        - Package repository ^(default: https://pub.mtdcy.top/cmdlets/latest^)
-echo   ARCH        - Target architecture ^(default: x86_64-windows-gnu^)
 echo   PREBUILTS   - Installation directory ^(default: current directory^)
+echo.
+echo Notes:
+echo   ARCH is fixed to x86_64-w64-mingw32 for Windows
 goto :eof
-
-REM Main entry point
-if "%~1"=="" goto :help
-
-set "CMD=%~1"
-shift
-
-if /i "%CMD%"=="fetch" (
-    if "%~1"=="" (
-        call :die "Usage: cmdlets.bat fetch ^<cmdlet^]"
-    )
-    call :fetch %*
-    goto :end
-)
-
-if /i "%CMD%"=="list" (
-    call :list %*
-    goto :end
-)
-
-if /i "%CMD%"=="search" (
-    call :search %*
-    goto :end
-)
-
-if /i "%CMD%"=="remove" (
-    call :remove %*
-    goto :end
-)
-
-if /i "%CMD%"=="help" (
-    call :help
-    goto :end
-)
-
-call :die "Unknown command: %CMD%"
-
-:end
-endlocal
-exit /b 0

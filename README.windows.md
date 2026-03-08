@@ -17,11 +17,36 @@
 - ✅ Automatic extraction to `prebuilts/` directory
 - ✅ Track installed packages in `.cmdlets` file
 
+## Quick Start
+
+### 1. Bootstrap (Linux/macOS)
+
+```bash
+./bootstrap.windows.sh
+```
+
+This downloads Windows (mingw64) versions of:
+- `curl.exe` - for downloading packages
+- `tar.exe` (from bsdtar) - for extracting packages
+
+Then copy the `prebuilts/` directory to your Windows environment.
+
+### 2. Using cmdlets.bat (Windows)
+
+```batch
+cmdlets.bat fetch curl
+cmdlets.bat list
+cmdlets.bat search curl
+cmdlets.bat remove curl
+```
+
+---
+
 ## Requirements
 
-- Windows 10 or later (for ANSI color support)
-- `curl.exe` (included in Windows 10+)
-- `tar.exe` (included in Windows 10+)
+- Windows 7 or later
+- `curl.exe` - for downloading packages
+- `tar.exe` or `bsdtar.exe` - for extracting packages
 
 ## Usage
 
