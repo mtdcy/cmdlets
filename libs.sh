@@ -343,14 +343,6 @@ _init_host() {
 
     _init_host_tools "${host_tools[@]}"
 
-    # for host checks (not --host for configure)
-    IFS=' :-()' read -r -a _HOST_VARS < <({
-        echo "$OSTYPE"
-        "$HOSTCC" --version | head -n1  # gcc version
-        which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
-    } | xargs)
-    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOST_VARS[@]}" | sort -u | xargs)
-
     # autotools envs
     export CC_FOR_BUILD="$HOSTCC"
 
