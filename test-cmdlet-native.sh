@@ -10,7 +10,7 @@ PREBUILTS="$TEST_DIR/prebuilts"
 
 # Test configuration
 export REPO="${REPO:-https://pub.mtdcy.top/cmdlets/latest}"
-export ARCH="${ARCH:-x86_64-apple-darwin}"  # Use host arch for native test
+export ARCH="${ARCH:-x86_64-w64-mingw32}"  # Windows target for cmdlet.bat test
 
 echo "=== Native Test for cmdlet.bat Logic ==="
 echo "Repository: $REPO"
@@ -35,7 +35,7 @@ fi
 echo ""
 echo "=== Test 2: Fetch curl Package ==="
 TEST_PKG="curl"
-PKGFILE="$TEST_PKG.tar.gz"
+PKGFILE="curl@8.18.0.tar.gz"
 PKGURL="$REPO/$ARCH/$PKGFILE"
 
 echo "Downloading: $PKGURL"
