@@ -5,9 +5,8 @@ REM
 REM  Copyright (c) 2026, mtdcy.chen@gmail.com
 REM  Licensed under BSD 2-Clause License
 REM
-REM  Usage: cmdlet.bat fetch <cmdlet> [options]
-REM    fetch <cmdlet>              - Download and extract cmdlet package
-REM    fetch <cmdlet> --install    - Also create symlinks (requires admin)
+REM  Usage: cmdlet.bat fetch <cmdlet>
+REM    fetch <cmdlet>    - Download and extract cmdlet package
 REM
 REM  Examples:
 REM    cmdlet.bat fetch bash
@@ -25,8 +24,8 @@ set CMDLETS_DIR=%~dp0
 set PREBUILTS=%CMDLETS_DIR%prebuilts
 set TEMP_DIR=%TEMP%\cmdlets_%RANDOM%
 
-REM Repository (user can override via environment)
-if not defined REPO set REPO=https://github.com/mtdcy/cmdlets/releases/download
+REM Repository
+if not defined REPO set REPO=https://pub.mtdcy.top/cmdlets/latest
 if not defined ARCH set ARCH=x86_64-windows-gnu
 
 REM Colors (Windows 10+ supports ANSI)
@@ -106,19 +105,9 @@ REM Main Functions
 REM =============================================================================
 
 :fetch
-REM Fetch cmdlet: name [options]
-REM Input: name[@version] [--install]
+REM Fetch cmdlet: name
+REM Input: name[@version]
 set "TARGET=%~1"
-set "INSTALL=0"
-
-REM Parse arguments
-shift
-:parse_args
-if "%~1"=="" goto :parse_done
-if /i "%~1"=="--install" set "INSTALL=1"
-shift
-goto :parse_args
-:parse_done
 
 REM Create temp directory
 mkdir "%TEMP_DIR%" 2>nul
@@ -167,9 +156,9 @@ if exist "%PREBUILTS%\.manifest" (
     )
 )
 
-REM Try v2 (sha-based)
+REM Fallback: direct download
 echo !info!#2 Fetch !TARGET!< !PKGFILE!!reset!
-call :fetch_v2
+call :fetch_direct
 goto :fetch_done
 
 :fetch_v3
@@ -179,13 +168,11 @@ call :curl "!PKGURL!" "%TEMP_DIR%\!PKGFILE!"
 call :unzip "%TEMP_DIR%\!PKGFILE!"
 goto :eof
 
-:fetch_v2
-REM Fetch v2 format: sha256 pkgfile
+:fetch_direct
+REM Direct download from repo
 set "PKGURL=!REPO!/!ARCH!/!PKGFILE!"
-call :curl "!PKGURL!" "%TEMP_DIR%\!PKGFILE!.meta"
-for /f "tokens=2" %%A in ("%TEMP_DIR%\!PKGFILE!.meta") do set "REALPKG=%%A"
-call :curl "!REPO!/!ARCH!/!REALPKG!" "%TEMP_DIR%\!REALPKG!"
-call :unzip "%TEMP_DIR%\!REALPKG!"
+call :curl "!PKGURL!" "%TEMP_DIR%\!PKGFILE!"
+call :unzip "%TEMP_DIR%\!PKGFILE!"
 goto :eof
 
 :fetch_done
@@ -208,13 +195,18 @@ echo.
 echo Usage: cmdlet.bat ^<command^> ^[options^]
 echo.
 echo Commands:
-echo   fetch ^<cmdlet^> ^[--install^]  - Download and extract cmdlet package
-echo   help                           - Show this help message
+echo   fetch ^<cmdlet^]    - Download and extract cmdlet package
+echo   help                - Show this help message
 echo.
 echo Examples:
 echo   cmdlet.bat fetch bash
 echo   cmdlet.bat fetch bash@3.2
 echo   cmdlet.bat fetch zlib/minigzip@1.3.1
+echo.
+echo Environment Variables:
+echo   REPO        - Package repository (default: https://pub.mtdcy.top/cmdlets/latest)
+echo   ARCH        - Target architecture (default: x86_64-windows-gnu)
+echo   PREBUILTS   - Installation directory (default: current directory)
 goto :eof
 
 REM Main entry point
@@ -225,7 +217,7 @@ shift
 
 if /i "%CMD%"=="fetch" (
     if "%~1"=="" (
-        call :die "Usage: cmdlet.bat fetch ^<cmdlet^>"
+        call :die "Usage: cmdlet.bat fetch ^<cmdlet^]"
     )
     call :fetch %*
     goto :end
