@@ -39,7 +39,7 @@ PKGFILE="curl/curl@8.18.0.tar.gz"
 PKGURL="$REPO/$ARCH/$PKGFILE"
 
 echo "Downloading: $PKGURL"
-mkdir -p "$TEST_DIR/temp"
+mkdir -p "$TEST_DIR/temp/$(dirname "$PKGFILE")"
 
 if curl -fsL -o "$TEST_DIR/temp/$PKGFILE" "$PKGURL"; then
     echo "✅ Download successful"
