@@ -34,6 +34,9 @@ if not defined REPO set REPO=https://pub.mtdcy.top/cmdlets/latest
 REM Target Architecture (fixed for Windows)
 set ARCH=x86_64-w64-mingw32
 
+REM Add prebuilts bin to PATH
+set PATH=%PREBUILTS%\bin;%PATH%
+
 REM Jump to main code (skip function definitions)
 goto :main
 
@@ -100,15 +103,21 @@ if not errorlevel 1 (
 )
 if defined PKGVER (set PKGFILE=%PKGNAME%@%PKGVER%.tar.gz) else (set PKGFILE=%PKGNAME%.tar.gz)
 if defined PKGPATH (set PKGFILE=%PKGPATH%/%PKGFILE%)
-if exist "%PREBUILTS%\.manifest" (
-    call :search_manifest "%PKGNAME%" > "%TEMP_DIR%\search.txt"
-    if exist "%TEMP_DIR%\search.txt" (
-        for /f "tokens=2" %%A in ("%TEMP_DIR%\search.txt") do set PKGFILE=%%A
-        if defined PKGFILE (echo #3 Fetch %TARGET% < %PKGFILE% & call :fetch_v3 & goto :fetch_done)
-    )
-)
+
+REM Try v3 (manifest-based) first
+if not exist "%PREBUILTS%\.manifest" goto :fetch_v2
+call :search_manifest "%PKGNAME%" > "%TEMP_DIR%\search.txt"
+if not exist "%TEMP_DIR%\search.txt" goto :fetch_v2
+for /f "tokens=2" %%A in ("%TEMP_DIR%\search.txt") do set PKGFILE=%%A
+if not defined PKGFILE goto :fetch_v2
+echo #3 Fetch %TARGET% < %PKGFILE%
+call :fetch_v3
+goto :fetch_done
+
+:fetch_v2
 echo #2 Fetch %TARGET% < %PKGFILE%
 call :fetch_direct
+
 :fetch_done
 echo %TARGET% >> "%PREBUILTS%\.cmdlets"
 rmdir /s /q "%TEMP_DIR%" 2>nul
