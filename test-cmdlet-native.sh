@@ -41,9 +41,10 @@ PKGURL="$REPO/$ARCH/$PKGFILE"
 echo "Downloading: $PKGURL"
 mkdir -p "$TEST_DIR/temp"
 
-if curl -fsL -o "$TEST_DIR/temp/$PKGFILE" "$PKGURL" 2>&1; then
+if curl -fsL -o "$TEST_DIR/temp/$PKGFILE" "$PKGURL"; then
     echo "✅ Download successful"
-    echo "   Size: $(ls -lh "$TEST_DIR/temp/$PKGFILE" | awk '{print $5}')"
+    SIZE=$(ls -lh "$TEST_DIR/temp/$PKGFILE" | awk '{print $5}')
+    echo "   Size: $SIZE"
     
     echo ""
     echo "Extracting to: $PREBUILTS"
