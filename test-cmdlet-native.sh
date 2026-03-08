@@ -35,7 +35,7 @@ fi
 echo ""
 echo "=== Test 2: Fetch curl Package ==="
 TEST_PKG="curl"
-PKGFILE="curl@8.18.0.tar.gz"
+PKGFILE="curl/curl@8.18.0.tar.gz"
 PKGURL="$REPO/$ARCH/$PKGFILE"
 
 echo "Downloading: $PKGURL"
