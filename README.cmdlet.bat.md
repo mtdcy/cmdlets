@@ -1,12 +1,15 @@
-# cmdlet.bat - Windows Package Fetcher
+# cmdlets.bat - Windows Package Manager
 
 ## Overview
 
-`cmdlet.bat` is a Windows batch script for fetching prebuilt packages from the cmdlets repository.
+`cmdlets.bat` is a Windows batch script for managing prebuilt packages from the cmdlets repository.
 
 ## Features
 
 - ✅ Fetch packages from remote repository
+- ✅ List installed packages and files
+- ✅ Search for packages
+- ✅ Remove installed packages
 - ✅ Support versioned packages (`pkg@version`)
 - ✅ Support subdirectory packages (`pkgname/file`)
 - ✅ Manifest-based package resolution (v3)
@@ -22,17 +25,41 @@
 
 ## Usage
 
-### Basic Fetch
+### Fetch Package
 
 ```batch
 REM Fetch latest version
-cmdlet.bat fetch curl
+cmdlets.bat fetch curl
 
 REM Fetch specific version
-cmdlet.bat fetch curl@8.18.0
+cmdlets.bat fetch curl@8.18.0
 
 REM Fetch from subdirectory
-cmdlet.bat fetch zlib/minigzip@1.3.1
+cmdlets.bat fetch zlib/minigzip@1.3.1
+```
+
+### List Installed Packages
+
+```batch
+REM List all installed packages
+cmdlets.bat list
+
+REM List files for specific package
+cmdlets.bat list curl
+```
+
+### Search Packages
+
+```batch
+REM Search for packages
+cmdlets.bat search curl
+```
+
+### Remove Package
+
+```batch
+REM Remove installed package
+cmdlets.bat remove curl
 ```
 
 ### Environment Variables
@@ -47,6 +74,16 @@ set ARCH=x86_64-windows-gnu
 REM Set installation directory
 set PREBUILTS=C:\path\to\prebuilts
 ```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `fetch <cmdlet>` | Download and extract cmdlet package |
+| `list [cmdlet]` | List installed packages or files |
+| `search <pattern>` | Search for packages |
+| `remove <cmdlet>` | Remove installed package |
+| `help` | Show help message |
 
 ## Repository Format
 
@@ -63,7 +100,7 @@ pkgname@version.tar.gz sha256 build_id
 Fallback to direct download from repository:
 
 ```
-<REPO>/<ARCH>/<pkgname>@<version>.tar.gz
+<REPO>/<ARCH>/<pkgname>/<pkgname>@<version>.tar.gz
 ```
 
 ## Testing
@@ -72,7 +109,16 @@ Fallback to direct download from repository:
 
 ```batch
 REM Test fetch curl
-cmdlet.bat fetch curl
+cmdlets.bat fetch curl
+
+REM List installed packages
+cmdlets.bat list
+
+REM Search for packages
+cmdlets.bat search curl
+
+REM Remove package
+cmdlets.bat remove curl
 
 REM Check results
 dir prebuilts\bin
@@ -90,7 +136,7 @@ docker run --rm --platform linux/amd64 \
     -v $(pwd)/test-win:/workspace \
     -w /workspace \
     lcr.io/mtdcy/builder:mingw64-latest \
-    wine cmd.exe /c cmdlet.bat fetch curl
+    wine cmd.exe /c cmdlets.bat fetch curl
 ```
 
 ## Output Structure
@@ -124,6 +170,13 @@ Ensure `tar.exe` is in your PATH (Windows 10+ includes it by default).
 ### "Manifest not found"
 
 This is normal for first-time use. The script will fallback to direct download.
+
+### "Package not found"
+
+Check the repository URL for available packages:
+```
+https://pub.mtdcy.top/cmdlets/latest/x86_64-w64-mingw32/
+```
 
 ## License
 

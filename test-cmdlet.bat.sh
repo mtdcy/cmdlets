@@ -1,17 +1,17 @@
 #!/bin/bash
-# Test cmdlet.bat in Windows environment (mingw64 + wine)
+# Test cmdlets.bat in Windows environment (mingw64 + wine)
 # Usage: ./test-cmdlet.bat.sh [cmdlet]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CMDLET_BAT="$SCRIPT_DIR/cmdlet.bat"
+CMDLET_BAT="$SCRIPT_DIR/cmdlets.bat"
 TEST_DIR="$SCRIPT_DIR/test-win"
 
 # Default test package
 TEST_PKG="${1:-curl}"
 
-echo "=== Testing cmdlet.bat ==="
+echo "=== Testing cmdlets.bat ==="
 echo "Package: $TEST_PKG"
 echo "Image: lcr.io/mtdcy/builder:mingw64-latest"
 echo ""
@@ -20,7 +20,7 @@ echo ""
 rm -rf "$TEST_DIR"
 mkdir -p "$TEST_DIR/prebuilts"
 
-# Copy cmdlet.bat to test directory
+# Copy cmdlets.bat to test directory
 cp "$CMDLET_BAT" "$TEST_DIR/"
 
 # Run in Docker
@@ -41,7 +41,7 @@ docker run --rm --platform linux/amd64 \
         
         # Fetch package using wine
         echo '=== Fetching $TEST_PKG ==='
-        wine cmd.exe /c cmdlet.bat fetch $TEST_PKG
+        wine cmd.exe /c cmdlets.bat fetch $TEST_PKG
         
         echo ''
         echo '=== Results ==='
