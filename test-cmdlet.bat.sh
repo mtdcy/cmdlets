@@ -24,9 +24,10 @@ mkdir -p "$TEST_DIR"
 cp "$CMDLET_BAT" "$TEST_DIR/"
 
 # Run in Docker
-docker run --rm \
+docker run --rm --platform linux/amd64 \
     -v "$TEST_DIR:/workspace" \
     -w /workspace \
+    --privileged \
     lcr.io/mtdcy/builder:mingw64-latest \
     bash -c "
         set -e
