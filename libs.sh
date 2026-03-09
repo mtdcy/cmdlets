@@ -302,7 +302,6 @@ _init_host() {
     _TARGET_WORKDIR="$_ROOT_/out/$_TARGET_ARCH"
     _TARGET_PACKAGES="$_ROOT_/packages"
     _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET_ARCH"
-    _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
 
     mkdir -p "$PREFIX" "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
@@ -519,6 +518,13 @@ _init_target() {
 
     # macos
     export MACOSX_DEPLOYMENT_TARGET
+
+    # prepare v3/manifest
+    export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
+    if ! _fetch_unzip_pkgfile cmdlets.manifest "$_TARGET_MANIFEST"; then
+        true # ignore error for empty cmdlet repo
+        slogw ".Init" "no v3/manifest."
+    fi
 
     # toolchain scripts, for debugging and options embedding
     _init_script() {
@@ -1182,12 +1188,6 @@ _fetch_unzip_pkgfile() {
 }
 
 _fetch_pkgfile() {
-    # always fetch manifest
-    if ! test -f "$TEMPDIR/manifest"; then
-        _fetch_unzip_pkgfile cmdlets.manifest "$_TARGET_MANIFEST" || die "fetch manifest failed."
-        true > "$TEMPDIR/manifest"
-    fi
-
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
