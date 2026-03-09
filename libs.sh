@@ -603,7 +603,9 @@ _init_target() {
     fi
 }
 
-# _curl source destination [options]
+# curl url
+#  input: url zip
+#  env: CURL_TIMEOUT=3
 _curl() {
     local source="$1"
 
@@ -620,6 +622,7 @@ _curl() {
 
 # fetch zip from cache...mirror...urls
 #  input: zip urls...
+#  env: _MIRRORS
 _curl_urls() {
     local zip="$1"
 
@@ -655,8 +658,10 @@ _curl_urls() {
     test -f "$zip" || sloge "$2 curl failed."
 }
 
-# unzip file to current dir, or exit program
-# _unzip <file> [strip]
+# unzip file to workdir
+# _unzip zipfile
+#  input: zipfile
+#  env: ZIP_SKIP=1
 _unzip() {
     slogi $_EMOJI_DIR "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
@@ -701,7 +706,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    _LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
+    _LOGGING=silent echocmd "${cmd[@]}" "$1"
 
     # post strip
     case "${cmd[0]}" in
@@ -717,8 +722,9 @@ _unzip() {
     esac
 }
 
-# extract zip file name from url
-_zipfile() {
+# url to packages file
+#  input: url
+_url_file() {
     local tar="${1##*/}"
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
@@ -732,33 +738,26 @@ _zipfile() {
 }
 
 # unzip url to workdir or die
-#  input: sha url [mirrors...]
-_fetch_url() {
+#  input: sha urls...
+_url_fetch() {
     local sha="$1"
 
-    # clone git repo
-    #  input: git_url#branch_or_tag_name [path]
-    _fetch_git() {
-        local url branch
-        local path="${2%.git*}"
-
-        slogi $_EMOJI_GIT "$1 => $path"
-
-        IFS='#' read -r url branch <<< "$1"
-        test -n "$branch" || branch="main"
-
-        # reuse local repo
-        if ! test -d "$path/.git"; then
-            git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
-        fi
-    }
-
-    # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _fetch_git "${@:2}" "${2##*/}"
+        # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
+        # limit: no urls for git
+        local url hash
+        IFS='#' read -r url hash <<< "$2"
+        test -n "$hash" || hash="$libs_ver"
+
+        slogi $_EMOJI_GIT "$url#$hash"
+
+        test -d .git || # reuse sources
+        git clone --recurse-submodules "$url" . || die "git clone $1 failed."
+
+        git checkout "$hash" --recurse-submodules
     else
         # assemble zip name from url
-        local zip="$(_zipfile "$2")"
+        local zip="$(_url_file "$2")"
 
         # download zip file
         _curl_urls "$zip" "${@:2}" || die
@@ -769,15 +768,93 @@ _fetch_url() {
                 # warning only for now
                 slogw "$_sha vs $sha (expected)"
             fi
+        else
+            sha256sum "$zip" | slogi $_EMOJI_ZIP
         fi
-        sha256sum "$zip" | slogi $_EMOJI_ZIP
 
         case "$("$FILE" -b "$zip")" in
             *"compressed data"*)    _unzip "$zip" "${ZIP_SKIP:-}"   ;;
             *"archive data"*)       _unzip "$zip" "${ZIP_SKIP:-}"   ;;
             *)                      cp -f "$zip" .                  ;; # copy to workdir
-        esac
+        esac || die "unzip $zip failed."
     fi
+}
+
+# v3/git releases
+_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
+
+_pkgfile_url() {
+    if _is_flat_repo; then
+        echo "${_TARGET_REPO#flat+}/${1##*/}"
+    else
+        echo "$_TARGET_REPO/$1"
+    fi
+}
+
+# curl and unzip pkgfile to PREFIX
+#  input: pkgfile [zipfile]
+_pkgfile_curl() {
+    local url="$(_pkgfile_url "$1")"
+    local zip="$2"
+
+    test -n "$zip" || zip="$TEMPDIR/${1##*/}"
+
+    mkdir -p "${zip%/*}"
+
+    rm -f "$zip"
+    _MIRRORS="" _curl_urls "$zip" "$url" || return 1
+
+    if [[ "$zip" =~ \.tar\..*$ ]]; then
+        tar -C "$PREFIX" -xvf "$zip"
+        echo ""
+    fi
+}
+
+# fetch pkgfile by pkgname and pkgvern(optional)
+_pkgfile_fetch() {
+    local pkgname pkgvern pkginfo pkgfiles
+
+    # priority: v2 > v3, no v1 package
+
+    slogi "$_EMOJI_PKGFILE Fetch package $1"
+
+    # zlib@1.3.1
+    IFS='@' read -r pkgname pkgvern <<< "$1"
+
+    # v2: latest version
+    : "${pkgvern:=latest}"
+
+    pkginfo="$pkgname/pkginfo@$pkgvern"
+
+    # prefer v2 pkginfo than v3 manifest for developers
+    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
+        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+    else
+        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+
+        # v3: no pkgvern => find out latest version
+        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
+                slogw "no package found"
+                return 1
+            }
+        fi
+
+        # find all pkgfiles
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
+    fi
+
+    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
+
+    local x
+    for x in "${pkgfiles[@]}"; do
+        echo ""
+        _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
+    done
+
+    touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
 # filter libs_tar
@@ -849,7 +926,7 @@ _prepare() {
 
     if test -n "$libs_url"; then
         # libs_url: support mirrors
-        _fetch_url "$libs_sha" "${libs_url[@]}"
+        _url_fetch "$libs_sha" "${libs_url[@]}"
     fi
 
     local x patch
@@ -860,7 +937,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _fetch_url "$sha" "$url"
+            ZIP_SKIP=0 _url_fetch "$sha" "$url"
         done
     fi
 
@@ -868,7 +945,7 @@ _prepare() {
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                local file="$(_zipfile "$patch")"
+                local file="$(_url_file "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
@@ -1186,83 +1263,6 @@ build() {
     _build_targets "${libs[@]}" || sloge "build rdepends failed #$?."
 }
 
-# v3/git releases
-_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
-
-_pkgfile_url() {
-    if _is_flat_repo; then
-        echo "${_TARGET_REPO#flat+}/${1##*/}"
-    else
-        echo "$_TARGET_REPO/$1"
-    fi
-}
-
-# curl and unzip pkgfile to PREFIX
-#  input: pkgfile [zipfile]
-_pkgfile_curl() {
-    local url="$(_pkgfile_url "$1")"
-    local zip="$2"
-
-    test -n "$zip" || zip="$TEMPDIR/${1##*/}"
-
-    mkdir -p "${zip%/*}"
-
-    rm -f "$zip"
-    _MIRRORS="" _curl_urls "$zip" "$url" || return 1
-
-    if [[ "$zip" =~ \.tar\..*$ ]]; then
-        tar -C "$PREFIX" -xvf "$zip"
-        echo ""
-    fi
-}
-
-# fetch pkgfile by pkgname and pkgvern(optional)
-_pkgfile_fetch() {
-    local pkgname pkgvern pkginfo pkgfiles
-
-    # priority: v2 > v3, no v1 package
-
-    slogi "$_EMOJI_PKGFILE Fetch package $1"
-
-    # zlib@1.3.1
-    IFS='@' read -r pkgname pkgvern <<< "$1"
-
-    # v2: latest version
-    : "${pkgvern:=latest}"
-
-    pkginfo="$pkgname/pkginfo@$pkgvern"
-
-    # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
-        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
-    else
-        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
-
-        # v3: no pkgvern => find out latest version
-        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
-            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
-                slogw "no package found"
-                return 1
-            }
-        fi
-
-        # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
-    fi
-
-    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
-
-    local x
-    for x in "${pkgfiles[@]}"; do
-        echo ""
-        _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
-    done
-
-    touch "$PREFIX/.$pkgname.d" # mark as ready
-}
-
 pkgfiles() {
     _init_target
 
@@ -1337,14 +1337,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _curl_urls "$(_zipfile "$libs_url")" "${libs_url[@]}"
+        _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _curl_urls "$(_zipfile "$url")" "$url"
+                _curl_urls "$(_url_file "$url")" "$url"
             done
         fi
     done
@@ -1472,9 +1472,9 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _curl_urls "$(_zipfile "$libs_url")" "${libs_url[@]}" || die
+    _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}" || die
 
-    IFS=' ' read -r sha _ < <(sha256sum "$(_zipfile "$libs_url")")
+    IFS=' ' read -r sha _ < <(sha256sum "$(_url_file "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
     slogw "<<<<< updated $libs_name => $libs_ver >>>>>"
