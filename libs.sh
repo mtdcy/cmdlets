@@ -154,47 +154,62 @@ host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
 
+_EMOJI_DIR="📂"
+_EMOJI_ZIP="📁"
+_EMOJI_FILE="📄"
+_EMOJI_URL="🔗"
+_EMOJI_GIT="🐙"
+_EMOJI_NOTE="📜"
+_EMOJI_PKGFILE="📦"
+
+_EMOJI_OK="✅"
+_EMOJI_RUN="🟢"
+_EMOJI_WARN="🟠"
+_EMOJI_ERROR="❌"
+
 # slog [error|info|warn] "leading" "message"
 _slog() {
     local ret=$?
-    local lvl date message
-
-    [ $# -gt 1 ] && lvl="$1" && shift 1
-    date="$(date '+%m-%d %H:%M:%S')"
+    local date="$(date '+%m-%d %H:%M:%S')"
+    local message
 
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
-    case "$(tr '[:upper:]' '[:lower:]' <<< "$lvl")" in
+    case "$1" in
         error)
-            message="[$date] \\033[31m$1\\033[39m ${*:2}"
+            message="[$date] \\033[31m${*:2}\\033[39m"
             ;;
         warn)
-            message="[$date] \\033[33m$1\\033[39m ${*:2}"
+            message="[$date] \\033[33m${*:2}\\033[39m"
             ;;
         info|*)
-            message="[$date] \\033[32m$1\\033[39m ${*:2}"
+            message="[$date] \\033[32m${*:2}\\033[39m"
             ;;
     esac
     echo -e "$message" >&2
     return $ret
 }
 
-slogi() { _slog info  "$@"; }
-slogw() { _slog warn  "$@"; }
-sloge() { _slog error "$@"; }
+slogi() { _slog info                "$@"; }
+slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
+sloge() { _slog error $_EMOJI_ERROR "$@"; }
 
 die()   {
-    _tty_reset # in case Ctrl-C happens
-    test -z "$*" || _slog error "....." "$@"
+    _capture_reset # in case Ctrl-C happens
+    if test -z "$*"; then
+        _slog error $_EMOJI_ERROR "die"
+    else
+        _slog error $_EMOJI_ERROR "$@"
+    fi
     exit 1 # exit shell
 }
 
-exit_on_error() {
+die_on_error() {
     local ret=$? # save error code
     [ $ret -ne 0 ] || return 0
 
-    _tty_reset # in case Ctrl-C happens
+    _capture_reset # in case Ctrl-C happens
 
-    sloge "exit on error: $*"
+    _slog error $_EMOJI_ERROR "die on error $ret"
     exit $ret # exit shell
 }
 
@@ -216,7 +231,7 @@ _capture() {
                 printf "#$i: %s" "$line"
                 tput rc                     # restore cursor position
             done < <(tee -a "$_LOGFILE")
-            _tty_reset
+            _capture_reset
             ;;
         *)
             tee -a "$_LOGFILE"
@@ -224,7 +239,7 @@ _capture() {
     esac
 }
 
-_tty_reset() {
+_capture_reset() {
     [ "$_LOGGING" = "tty" ] || return 0
 
     # bash 3.2: wait for all jobs
@@ -235,6 +250,7 @@ _tty_reset() {
     tput sgr0       # reset colors
 }
 
+# capture stdin and output to stderr (if logging plain)
 _capture_stderr() {
     test -n "$_LOGFILE" || return 0
     case "$_LOGGING" in
@@ -261,7 +277,7 @@ echocmd() {
 
 # slogcmd <command>
 slogcmd() {
-    slogi "..Run" "$@" >&2
+    slogi $_EMOJI_RUN "$@" >&2
 
     _LOGGING="${_LOGGING:-silent}" echocmd "$@"
 }
@@ -336,7 +352,7 @@ _init_host() {
                 p="$(which "$y" 2>/dev/null)" && break
             done
 
-            test -n "$p" && export "$k=$p" || slogw "⚠️  missing host tool $v"
+            test -n "$p" && export "$k=$p" || slogw "missing host tool $v"
         done
     }
 
@@ -370,7 +386,7 @@ _init_target() {
     # test gcc
     "$CC" -v &>/dev/null
 
-    exit_on_error "$CC is not recognized."
+    die_on_error "$CC is not recognized."
 
     case $("$CC" -dumpmachine) in
         *-w64-*)    _TARGET_NAME=windows    ;;
@@ -405,10 +421,10 @@ _init_target() {
             IFS=':' read -r k v <<< "$x"
             eval $k="\${CC/%gcc/$v}"
             if ! test -x "${!k}"; then
-                slogw "⚠️  ${!k} not found."
+                slogw "${!k} not found."
                 eval $k="\$(which $v)"
             fi
-            test -x "${!k}" || sloge "⚠️  $v not found."
+            test -x "${!k}" || slogw "$v not found."
             export $k
         done
     }
@@ -523,7 +539,7 @@ _init_target() {
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
     if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
-        slogw "⚠️  no v3/manifest."
+        slogw "no v3/manifest."
     fi
 
     # toolchain scripts, for debugging and options embedding
@@ -610,16 +626,12 @@ _curl_urls() {
 
     #1. try local file first
     if [ -f "$zip" ]; then
-        slogi ".FILE" "${zip#"$_ROOT_/"}"
-
-        # verify sha only if it exists
-        test -n "$sha" || return 0
-
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
+            slogi $_EMOJI_ZIP "$(sha256sum "$zip")"
             return 0
         else
-            slogw "..SHA" "$_sha vs $sha (expected)"
+            slogw "$_sha vs $sha (expected)"
             rm -f "$zip"
         fi
     fi
@@ -627,29 +639,29 @@ _curl_urls() {
     #2. try mirror
     if test -n "$_MIRRORS"; then
         mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
-        slogi ".CURL" "$mirror"
+        slogi $_EMOJI_URL "$mirror"
         _curl "$mirror" "$zip" || rm -f "$zip"
     fi
 
     #3. try originals
     if ! test -f "$zip"; then
         for url in "${@:3}"; do
-            slogi ".CURL" "$url"
+            slogi $_EMOJI_URL "$url"
             _curl "$url" "$zip" && break || rm -f "$zip"
         done
     fi
 
     if test -f "$zip"; then
-        slogi ".FILE" "$(sha256sum "$zip")"
+        slogi $_EMOJI_ZIP "$(sha256sum "$zip")"
     else
-        sloge ".CURL" "fetch $3 failed." || die
+        sloge "fetch $3 failed." || die
     fi
 }
 
 # unzip file to current dir, or exit program
 # _unzip <file> [strip]
 _unzip() {
-    slogi ".Zipx" "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -731,7 +743,7 @@ _fetch_url() {
         local url branch
         local path="${2%.git*}"
 
-        slogi "..GIT" "$1 => $path"
+        slogi $_EMOJI_GIT "$1 => $path"
 
         IFS='#' read -r url branch <<< "$1"
         test -n "$branch" || branch="main"
@@ -815,12 +827,12 @@ _prepare_workdir() {
     mkdir -p "$PREFIX"
     mkdir -p "$workdir" && cd "$workdir" || die "prepare workdir failed."
 
-    slogi ".WDIR" "${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
 }
 
 # prepare source code or die
 _prepare() {
-    slogi ".Load" "libs/$1.s"
+    slogi $_EMOJI_FILE "libs/$1.s"
 
     _load "$1" || die "load $1 failed."
 
@@ -875,7 +887,7 @@ _compile() {
 
     ( # always start subshell before _load()
 
-        trap _tty_reset EXIT
+        trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
 
         set -eo pipefail
@@ -884,7 +896,7 @@ _compile() {
         _prepare "$1" || return $?
 
         declare -F libs_build >/dev/null || {
-            slogw "<<<<<" "Not supported or missing libs_build"
+            slogw "Not supported or missing libs_build"
             return 0
         }
 
@@ -913,7 +925,7 @@ _compile() {
 
         # build library
         ( libs_build ) || {
-            sloge "<<<<<" "build $libs_name@$libs_ver failed"
+            sloge "build $libs_name@$libs_ver failed"
 
             mv "$_LOGFILE" "$_LOGFILE.fail"
             tail -v "$_LOGFILE.fail"
@@ -923,7 +935,7 @@ _compile() {
         # update tracking file
         touch "$PREFIX/.$libs_name.d"
 
-        slogi "<<<<<" "$libs_name@$libs_ver"
+        slogi $_EMOJI_OK "$libs_name@$libs_ver"
     )
 }
 
@@ -1088,7 +1100,7 @@ build() {
     # always prepend with compat
     _deps_fetch compat "$@"
 
-    slogi "BUILD" "$*"
+    slogi 🚀 "$*"
 
     local libs=() x
 
@@ -1096,7 +1108,9 @@ build() {
     IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
 
     # dependencies
-    slogi "-DEPS" "${libs[*]}"
+    if test -n "${libs[*]}"; then
+        slogi $_EMOJI_PKGFILE "${libs[*]}"
+    fi
 
     # sort and append requested libs
     libs+=( "$@" )
@@ -1109,8 +1123,7 @@ build() {
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
-            echo ""
-            slogi ">>>>>" "#$((i+1))/${#libs[@]} $name"
+            slogi $_EMOJI_NOTE "#$((i+1))/${#libs[@]} $name"
 
             local x supported
 
@@ -1118,7 +1131,7 @@ build() {
             for x in "$name" $(depends "$name"); do
                 IFS=' ' read -r -a supported < <( _load_targets "$x" ) || die "load targets failed."
                 list_has supported "$_TARGET_NAME" || {
-                    slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
+                    slogw "no support for $_TARGET_NAME ($x)"
                     unset supported
                     break
                 }
@@ -1126,8 +1139,8 @@ build() {
             is_true supported || continue
 
             # show dependencies status
-            slogi ".DEPS" "$(_deps_status "$name")" || {
-                slogw "<<<<<" "$name: missing dependencies"
+            slogi $_EMOJI_NOTE "$(_deps_status "$name")" || {
+                slogw "$name: missing dependencies"
                 fails+=( "$name" )
                 continue
             }
@@ -1142,7 +1155,8 @@ build() {
     }
 
     _build_targets "${libs[@]}" || {
-        sloge "build failed #$?." || true # always return errno 127
+        true # always return errno 127
+        sloge "build failed #$?."
         return 127
     }
 
@@ -1156,7 +1170,7 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
-    slogi "+DEPS" "${libs[*]}"
+    slogi 🚀 "${libs[*]}"
 
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
@@ -1195,7 +1209,7 @@ _pkgfile_fetch() {
 
     # priority: v2 > v3, no v1 package
 
-    slogi "📦 Fetch package $1"
+    slogi "$_EMOJI_PKGFILE Fetch package $1"
 
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgvern <<< "$1"
@@ -1216,7 +1230,7 @@ _pkgfile_fetch() {
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
             IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
             test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
-                slogw "🟠 no package found"
+                slogw "no package found"
                 return 1
             }
         fi
