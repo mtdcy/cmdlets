@@ -547,20 +547,20 @@ _init_target() {
     fi
 
     # toolchain scripts, for debugging and options embedding
-    _init_script() {
+    _init_target_script() {
         eval -- export REAL_$1="\$$2"
         export $2="$_ROOT_/scripts/$1"
     }
 
     # no all build system support command with arguments
-    _init_script cc         CC
-    _init_script cxx        CXX
-    _init_script ld         LD
-    _init_script as         AS
-    _init_script ar         AR
-    _init_script nm         NM
-    _init_script ranlib     RANLIB
-    _init_script pkg_config PKG_CONFIG
+    _init_target_script cc          CC
+    _init_target_script cxx         CXX
+    _init_target_script ld          LD
+    _init_target_script as          AS
+    _init_target_script ar          AR
+    _init_target_script nm          NM
+    _init_target_script ranlib      RANLIB
+    _init_target_script pkg_config  PKG_CONFIG
 
     is_mingw && _BINEXT=".exe" || unset _BINEXT
 
