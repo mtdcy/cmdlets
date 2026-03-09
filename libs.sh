@@ -177,10 +177,10 @@ _slog() {
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
     case "$1" in
         error)
-            message="[$date] \\033[31m${*:3}\\033[39m"
+            message="[$date] \\033[31m${*:2}\\033[39m"
             ;;
         warn)
-            message="[$date] \\033[33m${*:3}\\033[39m"
+            message="[$date] \\033[33m${*:2}\\033[39m"
             ;;
         info|*)
             message="[$date] \\033[32m${*:2}\\033[39m"
