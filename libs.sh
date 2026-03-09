@@ -336,7 +336,7 @@ _init_host() {
                 p="$(which "$y" 2>/dev/null)" && break
             done
 
-            test -n "$p" && export "$k=$p" || slogw ".Init" "missing host tool $v"
+            test -n "$p" && export "$k=$p" || slogw "⚠️  missing host tool $v"
         done
     }
 
@@ -405,10 +405,10 @@ _init_target() {
             IFS=':' read -r k v <<< "$x"
             eval $k="\${CC/%gcc/$v}"
             if ! test -x "${!k}"; then
-                slogw ".Init" "${!k} not found."
+                slogw "⚠️  ${!k} not found."
                 eval $k="\$(which $v)"
             fi
-            test -x "${!k}" || sloge ".Init" "$v not found."
+            test -x "${!k}" || sloge "⚠️  $v not found."
             export $k
         done
     }
@@ -523,7 +523,7 @@ _init_target() {
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
     if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
-        slogw ".Init" "no v3/manifest."
+        slogw "⚠️  no v3/manifest."
     fi
 
     # toolchain scripts, for debugging and options embedding
