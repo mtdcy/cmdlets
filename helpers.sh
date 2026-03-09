@@ -1344,7 +1344,7 @@ cmdlet.pkgconf() {
         esac
     done
 
-    slogi $_EMOJI_FILE"$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
+    slogi $_EMOJI_FILE "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
     if test -f "$name.pc"; then
         # append missing fields

@@ -162,12 +162,13 @@ _EMOJI_GIT="🐙"
 _EMOJI_NOTE="📜"
 _EMOJI_PKGFILE="📦"
 
+_EMOJI_JOB="🚀"
 _EMOJI_OK="✅"
 _EMOJI_RUN="🟢"
 _EMOJI_WARN="🟠"
 _EMOJI_ERROR="❌"
 
-# slog [error|info|warn] "leading" "message"
+# slog [error|info|warn] [emoji] "message"
 _slog() {
     local ret=$?
     local date="$(date '+%m-%d %H:%M:%S')"
@@ -176,10 +177,10 @@ _slog() {
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
     case "$1" in
         error)
-            message="[$date] \\033[31m${*:2}\\033[39m"
+            message="[$date] \\033[31m${*:3}\\033[39m"
             ;;
         warn)
-            message="[$date] \\033[33m${*:2}\\033[39m"
+            message="[$date] \\033[33m${*:3}\\033[39m"
             ;;
         info|*)
             message="[$date] \\033[32m${*:2}\\033[39m"
@@ -1100,7 +1101,7 @@ build() {
     # always prepend with compat
     _deps_fetch compat "$@"
 
-    slogi 🚀 "$*"
+    slogi $_EMOJI_JOB "$*"
 
     local libs=() x
 
@@ -1170,7 +1171,7 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
-    slogi 🚀 "${libs[*]}"
+    slogi $_EMOJI_JOB "${libs[*]}"
 
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
