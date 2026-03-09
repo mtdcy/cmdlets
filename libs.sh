@@ -836,7 +836,7 @@ _pkgfile_fetch() {
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
             IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
-            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
+            test -n "$pkgvern" && slogi $_EMOJI_NOTE "found pkgfile $pkgname@$pkgvern" || {
                 slogw "no package found"
                 return 1
             }
@@ -846,12 +846,12 @@ _pkgfile_fetch() {
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
     fi
 
-    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
+    test -n "${pkgfiles[*]}" || slogw "no pkgfile found"
 
     local x
     for x in "${pkgfiles[@]}"; do
         echo ""
-        _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
+        _pkgfile_curl "$x" || slogw "fetch $x failed"
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
