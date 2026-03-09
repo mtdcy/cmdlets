@@ -614,6 +614,7 @@ _curl() {
     if test -n "$2"; then
         # show errors
         curl "${opts[@]}" "${@:3}" "$source" -o "$2" | _capture
+        return ${PIPESTATUS[0]}  # return curl exit code
     else
         # silent curl output for stdout
         curl "${opts[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
