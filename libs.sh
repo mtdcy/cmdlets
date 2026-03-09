@@ -172,18 +172,21 @@ _EMOJI_ERROR="❌"
 _slog() {
     local ret=$?
     local date="$(date '+%m-%d %H:%M:%S')"
-    local message
+    local message="${*:2}"
+
+    # append stdin
+    test -p /dev/stdin && message+=" $(cat)"
 
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
     case "$1" in
         error)
-            message="[$date] \\033[31m${*:2}\\033[39m"
+            message="[$date] \\033[31m$message\\033[39m"
             ;;
         warn)
-            message="[$date] \\033[33m${*:2}\\033[39m"
+            message="[$date] \\033[33m$message\\033[39m"
             ;;
         info|*)
-            message="[$date] \\033[32m${*:2}\\033[39m"
+            message="[$date] \\033[32m$message\\033[39m"
             ;;
     esac
     echo -e "$message" >&2
@@ -629,7 +632,7 @@ _curl_urls() {
     if [ -f "$zip" ]; then
         IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
         if [ "$_sha" = "$sha" ]; then
-            slogi $_EMOJI_ZIP "$(sha256sum "$zip")"
+            sha256sum "$zip" | slogi $_EMOJI_ZIP
             return 0
         else
             slogw "$_sha vs $sha (expected)"
@@ -653,7 +656,7 @@ _curl_urls() {
     fi
 
     if test -f "$zip"; then
-        slogi $_EMOJI_ZIP "$(sha256sum "$zip")"
+        sha256sum "$zip" | slogi $_EMOJI_ZIP
     else
         sloge "fetch $3 failed." || die
     fi
