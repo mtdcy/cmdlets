@@ -157,7 +157,7 @@ is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
 _EMOJI_DIR="📂"
 _EMOJI_ZIP="📁"
 _EMOJI_FILE="📄"
-_EMOJI_URL="🔗"
+_EMOJI_URL="💫"
 _EMOJI_GIT="🐙"
 _EMOJI_NOTE="📜"
 _EMOJI_PKGFILE="📦"
@@ -603,63 +603,56 @@ _init_target() {
     fi
 }
 
-_CURL_OPTS=( -fsSL --connect-timeout 3 )
-
 # _curl source destination [options]
 _curl() {
     local source="$1"
 
+    local opts=( -fsSL --connect-timeout "${CURL_TIMEOUT:-3}" )
+
     if test -n "$2"; then
         # show errors
-        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" -o "$2" | _capture
+        curl "${opts[@]}" "${@:3}" "$source" -o "$2" | _capture
     else
         # silent curl output for stdout
-        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
+        curl "${opts[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
     fi
 }
 
-# fetch zip or die
-#  input: zip sha url [mirrors ...]
+# fetch zip from cache...mirror...urls
+#  input: zip urls...
 _curl_urls() {
-    local zip=$1
-    local sha=$2
-    local url=$3
-    local _sha mirror
+    local zip="$1"
 
-    mkdir -p "$(dirname "$zip")"
+    mkdir -p "${zip%/*}"
 
-    #1. try local file first
-    if [ -f "$zip" ]; then
-        IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
-        if [ "$_sha" = "$sha" ]; then
-            sha256sum "$zip" | slogi $_EMOJI_ZIP
-            return 0
-        else
-            slogw "$_sha vs $sha (expected)"
-            rm -f "$zip"
-        fi
-    fi
+    # first: local file cache
+    local urls=( "$zip" )
 
-    #2. try mirror
+    # second: mirror
     if test -n "$_MIRRORS"; then
-        mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
-        slogi $_EMOJI_URL "$mirror"
-        _curl "$mirror" "$zip" || rm -f "$zip"
+        urls+=( "$_MIRRORS/packages/$libs_name/${zip##*/}" )
     fi
 
-    #3. try originals
-    if ! test -f "$zip"; then
-        for url in "${@:3}"; do
-            slogi $_EMOJI_URL "$url"
-            _curl "$url" "$zip" && break || rm -f "$zip"
-        done
-    fi
+    # final: urls
+    urls+=( CURL_TIMEOUT=30 "${@:2}" )
 
-    if test -f "$zip"; then
-        sha256sum "$zip" | slogi $_EMOJI_ZIP
-    else
-        sloge "fetch $3 failed." || die
-    fi
+    local timeout=3 url
+    for url in "${urls[@]}"; do
+        case "$url" in
+            CURL_TIMEOUT=*) 
+                timeout="${url#*=}"
+                ;;
+            http*)
+                slogi $_EMOJI_URL "$url"
+                CURL_TIMEOUT="$timeout" _curl "$url" "$zip" && break
+                ;;
+            *)
+                test -f "$url" && break
+                ;;
+        esac
+    done
+
+    test -f "$zip" || sloge "$2 curl failed."
 }
 
 # unzip file to current dir, or exit program
@@ -741,6 +734,8 @@ _zipfile() {
 # unzip url to workdir or die
 #  input: sha url [mirrors...]
 _fetch_url() {
+    local sha="$1"
+
     # clone git repo
     #  input: git_url#branch_or_tag_name [path]
     _fetch_git() {
@@ -766,7 +761,16 @@ _fetch_url() {
         local zip="$(_zipfile "$2")"
 
         # download zip file
-        _curl_urls "$zip" "$1" "${@:2}"
+        _curl_urls "$zip" "${@:2}" || die
+
+        if test -n "$sha"; then
+            IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
+            if [ "$sha" != "$_sha" ]; then
+                # warning only for now
+                slogw "$_sha vs $sha (expected)"
+            fi
+        fi
+        sha256sum "$zip" | slogi $_EMOJI_ZIP
 
         case "$("$FILE" -b "$zip")" in
             *"compressed data"*)    _unzip "$zip" "${ZIP_SKIP:-}"   ;;
@@ -1185,21 +1189,26 @@ build() {
 # v3/git releases
 _is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
 
-# curl and unzip pkgfile to PREFIX
-_pkgfile_curl() {
-    local zip
+_pkgfile_url() {
+    if _is_flat_repo; then
+        echo "${_TARGET_REPO#flat+}/${1##*/}"
+    else
+        echo "$_TARGET_REPO/$1"
+    fi
+}
 
-    test -n "$2" && zip="$2" || zip="$TEMPDIR/${1##*/}"
+# curl and unzip pkgfile to PREFIX
+#  input: pkgfile [zipfile]
+_pkgfile_curl() {
+    local url="$(_pkgfile_url "$1")"
+    local zip="$2"
+
+    test -n "$zip" || zip="$TEMPDIR/${1##*/}"
 
     mkdir -p "${zip%/*}"
 
-    if _is_flat_repo; then
-        slogi "💫 $_TARGET_REPO/${1##*/}"
-        _curl "${_TARGET_REPO#flat+}/${1##*/}" "$zip" || return 1
-    else
-        slogi "💫 $_TARGET_REPO/$1"
-        _curl "$_TARGET_REPO/$1" "$zip" || return 1
-    fi
+    rm -f "$zip"
+    _MIRRORS="" _curl_urls "$zip" "$url" || return 1
 
     if [[ "$zip" =~ \.tar\..*$ ]]; then
         tar -C "$PREFIX" -xvf "$zip"
@@ -1247,6 +1256,7 @@ _pkgfile_fetch() {
 
     local x
     for x in "${pkgfiles[@]}"; do
+        echo ""
         _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
     done
 
@@ -1327,14 +1337,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _curl_urls "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
+        _curl_urls "$(_zipfile "$libs_url")" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _curl_urls "$(_zipfile "$url")" "$sha" "$url"
+                _curl_urls "$(_zipfile "$url")" "$url"
             done
         fi
     done
@@ -1462,7 +1472,7 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _curl_urls "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
+    _curl_urls "$(_zipfile "$libs_url")" "${libs_url[@]}" || die
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_zipfile "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
