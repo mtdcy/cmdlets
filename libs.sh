@@ -807,6 +807,8 @@ _load() {
     export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
 }
 
+_load_targets() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
+
 _prepare_workdir() {
     local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
 
@@ -1101,10 +1103,8 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
-    _load_targets() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
-
     # continue on error
-    _compile_targets() {
+    _build_targets() {
         local libs=( "$@" ) fails=() i
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
@@ -1141,7 +1141,7 @@ build() {
         }
     }
 
-    _compile_targets "${libs[@]}" || {
+    _build_targets "${libs[@]}" || {
         sloge "build failed #$?." || true # always return errno 127
         return 127
     }
@@ -1161,7 +1161,7 @@ build() {
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
 
-    _compile_targets "${libs[@]}" || sloge "build rdepends failed #$?."
+    _build_targets "${libs[@]}" || sloge "build rdepends failed #$?."
 }
 
 # v3/git releases
