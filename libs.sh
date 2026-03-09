@@ -521,7 +521,7 @@ _init_target() {
 
     # prepare v3/manifest
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
-    if ! _fetch_unzip_pkgfile cmdlets.manifest "$_TARGET_MANIFEST"; then
+    if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
         slogw ".Init" "no v3/manifest."
     fi
@@ -1166,7 +1166,8 @@ build() {
 # v3/git releases
 _is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
 
-_fetch_unzip_pkgfile() {
+# curl and unzip pkgfile to PREFIX
+_pkgfile_curl() {
     local zip
 
     test -n "$2" && zip="$2" || zip="$TEMPDIR/${1##*/}"
@@ -1187,7 +1188,8 @@ _fetch_unzip_pkgfile() {
     fi
 }
 
-_fetch_pkgfile() {
+# fetch pkgfile by pkgname and pkgvern(optional)
+_pkgfile_fetch() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
@@ -1203,7 +1205,7 @@ _fetch_pkgfile() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _fetch_unzip_pkgfile "$pkginfo"; then
+    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
     else
@@ -1226,7 +1228,7 @@ _fetch_pkgfile() {
 
     local x
     for x in "${pkgfiles[@]}"; do
-        _fetch_unzip_pkgfile "$x" || { slogw "<< fetch $x failed"; return 1; }
+        _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
@@ -1239,7 +1241,7 @@ pkgfiles() {
 
     local ret=0 x
     for x in "$@"; do
-        _fetch_pkgfile "$x" || ret=$?
+        _pkgfile_fetch "$x" || ret=$?
     done
 
     return $?
