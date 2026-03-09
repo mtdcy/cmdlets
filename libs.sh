@@ -600,7 +600,7 @@ _curl() {
 
 # fetch zip or die
 #  input: zip sha url [mirrors ...]
-_fetch() {
+_curl_urls() {
     local zip=$1
     local sha=$2
     local url=$3
@@ -708,23 +708,6 @@ _unzip() {
     esac
 }
 
-# clone git repo
-#  input: git_url#branch_or_tag_name [path]
-_fetch_git() {
-    local url branch
-    local path="${2%.git*}"
-
-    slogi "..GIT" "$1 => $path"
-
-    IFS='#' read -r url branch <<< "$1"
-    test -n "$branch" || branch="main"
-
-    # reuse local repo
-    if ! test -d "$path/.git"; then
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
-    fi
-}
-
 # extract zip file name from url
 _zipfile() {
     local tar="${1##*/}"
@@ -741,7 +724,24 @@ _zipfile() {
 
 # unzip url to workdir or die
 #  input: sha url [mirrors...]
-_fetch_unzip() {
+_fetch_url() {
+    # clone git repo
+    #  input: git_url#branch_or_tag_name [path]
+    _fetch_git() {
+        local url branch
+        local path="${2%.git*}"
+
+        slogi "..GIT" "$1 => $path"
+
+        IFS='#' read -r url branch <<< "$1"
+        test -n "$branch" || branch="main"
+
+        # reuse local repo
+        if ! test -d "$path/.git"; then
+            git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
+        fi
+    }
+
     # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
     if [[ "${2%#*}" =~ \.git$ ]]; then
         _fetch_git "${@:2}" "${2##*/}"
@@ -750,7 +750,7 @@ _fetch_unzip() {
         local zip="$(_zipfile "$2")"
 
         # download zip file
-        _fetch "$zip" "$1" "${@:2}"
+        _curl_urls "$zip" "$1" "${@:2}"
 
         case "$("$FILE" -b "$zip")" in
             *"compressed data"*)    _unzip "$zip" "${ZIP_SKIP:-}"   ;;
@@ -829,7 +829,7 @@ _prepare() {
 
     if test -n "$libs_url"; then
         # libs_url: support mirrors
-        _fetch_unzip "$libs_sha" "${libs_url[@]}"
+        _fetch_url "$libs_sha" "${libs_url[@]}"
     fi
 
     local x patch
@@ -840,7 +840,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _fetch_unzip "$sha" "$url"
+            ZIP_SKIP=0 _fetch_url "$sha" "$url"
         done
     fi
 
@@ -1309,14 +1309,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
+        _curl_urls "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _fetch "$(_zipfile "$url")" "$sha" "$url"
+                _curl_urls "$(_zipfile "$url")" "$sha" "$url"
             done
         fi
     done
@@ -1444,7 +1444,7 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
+    _curl_urls "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_zipfile "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
