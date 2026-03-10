@@ -643,7 +643,7 @@ _curl_urls() {
     local timeout=3 url
     for url in "${urls[@]}"; do
         case "$url" in
-            CURL_TIMEOUT=*) 
+            CURL_TIMEOUT=*)
                 timeout="${url#*=}"
                 ;;
             http*)
@@ -911,32 +911,29 @@ _load_deps()    {( _load "$1" >/dev/null && echo "${libs_deps[@]}"      )}
 # load libs_targets
 _load_targets() {( _load "$1" >/dev/null && echo "${libs_targets[@]}"   )}
 
-_prepare_workdir() {
-    local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
-
-    mkdir -p "$PREFIX"
-    mkdir -p "$workdir" && cd "$workdir" || die "prepare workdir failed."
-
-    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
-}
-
 # prepare source code or die
+#  input: name
 _prepare() {
     slogi $_EMOJI_FILE "libs/$1.s"
 
     _load "$1" || die "load $1 failed."
 
-    # enter working directory
-    _prepare_workdir
+    # prepare workdir and enter it
+    local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
 
-    if test -n "$libs_url"; then
-        # libs_url: support mirrors
-        _url_fetch "$libs_sha" "${libs_url[@]}"
-    fi
+    mkdir -p "$PREFIX"
+    mkdir -p "$workdir"
+
+    cd "$workdir"
+
+    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
+
+    # libs_url: fetch and unzip into workdir, support mirrors
+    test -z "$libs_url" || _url_fetch "$libs_sha" "${libs_url[@]}"
 
     local x patch
 
-    # libs_resources: no mirrors
+    # libs_resources: fetch and unzip to workdir, no mirrors
     if test -n "${libs_resources[*]}"; then
         local url sha
         for x in "${libs_resources[@]}"; do
@@ -946,7 +943,8 @@ _prepare() {
         done
     fi
 
-    # libs_patches: web ready
+    # libs_patches: fetch and patch, web ready
+    #  XXX: if you want to patch manually or reverse patch, use libs_resources
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
@@ -960,7 +958,7 @@ _prepare() {
         esac
     done
 
-    # always patch with -p0:
+    # inline patch: always patch with -p0:
     #  `diff -u main.c.orig main.c' will create patch working with -p0
     if test -s "$TEMPDIR/$libs_name.patch"; then
         if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
