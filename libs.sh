@@ -905,7 +905,11 @@ _load() {
     export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
 }
 
-_load_targets() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
+# load libs_deps
+_load_deps()    {( _load "$1" >/dev/null && echo "${libs_deps[@]}"      )}
+
+# load libs_targets
+_load_targets() {( _load "$1" >/dev/null && echo "${libs_targets[@]}"   )}
 
 _prepare_workdir() {
     local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
@@ -1025,9 +1029,6 @@ _compile() {
     )
 }
 
-# load libs_deps
-_deps_load() {( _load "$1" &>/dev/null && echo "${libs_deps[@]}" )}
-
 # generate or update dependencies map
 _deps_init() {
     test -z "$_DEPS_READY" || return 0
@@ -1043,12 +1044,12 @@ _deps_init() {
         # update dependencies
         while IFS='/.' read -r _ libs _; do
             sed -i "/^$libs:/d" "$_DEPS_FILE"
-            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+            echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s" )
     else
         # write dependencies
         while IFS='/.' read -r _ libs _; do
-            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+            echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <( find libs -maxdepth 1 -type f -name "*.s" )
     fi
     export _DEPS_READY=1
