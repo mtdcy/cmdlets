@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 libs_name=coreutils
 libs_lic="MIT"
-libs_ver=0.6.0
+libs_ver=0.7.0
 libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=f751b8209ec05ae304941a727e42a668dcc45674986252f44d195ed43ccfad2f
+libs_sha=dc56a3c4632742357d170d60a7dcecb9693de710daeaafa3ad925750b1905522
 libs_dep=( libiconv )
 
 # multicall core utils

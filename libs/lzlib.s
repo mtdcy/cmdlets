@@ -2,12 +2,12 @@
 
 libs_desc="Data compression library"
 libs_lic='BSD-2-Clause'
-libs_ver=1.15
+libs_ver=1.16
 libs_url=(
     https://download-mirror.savannah.gnu.org/releases/lzip/lzlib/lzlib-$libs_ver.tar.gz
     https://download.savannah.gnu.org/releases/lzip/lzlib/lzlib-$libs_ver.tar.gz
 )
-libs_sha=4afab907a46d5a7d14e927a1080c3f4d7e3ca5a0f9aea81747d8fed0292377ff
+libs_sha=203228de911780309dad6813e51541d7ea89469784f01cb661edba080ff1b038
 libs_dep=()
 
 libs_args=(

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="LGPLv2.0+"
-libs_ver=1.57.0
-libs_url=https://download.gnome.org/sources/pango/1.57/pango-1.57.0.tar.xz
-libs_sha=890640c841dae77d3ae3d8fe8953784b930fa241b17423e6120c7bfdf8b891e7
+libs_ver=1.57.1
+libs_url=https://download.gnome.org/sources/pango/1.57/pango-1.57.1.tar.xz
+libs_sha=e65d6d117080dc3aeeb7d8b4b3b518f7383aa2e6cfce23117c623cd624764c2f
 
 libs_deps=( glib cairo freetype fribidi harfbuzz fontconfig )
 

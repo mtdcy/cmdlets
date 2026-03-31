@@ -1,9 +1,9 @@
 # Cryptographic library based on the code from GnuPG
 #
 # shellcheck disable=SC2034
-libs_ver=1.12.0
+libs_ver=1.12.1
 libs_url=https://github.com/gpg/libgcrypt/archive/refs/tags/libgcrypt-$libs_ver.tar.gz
-libs_sha=2e50b8fff17f35866cbca9d254c0bcec51baac5efba85c797c749c76b82aae75
+libs_sha=e2bb8bf1bee4c0a66f2713db9577e0bb88eaf9a31d91dbe944c26ff47e336266
 libs_dep=( libxml2 libgpg-error )
 
 libs_args=(
