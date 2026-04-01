@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=FTL
-libs_ver=2.14.2
+libs_ver=2.14.3
 libs_url=https://downloads.sourceforge.net/project/freetype/freetype2/$libs_ver/freetype-$libs_ver.tar.xz
-libs_sha=4b62dcab4c920a1a860369933221814362e699e26f55792516d671e6ff55b5e1
+libs_sha=36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f
 libs_dep=(zlib bzip2 brotli libpng)
 
 libs_args=(

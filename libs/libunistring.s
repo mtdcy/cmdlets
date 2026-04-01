@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic='LGPLv3+|GPLv2'
-libs_ver=1.4.1
+libs_ver=1.4.2
 libs_url=https://ftpmirror.gnu.org/gnu/libunistring/libunistring-$libs_ver.tar.gz
-libs_sha=12542ad7619470efd95a623174dcd4b364f2483caf708c6bee837cb53a54cb9d
+libs_sha=e82664b170064e62331962126b259d452d53b227bb4a93ab20040d846fec01d8
 libs_dep=( libiconv )
 
 libs_args=(

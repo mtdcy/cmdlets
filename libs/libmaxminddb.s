@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic="Apache-2.0"
-libs_ver=1.13.0
+libs_ver=1.13.1
 libs_url=https://github.com/maxmind/libmaxminddb/releases/download/$libs_ver/libmaxminddb-$libs_ver.tar.gz
-libs_sha=538b196e5885630c299fe1e49dd468db418e25407a0d04651ced51001ebf9766
+libs_sha=49a2347f015683d83c5a281c1b2d38ca766a1f42d5183417973bf4ca9b8c4ca7
 libs_dep=( )
 
 libs_args=(

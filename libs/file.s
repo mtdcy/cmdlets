@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="BSD-2-Clause"
-libs_ver=5.46
+libs_ver=5.47
 libs_url=https://astron.com/pub/file/file-$libs_ver.tar.gz
-libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
+libs_sha=45672fec165cb4cc1358a2d76b5d57d22876dcb97ab169427ac385cbe1d5597a
 
 libs_deps=( zlib bzip2 xz zstd )
 
@@ -12,20 +12,20 @@ is_mingw && libs_deps+=( libgnurx )
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
 libs_resources=(
-    "https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.46-5build1.debian.tar.xz|d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb"
+    "https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/file_5.47-5build1.debian.tar.xz|d04f215fd64a3cddd3b85b3a111c0b0a3bd0d8f58030453a2e0df061f225dbeb"
 )
 
 libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order
-    debian/patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
-    debian/patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
+    debian/patches/1733423740.FILE5.47-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
+    debian/patches/1733427672.FILE5.47-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
 )
 
 is_mingw || libs_patches+=(
-    debian/patches/1741021322.FILE5_46-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
-    #debian/patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
-    debian/patches/1742492756.FILE5_46-69-g280e121f.remove-superfluous-christoph-biedl.patch
-    debian/patches/1742492810.FILE5_46-70-g4e2c7d3d.fix-msdosdate-endianess.patch
+    debian/patches/1741021322.FILE5.47-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
+    #debian/patches/1742485595.FILE5.47-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
+    debian/patches/1742492756.FILE5.47-69-g280e121f.remove-superfluous-christoph-biedl.patch
+    debian/patches/1742492810.FILE5.47-70-g4e2c7d3d.fix-msdosdate-endianess.patch
 
     # patches that should go upstream
     debian/patches/upstream.disable.att3b.patch
