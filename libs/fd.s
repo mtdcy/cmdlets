@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=10.4.1
-libs_url=https://github.com/sharkdp/fd/archive/refs/tags/v10.4.1.tar.gz
-libs_sha=59ab83e56743e28eaa92c5497b3998a35744db6d8d574f389456481f2af1cb00
+libs_ver=10.4.2
+libs_url=https://github.com/sharkdp/fd/archive/refs/tags/v10.4.2.tar.gz
+libs_sha=3a7e027af8c8e91c196ac259c703d78cd55c364706ddafbc66d02c326e57a456
 libs_dep=( libpcap )
 
 # configure args
