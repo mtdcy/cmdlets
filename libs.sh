@@ -1351,7 +1351,10 @@ _git_ls_remote() {
 _git_ls_local() {
     local HEAD="${1:-$(git branch --show-current)}"
 
+    # 1. check unstaged changes
+    # 2. check unpushed changes 
     # no origin/HEAD in workflows, why?
+    ! git diff --name-only --exit-code . ||
     ! git diff --name-only --exit-code "$HEAD" "origin/main"
 }
 
@@ -1363,7 +1366,10 @@ _make_target_tag() {
 
     # tag if remote branch exists
     if ! _git_ls_remote >/dev/null; then
-        slogw "MKTAG" "no local branch tag"
+        slogw "MKTAG" "no tag on local branch"
+        return 0 # no error code
+    elif _git_ls_local >/dev/null; then
+        slogw "MKTAG" "no tag on unpushed commits"
         return 0 # no error code
     fi
 
@@ -1371,11 +1377,8 @@ _make_target_tag() {
 
 	git tag -a "$TAG" -m "$TAG" --force "$HEAD"
 
-    # push if no local changes
-    if ! _git_ls_local >/dev/null; then
-        slogi ".PUSH" "$TAG => origin"
-        git push origin "$TAG" --force
-    fi
+    slogi ".PUSH" "$TAG => origin"
+    git push origin "$TAG" --force
 }
 
 # list changed cmdlets for target
