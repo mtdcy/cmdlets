@@ -1,5 +1,8 @@
 # Implementation of the file(1) command
 
+# depends on ubuntu patches
+libs_stable=1
+
 # shellcheck disable=SC2034
 libs_lic="BSD-2-Clause"
 libs_ver=5.46
