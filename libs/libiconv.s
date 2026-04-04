@@ -7,9 +7,9 @@ libs_desc="Character sets conversion library"
 libs_page="https://www.gnu.org/software/libiconv/"
 
 libs_lic="GPL-3.0-or-later|LGPL-2.0-or-later"
-libs_ver=1.18
+libs_ver=1.19
 libs_url=https://ftpmirror.gnu.org/gnu/libiconv/libiconv-$libs_ver.tar.gz
-libs_sha=3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8
+libs_sha=88dd96a8c0464eca144fc791ae60cd31cd8ee78321e67397e25fc095c4a19aa6
 
 is_darwin && libs_patches=(
     https://raw.githubusercontent.com/Homebrew/patches/9be2793af/libiconv/patch-utf8mac.diff

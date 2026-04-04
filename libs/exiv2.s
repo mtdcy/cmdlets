@@ -7,9 +7,9 @@ libs_targets=( linux darwin )
 
 # shellcheck disable=SC2034
 libs_lic="GPLv2.0+"
-libs_ver=0.28.7
+libs_ver=0.28.8
 libs_url=https://github.com/Exiv2/exiv2/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=5e292b02614dbc0cee40fe1116db2f42f63ef6b2ba430c77b614e17b8d61a638
+libs_sha=ea51b0609f58a9afa063b60daa1539948b62247721e154f4fff0ad3aec9f9756
 libs_dep=( zlib expat brotli inih libiconv )
 
 # configure args

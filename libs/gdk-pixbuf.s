@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="LGPLv2.1+"
-libs_ver=2.44.5
-libs_url=https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.5.tar.xz
-libs_sha=69b93e09139b80c0ee661503d60deb5a5874a31772b5184b9cd5462a4100ab68
+libs_ver=2.44.6
+libs_url=https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.6.tar.xz
+libs_sha=140c2d0b899fcf853ee92b26373c9dc228dbcde0820a4246693f4328a27466fa
 
 libs_deps=( glib libjpeg-turbo libpng libtiff )
 

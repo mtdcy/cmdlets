@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=2.15.1
+libs_ver=2.15.2
 libs_url=https://download.gnome.org/sources/libxml2/2.15/libxml2-${libs_ver}.tar.xz
-libs_sha=c008bac08fd5c7b4a87f7b8a71f283fa581d80d80ff8d2efd3b26224c39bc54c
+libs_sha=c8b9bc81f8b590c33af8cc6c336dbff2f53409973588a351c95f1c621b13d09d
 libs_dep=(zlib xz libiconv readline)
 
 libs_args=(

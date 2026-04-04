@@ -1,9 +1,9 @@
 # Library for manipulating JPEG-2000 images
 
 # shellcheck disable=SC2034
-libs_ver=4.2.8
+libs_ver=4.2.9
 libs_url=https://github.com/jasper-software/jasper/releases/download/version-$libs_ver/jasper-$libs_ver.tar.gz
-libs_sha=98058a94fbff57ec6e31dcaec37290589de0ba6f47c966f92654681a56c71fae
+libs_sha=f71cf643937a5fcaedcfeb30a22ba406912948ad4413148214df280afc425454
 libs_dep=( libjpeg-turbo )
 
 # configure args

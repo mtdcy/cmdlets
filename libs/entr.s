@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=ISC
-libs_ver=5.7
-libs_url=https://eradman.com/entrproject/code/entr-5.7.tar.gz
-libs_sha=90c5d943820c70cef37eb41a382a6ea4f5dd7fd95efef13b2b5520d320f5d067
+libs_ver=5.8
+libs_url=https://eradman.com/entrproject/code/entr-5.8.tar.gz
+libs_sha=dc9a2bdc556b2be900c1d8cdf432de26492de5af3ffade000d4bfd97f3122bfb
 libs_dep=( )
 
 libs_args=(
