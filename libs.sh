@@ -1083,14 +1083,15 @@ build() {
     echo "target : ${_TARGET_VARS[@]}"
     echo ""
 
-    _deps_fetch "$@"
+    # always prepend with compat
+    _deps_fetch compat "$@"
 
     slogi "BUILD" "$*"
 
     local libs=() x
 
     # check dependencies: rebuild libs
-    IFS=' ' read -r -a libs  < <( _deps_missing compat "$@" )
+    IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
 
     # dependencies
     slogi "-DEPS" "${libs[*]}"
