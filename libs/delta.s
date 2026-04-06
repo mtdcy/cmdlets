@@ -11,8 +11,9 @@ libs_sha=f59b86f8c8dda4d76a3ba34b8553777a20c3b461646917d8e480fac6531bba9f
 libs_deps=( zlib libgit2 pcre2 oniguruma )
 
 libs_patches=(
+    # Fixed 0.19.1
     # support libgit2 1.9, https://github.com/dandavison/delta/pull/1930
-    https://github.com/dandavison/delta/commit/9d6101e82a79daecfa9e81fa54c440b2e0442a33.patch?full_index=1
+    #https://github.com/dandavison/delta/commit/9d6101e82a79daecfa9e81fa54c440b2e0442a33.patch?full_index=1
 )
 
 libs_args=(
