@@ -10,6 +10,7 @@ libs_dep=()
 libs_args=(
     -DWITHOUT_OPENCV=ON
     -DWITHOUT_GAVL=ON
+    -DWITHOUT_CAIRO=ON
 )
 
 libs_build() {
