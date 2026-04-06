@@ -56,6 +56,9 @@ libs_args+=( -Dlibexecdir='/no-git-libexec' )
 libs_build() {
     #libs.requires libgnurx
 
+    # rename git => git-core
+    #sed -i '/^project/s/\<git\>/git-core/' meson.build
+
     # always find tools in host
     sed -i '/Program Files/d' meson.build
 
@@ -82,7 +85,8 @@ libs_build() {
         # merge & difftool
         git-mergetool git-difftool--helper
         # https
-        "git-remote-http:git-remote-https:git-remote-ftp:git-remote-ftps"
+        git-remote-http git-remote-https 
+        git-remote-ftp git-remote-ftps
         # misc
         git-request-pull
     )
@@ -123,31 +127,37 @@ libs_build() {
             || die "modify git-difftool--helper failed."
     fi
 
-    for x in "${cmds[@]}"; do
-        IFS=':' read -r bin links <<< "$x"
-        cmdlet.install "$bin" "${bin##*/}" ${links//:/ }
-    done
+    # override default wrapper
+    cat <<'EOF' > bin-wrappers/git
+#!/usr/bin/env bash
 
-    # pack all git tools into one pkgfile
-    cmdlet.pkgfile git bin/git bin/git-*
+WORKDIR="$(readlink -f "$0" | xargs dirname)"
 
-    # mergetools: env MERGE_TOOLS_DIR
-    cmdlet.pkginst mergetools share/mergetools ../mergetools/*
+# mergetools
+export MERGE_TOOLS_DIR="$WORKDIR/../share/git-core/mergetools"
+
+# templates
+export GIT_TEMPLATE_DIR="$WORKDIR/../share/git-core/templates"
+
+# PATHs 
+export GIT_EXEC_PATH="$WORKDIR/../share/git-core/libexec"
+export PATH="$GIT_EXEC_PATH:$PATH"
+
+exec "$GIT_EXEC_PATH/git" "$@"
+EOF
+    chmod a+x bin-wrappers/git
+
+    # install git + mergetools + templates
+    cmdlet.pkginst git \
+            bin bin-wrappers/git \
+            share/git-core/libexec "${cmds[@]}" \
+            share/git-core/mergetools ../mergetools/* \
+            share/git-core/templates templates/*
 
     cmdlet.check git
 
     cmdlet.caveats << EOF
-static built $(./git --version) without libexec or i18n
-
-all tools are installed in and loaded from executable path
-
-mergetools:
-    git difftool and mergetool need mergetools from \$HOME/.mergetools:
-
-    cmdlets.sh install mergetools
-    cmdlets.sh link share/mergetools ~/.mergetools
-
-    OR you can set MERGE_TOOLS_DIR env to where mergetools is.
+static built $(./git --version) without i18n
 EOF
 
     if is_darwin; then
