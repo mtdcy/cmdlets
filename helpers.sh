@@ -676,7 +676,7 @@ cargo.build() {
     } | _LOGGING=silent _capture
 
     # std < libs_args < user args
-    std+=( "${libs_args[@]}" "$@" )
+    local std=( "${libs_args[@]}" "$@" )
 
     # default: release
     list_has std "--release|--profile" || std+=( --release )
