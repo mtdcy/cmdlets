@@ -9,9 +9,9 @@ libs_lic='MPL-2.0'
 # BIND releases with even minor version numbers (9.14.x, 9.16.x, etc) are stable.
 libs_stable_minor=1 # update revision only
 
-libs_ver=9.20.21
-libs_url=https://downloads.isc.org/isc/bind9/9.20.21/bind-9.20.21.tar.xz
-libs_sha=15e1b5a227d2890f7c4e823a6ea018de70ee2f3a0e859cbff3d82aad8590de03
+libs_ver=9.20.22
+libs_url=https://downloads.isc.org/isc/bind9/9.20.22/bind-9.20.22.tar.xz
+libs_sha=cba92ff631b949655f475fe4b54290f6860fd0070d399f2279f6437c0d383ec6
 libs_dep=( zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc urcu )
 
 is_linux && libs_dep+=( libcap )

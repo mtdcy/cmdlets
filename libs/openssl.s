@@ -5,9 +5,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='Apache-2.0'
-libs_ver=3.6.1
-libs_url=https://github.com/openssl/openssl/releases/download/openssl-3.6.1/openssl-3.6.1.tar.gz
-libs_sha=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e
+libs_ver=3.6.2
+libs_url=https://github.com/openssl/openssl/releases/download/openssl-3.6.2/openssl-3.6.2.tar.gz
+libs_sha=aaf51a1fe064384f811daeaeb4ec4dce7340ec8bd893027eee676af31e83a04f
 libs_dep=()
 
 libs_args=(

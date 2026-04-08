@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="GPLv2"
-libs_ver=2.5.5
+libs_ver=2.5.6
 libs_url=https://github.com/dyne/frei0r/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=e2d01f58fa0f96a7452715f052fe452212044da4bad50bf7cc1d5d0db514a9a9
+libs_sha=bfe715df3d33c1acb857732962402bb8b0eef73e9dde1b58485d3e3b0e42e182
 libs_dep=()
 
 libs_args=(
