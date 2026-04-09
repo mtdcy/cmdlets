@@ -9,7 +9,7 @@ on:
     branches:
       - main
 
-  workflow_dispatch: null
+  workflow_dispatch:
 
 jobs:
   install:
@@ -27,9 +27,9 @@ jobs:
           export PATH="$HOME/.local/bin:/usr/bin:/bin"
 
           if curl --fail --connect-timeout 3 -o /dev/null -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
-            bash -ex -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
+            bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
           else
-            bash -ex -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
+            bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
           fi
 
           echo "$PATH" >> $GITHUB_PATH

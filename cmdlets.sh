@@ -3,6 +3,7 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.6    - 20260410      - code refactor
 #  1.0.5    - 20260208      - fix update command
 #                           - no sed in fetch()
 #                           - fix `readlink: xxx: No such file or directory'
@@ -13,9 +14,11 @@
 #  1.0.0    - 20260129      - first release
 
 set -eo pipefail
-export LANG="${LANG:-en_US.UTF-8}"
 
-VERSION=1.0.5
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL=en_US.UTF-8
+
+VERSION=1.0.6
 
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
@@ -92,12 +95,13 @@ EOF
 }
 
 info()  { echo -e "\\033[32m$*\\033[39m" 1>&2; }
-warn()  { echo -e "\\033[33m$*\\033[39m" 1>&2; }
 info1() { echo -e "\\033[35m$*\\033[39m" 1>&2; }
 info2() { echo -e "\\033[34m$*\\033[39m" 1>&2; }
 info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
-die()   { echo -e "\\033[31m$*\\033[39m" 1>&2; exit 1; }
+warn()  { echo -e "⚠️ \\033[33m$*\\033[39m" 1>&2; }
+
+die()   { echo -e "❌ \\033[31m$*\\033[39m" 1>&2; exit 1; }
 
 # prepend each line with '=> '
 _details() {
@@ -120,7 +124,7 @@ _exists() (
 )
 
 # curl file to destination or TEMPDIR
-_curl() (
+do_curl() (
     local dest="${2:-$TEMPDIR/$1}"
 
     mkdir -p "${dest%/*}"
@@ -150,11 +154,11 @@ else
 fi
 
 # save package to PREBUILTS
-_unzip() (
+do_unzip() (
     local zip="$1"
     if ! test -f "$zip"; then
         zip="$TEMPDIR/$1"
-        _curl "$1" "$zip" || return $?
+        do_curl "$1" "$zip" || return $?
     fi
 
     _tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
@@ -208,7 +212,7 @@ _search() {
 }
 
 # v3 only
-search() {
+do_search() {
     info3 "#3 Search $*"
 
     while IFS=' ' read -r _ pkgfile _; do
@@ -243,7 +247,7 @@ _caveats()  { echo "$PREBUILTS/caveats/${1//\//_}";     }
 #       bash
 #       bash@3.2
 #       bash32/bash@3.2
-fetch() {
+do_fetch() {
     local target="${1%.tar.*}"; shift 1
     local pkgname pkgfile pkgvern pkgbuild
     local caveats="$(_caveats "$target")"
@@ -256,7 +260,7 @@ fetch() {
     _v1() {
         info1 "#1 Fetch $1"
         # curl directly to symlink will override the real file.
-        _curl "bin/$1" || return $?
+        do_curl "bin/$1" || return $?
         mv -f "$TEMPDIR/bin/$1" "$PREBUILTS/bin/$1"
         chmod a+x "$PREBUILTS/bin/$1"
         echo "bin/$1" > "$TEMPDIR/files"
@@ -269,12 +273,12 @@ fetch() {
 
         local pkginfo="$pkgfile@$pkgvern"
         info2 "#2 Fetch $1 < $pkginfo"
-        _curl "$pkginfo" || return 1
+        do_curl "$pkginfo" || return 1
 
         # v2: sha pkgfile
         IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo" )
         info2 "#2 Fetch $1 < $pkgfile"
-        _unzip "$pkgfile" || return 2   # updated files
+        do_unzip "$pkgfile" || return 2   # updated files
     }
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
@@ -283,13 +287,13 @@ fetch() {
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
-        _unzip "$pkgfile" || return 2
+        do_unzip "$pkgfile" || return 2
 
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
         # caveats: v3 only
         true > "$caveats"
-        _curl "$pkgname/$pkgname.caveats" "$caveats" 2>/dev/null || true
+        do_curl "$pkgname/$pkgname.caveats" "$caveats" 2>/dev/null || true
     }
 
     # install from local file.tar.gz
@@ -298,15 +302,15 @@ fetch() {
         IFS='@' read -r target pkgvern < <( basename "${1%.tar.*}" )
 
         info "## Fetch $target < $1"
-        _unzip "$1" || return 1
+        do_unzip "$1" || return 1
     }
 
     if test -f "$target" && [[ "$target" =~ \.tar\.gz$ ]]; then
-        _local "$target" || die "<< install from $target failed"
+        _local "$target" || die "Install from $target failed"
     elif _v3 "$target" || _v2 "$target" || _v1 "$target"; then
         true
     else
-        die "<< Fetch $target/$ARCH failed"
+        die "Fetch $target/$ARCH failed"
     fi
 
     # update installed: name pkgvern pkgbuild
@@ -384,7 +388,7 @@ fetch() {
     fi
 }
 
-update() {
+do_update() {
     local pkgfile pkgvern pkgbuild options=()
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -398,7 +402,7 @@ update() {
 
         if test -z "$pkgbuild"; then
             info ">> no pkgbuild, always update"
-            fetch "$pkgfile" --install
+            do_fetch "$pkgfile" --install
         else
             local _pkgfile _pkgver _pkgbuild
 
@@ -406,16 +410,16 @@ update() {
             IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
 
             if test -z "$_pkgfile"; then
-                warn "<< no update found"
+                warn "no update found"
             elif [[ "$_pkgfile" != *"@$pkgvern.tar."* ]]; then
                 info ">> new pkgvern > $_pkgfile"
-                fetch "$pkgfile" --install
+                do_fetch "$pkgfile" --install
             elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
                 info ">> new pkgbuild > $pkgvern $_pkgbuild"
-                fetch "$pkgfile" --install
+                do_fetch "$pkgfile" --install
             elif [[ "${options[*]}" =~ --force ]]; then
                 info ">> force update > $pkgvern $_pkgbuild"
-                fetch "$pkgfile" --install
+                do_fetch "$pkgfile" --install
             fi
         fi
     done < <( sort "$CMDLETS_LIST" )
@@ -425,7 +429,7 @@ update() {
 # link prebuilts to other place
 #  input: <targets ...> <destination>
 #  notes: requires coreutils' ln
-link() {
+do_link() {
     local targets=( "${@:1:$(($#-1))}" )
     local to="${@:$#}"
 
@@ -451,7 +455,7 @@ link() {
 
 # remove installed files of cmdlet
 #  input: <cmdlet name>
-remove() {
+do_remove() {
     local name="${1%.tar.*}" # formated name
     local caveats="$(_caveats "$name")"
 
@@ -499,7 +503,7 @@ remove() {
     fi
 }
 
-install() {
+do_bootstrap() {
     local target
     if [ -f "$0" ]; then
         target="$0"
@@ -515,26 +519,23 @@ install() {
 
     mkdir -pv "$(dirname "$target")" | _details
 
-    test -w "$(dirname "$target")" || die "<< Permission Denied"
+    test -w "$(dirname "$target")" || die "Permission Denied"
 
     for inst in "${INSTALLERS[@]}"; do
-        if _curl "$inst" "$TEMPDIR/$NAME"; then
+        if do_curl "$inst" "$TEMPDIR/$NAME"; then
             cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
             chmod -v a+x "$target" | _details
 
-            # caveats about coretuils
-            info "\n\t🌹🌹🌹 $NAME requires coreutils to work properly 🌹🌹🌹\n"
-
-            # test target and exit
-            _on_exit && exec "$target" --update
+            # install mandatory cmdlets
+            "$target" install coreutils
         fi
     done
 
-    die "<< Update $(basename "$0") failed"
+    die "Update $(basename "$0") failed"
 }
 
 # list installed cmdlets
-list() {
+do_list() {
     test -f "$CMDLETS_LIST" || return 0
 
     while test -n "$1"; do
@@ -598,12 +599,12 @@ list() {
     done
 }
 
-# invoke cmd [args...]
-invoke() {
+# do_process cmd [args...]
+do_process() {
     mkdir -pv "$PREBUILTS"/{bin,share,caveats}
 
     # Permission denied
-    test -r "$PREBUILTS" || die "<< Read Permission Denied"
+    test -r "$PREBUILTS" || die "Read Permission Denied"
 
     local ret=0
     local done=1
@@ -612,10 +613,10 @@ invoke() {
             echo "$VERSION"
             ;;
         ls|list)
-            list "${@:2}"
+            do_list "${@:2}"
             ;;
         ln|link)
-            link "${@:2}"
+            do_link "${@:2}"
             ;;
         caveats|info)
             local caveats="$(_caveats "$2")"
@@ -632,7 +633,7 @@ invoke() {
     [ "$done" -ne 1 ] || exit "$ret"
 
     # Permission denied
-    test -w "$PREBUILTS" || die "<< Write Permission Denied?"
+    test -w "$PREBUILTS" || die "Write Permission Denied?"
 
     # init directories and files
     touch "$CMDLETS_LIST"
@@ -641,7 +642,7 @@ invoke() {
     # always try to update manifest
     export MANIFEST="$PREBUILTS/cmdlets.manifest"
     touch "$MANIFEST"
-    _curl "${MANIFEST##*/}" "$MANIFEST" || warn "== Fetch manifest failed"
+    do_curl "${MANIFEST##*/}" "$MANIFEST" || warn "Fetch manifest failed"
 
     # handle commands
     case "$1" in
@@ -649,36 +650,34 @@ invoke() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            update "${@:2}"
+            do_update "${@:2}" || ret=$?
             ;;
         update)
             if test -n "$2"; then
                 for x in "${@:2}"; do
-                    fetch "$x" --install || ret=$?
+                    do_fetch "$x" --install || ret=$?
                 done
-            elif test -L "$0"; then
-                update
             else
-                install
+                do_update || ret=$?
             fi
             ;;
         search)
-            search "${@:2}"
+            do_search "${@:2}" || ret=$?
             ;;
-        install)
+        install) # fetch cmdlets and install symlinks
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
-                ( fetch "$bin" --install "$alias" ) || ret=$?
+                ( do_fetch "$bin" --install "$alias" ) || ret=$?
             done
             ;;
-        fetch)      # fetch cmdlets
+        fetch) # fetch cmdlets without install symlinks
             for x in "${@:2}"; do
-                ( fetch "$x" ) || ret=$?
+                ( do_fetch "$x" ) || ret=$?
             done
             ;;
         rm|remove|uninstall)
             for x in "${@:2}"; do
-                ( remove "$x" ) || ret=$?
+                ( do_remove "$x" ) || ret=$?
             done
             ;;
         *)
@@ -701,9 +700,9 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
-    install
+    do_bootstrap 
 else
-    cd "$(dirname "$0")" && invoke "$@" || exit $?
+    cd "$(dirname "$0")" && do_process "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
