@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 libs_name=lazygit
 libs_lic="MIT"
-libs_ver=0.55.1
+libs_ver=0.56.0
 libs_url=https://github.com/jesseduffield/lazygit/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=6c11d02c61767aea1b3f2956797f9b4b3fccc526668a3f211d4e6071195ceb2c
+libs_sha=8785a17f52549640d1bacab66bec3156b9208c46390bb597002eeb3734085a00
 
 # configure args
 libs_args=(
