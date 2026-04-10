@@ -1,11 +1,13 @@
 # Cross-platform Rust rewrite of the GNU coreutils
 
+libs_stable=1
+
 # shellcheck disable=SC2034
 libs_name=coreutils
 libs_lic="MIT"
-libs_ver=0.8.0
+libs_ver=0.7.0
 libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=03f765fd23e9cc66f8789edc6928644d8eae5e5a7962d83795739d0a8a85eaef
+libs_sha=dc56a3c4632742357d170d60a7dcecb9693de710daeaafa3ad925750b1905522
 libs_dep=( libiconv )
 
 # multicall core utils
@@ -55,6 +57,9 @@ libs_args=(
 #fi
 
 libs_build() {
+    # v0.8.0: tee is broken
+    cmdlet.disclaim 0.8.0
+
     # libiconv has no pc file
     # export LIBICONV_NO_PKG_CONFIG=1
     export LIBICONV_STATIC=1
