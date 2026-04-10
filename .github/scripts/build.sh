@@ -53,7 +53,9 @@ fi
 # for release actions
 bash libs.sh zip_files || true
 
-if [ -n "$CL_NOTIFY" ] && [ "$ret" -ne 0 ]; then
+if [ "$ret" -eq 0 ]; then
+    bash libs.sh maketag
+elif [ -n "$CL_NOTIFY" ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---
 $(git show HEAD --stat)

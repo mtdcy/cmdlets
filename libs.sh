@@ -1243,8 +1243,6 @@ build() {
         return 127
     }
 
-    _make_target_tag || true
-
     # build rdepends
     is_true CMDLET_CHECK || return 0
 
@@ -1387,7 +1385,7 @@ _git_ls_local() {
 
 # make target tag on given commit or HEAD
 #  inputs: <target name> [commit id]
-_make_target_tag() {
+maketag() {
     local TAG="${1:-$(target)}"
     local HEAD="${2:-HEAD}"
 
