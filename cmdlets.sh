@@ -272,7 +272,10 @@ do_fetch() {
         IFS='@' read -r pkgfile pkgvern <<< "${1%.tar.*}"
         test -n "$pkgvern" || pkgvern="latest"
 
-        local pkginfo="$pkgfile@$pkgvern"
+        IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
+        test -n "$pkgfile" || pkgfile="$pkgname"
+
+        local pkginfo="$pkgname/$pkgfile@$pkgvern"
         info2 "#2 Fetch $1 < $pkginfo"
         do_curl "$pkginfo" || return 1
 
@@ -369,7 +372,7 @@ do_fetch() {
     # update files list: name files ...
     grep -Ev "^$target " "$FILES_LIST" > "$TEMPDIR/installed"
     {
-        printf '%s ' "$target "
+        printf '%s ' "$target"
         while read -r file; do
             printf '%s ' "$PREBUILTS/$file"
         done < "$TEMPDIR/files"
@@ -528,11 +531,11 @@ do_bootstrap() {
             chmod -v a+x "$target" | _details
 
             # install mandatory cmdlets
-            "$target" install coreutils
+            _on_exit && exec "$target" install coreutils
         fi
     done
 
-    die "Update $(basename "$0") failed"
+    die "do bootstrap failed"
 }
 
 # list installed cmdlets
