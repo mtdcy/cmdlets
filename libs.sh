@@ -170,7 +170,6 @@ _EMOJI_ERROR="❌"
 
 # slog [error|info|warn] [emoji] "message"
 _slog() {
-    local ret=$?
     local date="$(date '+%m-%d %H:%M:%S')"
     local message="${*:2}"
 
@@ -190,12 +189,11 @@ _slog() {
             ;;
     esac
     echo -e "$message" >&2
-    return $ret
 }
 
 slogi() { _slog info                "$@"; }
 slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
-sloge() { _slog error $_EMOJI_ERROR "$@"; }
+sloge() { _slog error $_EMOJI_ERROR "$@"; return 1; }
 
 die()   {
     _capture_reset # in case Ctrl-C happens
