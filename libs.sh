@@ -154,47 +154,66 @@ host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
 
-# slog [error|info|warn] "leading" "message"
+_EMOJI_DIR="📂"
+_EMOJI_ZIP="📁"
+_EMOJI_FILE="📄"
+_EMOJI_URL="💫"
+_EMOJI_GIT="🐙"
+_EMOJI_NOTE="📜"
+_EMOJI_PKGFILE="📦"
+
+_EMOJI_JOB="🚀"
+_EMOJI_OK="✅"
+_EMOJI_RUN="🟢"
+_EMOJI_WARN="🟠"
+_EMOJI_ERROR="❌"
+
+# slog [error|info|warn] [emoji] "message"
 _slog() {
     local ret=$?
-    local lvl date message
+    local date="$(date '+%m-%d %H:%M:%S')"
+    local message="${*:2}"
 
-    [ $# -gt 1 ] && lvl="$1" && shift 1
-    date="$(date '+%m-%d %H:%M:%S')"
+    # append stdin
+    test -p /dev/stdin && message+=" $(cat)"
 
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
-    case "$(tr '[:upper:]' '[:lower:]' <<< "$lvl")" in
+    case "$1" in
         error)
-            message="[$date] \\033[31m$1\\033[39m ${*:2}"
+            message="[$date] \\033[31m$message\\033[39m"
             ;;
         warn)
-            message="[$date] \\033[33m$1\\033[39m ${*:2}"
+            message="[$date] \\033[33m$message\\033[39m"
             ;;
         info|*)
-            message="[$date] \\033[32m$1\\033[39m ${*:2}"
+            message="[$date] \\033[32m$message\\033[39m"
             ;;
     esac
     echo -e "$message" >&2
     return $ret
 }
 
-slogi() { _slog info  "$@"; }
-slogw() { _slog warn  "$@"; }
-sloge() { _slog error "$@"; }
+slogi() { _slog info                "$@"; }
+slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
+sloge() { _slog error $_EMOJI_ERROR "$@"; }
 
 die()   {
-    _tty_reset # in case Ctrl-C happens
-    test -z "$*" || _slog error "....." "$@"
+    _capture_reset # in case Ctrl-C happens
+    if test -z "$*"; then
+        _slog error $_EMOJI_ERROR "die"
+    else
+        _slog error $_EMOJI_ERROR "$@"
+    fi
     exit 1 # exit shell
 }
 
-exit_on_error() {
+die_on_error() {
     local ret=$? # save error code
     [ $ret -ne 0 ] || return 0
 
-    _tty_reset # in case Ctrl-C happens
+    _capture_reset # in case Ctrl-C happens
 
-    sloge "exit on error: $*"
+    _slog error $_EMOJI_ERROR "die on error $ret"
     exit $ret # exit shell
 }
 
@@ -216,7 +235,7 @@ _capture() {
                 printf "#$i: %s" "$line"
                 tput rc                     # restore cursor position
             done < <(tee -a "$_LOGFILE")
-            _tty_reset
+            _capture_reset
             ;;
         *)
             tee -a "$_LOGFILE"
@@ -224,7 +243,7 @@ _capture() {
     esac
 }
 
-_tty_reset() {
+_capture_reset() {
     [ "$_LOGGING" = "tty" ] || return 0
 
     # bash 3.2: wait for all jobs
@@ -235,6 +254,7 @@ _tty_reset() {
     tput sgr0       # reset colors
 }
 
+# capture stdin and output to stderr (if logging plain)
 _capture_stderr() {
     test -n "$_LOGFILE" || return 0
     case "$_LOGGING" in
@@ -261,7 +281,7 @@ echocmd() {
 
 # slogcmd <command>
 slogcmd() {
-    slogi "..Run" "$@" >&2
+    slogi $_EMOJI_RUN "$@" >&2
 
     _LOGGING="${_LOGGING:-silent}" echocmd "$@"
 }
@@ -336,7 +356,7 @@ _init_host() {
                 p="$(which "$y" 2>/dev/null)" && break
             done
 
-            test -n "$p" && export "$k=$p" || slogw ".Init" "missing host tool $v"
+            test -n "$p" && export "$k=$p" || slogw "missing host tool $v"
         done
     }
 
@@ -370,7 +390,7 @@ _init_target() {
     # test gcc
     "$CC" -v &>/dev/null
 
-    exit_on_error "$CC is not recognized."
+    die_on_error "$CC is not recognized."
 
     case $("$CC" -dumpmachine) in
         *-w64-*)    _TARGET_NAME=windows    ;;
@@ -405,10 +425,10 @@ _init_target() {
             IFS=':' read -r k v <<< "$x"
             eval $k="\${CC/%gcc/$v}"
             if ! test -x "${!k}"; then
-                slogw ".Init" "${!k} not found."
+                slogw "${!k} not found."
                 eval $k="\$(which $v)"
             fi
-            test -x "${!k}" || sloge ".Init" "$v not found."
+            test -x "${!k}" || slogw "$v not found."
             export $k
         done
     }
@@ -523,24 +543,24 @@ _init_target() {
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
     if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
-        slogw ".Init" "no v3/manifest."
+        slogw "no v3/manifest."
     fi
 
     # toolchain scripts, for debugging and options embedding
-    _init_script() {
+    _init_target_script() {
         eval -- export REAL_$1="\$$2"
         export $2="$_ROOT_/scripts/$1"
     }
 
     # no all build system support command with arguments
-    _init_script cc         CC
-    _init_script cxx        CXX
-    _init_script ld         LD
-    _init_script as         AS
-    _init_script ar         AR
-    _init_script nm         NM
-    _init_script ranlib     RANLIB
-    _init_script pkg_config PKG_CONFIG
+    _init_target_script cc          CC
+    _init_target_script cxx         CXX
+    _init_target_script ld          LD
+    _init_target_script as          AS
+    _init_target_script ar          AR
+    _init_target_script nm          NM
+    _init_target_script ranlib      RANLIB
+    _init_target_script pkg_config  PKG_CONFIG
 
     is_mingw && _BINEXT=".exe" || unset _BINEXT
 
@@ -583,73 +603,68 @@ _init_target() {
     fi
 }
 
-_CURL_OPTS=( -fsSL --connect-timeout 3 )
-
-# _curl source destination [options]
+# curl url
+#  input: url zip
+#  env: CURL_TIMEOUT=3
 _curl() {
     local source="$1"
 
+    local opts=( -fsSL --connect-timeout "${CURL_TIMEOUT:-3}" )
+
     if test -n "$2"; then
         # show errors
-        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" -o "$2" | _capture
+        curl "${opts[@]}" "${@:3}" "$source" -o "$2" | _capture
+        return ${PIPESTATUS[0]}  # return curl exit code
     else
         # silent curl output for stdout
-        curl "${_CURL_OPTS[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
+        curl "${opts[@]}" "${@:3}" "$source" 2> >(_capture_stderr)
     fi
 }
 
-# fetch zip or die
-#  input: zip sha url [mirrors ...]
-_fetch() {
-    local zip=$1
-    local sha=$2
-    local url=$3
-    local _sha mirror
+# fetch zip from cache...mirror...urls
+#  input: zip urls...
+#  env: _MIRRORS
+_curl_urls() {
+    local zip="$1"
 
-    mkdir -p "$(dirname "$zip")"
+    mkdir -p "${zip%/*}"
 
-    #1. try local file first
-    if [ -f "$zip" ]; then
-        slogi ".FILE" "${zip#"$_ROOT_/"}"
+    # first: local file cache
+    local urls=( "$zip" )
 
-        # verify sha only if it exists
-        test -n "$sha" || return 0
-
-        IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
-        if [ "$_sha" = "$sha" ]; then
-            return 0
-        else
-            slogw "..SHA" "$_sha vs $sha (expected)"
-            rm -f "$zip"
-        fi
-    fi
-
-    #2. try mirror
+    # second: mirror
     if test -n "$_MIRRORS"; then
-        mirror="$_MIRRORS/packages/$libs_name/${zip##*/}"
-        slogi ".CURL" "$mirror"
-        _curl "$mirror" "$zip" || rm -f "$zip"
+        urls+=( "$_MIRRORS/packages/$libs_name/${zip##*/}" )
     fi
 
-    #3. try originals
-    if ! test -f "$zip"; then
-        for url in "${@:3}"; do
-            slogi ".CURL" "$url"
-            _curl "$url" "$zip" && break || rm -f "$zip"
-        done
-    fi
+    # final: urls
+    urls+=( CURL_TIMEOUT=30 "${@:2}" )
 
-    if test -f "$zip"; then
-        slogi ".FILE" "$(sha256sum "$zip")"
-    else
-        sloge ".CURL" "fetch $3 failed." || die
-    fi
+    local timeout=3 url
+    for url in "${urls[@]}"; do
+        case "$url" in
+            CURL_TIMEOUT=*)
+                timeout="${url#*=}"
+                ;;
+            http*)
+                slogi $_EMOJI_URL "$url"
+                CURL_TIMEOUT="$timeout" _curl "$url" "$zip" && break
+                ;;
+            *)
+                test -f "$url" && break
+                ;;
+        esac
+    done
+
+    test -f "$zip" || sloge "$2 curl failed."
 }
 
-# unzip file to current dir, or exit program
-# _unzip <file> [strip]
+# unzip file to workdir
+# _unzip zipfile
+#  input: zipfile
+#  env: ZIP_SKIP=1
 _unzip() {
-    slogi ".Zipx" "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -692,7 +707,7 @@ _unzip() {
     esac
 
     # silent this cmd to speed up build procedure
-    _LOGGING=silent echocmd "${cmd[@]}" "$1" || die "unzip $1 failed."
+    _LOGGING=silent echocmd "${cmd[@]}" "$1"
 
     # post strip
     case "${cmd[0]}" in
@@ -708,25 +723,9 @@ _unzip() {
     esac
 }
 
-# clone git repo
-#  input: git_url#branch_or_tag_name [path]
-_fetch_git() {
-    local url branch
-    local path="${2%.git*}"
-
-    slogi "..GIT" "$1 => $path"
-
-    IFS='#' read -r url branch <<< "$1"
-    test -n "$branch" || branch="main"
-
-    # reuse local repo
-    if ! test -d "$path/.git"; then
-        git clone --depth=1 --recurse-submodules --branch "$branch" --single-branch "$url" "$path" || die "git clone $1 failed."
-    fi
-}
-
-# extract zip file name from url
-_zipfile() {
+# url to packages file
+#  input: url
+_url_file() {
     local tar="${1##*/}"
 
     # https://github.com/ntop/ntopng/commit/a195be91f7685fcc627e9ec88031bcfa00993750.patch?full_index=1
@@ -740,24 +739,123 @@ _zipfile() {
 }
 
 # unzip url to workdir or die
-#  input: sha url [mirrors...]
-_fetch_unzip() {
-    # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
+#  input: sha urls...
+_url_fetch() {
+    local sha="$1"
+
     if [[ "${2%#*}" =~ \.git$ ]]; then
-        _fetch_git "${@:2}" "${2##*/}"
+        # e.g: libs_url="https://github.com/docker/cli.git#v$libs_ver"
+        # limit: no urls for git
+        local url hash
+        IFS='#' read -r url hash <<< "$2"
+        test -n "$hash" || hash="$libs_ver"
+
+        slogi $_EMOJI_GIT "$url#$hash"
+
+        test -d .git || # reuse sources
+        git clone --recurse-submodules "$url" . || die "git clone $1 failed."
+
+        git checkout "$hash" --recurse-submodules
     else
         # assemble zip name from url
-        local zip="$(_zipfile "$2")"
+        local zip="$(_url_file "$2")"
 
         # download zip file
-        _fetch "$zip" "$1" "${@:2}"
+        _curl_urls "$zip" "${@:2}" || die
+
+        if test -n "$sha"; then
+            IFS=' *' read -r _sha _ <<< "$(sha256sum "$zip")"
+            if [ "$sha" != "$_sha" ]; then
+                # warning only for now
+                slogw "$_sha vs $sha (expected)"
+            fi
+        else
+            sha256sum "$zip" | slogi $_EMOJI_ZIP
+        fi
 
         case "$("$FILE" -b "$zip")" in
             *"compressed data"*)    _unzip "$zip" "${ZIP_SKIP:-}"   ;;
             *"archive data"*)       _unzip "$zip" "${ZIP_SKIP:-}"   ;;
             *)                      cp -f "$zip" .                  ;; # copy to workdir
-        esac
+        esac || die "unzip $zip failed."
     fi
+}
+
+# v3/git releases
+_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
+
+_pkgfile_url() {
+    if _is_flat_repo; then
+        echo "${_TARGET_REPO#flat+}/${1##*/}"
+    else
+        echo "$_TARGET_REPO/$1"
+    fi
+}
+
+# curl and unzip pkgfile to PREFIX
+#  input: pkgfile [zipfile]
+_pkgfile_curl() {
+    local url="$(_pkgfile_url "$1")"
+    local zip="$2"
+
+    test -n "$zip" || zip="$TEMPDIR/${1##*/}"
+
+    mkdir -p "${zip%/*}"
+
+    rm -f "$zip"
+    _MIRRORS="" _curl_urls "$zip" "$url" || return 1
+
+    if [[ "$zip" =~ \.tar\..*$ ]]; then
+        tar -C "$PREFIX" -xvf "$zip"
+        echo ""
+    fi
+}
+
+# fetch pkgfile by pkgname and pkgvern(optional)
+_pkgfile_fetch() {
+    local pkgname pkgvern pkginfo pkgfiles
+
+    # priority: v2 > v3, no v1 package
+
+    slogi "$_EMOJI_PKGFILE Fetch package $1"
+
+    # zlib@1.3.1
+    IFS='@' read -r pkgname pkgvern <<< "$1"
+
+    # v2: latest version
+    : "${pkgvern:=latest}"
+
+    pkginfo="$pkgname/pkginfo@$pkgvern"
+
+    # prefer v2 pkginfo than v3 manifest for developers
+    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
+        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+    else
+        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+
+        # v3: no pkgvern => find out latest version
+        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            test -n "$pkgvern" && slogi $_EMOJI_NOTE "found pkgfile $pkgname@$pkgvern" || {
+                slogw "no package found"
+                return 1
+            }
+        fi
+
+        # find all pkgfiles
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
+    fi
+
+    test -n "${pkgfiles[*]}" || slogw "no pkgfile found"
+
+    local x
+    for x in "${pkgfiles[@]}"; do
+        echo ""
+        _pkgfile_curl "$x" || slogw "fetch $x failed"
+    done
+
+    touch "$PREFIX/.$pkgname.d" # mark as ready
 }
 
 # filter libs_tar
@@ -807,46 +905,50 @@ _load() {
     export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
 }
 
-_prepare_workdir() {
-    local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
+# load libs_deps
+_load_deps()    {( _load "$1" >/dev/null && echo "${libs_deps[@]}"      )}
 
-    mkdir -p "$PREFIX"
-    mkdir -p "$workdir" && cd "$workdir" || die "prepare workdir failed."
-
-    slogi ".WDIR" "${PWD#"$_ROOT_/"}"
-}
+# load libs_targets
+_load_targets() {( _load "$1" >/dev/null && echo "${libs_targets[@]}"   )}
 
 # prepare source code or die
+#  input: name
 _prepare() {
-    slogi ".Load" "libs/$1.s"
+    slogi $_EMOJI_FILE "libs/$1.s"
 
     _load "$1" || die "load $1 failed."
 
-    # enter working directory
-    _prepare_workdir
+    # prepare workdir and enter it
+    local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
 
-    if test -n "$libs_url"; then
-        # libs_url: support mirrors
-        _fetch_unzip "$libs_sha" "${libs_url[@]}"
-    fi
+    mkdir -p "$PREFIX"
+    mkdir -p "$workdir"
+
+    cd "$workdir"
+
+    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
+
+    # libs_url: fetch and unzip into workdir, support mirrors
+    test -z "$libs_url" || _url_fetch "$libs_sha" "${libs_url[@]}"
 
     local x patch
 
-    # libs_resources: no mirrors
+    # libs_resources: fetch and unzip to workdir, no mirrors
     if test -n "${libs_resources[*]}"; then
         local url sha
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _fetch_unzip "$sha" "$url"
+            ZIP_SKIP=0 _url_fetch "$sha" "$url"
         done
     fi
 
-    # libs_patches: web ready
+    # libs_patches: fetch and patch, web ready
+    #  XXX: if you want to patch manually or reverse patch, use libs_resources
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
             http://*|https://*)
-                local file="$(_zipfile "$patch")"
+                local file="$(_url_file "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
@@ -856,7 +958,7 @@ _prepare() {
         esac
     done
 
-    # always patch with -p0:
+    # inline patch: always patch with -p0:
     #  `diff -u main.c.orig main.c' will create patch working with -p0
     if test -s "$TEMPDIR/$libs_name.patch"; then
         if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
@@ -873,7 +975,7 @@ _compile() {
 
     ( # always start subshell before _load()
 
-        trap _tty_reset EXIT
+        trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
 
         set -eo pipefail
@@ -882,7 +984,7 @@ _compile() {
         _prepare "$1" || return $?
 
         declare -F libs_build >/dev/null || {
-            slogw "<<<<<" "Not supported or missing libs_build"
+            slogw "Not supported or missing libs_build"
             return 0
         }
 
@@ -911,7 +1013,7 @@ _compile() {
 
         # build library
         ( libs_build ) || {
-            sloge "<<<<<" "build $libs_name@$libs_ver failed"
+            sloge "build $libs_name@$libs_ver failed"
 
             mv "$_LOGFILE" "$_LOGFILE.fail"
             tail -v "$_LOGFILE.fail"
@@ -921,12 +1023,9 @@ _compile() {
         # update tracking file
         touch "$PREFIX/.$libs_name.d"
 
-        slogi "<<<<<" "$libs_name@$libs_ver"
+        slogi $_EMOJI_OK "$libs_name@$libs_ver"
     )
 }
-
-# load libs_deps
-_deps_load() {( _load "$1" &>/dev/null && echo "${libs_deps[@]}" )}
 
 # generate or update dependencies map
 _deps_init() {
@@ -943,12 +1042,12 @@ _deps_init() {
         # update dependencies
         while IFS='/.' read -r _ libs _; do
             sed -i "/^$libs:/d" "$_DEPS_FILE"
-            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+            echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s" )
     else
         # write dependencies
         while IFS='/.' read -r _ libs _; do
-            echo "$libs: $(_deps_load "$libs")" >> "$_DEPS_FILE"
+            echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <( find libs -maxdepth 1 -type f -name "*.s" )
     fi
     export _DEPS_READY=1
@@ -1086,7 +1185,7 @@ build() {
     # always prepend with compat
     _deps_fetch compat "$@"
 
-    slogi "BUILD" "$*"
+    slogi $_EMOJI_JOB "$*"
 
     local libs=() x
 
@@ -1094,23 +1193,22 @@ build() {
     IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
 
     # dependencies
-    slogi "-DEPS" "${libs[*]}"
+    if test -n "${libs[*]}"; then
+        slogi $_EMOJI_PKGFILE "${libs[*]}"
+    fi
 
     # sort and append requested libs
     libs+=( "$@" )
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
-    _load_targets() {( _load "$1" 1>/dev/null && echo "${libs_targets[@]}" )}
-
     # continue on error
-    _compile_targets() {
+    _build_targets() {
         local libs=( "$@" ) fails=() i
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
-            echo ""
-            slogi ">>>>>" "#$((i+1))/${#libs[@]} $name"
+            slogi $_EMOJI_NOTE "#$((i+1))/${#libs[@]} $name"
 
             local x supported
 
@@ -1118,7 +1216,7 @@ build() {
             for x in "$name" $(depends "$name"); do
                 IFS=' ' read -r -a supported < <( _load_targets "$x" ) || die "load targets failed."
                 list_has supported "$_TARGET_NAME" || {
-                    slogw "<<<<<" "no support for $_TARGET_NAME ($x)"
+                    slogw "no support for $_TARGET_NAME ($x)"
                     unset supported
                     break
                 }
@@ -1126,8 +1224,8 @@ build() {
             is_true supported || continue
 
             # show dependencies status
-            slogi ".DEPS" "$(_deps_status "$name")" || {
-                slogw "<<<<<" "$name: missing dependencies"
+            slogi $_EMOJI_NOTE "$(_deps_status "$name")" || {
+                slogw "$name: missing dependencies"
                 fails+=( "$name" )
                 continue
             }
@@ -1141,8 +1239,9 @@ build() {
         }
     }
 
-    _compile_targets "${libs[@]}" || {
-        sloge "build failed #$?." || true # always return errno 127
+    _build_targets "${libs[@]}" || {
+        true # always return errno 127
+        sloge "build failed #$?."
         return 127
     }
 
@@ -1156,83 +1255,12 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
 
-    slogi "+DEPS" "${libs[*]}"
+    slogi $_EMOJI_JOB "${libs[*]}"
 
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
 
-    _compile_targets "${libs[@]}" || sloge "build rdepends failed #$?."
-}
-
-# v3/git releases
-_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
-
-# curl and unzip pkgfile to PREFIX
-_pkgfile_curl() {
-    local zip
-
-    test -n "$2" && zip="$2" || zip="$TEMPDIR/${1##*/}"
-
-    mkdir -p "${zip%/*}"
-
-    if _is_flat_repo; then
-        slogi "💫 $_TARGET_REPO/${1##*/}"
-        _curl "${_TARGET_REPO#flat+}/${1##*/}" "$zip" || return 1
-    else
-        slogi "💫 $_TARGET_REPO/$1"
-        _curl "$_TARGET_REPO/$1" "$zip" || return 1
-    fi
-
-    if [[ "$zip" =~ \.tar\..*$ ]]; then
-        tar -C "$PREFIX" -xvf "$zip"
-        echo ""
-    fi
-}
-
-# fetch pkgfile by pkgname and pkgvern(optional)
-_pkgfile_fetch() {
-    local pkgname pkgvern pkginfo pkgfiles
-
-    # priority: v2 > v3, no v1 package
-
-    slogi "📦 Fetch package $1"
-
-    # zlib@1.3.1
-    IFS='@' read -r pkgname pkgvern <<< "$1"
-
-    # v2: latest version
-    : "${pkgvern:=latest}"
-
-    pkginfo="$pkgname/pkginfo@$pkgvern"
-
-    # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
-        # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
-    else
-        # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
-
-        # v3: no pkgvern => find out latest version
-        if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
-            test -n "$pkgvern" && slogi ">> found package $pkgname@$pkgvern" || {
-                slogw "🟠 no package found"
-                return 1
-            }
-        fi
-
-        # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
-    fi
-
-    test -n "${pkgfiles[*]}" || { slogw "<< $* no pkgfile found"; return 1; }
-
-    local x
-    for x in "${pkgfiles[@]}"; do
-        _pkgfile_curl "$x" || { slogw "<< fetch $x failed"; return 1; }
-    done
-
-    touch "$PREFIX/.$pkgname.d" # mark as ready
+    _build_targets "${libs[@]}" || sloge "build rdepends failed #$?."
 }
 
 pkgfiles() {
@@ -1309,14 +1337,14 @@ fetch() {
 
         test -n "$libs_url" || continue
 
-        _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}"
+        _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}"
 
         # libs_resources: no mirrors
         if test -n "${libs_resources[*]}"; then
             local url sha
             for x in "${libs_resources[@]}"; do
                 IFS=';|' read -r url sha <<< "$x"
-                _fetch "$(_zipfile "$url")" "$sha" "$url"
+                _curl_urls "$(_url_file "$url")" "$url"
             done
         fi
     done
@@ -1444,9 +1472,9 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _fetch "$(_zipfile "$libs_url")" "$libs_sha" "${libs_url[@]}" || die
+    _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}" || die
 
-    IFS=' ' read -r sha _ < <(sha256sum "$(_zipfile "$libs_url")")
+    IFS=' ' read -r sha _ < <(sha256sum "$(_url_file "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
     slogw "<<<<< updated $libs_name => $libs_ver >>>>>"

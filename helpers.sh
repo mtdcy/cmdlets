@@ -1044,7 +1044,7 @@ _make_pkgfile() {
         files+=( "$x" )
     done
 
-    slogi "..TAR" "$1 < ${files[*]}"
+    slogi $_EMOJI_PKGFILE "$1 < ${files[*]}"
 
     echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
@@ -1142,7 +1142,7 @@ cmdlet.disclaim() {
 cmdlet.pkginst() {
     local name="$1"; shift
 
-    slogi ".Inst" "$name < $*"
+    slogi $_EMOJI_PKGFILE "$name < $*"
 
     local sub installed
     while [ $# -ne 0 ]; do
@@ -1180,7 +1180,7 @@ cmdlet.pkginst() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet.install() {
-    slogi ".Inst" "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
+    slogi $_EMOJI_PKGFILE "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
     # executable
     local bin="$(_locate_exe "$1")" ext
@@ -1217,7 +1217,7 @@ cmdlet.install() {
 
 # perform visual check on cmdlet
 cmdlet.check() {
-    slogi "..Run" "check $*"
+    slogi $_EMOJI_RUN "check $*"
 
     local bin="$(_locate_bin "$1")"
 
@@ -1261,7 +1261,7 @@ cmdlet.caveats() {
     # no version for caveats file
     caveats="$PREFIX/$libs_name/$libs_name.caveats"
 
-    slogi "Caveats:"
+    slogi $_EMOJI_NOTE "Caveats:"
     if test -n "$*"; then
         echo "$*" | tee -a "$caveats" || die "write caveats failed."
     else
@@ -1344,7 +1344,7 @@ cmdlet.pkgconf() {
         esac
     done
 
-    slogi "..Fix" "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
+    slogi $_EMOJI_FILE "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
     if test -f "$name.pc"; then
         # append missing fields
@@ -1383,7 +1383,7 @@ pkgconf() { cmdlet.pkgconf "$@";  }
 cmdlet.archive() {
     local name="${1%.a}"; shift
 
-    slogi "...AR" "$name < $@"
+    slogi $_EMOJI_PKGFILE "$name < $*"
 
     if is_darwin; then
         echocmd libtool -static -o "$name.a" "$@"
