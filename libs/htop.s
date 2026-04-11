@@ -5,9 +5,9 @@ libs_targets=( linux darwin )
 # shellcheck disable=SC2034
 libs_name=htop
 libs_lic="GPL"
-libs_ver=3.4.1
+libs_ver=3.5.0
 libs_url=https://github.com/htop-dev/htop/releases/download/$libs_ver/htop-$libs_ver.tar.xz
-libs_sha=904f7d4580fc11cffc7e0f06895a4789e0c1c054435752c151e812fead9f6220
+libs_sha=b6586e405c5223ebe5ac7828df21edad45cbf90288088bd1b18ad8fa700ffa05
 
 libs_deps=(ncurses) # enables mouse scroll
 
