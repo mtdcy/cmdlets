@@ -33,9 +33,6 @@ if test -n "$1"; then
     cmdlets=( "$1" ) # build single library manually
 else
     TAG="$(bash libs.sh target)"
-
-    # build cmdlet and rdepends by default
-    rdepends=1
 fi
 
 ret=0
@@ -43,7 +40,7 @@ ret=0
 if [[ "$cmdlets" =~ -$ ]]; then
     export CMDLET_PKGFILES=0
     bash libs.sh build "${cmdlets[@]%-}" || ret=$?
-elif [[ "$cmdlets" =~ \+$ ]] || test -n "$rdepends"; then
+elif [[ "$cmdlets" =~ \+$ ]]; then
     export CMDLET_CHECK=1
     bash libs.sh build "${cmdlets[@]%+}" || ret=$?
 else
