@@ -3,14 +3,14 @@ name: Update cmdlets
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # daily
+    - cron: '0 0 * * 0'  # weekly
 
 # push:
 #   paths: null
 #   branches:
 #     - main
 
-  workflow_dispatch: null
+  workflow_dispatch:
 
 jobs:
   update:
