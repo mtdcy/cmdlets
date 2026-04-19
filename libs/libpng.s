@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 libs_lic="libpng-2.0"
-libs_ver=1.6.57
+libs_ver=1.6.58
 libs_url=https://downloads.sourceforge.net/libpng/libpng16/libpng-$libs_ver.tar.xz
-libs_sha=d10c20d7171569804cae8dfc13ba6dcd0662c41ed39d43d4d429314aafb10a80
+libs_sha=28eb403f51f0f7405249132cecfe82ea5c0ef97f1b32c5a65828814ae0d34775
 libs_dep=(zlib)
 
 libs_args=(
