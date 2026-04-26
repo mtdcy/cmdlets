@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=GPLv2+
-libs_ver=3.3.10
-libs_url=https://fftw.org/fftw-3.3.10.tar.gz
-libs_sha=56c932549852cddcfafdab3820b0200c7742675be92179e59e6215b340e26467
+libs_ver=3.3.11
+libs_url=https://fftw.org/fftw-3.3.11.tar.gz
+libs_sha=5630c24cdeb33b131612f7eb4b1a9934234754f9f388ff8617458d0be6f239a1
 libs_dep=( )
 
 libs_patches=(

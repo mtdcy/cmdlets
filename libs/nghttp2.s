@@ -2,9 +2,9 @@
 # shellcheck disable=SC2034
 libs_desc="HTTP/2 C Library"
 libs_lic="MIT"
-libs_ver=1.68.1
-libs_url=https://github.com/nghttp2/nghttp2/releases/download/v1.68.1/nghttp2-1.68.1.tar.gz
-libs_sha=ceb434c1f9dfe2a9d305b6b797786fb9227484dfa88508d14ca1c50263db55d3
+libs_ver=1.69.0
+libs_url=https://github.com/nghttp2/nghttp2/releases/download/v1.69.0/nghttp2-1.69.0.tar.gz
+libs_sha=c866b7477cbb7512ab6863a685027adbb1bb8da8fc3bab7429ed43d3281d5aa9
 libs_dep=()
 
 libs_args=(

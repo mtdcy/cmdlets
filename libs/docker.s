@@ -3,9 +3,9 @@
 # Docker clients
 
 # shellcheck disable=SC2034,SC2248
-libs_ver=29.4.0
+libs_ver=29.4.1
 libs_url=https://github.com/docker/cli/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=cc347f0246975cde09da43831c227ccae3b73d0953389d0963e6aa04af6de6a1
+libs_sha=b45d935ab8f5faff8b0a03eb6c5c658636f47bc8170d892152b8eb57f5931315
 
 compose_ver=5.0.2
 buildx_ver=0.31.1
