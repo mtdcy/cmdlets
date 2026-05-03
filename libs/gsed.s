@@ -3,12 +3,12 @@
 # shellcheck disable=SC2034
 
 libs_lic=GPLv3+
-libs_ver=4.9
+libs_ver=4.10
 libs_url=(
     https://mirrors.ustc.edu.cn/gnu/sed/sed-$libs_ver.tar.xz
     https://ftpmirror.gnu.org/gnu/sed/sed-$libs_ver.tar.xz
 )
-libs_sha=6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181
+libs_sha=b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7
 libs_dep=(libiconv)
 
 libs_args=(
