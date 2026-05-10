@@ -4,9 +4,9 @@ libs_targets=( linux )
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=2.4.132
+libs_ver=2.4.133
 libs_url=https://dri.freedesktop.org/libdrm/libdrm-$libs_ver.tar.xz
-libs_sha=df9091045e1115d4ff3eb01dbb6514168f0fe91e6f3e820dd5b21da040721eda
+libs_sha=fc68f9d0ba2ea63c9432a299e14fea09fad7a8a66e8039fcd7802ca59f77b4f5
 
 libs_args=(
     -Dudev=false
