@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034,SC2154
 libs_lic="BSD-2-Clause"
-libs_ver=1.30.0
+libs_ver=1.30.1
 libs_url=https://nginx.org/download/nginx-$libs_ver.tar.gz
-libs_sha=058188c64bf22baecaa72b809a6318a4f9ba623889c554feab03f7cb853ab31b
+libs_sha=99765000d974896b31ca5882d8c279ce3fe7ef6f5c6f9f0a967ed7fd3407f9cc
 libs_dep=( zlib pcre2 libxcrypt openssl libxml2 libxslt libgd )
 
 WITH_GEOIP2=0

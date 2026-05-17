@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=0.4.9
-libs_url=https://github.com/jorgerojas26/lazysql/archive/refs/tags/v0.4.9.tar.gz
-libs_sha=92a36347c064e2440f4f4bf38d3555ed282bb5ca7f0ebe3884d507cbcabaca9b
+libs_ver=0.5.0
+libs_url=https://github.com/jorgerojas26/lazysql/archive/refs/tags/v0.5.0.tar.gz
+libs_sha=64234607848634342e1b98788f331f5908cfb27b93acaa5341d88e0a465cf464
 
 libs_args=(
 )

@@ -4,12 +4,12 @@ libs_targets=( ! windows )
 
 # shellcheck disable=SC2034
 libs_lic='GPL-3.0+'
-libs_ver=2.7
+libs_ver=2.8
 libs_url=(
-    https://mirrors.ustc.edu.cn/gnu/inetutils/inetutils-2.7.tar.gz
-    https://ftpmirror.gnu.org/gnu/inetutils/inetutils-2.7.tar.gz
+    https://mirrors.ustc.edu.cn/gnu/inetutils/inetutils-2.8.tar.gz
+    https://ftpmirror.gnu.org/gnu/inetutils/inetutils-2.8.tar.gz
 )
-libs_sha=a156be1cde3c5c0ffefc262180d9369a60484087907aa554c62787d2f40ec086
+libs_sha=57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5
 libs_dep=( libidn2 libxcrypt ncurses readline )
 
 libs_args=(
