@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=LGPLv3
-libs_ver=1.22.0
+libs_ver=1.22.1
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
-libs_sha=8bd20cfa3201997b8f63266cddfabea2e1481467d7f992e6a2595e0bec691fc2
+libs_sha=379b6abde094ba8f93620b91c230af2d7102945ad641231876074f3b113865fa
 libs_dep=( libjpeg-turbo openjpeg libpng libtiff libwebp x265 libde265 )
 
 # configure args

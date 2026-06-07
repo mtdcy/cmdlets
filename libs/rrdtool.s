@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='GPLv2'
-libs_ver=1.10.0
-libs_url=https://github.com/oetiker/rrdtool-1.x/releases/download/v1.10.0/rrdtool-1.10.0.tar.gz
-libs_sha=ee500a0959c6584bc8dccb1ec7aa205ac09a4fa279465b4b5e2d62724a101bd6
+libs_ver=1.10.1
+libs_url=https://github.com/oetiker/rrdtool-1.x/releases/download/v1.10.1/rrdtool-1.10.1.tar.gz
+libs_sha=79a0a4caaa278d42b4208048b2c5b28fced0dd8d4498bbcabac42e5641cc1b20
 libs_dep=( glib cairo pango libpng libxml2 harfbuzz )
 # glib with g_regex => regex support
 

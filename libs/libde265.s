@@ -1,9 +1,9 @@
 # Open h.265 video decoder
 
 # shellcheck disable=SC2034
-libs_ver=1.0.19
+libs_ver=1.1.0
 libs_url=https://github.com/strukturag/libde265/releases/download/v$libs_ver/libde265-$libs_ver.tar.gz
-libs_sha=bb19a0b485d2643e0eeb7e91f3ab32d1ad617e7c487dbedc91214ca3dbd8d7eb
+libs_sha=afc19dd28e2fc523de5952bba5224ee1d28e286c72436d2843df126cca1181fd
 libs_dep=( )
 
 # Fix -flat_namespace being used on Big Sur and later. <= homebrew
