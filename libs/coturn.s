@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=4.12.0
-libs_url=https://github.com/coturn/coturn/archive/refs/tags/4.12.0.tar.gz
-libs_sha=5374811d50548e2eb1982c0591a55c79c95d78633c17fd211bef13206087e95b
+libs_ver=4.13.0
+libs_url=https://github.com/coturn/coturn/archive/refs/tags/4.13.0.tar.gz
+libs_sha=e1d7f2f6587dd1aa0a03fbddac0c8cbf3f6e3e746275eb44b145932749895f6d
 libs_dep=( hiredis libevent sqlite openssl )
 
 libs_args=(
