@@ -5,9 +5,9 @@ libs_desc="Ping, but with a graph"
 libs_targets=( linux darwin )
 
 libs_lic='MIT'
-libs_ver=1.20.1
-libs_url=https://github.com/orf/gping/archive/refs/tags/gping-v1.20.1.tar.gz
-libs_sha=0df965111429d5fcef832a4ff23b452a1ec8f683d51ed31ce9b10902c0a18a9c
+libs_ver=1.20.2
+libs_url=https://github.com/orf/gping/archive/refs/tags/gping-v1.20.2.tar.gz
+libs_sha=2aefe53acfa07c2a9316eee36bf3a99c9986d3351be854fd0cfe2f7dd0019154
 libs_dep=( )
 
 is_linux && libs_dep+=( iputils )
