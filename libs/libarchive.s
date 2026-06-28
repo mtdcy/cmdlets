@@ -2,9 +2,9 @@
 # shellcheck disable=SC2034
 libs_desc="Multi-format archive and compression library"
 libs_lic='BSD-2-Clause'
-libs_ver=3.8.7
+libs_ver=3.8.8
 libs_url=https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
-libs_sha=d3a8ba457ae25c27c84fd2830a2efdcc5b1d40bf585d4eb0d35f47e99e5d4774
+libs_sha=3873a88801da067d0528a989af06877710529d50ee8fe6f3970cbb4302efb918
 
 libs_deps=( libb2 lz4 xz zstd bzip2 expat zlib libiconv pcre2 )
 

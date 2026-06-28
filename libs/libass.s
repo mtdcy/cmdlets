@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=ISC
-libs_ver=0.17.4
+libs_ver=0.17.5
 libs_url=https://github.com/libass/libass/releases/download/$libs_ver/libass-$libs_ver.tar.xz
-libs_sha=78f1179b838d025e9c26e8fef33f8092f65611444ffa1bfc0cfac6a33511a05a
+libs_sha=2dca25c0e0c837ddf00b52011b3f82cac1e4ddd3ad018227806b0c2288864acc
 libs_dep=( fribidi freetype harfbuzz libunibreak )
 
 libs_args=(

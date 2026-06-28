@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='blessing'
-libs_ver=3.53.2
+libs_ver=3.53.3
 libs_url=https://github.com/sqlite/sqlite/archive/refs/tags/version-$libs_ver.tar.gz
-libs_sha=7fe547e2870e470f4891ff71f71b701e312d44e4413faabf5958afa0c789d3ca
+libs_sha=fabf7ef6a8d19c730ed265be23d4a78ec783532f926344101ae47f6c15dae73f
 libs_dep=( zlib readline )
 
 libs_build() {

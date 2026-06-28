@@ -1,9 +1,9 @@
 # Handy way to save and run project-specific commands
 
 # shellcheck disable=SC2034
-libs_ver=1.53.0
-libs_url=https://github.com/casey/just/archive/refs/tags/1.53.0.tar.gz
-libs_sha=9742f15ea4e6afd4bf9b8fecd0c5ef61904d3d187f24675601fdfbace885a4c3
+libs_ver=1.54.0
+libs_url=https://github.com/casey/just/archive/refs/tags/1.54.0.tar.gz
+libs_sha=53d288296054876d4d9fb76b0f947c3f2a805969bfa19ec79108da44e70cd93e
 libs_dep=( )
 
 # configure args
