@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=1.23.0
+libs_ver=1.24.0
 libs_url=https://github.com/ngtcp2/ngtcp2/releases/download/v$libs_ver/ngtcp2-$libs_ver.tar.xz
-libs_sha=59d5b4211e96970f2d3d5e6876f73dce03414800ba04aa56835b132fce8de730
+libs_sha=7fa5ec2be0f0cbed8bc4ec89c0787dfa9d8ce678f1ed9477c52f30eb1a591207
 
 libs_deps=( openssl )
 

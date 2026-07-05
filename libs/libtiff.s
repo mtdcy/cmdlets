@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 libs_lic="libtiff"
-libs_ver=4.7.1
+libs_ver=4.7.2
 libs_url=https://download.osgeo.org/libtiff/tiff-$libs_ver.tar.gz
-libs_sha=f698d94f3103da8ca7438d84e0344e453fe0ba3b7486e04c5bf7a9a3fabe9b69
+libs_sha=672bd7d10aee4606171afb864f3570b83340f6a33e2c186dc0512f7145ffdf6a
 libs_dep=(zlib xz libjpeg-turbo zstd)
 
 libs_args=(

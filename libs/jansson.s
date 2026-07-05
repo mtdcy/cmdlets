@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 libs_name=jansson
 libs_lic="MIT"
-libs_ver=2.15.0
+libs_ver=2.15.1
 libs_url=https://github.com/akheron/jansson/releases/download/v$libs_ver/jansson-$libs_ver.tar.gz
-libs_sha=070a629590723228dc3b744ae90e965a569efb9c535b3309b52e80e75d8eb3be
+libs_sha=0c7114dc0b2d22a670724a1f95922029d7077c19dbf79a584cb8084d2f267f2f
 
 libs_args=(
     --disable-option-checking

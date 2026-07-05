@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='GPL-2.0-or-later'
-libs_ver=2.28
-libs_url=https://github.com/ThomasHabets/arping/archive/refs/tags/arping-2.28.tar.gz
-libs_sha=43b94dbb96d288096ebe0e81c0411c2e69d329d7447ac1fd7b758eda38fd35a8
+libs_ver=2.29
+libs_url=https://github.com/ThomasHabets/arping/archive/refs/tags/arping-2.29.tar.gz
+libs_sha=387955d6ba8eedcf242bb3784bebf8e40fad39703117e21e02cec12820990a5c
 libs_dep=( libnet libpcap )
 
 libs_args=(

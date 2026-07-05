@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic="BSD-3-Clause"
-libs_ver=2.1.12
+libs_ver=2.1.13
 libs_url=https://github.com/libevent/libevent/archive/refs/tags/release-$libs_ver-stable.tar.gz
-libs_sha=7180a979aaa7000e1264da484f712d403fcf7679b1e9212c4e3d09f5c93efc24
+libs_sha=1a0885e17dc78afbaeddf13cf849f9238bbc24acdc178464a0d1934d7c5ffbd5
 libs_dep=( openssl )
 
 libs_args=(
