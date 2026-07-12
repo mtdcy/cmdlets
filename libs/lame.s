@@ -3,9 +3,9 @@
 # shellcheck disable=SC2034
 
 libs_lic="LGPL"
-libs_ver=3.100
+libs_ver=3.101
 libs_url=https://sourceforge.net/projects/lame/files/lame/$libs_ver/lame-$libs_ver.tar.gz
-libs_sha=ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e
+libs_sha=7578af6eebd578b2bd64e468fac4ae1f03670a7e028166e67f855674b9b6aeac
 
 libs_args=(
     --disable-option-checking

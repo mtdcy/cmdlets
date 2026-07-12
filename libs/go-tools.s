@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="BSD-3-Clause"
-libs_ver=0.22.0
-libs_url=https://github.com/golang/tools/archive/refs/tags/gopls/v0.22.0.tar.gz
-libs_sha=249dc0c4b9f3e853f6a7fb6f3528db2f48793e7c54323f3b32aa38f6432f088a
+libs_ver=0.23.0
+libs_url=https://github.com/golang/tools/archive/refs/tags/gopls/v0.23.0.tar.gz
+libs_sha=1ba41875b918db73c6a409ad8f552b85f72dfeea43ffb541b798322ff6b4152b
 
 # configure args
 libs_args=(

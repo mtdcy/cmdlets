@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=2.24.0
+libs_ver=2.24.1
 libs_url=https://github.com/intel/libva/releases/download/$libs_ver/libva-$libs_ver.tar.bz2
-libs_sha=56fab4e482dca2c9e8280d5057294b9faa789d637f97cc394a0c6ec08159060c
+libs_sha=eec6050b52876f229bd35e9df17cd31a06785e18e6f7990c445b584628483d67
 
 is_linux && libs_dep=(libdrm wayland)
 

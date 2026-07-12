@@ -2,9 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=0.27
-libs_url=https://libisl.sourceforge.io/isl-0.27.tar.xz
-libs_sha=6d8babb59e7b672e8cb7870e874f3f7b813b6e00e6af3f8b04f7579965643d5c
+libs_ver=0.28
+libs_url=https://libisl.sourceforge.io/isl-0.28.tar.xz
+libs_sha=3dc31b8e1b18329e42d5dfbf84dd55e15c59b61569a2ab246f61497d9592f727
 
 libs_deps=( gmp )
 

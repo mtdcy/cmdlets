@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=GPLv3+
-libs_ver=5.4.0
+libs_ver=5.4.1
 libs_url=https://ftpmirror.gnu.org/gnu/gawk/gawk-$libs_ver.tar.xz
-libs_sha=3dd430f0cd3b4428c6c3f6afc021b9cd3c1f8c93f7a688dc268ca428a90b4ac1
+libs_sha=07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37
 
 libs_deps=(gmp mpfr readline)
 

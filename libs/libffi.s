@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
-libs_ver=3.6.0
+libs_ver=3.7.0
 libs_url=https://github.com/libffi/libffi/releases/download/v$libs_ver/libffi-$libs_ver.tar.gz
-libs_sha=31ff1fe32deaebfbb388727f32677bb254bf2a41382c51464c0b1837c9ee9828
+libs_sha=2255c5a638dfb51bf67c20a12a7bb70d17feb1e9eababac05f5573146f586436
 libs_dep=()
 
 libs_args=(
