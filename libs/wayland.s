@@ -4,9 +4,9 @@ libs_targets=( linux )
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=1.25.0
+libs_ver=1.26.0
 libs_url=https://gitlab.freedesktop.org/wayland/wayland/-/releases/$libs_ver/downloads/wayland-$libs_ver.tar.xz
-libs_sha=c065f040afdff3177680600f249727e41a1afc22fccf27222f15f5306faa1f03
+libs_sha=64176eaa46e4969903e286f8e5ef8331affc17fdf03ac9b58381d2b23162b7a3
 libs_dep=( expat libffi libxml2 )
 
 # configure args

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=15.1.0
+libs_ver=15.2.0
 libs_url=https://github.com/BurntSushi/ripgrep/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=046fa01a216793b8bd2750f9d68d4ad43986eb9c0d6122600f993906012972e8
+libs_sha=7605249d3eb0d5f170e3414498e3344e26b1e7a147aec518b57090b80036a562
 libs_dep=( pcre2 )
 
 is_musl && libs_dep+=( jemalloc )
