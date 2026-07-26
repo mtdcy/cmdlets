@@ -1,9 +1,9 @@
 # C library SSHv1/SSHv2 client and server protocols
 #
 # shellcheck disable=SC2034
-libs_ver=0.11.4
+libs_ver=0.11.5
 libs_url=https://www.libssh.org/files/0.11/libssh-$libs_ver.tar.xz
-libs_sha=002ac320e3d66c9e100ec6576e3e84aa0c48949efde3bf5b40a2802992297701
+libs_sha=6898ba9dd836d618b71dc7a4bb786a502c173cef5cafbf20fe5e0567ba4ea30c
 libs_dep=( zlib openssl )
 
 # configure args
