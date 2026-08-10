@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=1.4.0
-libs_url=https://github.com/redis/hiredis/archive/refs/tags/v1.4.0.tar.gz
-libs_sha=5fa6e719e59cd4f8ae435c52a18ac4035d135251f9ee54e7a045bccf59107ed8
+libs_ver=1.4.1
+libs_url=https://github.com/redis/hiredis/archive/refs/tags/v1.4.1.tar.gz
+libs_sha=ca3180359a8b1275838a45415851f8cd5c411e27bdbf18f4823012e45507d2e4
 libs_dep=( openssl )
 
 libs_args=(
