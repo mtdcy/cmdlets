@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
 # shellcheck disable=SC2155
-#
+
+VERSION=1.0.7
+
 # Changes:
 #  1.0.7    - 20260815      - new DOMAIN cmdlets.mtdcy.top
 #  1.0.6    - 20260410      - code refactor
@@ -18,8 +20,6 @@ set -eo pipefail
 
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL=en_US.UTF-8
-
-VERSION=1.0.6
 
 NAME="cmdlets.sh"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
