@@ -272,6 +272,9 @@ do_fetch() {
         IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo")
         info2 "#2 Fetch $1 < $pkgfile"
         do_unzip "$pkgfile" || return 2   # updated files
+
+        # v2: update pkgvern
+        IFS='@' read -r _ pkgvern <<< "${pkgfile%.tar.*}"
     }
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
