@@ -384,6 +384,7 @@ do_fetch() {
     fi
 }
 
+# update cmdlets.sh and packages
 do_update() {
     local pkgfile pkgvern pkgbuild options=()
     while [ $# -gt 0 ]; do
@@ -392,6 +393,8 @@ do_update() {
         esac
         shift 1
     done
+
+    do_bootstrap
 
     while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "🚀 Update $pkgfile ..."
