@@ -31,6 +31,8 @@ libs_build() {
     cmake.build
 
     cmdlet.pkgfile libz -- cmake.install
+
+    cmdlet.install minigzip
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
