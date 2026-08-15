@@ -17,17 +17,7 @@ Prebuilt single-file, static or pseudo-static binaries and libraries for Linux a
 ### Install cmdlets
 
 ```shell
-# From GitHub
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
-
-# From China mirror (faster in CN)
-bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
-```
-
-### Setup repository (optional)
-
-```shell
-export CMDLETS_MAIN_REPO=https://github.com/mtdcy/cmdlets/releases/download
+bash -c "$(curl -fsSL https://cmdlets.mtdcy.top/latest/cmdlets.sh)" install
 ```
 
 ### Install packages
@@ -103,8 +93,7 @@ export CMDLET_BUILD_NJOBS=2
 
 ## Downloads
 
-- 🌐 **GitHub Releases**: https://github.com/mtdcy/cmdlets/releases
-- 🇨🇳 **China Mirror**: https://pub.mtdcy.top:8443/cmdlets/latest
+- 🌐 **Releases**: https://cmdlets.mtdcy.top/latest/
 
 ## Contributing
 

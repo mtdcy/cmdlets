@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 #
 # shellcheck disable=SC2155
-#
+
+VERSION=1.0.7
+
 # Changes:
+#  1.0.7    - 20260815      - new DOMAIN cmdlets.mtdcy.top
 #  1.0.6    - 20260410      - code refactor
 #  1.0.5    - 20260208      - fix update command
 #                           - no sed in fetch()
@@ -18,34 +21,16 @@ set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL=en_US.UTF-8
 
-VERSION=1.0.6
-
+NAME="cmdlets.sh"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 CMDLETS_LIST="$PREBUILTS/.cmdlets"
 FILES_LIST="$PREBUILTS/.files"
 
 # user defined repo
-REPO="$CMDLETS_MAIN_REPO"
-
-# local private repo
-: "${REPO:=http://pub.mtdcy.top/cmdlets/latest}"
-
-# test repo connectivity
-curl -fsIL --connect-timeout 1 -o /dev/null "$REPO" || unset REPO
-
-# default public v3/git releases repo
-: "${REPO:=flat+https://github.com/mtdcy/cmdlets/releases/download}"
+REPO="${CMDLETS_MAIN_REPO:-https://cmdlets.mtdcy.top/latest}"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
-
-INSTALLERS=(
-    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/v1.0.x/cmdlets.sh"
-    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
-    "https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
-)
-
-NAME="$(basename "${INSTALLERS[0]}")"
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
@@ -102,7 +87,10 @@ info3() { echo -e "\\033[36m$*\\033[39m" 1>&2; }
 
 warn()  { echo -e "⚠️ \\033[33m$*\\033[39m" 1>&2; }
 
-die()   { echo -e "❌ \\033[31m$*\\033[39m" 1>&2; exit 1; }
+die()   {
+          echo -e "❌ \\033[31m$*\\033[39m" 1>&2
+                                                   exit 1
+}
 
 # prepend each line with '=> '
 _details() {
@@ -181,8 +169,8 @@ _search() {
     # pkgname exists?
     [[ "$pkgfile" =~ / ]] && IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
 
-    options=( "${@:2}" )
-    test -n "${options[*]}" || options=( --pkgfile --pkgname )
+    options=("${@:2}")
+    test -n "${options[*]}" || options=(--pkgfile --pkgname)
 
     for opt in "${options[@]}"; do
         case "$opt" in
@@ -218,18 +206,18 @@ do_search() {
 
     while IFS=' ' read -r _ pkgfile _; do
         printf '=> %s\n' "$pkgfile"
-    done < <( _search "$@" | sort -u )
+    done < <( _search "$@" | sort -u)
 }
 
 # edit file in place
-if sed --version &>/dev/null; then
-_edit() {
-    sed -i "$1" "$2"
-}
+if sed --version &> /dev/null; then
+    _edit() {
+        sed -i "$1" "$2"
+    }
 else
-_edit() {
-    sed -i '' "$1" "$2"
-}
+    _edit() {
+        sed -i '' "$1" "$2"
+    }
 fi
 
 # replace 'wc -L' which is not availabe on macOS
@@ -249,7 +237,8 @@ _caveats()  { echo "$PREBUILTS/caveats/${1//\//_}";     }
 #       bash@3.2
 #       bash32/bash@3.2
 do_fetch() {
-    local target="${1%.tar.*}"; shift 1
+    local target="${1%.tar.*}"
+                                shift 1
     local pkgname pkgfile pkgvern pkgbuild
     local caveats="$(_caveats "$target")"
 
@@ -280,14 +269,17 @@ do_fetch() {
         do_curl "$pkginfo" || return 1
 
         # v2: sha pkgfile
-        IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo" )
+        IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo")
         info2 "#2 Fetch $1 < $pkgfile"
         do_unzip "$pkgfile" || return 2   # updated files
+
+        # v2: update pkgvern
+        IFS='@' read -r _ pkgvern <<< "${pkgfile%.tar.*}"
     }
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        IFS=' ' read -r _ pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1 )
+        IFS=' ' read -r _ pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
@@ -297,13 +289,13 @@ do_fetch() {
 
         # caveats: v3 only
         true > "$caveats"
-        do_curl "$pkgname/$pkgname.caveats" "$caveats" 2>/dev/null || true
+        do_curl "$pkgname/$pkgname.caveats" "$caveats" 2> /dev/null || true
     }
 
     # install from local file.tar.gz
     _local() {
         # update target name and version
-        IFS='@' read -r target pkgvern < <( basename "${1%.tar.*}" )
+        IFS='@' read -r target pkgvern < <( basename "${1%.tar.*}")
 
         info "## Fetch $target < $1"
         do_unzip "$1" || return 1
@@ -340,7 +332,7 @@ do_fetch() {
             --install)
                 info "== Install target and link(s)"
 
-                local width=$(grep "^bin/" "$TEMPDIR/files" | _width )
+                local width=$(grep "^bin/" "$TEMPDIR/files" | _width)
 
                 # cmdlets.sh install bash@3.2:bash
                 if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
@@ -348,7 +340,7 @@ do_fetch() {
                     for link in ${2//:/ }; do
                         [ "$link" = "$target" ] && continue
                         _ln_println "$width" "$target" "$link"
-                        links+=( "$link" )
+                        links+=("$link")
                     done
                     shift 1
                 else
@@ -359,8 +351,8 @@ do_fetch() {
                         else
                             _ln_println "$width" "$file" "${file##*/}"
                         fi
-                        links+=( "${file##*/}" )
-                    done < <( grep "^bin/" "$TEMPDIR/files" )
+                        links+=("${file##*/}")
+                    done < <( grep "^bin/" "$TEMPDIR/files")
                 fi
                 ;;
             *)
@@ -392,14 +384,17 @@ do_fetch() {
     fi
 }
 
+# update cmdlets.sh and packages
 do_update() {
     local pkgfile pkgvern pkgbuild options=()
     while [ $# -gt 0 ]; do
         case "$1" in
-            --force)    options+=( --force ) ;;
+            --force)    options+=(--force)   ;;
         esac
         shift 1
     done
+
+    do_bootstrap
 
     while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
         info "🚀 Update $pkgfile ..."
@@ -411,7 +406,7 @@ do_update() {
             local _pkgfile _pkgver _pkgbuild
 
             # name pkgfile sha build
-            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1 )
+            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1)
 
             if test -z "$_pkgfile"; then
                 warn "no update found"
@@ -426,15 +421,14 @@ do_update() {
                 do_fetch "$pkgfile" --install
             fi
         fi
-    done < <( sort "$CMDLETS_LIST" )
+    done < <( sort "$CMDLETS_LIST")
 }
-
 
 # link prebuilts to other place
 #  input: <targets ...> <destination>
 #  notes: requires coreutils' ln
 do_link() {
-    local targets=( "${@:1:$(($#-1))}" )
+    local targets=("${@:1:$(($# - 1))}")
     local to="${@:$#}"
 
     # relative?
@@ -483,7 +477,7 @@ do_remove() {
         #_rm_println "${files[@]}"
         while read -r file; do
             _rm_println "$file"
-        done < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n' )
+        done < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n')
 
         # clear recrods
         _edit "\#^$name #d" "$FILES_LIST"
@@ -492,7 +486,7 @@ do_remove() {
         # remove links in PREBUILTS/bin
         while read -r link; do
             _rm_println "$link"
-        done < <( find "$PREBUILTS/bin" -type l -lname "$name" )
+        done < <( find "$PREBUILTS/bin" -type l -lname "$name")
 
         # remove PREBUILTS/bin/target
         _rm_println "$PREBUILTS/bin/$name"
@@ -500,7 +494,7 @@ do_remove() {
         # remove links in executable path
         while read -r link; do
             _rm_println "${link#./}"
-        done < <( find . -maxdepth 1 -type l -lname "$name" )
+        done < <( find . -maxdepth 1 -type l -lname "$name")
 
         # remove target
         _rm_println "$name"
@@ -509,9 +503,7 @@ do_remove() {
 
 do_bootstrap() {
     local target
-    if [ -f "$0" ]; then
-        target="$0"
-    elif [[ "$PATH" =~ $HOME/.bin ]]; then
+    if [[ "$PATH" =~ $HOME/.bin ]]; then
         target="$HOME/.bin/$NAME"
     elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
         target="$HOME/.local/bin/$NAME"
@@ -525,15 +517,13 @@ do_bootstrap() {
 
     test -w "$(dirname "$target")" || die "Permission Denied"
 
-    for inst in "${INSTALLERS[@]}"; do
-        if do_curl "$inst" "$TEMPDIR/$NAME"; then
-            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
-            chmod -v a+x "$target" | _details
+    if do_curl "$REPO/$NAME" "$TEMPDIR/$NAME"; then
+        cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
+        chmod -v a+x "$target" | _details
 
-            # install mandatory cmdlets
-            _on_exit && exec "$target" install coreutils
-        fi
-    done
+        # install mandatory cmdlets
+        _on_exit && exec "$target" install coreutils
+    fi
 
     die "do bootstrap failed"
 }
@@ -544,15 +534,15 @@ do_list() {
 
     while test -n "$1"; do
         case "$1" in
-            --*) options+=( "$1" ) ;;
-            *)   args+=( "$1" ) ;;
+            --*) options+=("$1")   ;;
+            *)   args+=("$1")   ;;
         esac
         shift 1
     done
 
     # defaults
     if test -z "${options[*]}"; then
-        test -n "${args[*]}" && options=( --files ) || options=( --cmdlets )
+        test -n "${args[*]}" && options=(--files)   || options=(--cmdlets)
     fi
 
     # println: width name info
@@ -578,7 +568,7 @@ do_list() {
                 width="$(cut -d' ' -f1 < "$CMDLETS_LIST" | _width)"
                 while IFS=' ' read -r name pkgvern pkgbuild; do
                     _ls_println "$width" "$name" "$pkgvern" "$pkgbuild"
-                done < <( sort "$CMDLETS_LIST" )
+                done < <( sort "$CMDLETS_LIST")
                 ;;
             --files)
                 for x in "${args[@]}"; do
@@ -597,7 +587,7 @@ do_list() {
                     real="$(readlink "$link")"
                     [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
                     _ls_println "$width" "${link##*/}" "$real"
-                done < <( find . -maxdepth 1 -type l | sort -h )
+                done < <( find . -maxdepth 1 -type l | sort -h)
                 ;;
         esac
     done
@@ -605,6 +595,13 @@ do_list() {
 
 # do_process cmd [args...]
 do_process() {
+    case "$1" in
+        bootstrap)
+            do_bootstrap
+            exit
+            ;;
+    esac
+
     mkdir -pv "$PREBUILTS"/{bin,share,caveats}
 
     # Permission denied
@@ -616,17 +613,17 @@ do_process() {
         version)
             echo "$VERSION"
             ;;
-        ls|list)
+        ls | list)
             do_list "${@:2}"
             ;;
-        ln|link)
+        ln | link)
             do_link "${@:2}"
             ;;
-        caveats|info)
+        caveats | info)
             local caveats="$(_caveats "$2")"
             test -s "$caveats" && cat "$caveats" || info "<< no caveats found"
             ;;
-        usage|help)
+        usage | help)
             usage
             ;;
         *)
@@ -679,7 +676,7 @@ do_process() {
                 ( do_fetch "$x" ) || ret=$?
             done
             ;;
-        rm|remove|uninstall)
+        rm | remove | uninstall)
             for x in "${@:2}"; do
                 ( do_remove "$x" ) || ret=$?
             done
@@ -704,7 +701,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 
 # for quick install
 if [ "$0" = "install" ]; then
-    do_bootstrap 
+    do_bootstrap
 else
     cd "$(dirname "$0")" && do_process "$@" || exit $?
 fi

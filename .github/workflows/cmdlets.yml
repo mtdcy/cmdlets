@@ -1,5 +1,5 @@
 ---
-name: Check cmdlets installer
+name: Check cmdlets cli
 
 on:
   push:
@@ -21,16 +21,17 @@ jobs:
           - macos-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Install cmdlets.sh
         shell: bash
         run: |
           export PATH="$HOME/.local/bin:/usr/bin:/bin"
 
-          if curl --fail --connect-timeout 3 -o /dev/null -sIL https://git.mtdcy.top/mtdcy/cmdlets; then
-            bash -c "$(curl -fsSL http://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh)" install
-          else
-            bash -c "$(curl -fsSL https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh)" install
-          fi
+          ./cmdlets.sh bootstrap
 
           echo "$PATH" >> $GITHUB_PATH
 
