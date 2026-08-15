@@ -595,10 +595,19 @@ do_list() {
 
 # do_process cmd [args...]
 do_process() {
+    # early stage, no resources needed
     case "$1" in
         bootstrap)
             do_bootstrap
-            exit
+            return
+            ;;
+        version)
+            echo "$VERSION"
+            return
+            ;;
+        usage | help)
+            usage
+            return
             ;;
     esac
 
@@ -607,12 +616,10 @@ do_process() {
     # Permission denied
     test -r "$PREBUILTS" || die "Read Permission Denied"
 
+    # pre-install stage
     local ret=0
     local done=1
     case "$1" in
-        version)
-            echo "$VERSION"
-            ;;
         ls | list)
             do_list "${@:2}"
             ;;
@@ -622,9 +629,6 @@ do_process() {
         caveats | info)
             local caveats="$(_caveats "$2")"
             test -s "$caveats" && cat "$caveats" || info "<< no caveats found"
-            ;;
-        usage | help)
-            usage
             ;;
         *)
             done=0
@@ -645,7 +649,7 @@ do_process() {
     touch "$MANIFEST"
     do_curl "${MANIFEST##*/}" "$MANIFEST" || warn "Fetch manifest failed"
 
-    # handle commands
+    # install stage: everything should be ready now
     case "$1" in
         manifest)
             cat "$MANIFEST"
