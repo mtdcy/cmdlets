@@ -3,6 +3,7 @@
 # shellcheck disable=SC2155
 #
 # Changes:
+#  1.0.7    - 20260815      - new DOMAIN cmdlets.mtdcy.top
 #  1.0.6    - 20260410      - code refactor
 #  1.0.5    - 20260208      - fix update command
 #                           - no sed in fetch()
@@ -20,32 +21,16 @@ export LC_ALL=en_US.UTF-8
 
 VERSION=1.0.6
 
+NAME="cmdlets.sh"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 CMDLETS_LIST="$PREBUILTS/.cmdlets"
 FILES_LIST="$PREBUILTS/.files"
 
 # user defined repo
-REPO="$CMDLETS_MAIN_REPO"
-
-# local private repo
-: "${REPO:=http://pub.mtdcy.top/cmdlets/latest}"
-
-# test repo connectivity
-# curl -fsIL --connect-timeout 1 -o /dev/null "$REPO" || unset REPO
-
-# default public v3/git releases repo
-# : "${REPO:=flat+https://github.com/mtdcy/cmdlets/releases/download}"
+REPO="${CMDLETS_MAIN_REPO:-https://cmdlets.mtdcy.top/latest}"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
-
-INSTALLERS=(
-    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/v1.0.x/cmdlets.sh"
-    "https://git.mtdcy.top/mtdcy/cmdlets/raw/branch/main/cmdlets.sh"
-    #"https://raw.githubusercontent.com/mtdcy/cmdlets/main/cmdlets.sh"
-)
-
-NAME="$(basename "${INSTALLERS[0]}")"
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
@@ -512,9 +497,7 @@ do_remove() {
 
 do_bootstrap() {
     local target
-    if [ -f "$0" ]; then
-        target="$0"
-    elif [[ "$PATH" =~ $HOME/.bin ]]; then
+    if [[ "$PATH" =~ $HOME/.bin ]]; then
         target="$HOME/.bin/$NAME"
     elif [[ "$PATH" =~ $HOME/.local/bin ]]; then
         target="$HOME/.local/bin/$NAME"
@@ -528,15 +511,13 @@ do_bootstrap() {
 
     test -w "$(dirname "$target")" || die "Permission Denied"
 
-    for inst in "${INSTALLERS[@]}"; do
-        if do_curl "$inst" "$TEMPDIR/$NAME"; then
-            cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
-            chmod -v a+x "$target" | _details
+    if do_curl "$REPO/$NAME" "$TEMPDIR/$NAME"; then
+        cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
+        chmod -v a+x "$target" | _details
 
-            # install mandatory cmdlets
-            _on_exit && exec "$target" install coreutils
-        fi
-    done
+        # install mandatory cmdlets
+        _on_exit && exec "$target" install coreutils
+    fi
 
     die "do bootstrap failed"
 }
@@ -608,6 +589,13 @@ do_list() {
 
 # do_process cmd [args...]
 do_process() {
+    case "$1" in
+        bootstrap)
+            do_bootstrap
+            exit
+            ;;
+    esac
+
     mkdir -pv "$PREBUILTS"/{bin,share,caveats}
 
     # Permission denied
