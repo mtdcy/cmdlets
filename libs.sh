@@ -57,7 +57,7 @@ _TARGET="${CMDLET_TARGET:-}"
 _TARGET_NAMES=( linux darwin windows )
 
 # pkgfiles repo
-_TARGET_REPO="${CMDLET_REPO:-https://pub.mtdcy.top/cmdlets/latest}"
+_TARGET_REPO="${CMDLET_REPO:-https://cmdlets.mtdcy.top/latest}"
 
 # mirrors
 _MIRRORS="${CMDLET_MIRRORS:-https://mirrors.mtdcy.top}"
@@ -1377,7 +1377,7 @@ _git_ls_local() {
     local HEAD="${1:-$(git branch --show-current)}"
 
     # 1. check unstaged changes
-    # 2. check unpushed changes 
+    # 2. check unpushed changes
     # no origin/HEAD in workflows, why?
     ! git diff --name-only --exit-code . ||
     ! git diff --name-only --exit-code "$HEAD" "origin/main"

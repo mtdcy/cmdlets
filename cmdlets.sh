@@ -28,9 +28,9 @@ CMDLETS_LIST="$PREBUILTS/.cmdlets"
 FILES_LIST="$PREBUILTS/.files"
 
 # user defined repo
-REPO="${CMDLETS_MAIN_REPO:-https://cmdlets.mtdcy.top/latest}"
+REPO="${CMDLETS_REPO:-https://cmdlets.mtdcy.top/latest}"
 
-unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_MAIN_REPO
+unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_REPO
 
 if [ -z "$ARCH" ]; then
     if [ "$(uname -s)" = Darwin ]; then
