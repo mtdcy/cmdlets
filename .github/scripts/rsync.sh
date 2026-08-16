@@ -15,17 +15,29 @@ fi
 
 remote="$user@$host:$dest"
 
-ssh_opt=( -p "$port" -o StrictHostKeyChecking=no )
+ssh_opt=(-p "$port" -o StrictHostKeyChecking=no)
 
-test -f .ssh_token && ssh_opt+=( -i .ssh_token ) || true
+test -f .ssh_token && ssh_opt+=(-i .ssh_token)   || true
+
+opts=(
+    -avz
+    --exclude='/bin/'
+    --exclude='/lib/'
+    --exclude='/libexec/'
+    --exclude='/include/'
+    --exclude='/share/'
+    --exclude='/.*'
+    -e "ssh ${ssh_opt[*]}"
+    # no delete here
+)
 
 info "*** rsync artifacts ***"
-rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
+rsync "${opts[@]}" prebuilts/ "$remote/cmdlets/latest/" || ret=$?
 
 info "*** rsync logs ***"
-rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" logs/ "$remote/cmdlets/logs/" || ret=$?
+rsync "${opts[@]}" logs/ "$remote/cmdlets/logs/" || ret=$?
 
 #info "*** rsync packages ***"
-#rsync -avc --exclude '.*.d' -e "ssh ${ssh_opt[*]}" packages/ "$remote/packages/" || ret=$?
+#rsync "${opts[@]}" packages/ "$remote/packages/" || ret=$?
 
 exit $?
