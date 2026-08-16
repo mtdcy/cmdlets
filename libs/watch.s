@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="GPLv2+|LGPLv2.1+"
-libs_ver=4.0.6
+libs_ver=4.0.7
 libs_url=https://gitlab.com/procps-ng/procps/-/archive/v$libs_ver/procps-v$libs_ver.tar.bz2
-libs_sha=144410bd111330b191d4384ba6e8b4861390c644b7188e9487f779116b35a33c
+libs_sha=707d4d43c78b1ff9d0286a4839465e78fa1a82896ec97d3508765b31a808b4b2
 libs_dep=( ncurses )
 
 libs_args=(

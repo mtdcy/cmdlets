@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=0.23.1
-libs_url=https://github.com/rockdaboot/libpsl/releases/download/0.23.1/libpsl-0.23.1.tar.gz
-libs_sha=8fbb03054556498ba9c4cc48fcaa36a4483748c6504a65bdb9ba348f555b0e56
+libs_ver=0.23.2
+libs_url=https://github.com/rockdaboot/libpsl/releases/download/0.23.2/libpsl-0.23.2.tar.gz
+libs_sha=f2ea0e59bffb36597a872f6ef89893ffa4c30196c87eff7aeb2c47e4e8c98133
 libs_dep=( libidn2 libunistring )
 
 # configure args
