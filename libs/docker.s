@@ -46,17 +46,13 @@ libs_build() (
         go.build -ldflags="'-X github.com/docker/buildx/version.Version=v$buildx_ver'" -o ../docker-buildx ./cmd/buildx
     ) || die
 
-    # install tools
-    cmdlet.install docker
-    cmdlet.install docker-compose
-    cmdlet.install docker-buildx
+    # install all tools as one pkgfile
+    cmdlet.pkginst docker \
+        bin docker docker-compose docker-buildx
 
     cmdlet.check docker-compose
     cmdlet.check docker-buildx
     cmdlet.check docker --version
-
-    # install all tools as one pkgfile
-    cmdlet.pkgfile docker bin/docker bin/docker-*
 
     caveats << EOF
 static prebuilt docker client v$libs_ver
