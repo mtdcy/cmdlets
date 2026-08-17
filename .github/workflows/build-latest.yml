@@ -17,6 +17,7 @@ on:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    container: lcr.io/mtdcy/builder:ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,7 +33,7 @@ jobs:
 
           targets=(
             # apple
-            arm64-apple-darwin 
+            arm64-apple-darwin
             # x86_64-apple-darwin
             # linux
             x86_64-linux-gnu

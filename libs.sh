@@ -1335,14 +1335,13 @@ fetch() {
 
         _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}"
 
-        # libs_resources: no mirrors
-        if test -n "${libs_resources[*]}"; then
-            local url sha
-            for x in "${libs_resources[@]}"; do
-                IFS=';|' read -r url sha <<< "$x"
-                _curl_urls "$(_url_file "$url")" "$url"
-            done
-        fi
+        # libs_patches & libs_resources: no mirrors
+        local url sha
+        for x in "${libs_patches[@]}" "${libs_resources[@]}"; do
+            test -n "$x" || continue
+            IFS=';|' read -r url sha <<< "$x"
+            _curl_urls "$(_url_file "$url")" "$url"
+        done
     done
 }
 
