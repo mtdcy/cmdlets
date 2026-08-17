@@ -1,13 +1,16 @@
 # Protocol for a compositor to talk to its clients
 
-libs_targets=( linux )
+libs_targets=(linux)
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=1.26.1
-libs_url=https://gitlab.freedesktop.org/wayland/wayland/-/releases/$libs_ver/downloads/wayland-$libs_ver.tar.xz
-libs_sha=a5b6baa7b948476a7b606bf95573cc9af6deb9950106bbeb0e11f354954ae178
-libs_dep=( expat libffi libxml2 )
+libs_ver=1.26.0
+libs_url=(
+    https://github.com/sailfishos-mirror/wayland/archive/refs/tags/$libs_ver.tar.gz
+    #https://gitlab.freedesktop.org/wayland/wayland/-/releases/$libs_ver/downloads/wayland-$libs_ver.tar.gz
+)
+libs_sha=56b3a985cbfe17a926e3bcf037e4d374f44eaa33f3a4b364549dddf0d324cebc
+libs_dep=(expat libffi libxml2)
 
 # configure args
 libs_args=(
@@ -24,7 +27,7 @@ libs_build() {
 
     meson.compile
 
-    pkgfile libwayland -- meson.install --tags devel
+    cmdlet.pkgfile libwayland -- meson.install --tags devel
 
     cmdlet.install src/wayland-scanner
 
