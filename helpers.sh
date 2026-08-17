@@ -372,9 +372,7 @@ _meson_init() {
 
     export LIBS_BUILDDIR
 
-    # cross compile
-    if is_mingw; then
-        cat << EOF > mingw.txt
+    cat << EOF > meson-static.ini
 [binaries]
 c = '$CC'
 cpp = '$CXX'
@@ -382,6 +380,11 @@ ar = '$AR'
 strip = '$STRIP'
 windres = '$WINDRES'
 pkgconfig = '$PKG_CONFIG'
+EOF
+
+    # cross compile
+    if is_mingw; then
+        cat << EOF >> meson-static.ini
 exe_wrapper = 'wine'
 
 [host_machine]
@@ -415,10 +418,14 @@ meson() {
                 -Dprefix="'$PREFIX'"
                 -Dlibdir=lib
                 -Dbuildtype=release
-                -Ddefault_library=static    # prefer static internal project libraries
+                -Ddefault_library=static    # prefer static project libraries
             )
 
-            is_mingw && std+=( --cross-file=mingw.txt )
+            if is_mingw; then
+                std+=(--cross-file=meson-static.ini)
+            else
+                std+=(--native-file=meson-static.ini)
+            fi
 
             # prefer static external dependencies
             #is_darwin || std+=( --prefer-static )
@@ -448,10 +455,14 @@ meson.setup() {
         -Dprefix="'$PREFIX'"
         -Dlibdir=lib
         -Dbuildtype=release
-        -Ddefault_library=static
+        -Ddefault_library=static    # prefer static project libraries
     )
 
-    is_mingw && std+=( --cross-file=mingw.txt )
+    if is_mingw; then
+        std+=(--cross-file=meson-static.ini)
+    else
+        std+=(--native-file=meson-static.ini)
+    fi
 
     # prefer static external dependencies
     #is_darwin || std+=( --prefer-static )
