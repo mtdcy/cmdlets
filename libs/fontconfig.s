@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=2.18.3
-libs_url=https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.18.3/fontconfig-2.18.3.tar.gz
-libs_sha=9ae01e1d53acdef56010c5451cd34aa41d325b2faccd8606448d8fa01b2496b3
+libs_ver=2.18.4
+libs_url=https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.18.4/fontconfig-2.18.4.tar.gz
+libs_sha=48f8c8906219cce3fed69a13826b1703c43c2ccc97b181dac56ec7d71ed6c6c2
 libs_dep=( freetype libxml2 )
 
 # configure args
