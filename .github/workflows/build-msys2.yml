@@ -40,7 +40,7 @@ jobs:
         shell: su buildbot -c "msys2 -c {0}"
         run: |-
           export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
-          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
+          export CMDLET_WEBHOOK="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
 
           # fix: detected dubious ownership in repository
           git config --global --add safe.directory '*'
@@ -55,6 +55,6 @@ jobs:
         if: always()
         shell: bash
         run: |-
-          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
+          export CMDLET_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
 
           ./.github/scripts/rsync.sh "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"

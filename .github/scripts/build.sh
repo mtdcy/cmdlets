@@ -52,13 +52,13 @@ bash libs.sh zip_files || true
 
 if [ "$ret" -eq 0 ]; then
     bash libs.sh maketag
-elif [ -n "$CL_NOTIFY" ]; then
+elif [ -n "$CMDLET_WEBHOOK" ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
     ---
 $(git show HEAD --stat)
 "
 
-    curl --fail -sL --form-string "text=$text" "$CL_NOTIFY"
+    curl --fail -sL --form-string "text=$text" "$CMDLET_WEBHOOK"
 fi
 
 exit "$ret"

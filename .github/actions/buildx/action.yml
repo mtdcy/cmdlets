@@ -1,0 +1,60 @@
+---
+name: 'Build cmdlets action'
+description: 'cmdlets 通用构建模块'
+
+inputs:
+  cmdlets:
+    description: 'cmdlets to build'
+    required: false
+    type: string
+  webhook:
+    description: 'notify webhook url'
+    required: false
+    type: string
+  artifacts-remote:
+    description: 'artifacts remote url'
+    required: false
+    type: string
+  artifacts-token:
+    description: 'artifacts token'
+    required: false
+    type: string
+  mirrors:
+    description: 'package mirrors'
+    required: false
+    type: string
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: packages
+        path: |
+          packages
+
+    - name: Build
+      shell: bash
+      run: |-
+        set -ex
+
+        export CMDLET_MIRRORS="${{ inputs.mirrors }}"
+        export CMDLET_WEBHOOK="${{ inputs.webhook }}"
+
+        # fix: detected dubious ownership in repository
+        git config --global --add safe.directory '*'
+        git config user.name "bot"
+        git config user.email "bot@noreply.mtdcy.top"
+
+        ./.github/scripts/build.sh "${{ inputs.cmdlets }}"
+
+    - name: Release
+      if: ${{ always() && inputs.artifacts-remote != '' }}
+      shell: bash
+      run: |-
+        export CMDLET_ARTIFACTS_TOKEN="${{ inputs.artifacts-token }}"
+
+        ./.github/scripts/rsync.sh prebuilts/ "${{ inputs.artifacts-remote }}/cmdlets/latest/"
+        ./.github/scripts/rsync.sh logs/ "${{ inputs.artifacts-remote }}/cmdlets/logs/"

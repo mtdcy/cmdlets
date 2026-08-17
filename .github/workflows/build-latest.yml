@@ -59,16 +59,35 @@ jobs:
             packages
 
       - name: Deploy (rsync)
-        # uses: burnett01/rsync-deployments@7.0.1
-        uses: https://git.mtdcy.top/actions/rsync@7.0.1
+        shell: bash
+        run: |-
+          export CMDLET_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
+
+          remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+
+          ./.github/scripts/rsync.sh packages/ "$remote/packages/"
+
+  build-locally:
+    needs: prepare
+    runs-on: ${{ vars.LOCAL_MACHINE || 'ubuntu-latest' }}
+    container:
+      image: ${{ vars.LOCAL_BUILDER || '' }}
+      options: --privileged
+    if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' && vars.LOCAL_MACHINE != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          switches: -avc
-          path: packages/
-          remote_path: ${{ vars.ARTIFACTS_REMOTE_PATH }}/packages/
-          remote_host: ${{ vars.ARTIFACTS_REMOTE_HOST }}
-          remote_port: ${{ vars.ARTIFACTS_REMOTE_PORT }}
-          remote_user: ${{ vars.ARTIFACTS_REMOTE_USER }}
-          remote_key: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          fetch-depth: 0
+
+      - name: Build
+        uses: ./.github/actions/buildx
+        with:
+          cmdlets: ${{ inputs.cmdlets }}
+          webhook: ${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}
+          artifacts-remote: ${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}
+          artifacts-token: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          mirrors: ${{ vars.MIRRORS }}
 
   build:
     needs: prepare
@@ -76,7 +95,6 @@ jobs:
     container:
       image: ${{ matrix.builder }}
       options: --privileged
-    if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' }}
     strategy:
       fail-fast: false
       matrix:
@@ -92,40 +110,18 @@ jobs:
           # for x86_64-w64-mingw32
           - machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:mingw64-latest
-
+    if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' && vars.LOCAL_MACHINE == '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.COMMIT_TOKEN }}
           fetch-depth: 0
 
-      - name: Download packages
-        uses: actions/download-artifact@v3
-        with:
-          name: packages
-          path: |
-            packages
-
       - name: Build
-        shell: bash
-        run: |-
-          set -ex
-
-          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
-          export CL_NOTIFY="${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}"
-
-          # fix: detected dubious ownership in repository
-          git config --global --add safe.directory '*'
-          git config user.name "bot"
-          git config user.email "bot@noreply.mtdcy.top"
-
-          ./.github/scripts/build.sh "${{ github.event.inputs.cmdlets }}"
-
-      - name: Release
-        if: always()
-        shell: bash
-        run: |-
-          export CL_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
-
-          ./.github/scripts/rsync.sh "${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
+        uses: ./.github/actions/buildx
+        with:
+          cmdlets: ${{ inputs.cmdlets }}
+          webhook: ${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}
+          artifacts-remote: ${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}
+          artifacts-token: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
+          mirrors: ${{ vars.MIRRORS }}

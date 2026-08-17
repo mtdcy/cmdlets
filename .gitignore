@@ -1,5 +1,6 @@
 prebuilts/
 packages/
+artifacts/
 out/
 logs/
 cmdlets.env*
@@ -17,3 +18,4 @@ pkg-config.log
 .ssh_token
 .history
 toolchain.log
+.vars
