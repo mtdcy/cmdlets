@@ -1,6 +1,6 @@
 # cmdlets
 
-[![Build](https://github.com/mtdcy/cmdlets/actions/workflows/build-github.yml/badge.svg)](https://github.com/mtdcy/cmdlets/actions/workflows/build-github.yml)
+[![Build](https://git.mtdcy.top:8443/mtdcy/cmdlets/actions/workflows/build-latest.yml/badge.svg)](https://git.mtdcy.top:8443/mtdcy/cmdlets/actions?workflow=build-latest.yml)
 [![License](https://img.shields.io/badge/license-BSD%202--Clause-blue.svg)](LICENSE)
 
 Prebuilt single-file, static or pseudo-static binaries and libraries for Linux and macOS.
