@@ -1,7 +1,7 @@
 # x265 HEVC Encoder
 
 # shellcheck disable=SC2034
-libs_lic="GPL-2.0-only"
+libs_lic="GPL-2.0"
 libs_ver=4.2
 libs_url=http://ftp.videolan.org/pub/videolan/x265/x265_$libs_ver.tar.gz
 libs_sha=40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210
@@ -9,7 +9,7 @@ libs_sha=40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210
 HIGH_BIT_DEPTH=0
 
 if is_arm64; then
-    asm_args=( -DENABLE_ASSEMBLY=ON )
+    asm_args=(-DENABLE_ASSEMBLY=ON)
 
     is_darwin || asm_args+=(
         -DENABLE_ASSEMBLY=ON
@@ -20,7 +20,7 @@ if is_arm64; then
     )
 
     # homebrew set this for linux aarch64
-    is_linux && asm_args+=( -DENABLE_SVE2=OFF )
+    is_linux && asm_args+=(-DENABLE_SVE2=OFF)
 else
     asm_args=(
         # https://bitbucket.org/multicoreware/x265_git/issues/559
@@ -30,10 +30,10 @@ fi
 
 # cmake 4 workaround, from homebrew
 # report AppleClang as Clang
-libs_patches=(
-    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04.24e200a1ee9c45c167
-    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4.20812072289af91492a8
-)
+#libs_patches=(
+#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04.24e200a1ee9c45c167
+#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4.20812072289af91492a8
+#)
 
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
@@ -74,23 +74,23 @@ libs_build() {
         (
             cd 12bit
             cmake "${high_args[@]}" -DMAIN12=ON ../source &&
-            make x265-static &&
-            mv libx265.a ../8bit/libx265_main12.a
+                make x265-static &&
+                mv libx265.a ../8bit/libx265_main12.a
         ) || return 1
 
         # 10bit
         (
             cd 10bit
             cmake "${high_args[@]}" -DENABLE_HDR10_PLUS=ON ../source &&
-            make x265-static &&
-            mv libx265.a ../8bit/libx265_main10.a
+                make x265-static &&
+                mv libx265.a ../8bit/libx265_main10.a
         ) || return 1
     fi
 
     # 8bit/main profile
     cd 8bit
     cmake "${main_args[@]}" ../source &&
-    make x265-static || return 1
+        make x265-static || return 1
 
     if [ "$HIGH_BIT_DEPTH" -ne 0 ]; then
         mv libx265.a libx265_main.a
