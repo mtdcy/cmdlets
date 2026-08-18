@@ -18,7 +18,7 @@ export FORCE_UNSAFE_CONFIGURE=1
 unset TAG
 
 if which brew; then
-    _gnubin=( coreutils gnu-sed gawk grep gnu-tar findutils )
+    _gnubin=(coreutils gnu-sed gawk grep gnu-tar findutils)
     for x in "${_gnubin[@]}"; do
         export PATH="$(brew --prefix "$x")/libexec/gnubin:$PATH"
     done
@@ -30,7 +30,7 @@ test -n "$BUILDER_NAME" || make prepare-host || true
 
 cmdlets=()
 if test -n "$1"; then
-    cmdlets=( "$1" ) # build single library manually
+    IFS=', ' read -r -a cmdlets <<< "$*"
 else
     TAG="$(bash libs.sh target)"
 fi
@@ -50,7 +50,8 @@ fi
 # for release actions
 bash libs.sh zip_files || true
 
-if [ "$ret" -eq 0 ]; then
+# mingw32 is not ready => alway tag to HEAD
+if [ "$ret" -eq 0 ] || [ "$TAG" = "x86_64-w64-mingw32" ]; then
     bash libs.sh maketag
 elif [ -n "$CMDLET_WEBHOOK" ]; then
     text="Build cmdlets (${cmdlets[*]}) failed

@@ -34,14 +34,15 @@ jobs:
           targets=(
             # apple
             arm64-apple-darwin
-            # x86_64-apple-darwin
+            x86_64-apple-darwin
             # linux
             x86_64-linux-gnu
             aarch64-linux-gnu
             # windows
             x86_64-w64-mingw32
           )
-          cmdlets=( "${{ github.event.inputs.cmdlets }}" )
+
+          IFS=', ' read -r -a cmdlets <<< "${{ github.event.inputs.cmdlets }}"
           if test -z "${cmdlets[*]}"; then
             for x in "${targets[@]}"; do
               cmdlets+=( $(bash libs.sh _target_ls_changed "$x") )
@@ -83,7 +84,7 @@ jobs:
       - name: Build
         uses: ./.github/actions/buildx
         with:
-          cmdlets: ${{ inputs.cmdlets }}
+          cmdlets: ${{ github.event.inputs.cmdlets }}
           webhook: ${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}
           artifacts-remote: ${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}
           artifacts-token: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
@@ -100,7 +101,8 @@ jobs:
       matrix:
         include:
           # for arm64-apple-darwin or x86_64-apple-darwin
-          - machine: macos-latest
+          - machine: macos-arm64
+          - machine: macos-intel
           # for x86_64-linux-gnu
           - machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:ubuntu-22.04

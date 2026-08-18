@@ -43,6 +43,7 @@ opts+=(
     --platform ubuntu-22.04=gitea/runner-images:ubuntu-22.04
     --platform macos-latest=-self-hosted
     --platform macos-arm64=-self-hosted
+    --platform macos-intel=-self-hosted
 
     # variables
     --var LOCAL_REGISTRY=lcr.io
