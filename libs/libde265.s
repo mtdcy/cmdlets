@@ -1,21 +1,23 @@
-# Open h.265 video decoder
+# Open h.265 video codec implementation.
 
 # shellcheck disable=SC2034
 libs_ver=1.1.1
 libs_url=https://github.com/strukturag/libde265/releases/download/v$libs_ver/libde265-$libs_ver.tar.gz
 libs_sha=fd48a927e94ed74fc7ce8829d222b9d8599fcbfe8b6448ba66705babc56ab219
-libs_dep=( )
+libs_dep=()
 
 # Fix -flat_namespace being used on Big Sur and later. <= homebrew
-is_darwin && libs_patches=(
-    https://raw.githubusercontent.com/Homebrew/formula-patches/03cf8088210822aa2c1ab544ed58ea04c897d9c4/libtool/configure-big_sur.diff
-)
+#is_darwin && libs_patches=(
+#    https://raw.githubusercontent.com/Homebrew/formula-patches/03cf8088210822aa2c1ab544ed58ea04c897d9c4/libtool/configure-big_sur.diff
+#)
 
 # configure args
 libs_args=(
+    # 纯粹的解码定位
     # decode only for libheif
     -DENABLE_DECODER=ON
     -DENABLE_ENCODER=OFF
+    -DENABLE_SHERLOCK265=OFF
 
     -DENABLE_SDL=OFF
 
