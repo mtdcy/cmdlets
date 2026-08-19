@@ -5,12 +5,12 @@ libs_lic=GPLv2+
 libs_ver=3.3.11
 libs_url=https://fftw.org/fftw-3.3.11.tar.gz
 libs_sha=5630c24cdeb33b131612f7eb4b1a9934234754f9f388ff8617458d0be6f239a1
-libs_dep=( )
+libs_dep=()
 
-libs_patches=(
-    # Fix the cmake config file when configured with autotools, upstream pr ref, https://github.com/FFTW/fftw3/pull/338
-    "https://github.com/FFTW/fftw3/commit/394fa85ab5f8914b82b3404844444c53f5c7f095.patch?full_index=1"
-)
+#libs_patches=(
+#    # Fix the cmake config file when configured with autotools, upstream pr ref, https://github.com/FFTW/fftw3/pull/338
+#    "https://github.com/FFTW/fftw3/commit/394fa85ab5f8914b82b3404844444c53f5c7f095.patch?full_index=1"
+#)
 
 libs_args=(
     --disable-option-checking
@@ -27,16 +27,16 @@ libs_args=(
 
 # Not default yet: https://github.com/FFTW/fftw3/pull/315#issuecomment-2630106315
 #  => won't work with arm linux, and related changes will be included in FFTW 3.3.11
-is_darwin && is_arm64 && libs_args+=( --enable-armv8-cntvct-el0 )
+is_darwin && is_arm64 && libs_args+=(--enable-armv8-cntvct-el0)
 
 # FFTW supports runtime detection of CPU capabilities, so it is safe to
 # use with --enable-avx and the code will still run on all CPUs
-is_intel && simd_args+=( --enable-sse2 --enable-avx --enable-avx2 )
+is_intel && simd_args+=(--enable-sse2 --enable-avx --enable-avx2)
 # enable-sse2, enable-avx and enable-avx2 work for both single and double precision.
 # long-double precision has no SIMD optimization available.
 
 # openmp
-is_darwin || libs_args+=( --enable-openmp )
+is_darwin || libs_args+=(--enable-openmp)
 
 libs_build() {
     # build default double precision
