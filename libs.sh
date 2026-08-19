@@ -509,6 +509,22 @@ _init_target() {
         ldflags+=( -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
     fi
 
+    # toolchain scripts, for debugging and options embedding
+    _init_target_script() {
+        eval -- export REAL_$1="\$$2"
+        export $2="$_ROOT_/scripts/$1"
+    }
+
+    # no all build system support command with arguments
+    _init_target_script cc          CC
+    _init_target_script cxx         CXX
+    _init_target_script ld          LD
+    _init_target_script as          AS
+    _init_target_script ar          AR
+    _init_target_script nm          NM
+    _init_target_script ranlib      RANLIB
+    _init_target_script pkg_config  PKG_CONFIG
+
     OBJC="$CC"
     CPP="$CC -E"
     CFLAGS="${cflags[*]}"
@@ -543,22 +559,6 @@ _init_target() {
         true # ignore error for empty cmdlet repo
         slogw "no v3/manifest."
     fi
-
-    # toolchain scripts, for debugging and options embedding
-    _init_target_script() {
-        eval -- export REAL_$1="\$$2"
-        export $2="$_ROOT_/scripts/$1"
-    }
-
-    # no all build system support command with arguments
-    _init_target_script cc          CC
-    _init_target_script cxx         CXX
-    _init_target_script ld          LD
-    _init_target_script as          AS
-    _init_target_script ar          AR
-    _init_target_script nm          NM
-    _init_target_script ranlib      RANLIB
-    _init_target_script pkg_config  PKG_CONFIG
 
     is_mingw && _BINEXT=".exe" || unset _BINEXT
 
