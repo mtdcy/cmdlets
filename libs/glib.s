@@ -8,12 +8,14 @@ libs_stable_minor=1
 
 # shellcheck disable=SC2034
 libs_lic=LGPLv2.1+
-libs_ver=2.86.5
-libs_url=https://github.com/GNOME/glib/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=d76c8f4154635ae0cd96f1fbe2cfc0d23066fce2838b60638f6573843962a954
+libs_ver=2.89.3
+libs_url=https://download.gnome.org/sources/glib/${libs_ver%.*}/glib-$libs_ver.tar.xz
+libs_sha=09fd1e99f991067749ad66090e482ec4bd6514ad53abb4e9fbbdc2a4d2753532
 libs_dep=( zlib pcre2 libiconv libffi )
 
 libs_args=(
+    --wrap-mode=nodownload
+
     # GLib libraries
     -Dglib_assert=true
     -Dglib_checks=true
@@ -27,8 +29,10 @@ libs_args=(
     #  => used to create language bindings for other programming languages like Python, JavaScript, Vala, and Lua.
     -Dintrospection=disabled
 
-    # disabled features
+    # disable intl, use proxy-libintl instead
     -Dnls=disabled
+
+    # disabled features
     -Dselinux=disabled
     -Dsysprof=disabled
     -Dlibmount=disabled
@@ -65,15 +69,16 @@ fi
 
 # shellcheck disable=SC2086
 libs_build() {
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
+
     # ERROR: Subproject gvdb is buildable: NO
-    rm -rf subprojects/gvdb
+    #rm -rf subprojects/gvdb
 
     # sed -i '/libintl_deps/d' glib/meson.build
     libs.requires iconv
 
     if is_mingw; then
         libs.requires libwinrt
-
     fi
 
     # stub libintl:
