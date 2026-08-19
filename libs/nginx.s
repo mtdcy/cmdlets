@@ -1,13 +1,16 @@
 # HTTP(S) server and reverse proxy, and IMAP/POP3 proxy server
-#
+
+libs_targets=(! windows)
+libs_stable_minor=1 # update revision only
+
 # shellcheck disable=SC2034,SC2154
 libs_lic="BSD-2-Clause"
-libs_ver=1.31.3
+libs_ver=1.30.4
 libs_url=https://nginx.org/download/nginx-$libs_ver.tar.gz
-libs_sha=a7657c50811c2d92d9895395e8b873ef60398142c4db21eb647811c38f6dd525
-libs_dep=( zlib pcre2 libxcrypt openssl libxml2 libxslt libgd )
+libs_sha=4261dc90e9e47c1c4041276e9aaa3d48ebe2e664f728e14fa95ae6c67d57a08b
+libs_dep=(zlib pcre2 libxcrypt openssl libxml2 libxslt libgd)
 
-WITH_GEOIP2=0
+WITH_GEOIP2=1
 
 NGX_GEOIP2_VER=3.4
 NGX_FANCYINDEX_VER=0.5.2
@@ -63,6 +66,7 @@ libs_args=(
     --with-http_slice_module
     --with-http_stub_status_module
 
+    # 在现代 Nginx 运维中，绝大多数场景都不推荐、也不需要安装这个模块
     #--with-http_perl_module
 
     # streams
@@ -70,6 +74,11 @@ libs_args=(
     --with-stream_realip_module
     --with-stream_ssl_module
     --with-stream_ssl_preread_module
+
+    # 它依赖的是早已被官方废弃的第一代 GeoIP Legacy 数据库（.dat 格式）
+    # MaxMind 官方自 2018 年起就已停止维护和更新该格式的数据库。
+    #--with-http_geoip_module
+    #--with-stream_geoip_module
 
     # mail
     --with-mail
@@ -79,21 +88,19 @@ libs_args=(
     --add-module=ngx-fancyindex-$NGX_FANCYINDEX_VER
 )
 
-is_mingw || libs_args+=( --with-threads )
+is_mingw || libs_args+=(--with-threads)
 
 # geoip2: requires maxminddb
 if [ $WITH_GEOIP2 -ne 0 ]; then
-    libs_dep+=( libmaxminddb )
-    libs_args+=(
-        --add-module=ngx_http_geoip2_module-$NGX_GEOIP2_VER
-        --with-http_geoip_module
-        --with-stream_geoip_module
-    )
+    libs_dep+=(libmaxminddb)
+    libs_args+=(--add-module=ngx_http_geoip2_module-$NGX_GEOIP2_VER)
 fi
 
-is_mingw && libs_args+=( --crossbuild=win32 )
+is_mingw && libs_args+=(--crossbuild=win32)
 
 libs_build() {
+    cmdlet.disclaim 1.31 # mainline version
+
     # nginx config for shared only, we have to add static libraries manually
     # append libexslt: try fix xsltApplyStylesheet() failed
     #  => exsltRegisterAll()
@@ -114,26 +121,25 @@ libs_build() {
     if is_mingw; then
         sed -i auto/feature \
             -e 's/-x \$NGX_AUTOTEST/&.exe/g' \
-            -e 's/-c \$NGX_AUTOTEST/&.exe/g' \
-            || die "hack mingw exe failed."
+            -e 's/-c \$NGX_AUTOTEST/&.exe/g' ||
+               die "hack mingw exe failed."
 
         sed -e 's/win32/xxx/' \
             -i auto/lib/openssl/conf \
             -i auto/lib/pcre/conf \
-            -i auto/lib/zlib/conf \
-            || die "hack for mingw failed."
+            -i auto/lib/zlib/conf ||
+               die "hack for mingw failed."
     fi
-
 
     configure
 
     make
 
-    cmdlet ./objs/nginx
+    cmdlet.install ./objs/nginx
 
-    check nginx -version
+    cmdlet.check nginx -version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built nginx @ $libs_ver with fancyindex
 
 defaults:
@@ -146,7 +152,5 @@ defaults:
 
 EOF
 }
-
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
