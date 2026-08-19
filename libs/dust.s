@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic=Apache-2.0
-libs_ver=1.2.4
-libs_url=https://github.com/bootandy/dust/archive/refs/tags/v1.2.4.tar.gz
-libs_sha=2f6768534bd01727234e67f1dd3754c9547aa18c715f6ee52094e881ebac50e3
+libs_ver=1.2.5
+libs_url=https://github.com/bootandy/dust/archive/refs/tags/v1.2.5.tar.gz
+libs_sha=4445e61f1341ea567e9e49367f275a1f4b026a60526e60048265f7af4a4943fd
 libs_dep=( libpcap )
 
 # configure args
