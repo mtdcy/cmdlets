@@ -5,17 +5,25 @@
 
 # shellcheck disable=SC2034
 libs_lic=GPLv3+
-libs_ver=5.3
+libs_ver=5.3.15
 libs_url=(
-    https://github.com/bminor/bash/archive/refs/tags/bash-$libs_ver.tar.gz
-    https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+    https://mirrors.ustc.edu.cn/gnu/bash/bash-${libs_ver%.*}.tar.gz
+    https://github.com/bminor/bash/archive/refs/tags/bash-${libs_ver%.*}.tar.gz
+    https://ftpmirror.gnu.org/gnu/bash/bash-${libs_ver%.*}.tar.gz
 )
 
 libs_sha=6c377fd89688d0ce9bef112ce82c83418f1b6d5457ad6ea2ef2d8558bd552f2c
 
-libs_deps=( ncurses readline libiconv ) 
+PATCHLEVEL=${libs_ver##*.}
+
+libs_resources=()
+for ((i = 1; i <= PATCHLEVEL; i++)); do
+    libs_resources+=("https://mirrors.ustc.edu.cn/gnu/bash/bash-5.3-patches/bash53-$( printf "%03d" "$i")")
+done
+
+libs_deps=(ncurses readline libiconv)
 libs_args=(
-    --disable-option-checking 
+    --disable-option-checking
 
     --with-curses
     --enable-readline
@@ -59,7 +67,7 @@ is_mingw || libs_args+=(
 )
 
 # fix 'error: cannot guess build type'
-is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+is_darwin || libs_args+=(--build="$( uname -m)-unknown-linux-gnu")
 
 is_mingw && libs_resources=(
     https://mirrors.ustc.edu.cn/cygwin/x86_64/release/cygwin/cygwin-3.7.0-0.395.ga7c614986ab2-x86_64.tar.xz
@@ -67,6 +75,10 @@ is_mingw && libs_resources=(
 )
 
 libs_build() {
+    for x in bash53-*; do
+        slogi "$_EMOJI_RUN" "patch $x"
+        patch -p0 < "$x" || patch -p1 < "$x"
+    done
 
     # macOS defined this:
     #  refer to https://github.com/Homebrew/homebrew-core/blob/90c02007778049214b6c76120bb74ef702eec449/Formula/b/bash.rb
@@ -82,7 +94,7 @@ libs_build() {
         autoconf -f
     elif is_mingw; then
         export CFLAGS+=" -I$PWD/usr/include -Dmain=WinMain"
-        export LDFLAGS+=" -L$PWD/usr/lib -lcygwin" 
+        export LDFLAGS+=" -L$PWD/usr/lib -lcygwin"
     fi
 
     configure
