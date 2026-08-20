@@ -10,17 +10,21 @@ libs_url=(
 )
 libs_sha=7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd
 
-libs_deps=()
+libs_deps=(libiconv)
 
 libs_args=(
     --disable-dependency-tracking
+
+    --with-libiconv
+
+    --disable-nls
 )
 
 libs_build() {
     # disclaim rust diffutils versions
     cmdlet.disclaim 0.5.0
 
-    configure 
+    configure
 
     make
 
@@ -31,6 +35,5 @@ libs_build() {
     # rust diffutils has no `--version'
     cmdlet.check diff --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
