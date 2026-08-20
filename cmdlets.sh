@@ -25,6 +25,8 @@ export LC_ALL=en_US.UTF-8
 NAME="cmdlets.sh"
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
 PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
+MANIFEST="$PREBUILTS/.manifest"
+
 CMDLETS_LIST="$PREBUILTS/.cmdlets"
 FILES_LIST="$PREBUILTS/.files"
 
@@ -387,46 +389,6 @@ do_fetch() {
     fi
 }
 
-# update cmdlets.sh and packages
-do_update() {
-    local pkgfile pkgvern pkgbuild options=()
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --force)    options+=(--force)   ;;
-        esac
-        shift 1
-    done
-
-    do_bootstrap
-
-    while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
-        info "🚀 Update $pkgfile ..."
-
-        if test -z "$pkgbuild"; then
-            info ">> no pkgbuild, always update"
-            do_fetch "$pkgfile" --install
-        else
-            local _pkgfile _pkgver _pkgbuild
-
-            # name pkgfile sha build
-            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1)
-
-            if test -z "$_pkgfile"; then
-                warn "no update found"
-            elif [[ "$_pkgfile" != *"@$pkgvern.tar."* ]]; then
-                info ">> new pkgvern > $_pkgfile"
-                do_fetch "$pkgfile" --install
-            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> new pkgbuild > $pkgvern $_pkgbuild"
-                do_fetch "$pkgfile" --install
-            elif [[ "${options[*]}" =~ --force ]]; then
-                info ">> force update > $pkgvern $_pkgbuild"
-                do_fetch "$pkgfile" --install
-            fi
-        fi
-    done < <( sort "$CMDLETS_LIST")
-}
-
 # link prebuilts to other place
 #  input: <targets ...> <destination>
 #  notes: requires coreutils' ln
@@ -504,7 +466,49 @@ do_remove() {
     fi
 }
 
-do_bootstrap() {
+do_update_int() {
+    local pkgfile pkgvern pkgbuild options=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --force)    options+=(--force)   ;;
+        esac
+        shift 1
+    done
+
+    while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
+        info "🚀 Try update $pkgfile ..."
+
+        if test -z "$pkgbuild"; then
+            info ">> no pkgbuild, always update"
+            do_fetch "$pkgfile" --install
+        else
+            local _pkgfile _pkgver _pkgbuild
+
+            # name pkgfile sha build
+            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1)
+
+            if test -z "$_pkgfile"; then
+                warn "no update found"
+            elif [[ "${options[*]}" =~ --force ]]; then
+                info ">> force update > $pkgvern $_pkgbuild"
+                do_fetch "$pkgfile" --install
+            elif [[ "$_pkgfile" != *"@$pkgvern.tar."* ]]; then
+                info ">> new pkgvern > $_pkgfile"
+                do_fetch "$pkgfile" --install
+            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
+                info ">> new pkgbuild > $pkgvern $_pkgbuild"
+                do_fetch "$pkgfile" --install
+            fi
+        fi
+    done < <( sort "$CMDLETS_LIST")
+}
+
+do_fetch_manifest() {
+    touch "$MANIFEST"
+    do_curl cmdlets.manifest "$MANIFEST" || warn "Fetch manifest failed"
+}
+
+do_fetch_cli() {
     local target
     if [[ "$PATH" =~ $HOME/.bin ]]; then
         target="$HOME/.bin/$NAME"
@@ -523,12 +527,25 @@ do_bootstrap() {
     if do_curl "$REPO/$NAME" "$TEMPDIR/$NAME"; then
         cp -fv "$TEMPDIR/$NAME" "$target" 2>&1 | _details_escape
         chmod -v a+x "$target" | _details
-
-        # install mandatory cmdlets
-        _on_exit && exec "$target" install coreutils
+    else
+        die "do_curl $REPO/$NAME failed"
     fi
+}
 
-    die "do bootstrap failed"
+# prepare cmdlets.sh
+do_bootstrap() {
+    do_fetch_cli
+
+    # always use new cli
+    "$NAME" install coreutils
+}
+
+# update cmdlets.sh and then packages
+do_update() {
+    do_fetch_cli
+
+    # always use new cli
+    "$NAME" --update # => do_update_int
 }
 
 # list installed cmdlets
@@ -643,14 +660,12 @@ do_process() {
     # Permission denied
     test -w "$PREBUILTS" || die "Write Permission Denied?"
 
+    # always try to update manifest
+    do_fetch_manifest
+
     # init directories and files
     touch "$CMDLETS_LIST"
     touch "$FILES_LIST"
-
-    # always try to update manifest
-    export MANIFEST="$PREBUILTS/cmdlets.manifest"
-    touch "$MANIFEST"
-    do_curl "${MANIFEST##*/}" "$MANIFEST" || warn "Fetch manifest failed"
 
     # install stage: everything should be ready now
     case "$1" in
@@ -658,7 +673,7 @@ do_process() {
             cat "$MANIFEST"
             ;;
         --update) # internel cmd
-            do_update "${@:2}" || ret=$?
+            do_update_int "${@:2}" || ret=$?
             ;;
         update)
             if test -n "$2"; then
