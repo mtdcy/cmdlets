@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=3.2.2
+libs_ver=3.2.3
 libs_url=https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=b4275d83fb95521510e389b8d13af10298ed5bed1c8e13efd961d91b1105e462
+libs_sha=e10c12b3f21f45bf08e09d4215d9c7691368d747beebd840de0b6fefed2df9f8
 libs_dep=( )
 
 # configure args
