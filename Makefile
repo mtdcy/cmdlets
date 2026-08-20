@@ -17,7 +17,8 @@ MAKEFLAGS 	+= --always-make
 ##############################################################################
 .ONESHELL:
 
-cmdlets.env:
+cmdlets.env: env.example
+	cp $< $@
 	@echo "== Please edit $@ first, then"
 	@echo "    source $@"
 	@echo "    make prepare-host"
@@ -26,7 +27,6 @@ cmdlets.env:
 	@echo "OR  make prepare-remote-debian"
 	@echo ""
 	@echo "    make zlib"
-	cp .env $@
 
 ##############################################################################
 # host environment variables => docker/remote

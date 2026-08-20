@@ -8,6 +8,7 @@ info "build $*"
 
 pwd -P
 bash --version
+env
 
 export CMDLET_LOGGING=silent
 export CMDLET_NJOBS="${CMDLET_NJOBS:-1}"
@@ -55,7 +56,7 @@ if [ "$ret" -eq 0 ] || [ "$TAG" = "x86_64-w64-mingw32" ]; then
     bash libs.sh maketag
 elif [ -n "$CMDLET_WEBHOOK" ]; then
     text="Build cmdlets (${cmdlets[*]}) failed
-    ---
+---
 $(git show HEAD --stat)
 "
 
