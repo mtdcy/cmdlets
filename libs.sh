@@ -14,7 +14,7 @@ set -e -o pipefail
 {
     export BASH_COMPAT=3.2  # bash 4.3+
     shopt -s compat32       # bash 5.0+
-} 2>/dev/null || true
+} 2> /dev/null || true
 
 umask  0022
 export LANG=C
@@ -36,7 +36,7 @@ export LANG=C
 _LOGGING="${CMDLET_LOGGING:-plain}"
 
 if [ "$_LOGGING" = "tty" ]; then
-    test -t 1 && which tput &>/dev/null || _LOGGING=plain
+    test -t 1 && which tput &> /dev/null || _LOGGING=plain
 fi
 
 # target variables:
@@ -54,7 +54,7 @@ fi
 _TARGET="${CMDLET_TARGET:-}"
 
 # supported targets
-_TARGET_NAMES=( linux darwin windows )
+_TARGET_NAMES=(linux darwin windows)
 
 # pkgfiles repo
 _TARGET_REPO="${CMDLET_REPO:-https://cmdlets.mtdcy.top/latest}"
@@ -83,8 +83,8 @@ unset PREFIX _ROOT_ CC
 is_true() {
     local opt="$1"
     case "${!opt}" in
-        1|yes)  return 0            ;;
-        0|no)   return 1            ;;
+        1 | yes) return 0           ;;
+        0 | no) return 1            ;;
         *)      test -n "${!opt}"   ;;
     esac
 }
@@ -107,7 +107,7 @@ escape.crlf() {
 
 # help functions
 is_listed() {
-    if [ $# -eq 2 ] && declare -p "$2" &>/dev/null; then
+    if [ $# -eq 2 ] && declare -p "$2" &> /dev/null; then
         # declare -n _lref="$2" #=> bash 4+
         local _lname="$2"
         eval "local _lref=( \"\${$_lname[@]}\" )"
@@ -154,6 +154,7 @@ host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
 
+_EMOJI_ROSE="🌹"
 _EMOJI_DIR="📂"
 _EMOJI_ZIP="📁"
 _EMOJI_FILE="📄"
@@ -184,7 +185,7 @@ _slog() {
         warn)
             message="[$date] \\033[33m$message\\033[39m"
             ;;
-        info|*)
+        info | *)
             message="[$date] \\033[32m$message\\033[39m"
             ;;
     esac
@@ -193,7 +194,10 @@ _slog() {
 
 slogi() { _slog info                "$@"; }
 slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
-sloge() { _slog error $_EMOJI_ERROR "$@"; return 1; }
+sloge() {
+          _slog error $_EMOJI_ERROR "$@"
+                                          return 1
+}
 
 die()   {
     _capture_reset # in case Ctrl-C happens
@@ -226,7 +230,7 @@ _capture() {
             tput dim                        # dim on
             tput rmam                       # line break off
             while read -r line; do
-                i=$((i+1))
+                i=$((i + 1))
 
                 tput ed                     # clear to end of screen
                 tput sc                     # save cursor position
@@ -351,7 +355,7 @@ _init_host() {
             IFS=':' read -r k v <<< "$x"
 
             for y in ${v//,/ }; do
-                p="$(which "$y" 2>/dev/null)" && break
+                p="$(which "$y" 2> /dev/null)" && break
             done
 
             test -n "$p" && export "$k=$p" || slogw "missing host tool $v"
@@ -367,9 +371,9 @@ _init_host() {
     IFS=' :()' read -r -a _HOST_VARS < <({
         echo "${OSTYPE//-/ }"
         "$HOSTCC" --version 2>&1 | grep -oE "gcc|clang"         # cc type
-        which ldd &>/dev/null && ldd --version 2>&1 | head -n1  # libc type
+        which ldd &> /dev/null && ldd --version 2>&1 | head -n1 # libc type
     } | xargs)
-    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOST_VARS[@]}" | sort -u | xargs )
+    IFS=' ' read -r -a _HOST_VARS < <( printf '%s\n' "${_HOST_VARS[@]}" | sort -u | xargs)
 
     export _HOST_VARS
 }
@@ -382,11 +386,11 @@ _init_target() {
 
     case "$OSTYPE" in
         darwin*)    CC="$(xcrun --find "$CC")" ;;
-        *)          CC="$(which "$CC")"
+        *)          CC="$(which "$CC")" ;;
     esac
 
     # test gcc
-    "$CC" -v &>/dev/null
+    "$CC" -v &> /dev/null
 
     die_on_error "$CC is not recognized."
 
@@ -413,7 +417,7 @@ _init_target() {
 
     # target specific toolchain utils
     case "$("$CC" -dumpmachine)" in
-        *-w64-*|*-mingw32)  binutils+=( WINDRES:windres DLLTOOL:dlltool ) ;;
+        *-w64-* | *-mingw32) binutils+=(WINDRES:windres DLLTOOL:dlltool)  ;;
     esac
 
     # XXX: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ar: No such file or directory
@@ -441,7 +445,7 @@ _init_target() {
         "$CC" --version 2>&1 | grep -oE "gcc|clang"
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
     } | xargs)
-    IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs )
+    IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
     export _TARGET _TARGET_ARCH _TARGET_NAME _TARGET_VARS _TARGET_REPO _TARGET_NAMES
 
@@ -468,7 +472,7 @@ _init_target() {
             -Wno-deprecated-non-prototype
             -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
         )
-        ldflags+=( -Wl,-dead_strip )
+        ldflags+=(-Wl,-dead_strip)
     elif is_mingw; then
         # mingw windows headers
         #echo "#include <windows.h>" > "$TEMPDIR/test.c"
@@ -479,12 +483,12 @@ _init_target() {
         #cflags+=( -I/usr/include/wine/windows )
         #ldflags+=( -L/usr/lib/wine/$(uname -m)-windows )
 
-        cflags+=( --static -ffunction-sections -fdata-sections )
+        cflags+=(--static -ffunction-sections -fdata-sections)
 
-        is_posix && cflags+=( -D_POSIX )
+        is_posix && cflags+=(-D_POSIX)
 
         # XXX: allow link with certain dlls?
-        ldflags+=( -Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
+        ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
 
         # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64
         #"$CC" -dumpspecs > "$_TARGET_WORKDIR/.specs"
@@ -500,13 +504,13 @@ _init_target() {
         )
 
         # remove unused sections, need -ffunction-sections and -fdata-sections
-        ldflags+=( -Wl,-gc-sections )
+        ldflags+=(-Wl,-gc-sections)
 
         # Security: FULL RELRO
-        ldflags+=( -Wl,-z,relro,-z,now )
+        ldflags+=(-Wl,-z,relro,-z,now)
 
         # disable dynamic linking and link used symbols only
-        ldflags+=( -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic )
+        ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
     fi
 
     # toolchain scripts, for debugging and options embedding
@@ -564,7 +568,7 @@ _init_target() {
 
     # linux mingw for windows target with wine
     if is_mingw && test -n "$WINEPREFIX"; then
-        WINE="$(which wine 2>/dev/null)" || true
+        WINE="$(which wine 2> /dev/null)" || true
 
         # no wine debug infomations
         WINEDEBUG=-all
@@ -572,7 +576,7 @@ _init_target() {
         # wine: '/wine' is not owned by you
         #  : workflows start with --entrypoint=''
         [ "$(stat -c %u "$WINEPREFIX")" -eq $(id -u) ] ||
-        sudo chown -R $(id -u) "$WINEPREFIX"
+            sudo chown -R $(id -u) "$WINEPREFIX"
 
         # enable binfmt support
         if ! test -e /proc/sys/fs/binfmt_misc; then
@@ -581,7 +585,7 @@ _init_target() {
 
             if ! test -e /proc/sys/fs/binfmt_misc/wine; then
                 sudo update-binfmts --import wine
-                sudo update-binfmts --enable wine &>/dev/null
+                sudo update-binfmts --enable wine &> /dev/null
             fi
 
             slogi "Wine binfmt status:"
@@ -597,7 +601,7 @@ _init_target() {
         # pgrep wineserver &>/dev/null || wineserver -p
 
         # FIXME: libarchive hanges up at: config.status: executing mkdirs commands
-        pgrep wineserver &>/dev/null && wineserver -k || true
+        pgrep wineserver &> /dev/null && wineserver -k || true
     fi
 }
 
@@ -607,7 +611,7 @@ _init_target() {
 _curl() {
     local source="$1"
 
-    local opts=( -fsSL --connect-timeout "${CURL_TIMEOUT:-3}" )
+    local opts=(-fsSL --connect-timeout "${CURL_TIMEOUT:-3}")
 
     if test -n "$2"; then
         # show errors
@@ -628,15 +632,15 @@ _curl_urls() {
     mkdir -p "${zip%/*}"
 
     # first: local file cache
-    local urls=( "$zip" )
+    local urls=("$zip")
 
     # second: mirror
     if test -n "$_MIRRORS"; then
-        urls+=( "$_MIRRORS/packages/$libs_name/${zip##*/}" )
+        urls+=("$_MIRRORS/packages/$libs_name/${zip##*/}")
     fi
 
     # final: urls
-    urls+=( CURL_TIMEOUT=30 "${@:2}" )
+    urls+=(CURL_TIMEOUT=30 "${@:2}")
 
     local timeout=3 url
     for url in "${urls[@]}"; do
@@ -671,18 +675,18 @@ _unzip() {
 
     # match extensions
     case "$1" in
-        *.tar)                  cmd=( "$TAR" -xv )          ;;
-        *.tar.gz|*.tgz)         cmd=( "$TAR" -xv -z )       ;;
-        *.tar.bz2|*.tbz2)       cmd=( "$TAR" -xv -j )       ;;
-        *.tar.xz)               cmd=( "$TAR" -xv -J )       ;;
-        *.tar.lz)               cmd=( "$TAR" -xv --lzip )   ;;
-        *.tar.zst)              cmd=( "$TAR" -xv --zstd)    ;;
-        *.rar)                  cmd=( unrar x )             ;;
-        *.zip)                  cmd=( unzip -o )            ;;
-        *.7z)                   cmd=( 7z x )                ;;
-        *.gz)                   cmd=( gunzip )              ;;
-        *.bz2)                  cmd=( bunzip )              ;;
-        *.Z)                    cmd=( uncompress )          ;;
+        *.tar)                  cmd=("$TAR" -xv)            ;;
+        *.tar.gz | *.tgz)       cmd=("$TAR" -xv -z)         ;;
+        *.tar.bz2 | *.tbz2)     cmd=("$TAR" -xv -j)         ;;
+        *.tar.xz)               cmd=("$TAR" -xv -J)         ;;
+        *.tar.lz)               cmd=("$TAR" -xv --lzip)     ;;
+        *.tar.zst)              cmd=("$TAR" -xv --zstd)     ;;
+        *.rar)                  cmd=(unrar x)               ;;
+        *.zip)                  cmd=(unzip -o)              ;;
+        *.7z)                   cmd=(7z x)                  ;;
+        *.gz)                   cmd=(gunzip)                ;;
+        *.bz2)                  cmd=(bunzip)                ;;
+        *.Z)                    cmd=(uncompress)            ;;
         *)                      false                       ;;
     esac
 
@@ -695,12 +699,12 @@ _unzip() {
             [ "$skip" -eq 1 ] || skip=0
 
             if "$TAR" --version | grep -qFw "bsdtar"; then
-                cmd+=( --strip-components "$skip" )
+                cmd+=(--strip-components "$skip")
             else
-                cmd+=( --strip-components="$skip" )
+                cmd+=(--strip-components="$skip")
             fi
 
-            cmd+=( -f )
+            cmd+=(-f)
             ;;
     esac
 
@@ -751,7 +755,7 @@ _url_fetch() {
         slogi $_EMOJI_GIT "$url#$hash"
 
         test -d .git || # reuse sources
-        git clone --recurse-submodules "$url" . || die "git clone $1 failed."
+            git clone --recurse-submodules "$url" . || die "git clone $1 failed."
 
         git checkout "$hash" --recurse-submodules
     else
@@ -828,13 +832,13 @@ _pkgfile_fetch() {
     # prefer v2 pkginfo than v3 manifest for developers
     if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs)
     else
         # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
-            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//' )
+            IFS='/@' read -r  _ _ pkgvern _ < <( grep -oE " $pkgname/.*@[0-9.]+" "$_TARGET_MANIFEST" | sort -n | tail -n1 | sed 's/\.$//')
             test -n "$pkgvern" && slogi $_EMOJI_NOTE "found pkgfile $pkgname@$pkgvern" || {
                 slogw "no package found"
                 return 1
@@ -842,7 +846,7 @@ _pkgfile_fetch() {
         fi
 
         # find all pkgfiles
-        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs )
+        IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@$pkgvern\.tar\.gz " "$_TARGET_MANIFEST" | xargs)
     fi
 
     test -n "${pkgfiles[*]}" || slogw "no pkgfile found"
@@ -863,9 +867,9 @@ _supported_targets() {
     elif [ "$1" != "!" ]; then
         echo "$@"
     else
-        local list=( "${_TARGET_NAMES[@]}" ) x
+        local list=("${_TARGET_NAMES[@]}")   x
         for x in "${@:2}"; do
-            list=( "${list[@]/$x}" )
+            list=("${list[@]/$x/}")
         done
         echo "${list[@]}"
     fi
@@ -891,10 +895,10 @@ _load() {
     test -n "$libs_name" || libs_name="$name"
 
     # update libs_dep to libs_deps, make old build compatible
-    test -n "$libs_deps" || libs_deps=( "${libs_dep[@]}" )
+    test -n "$libs_deps" || libs_deps=("${libs_dep[@]}")
 
     # supported targets
-    IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}" )
+    IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}")
 
     sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
 
@@ -904,10 +908,10 @@ _load() {
 }
 
 # load libs_deps
-_load_deps()    {( _load "$1" >/dev/null && echo "${libs_deps[@]}"      )}
+_load_deps()    { (_load "$1" > /dev/null && echo "${libs_deps[@]}"     ); }
 
 # load libs_targets
-_load_targets() {( _load "$1" >/dev/null && echo "${libs_targets[@]}"   )}
+_load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 
 # prepare source code or die
 #  input: name
@@ -945,7 +949,7 @@ _prepare() {
     #  XXX: if you want to patch manually or reverse patch, use libs_resources
     for patch in "${libs_patches[@]}"; do
         case "$patch" in
-            http://*|https://*)
+            http://* | https://*)
                 local file="$(_url_file "$patch")"
                 test -f "$file" || _curl "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
@@ -971,7 +975,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    ( # always start subshell before _load()
+    (                    # always start subshell before _load()
 
         trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
@@ -981,7 +985,7 @@ _compile() {
         # prepare source codes
         _prepare "$1" || return $?
 
-        declare -F libs_build >/dev/null || {
+        declare -F libs_build > /dev/null || {
             slogw "Not supported or missing libs_build"
             return 0
         }
@@ -1003,7 +1007,7 @@ _compile() {
         touch "$_TARGET_MANIFEST"
 
         # read pkgbuild before clear
-        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+" )
+        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
         test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
@@ -1041,12 +1045,12 @@ _deps_init() {
         while IFS='/.' read -r _ libs _; do
             sed -i "/^$libs:/d" "$_DEPS_FILE"
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
-        done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s" )
+        done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s")
     else
         # write dependencies
         while IFS='/.' read -r _ libs _; do
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
-        done < <( find libs -maxdepth 1 -type f -name "*.s" )
+        done < <( find libs -maxdepth 1 -type f -name "*.s")
     fi
     export _DEPS_READY=1
 }
@@ -1063,9 +1067,12 @@ depends() {
 
         for x in $(depends $deps) $deps; do
             is_listed "$x" "$@" && continue
-            is_listed "$x" "${list[@]}" || list+=( "$x" )
+            is_listed "$x" "${list[@]}" || list+=("$x")
         done
-    done < <(IFS='|'; grep -E "^($*):" "$_DEPS_FILE")
+    done < <(
+             IFS='|'
+                      grep -E "^($*):" "$_DEPS_FILE"
+    )
 
     echo "${list[@]}"
 }
@@ -1081,9 +1088,12 @@ rdepends() {
         is_listed "$libs" "$@" && continue
 
         for x in "$libs" $(rdepends "$libs"); do
-            is_listed "$x" "${list[@]}" || list+=( "$x" )
+            is_listed "$x" "${list[@]}" || list+=("$x")
         done
-    done < <(IFS='|'; grep -E " ($*)" "$_DEPS_FILE")
+    done < <(
+             IFS='|'
+                      grep -E " ($*)" "$_DEPS_FILE"
+    )
 
     echo "${list[@]}"
 }
@@ -1095,16 +1105,16 @@ _deps_sort() {
     for libs in "$@"; do
         # have dependencies => tail
         for x in $(depends "$libs"); do
-            is_listed "$x" "$@" && tail+=( "$libs" ) && break
+            is_listed "$x" "$@" && tail+=("$libs")   && break
         done
 
         # OR append to head
-        is_listed "$libs" "${tail[@]}" || head+=( "$libs" )
+        is_listed "$libs" "${tail[@]}" || head+=("$libs")
     done
 
     # sort tail again: be careful with circular dependencies
     if [ -n "${head[*]}" ] && [ "${#tail[@]}" -gt 1 ]; then
-        IFS=' ' read -r -a tail < <( _deps_sort "${tail[@]}" )
+        IFS=' ' read -r -a tail < <( _deps_sort "${tail[@]}")
     fi
 
     echo "${head[@]}" "${tail[@]}"
@@ -1116,19 +1126,17 @@ _deps_status() {
     local deps
     IFS=' ' read -r -a deps < <(depends "$@")
 
-    local sep="" sign x ret=0
+    local sep="" x ret=0
     for x in "${deps[@]}"; do
         if test -f "$PREFIX/.$x.d"; then
-            sign="\\033[32m✔\\033[39m"
+            printf "\\033[32m%s%s✔\\033[39m" "$sep" "$x"
         else
-            sign="\\033[31m✘\\033[39m"
+            printf "\\033[31m%s%s✔\\033[39m" "$sep" "$x"
             ret=1
         fi
-        printf "%s%s%s" "$sep" "$x" "$sign"
         sep=", "
     done
 
-    printf "\n"
     return $ret
 }
 
@@ -1144,7 +1152,7 @@ _deps_fetch() {
 
     # check dependencies: libraries updated or not ready
     for x in "${deps[@]}"; do
-        test -e "$PREFIX/.$x.d" || pkgfiles+=( "$x" )
+        test -e "$PREFIX/.$x.d" || pkgfiles+=("$x")
         [ "$_ROOT_/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
     done
 
@@ -1155,7 +1163,7 @@ _deps_missing() {
     local deps x list=()
     IFS=' ' read -r -a deps < <(depends "$@")
     for x in "${deps[@]}"; do
-        test -e "$PREFIX/.$x.d" || list+=( "$x" )
+        test -e "$PREFIX/.$x.d" || list+=("$x")
     done
 
     # ready to compile => always sort here
@@ -1174,7 +1182,8 @@ build() {
 
     _init_target
 
-    slogi "🌹🌹🌹 cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE} 🌹🌹🌹"
+    slogi $_EMOJI_ROSE "cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE}"
+
     echo ""
     echo "host   : ${_HOST_VARS[@]}"
     echo "target : ${_TARGET_VARS[@]}"
@@ -1183,36 +1192,36 @@ build() {
     # always prepend with compat
     _deps_fetch compat "$@"
 
-    slogi $_EMOJI_JOB "$*"
+    slogi $_EMOJI_JOB "Build: $*"
 
     local libs=() x
 
     # check dependencies: rebuild libs
-    IFS=' ' read -r -a libs  < <( _deps_missing "$@" )
+    IFS=' ' read -r -a libs  < <( _deps_missing "$@")
 
     # dependencies
     if test -n "${libs[*]}"; then
-        slogi $_EMOJI_PKGFILE "${libs[*]}"
+        slogi $_EMOJI_PKGFILE "Depends: ${libs[*]}"
     fi
 
     # sort and append requested libs
-    libs+=( "$@" )
+    libs+=("$@")
 
-    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
+    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}")
 
     # continue on error
     _build_targets() {
-        local libs=( "$@" ) fails=() i
+        local libs=("$@")   fails=() i
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
-            slogi $_EMOJI_NOTE "#$((i+1))/${#libs[@]} $name"
+            slogi $_EMOJI_NOTE "Compile: #$((i + 1))/${#libs[@]} $name"
 
             local x supported
 
             # check for supported targets
             for x in "$name" $(depends "$name"); do
-                IFS=' ' read -r -a supported < <( _load_targets "$x" ) || die "load targets failed."
+                IFS=' ' read -r -a supported < <( _load_targets "$x")  || die "load targets failed."
                 list_has supported "$_TARGET_NAME" || {
                     slogw "no support for $_TARGET_NAME ($x)"
                     unset supported
@@ -1222,13 +1231,13 @@ build() {
             is_true supported || continue
 
             # show dependencies status
-            slogi $_EMOJI_NOTE "$(_deps_status "$name")" || {
+            slogi $_EMOJI_NOTE "Status: $(_deps_status "$name")" || {
                 slogw "$name: missing dependencies"
-                fails+=( "$name" )
+                fails+=("$name")
                 continue
             }
 
-            time _compile "$name" || fails+=( "$name" )
+            time _compile "$name" || fails+=("$name")
         done
 
         test -z "${fails[*]}" || {
@@ -1247,9 +1256,9 @@ build() {
     is_true CMDLET_CHECK || return 0
 
     # reverse dependencies
-    IFS=' ' read -r -a libs < <( rdepends "$@" )
+    IFS=' ' read -r -a libs < <( rdepends "$@")
 
-    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}" )
+    IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}")
 
     slogi $_EMOJI_JOB "${libs[*]}"
 
@@ -1296,28 +1305,28 @@ search() {
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/bin" -name "$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
 
         # libraries?
         slogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
 
         # headers?
         slogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2>/dev/null  | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
         if $PKG_CONFIG --exists --print-errors --short-errors "$x"; then
             slogi ".Found $x @ $($PKG_CONFIG --modversion "$x")"
             echo "PREFIX  : $($PKG_CONFIG --variable=prefix "$x")"
-            echo "CFLAGS  : $($PKG_CONFIG --cflags "$x" )"
-            echo "LDFLAGS : $($PKG_CONFIG --static --libs "$x"   )"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "$x")"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "$x")"
         elif [[ ! "$x" =~ ^lib ]] && $PKG_CONFIG --exists --print-errors --short-errors "lib$x"; then
             slogi ".Found lib$x @ $($PKG_CONFIG --modversion "lib$x")"
-            echo "PREFIX  : $($PKG_CONFIG --variable=prefix "lib$x" )"
-            echo "CFLAGS  : $($PKG_CONFIG --cflags "lib$x" )"
-            echo "LDFLAGS : $($PKG_CONFIG --static --libs "lib$x"   )"
+            echo "PREFIX  : $($PKG_CONFIG --variable=prefix "lib$x")"
+            echo "CFLAGS  : $($PKG_CONFIG --cflags "lib$x")"
+            echo "LDFLAGS : $($PKG_CONFIG --static --libs "lib$x")"
         fi
     done
 }
@@ -1354,7 +1363,7 @@ prepare() {
     _deps_fetch "$@"
 
     for x in "$@"; do
-        ( _prepare "$x"; )
+        ( _prepare "$x"  )
     done
 }
 
@@ -1379,7 +1388,7 @@ _git_ls_local() {
     # 2. check unpushed changes
     # no origin/HEAD in workflows, why?
     ! git diff --name-only --exit-code . ||
-    ! git diff --name-only --exit-code "$HEAD" "origin/main"
+        ! git diff --name-only --exit-code "$HEAD" "origin/main"
 }
 
 # make target tag on given commit or HEAD
@@ -1389,17 +1398,17 @@ maketag() {
     local HEAD="${2:-HEAD}"
 
     # tag if remote branch exists
-    if ! _git_ls_remote >/dev/null; then
+    if ! _git_ls_remote > /dev/null; then
         slogw "MKTAG" "no tag on local branch"
         return 0 # no error code
-    elif _git_ls_local >/dev/null; then
+    elif _git_ls_local > /dev/null; then
         slogw "MKTAG" "no tag on unpushed commits"
         return 0 # no error code
     fi
 
     slogi "MKTAG" "$TAG => $HEAD"
 
-	git tag -a "$TAG" -m "$TAG" --force "$HEAD"
+    git tag -a "$TAG" -m "$TAG" --force "$HEAD"
 
     slogi ".PUSH" "$TAG => origin"
     git push origin "$TAG" --force
@@ -1421,8 +1430,8 @@ _target_ls_changed() {
         # file been deleted or renamed
         test -e "libs/$libs" || continue
 
-        list+=( "${libs%.s}" )
-    done < <( _git_ls_local "$OLDHEAD" | grep -E "^libs/[^/]+\.s" )
+        list+=("${libs%.s}")
+    done < <( _git_ls_local "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
 
     echo "${list[@]}"
 }
@@ -1492,7 +1501,7 @@ case "$0" in
     *libs.sh)   "$@"        ;;
     *)
         func="${0##*/}"
-        declare -F $func &>/dev/null || return 0
+        declare -F $func &> /dev/null || return 0
         "$func" "$@"
         ;;
 esac
