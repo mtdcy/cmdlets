@@ -7,7 +7,7 @@ libs_url=https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
 #https://ftpmirror.gnu.org/gnu/ncurses/ncurses-$libs_ver.tar.gz
 libs_sha=355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11
 
-is_mingw && libs_deps+=( libgnurx )
+is_mingw && libs_deps+=(libgnurx)
 
 libs_patches=(
     # do not leak build-time LDFLAGS into the pkgconfig files:
@@ -23,10 +23,11 @@ libs_args=(
 
     --disable-overwrite         # put headers in subdir, omit link to -lcurses
 
-    # terminfo
+    # terminfo => use fallback, @see second stage
     # The system's tic program is used to install the terminal database, even for cross-compiles.
-    --without-database             # terminfo database
-    --enable-termcap
+    #--disable-database          # terminfo database
+    #--with-fallbacks="xterm,xterm-256color,ansi"
+    --disable-home-terminfo     # drop ~/.terminfo from terminfo search-path
     # --datadir                 # terminfo location
 
     # terminfo(ncurses) vs termcap(obsolete)
@@ -34,15 +35,12 @@ libs_args=(
     # https://invisible-island.net/ncurses/INSTALL.html#CONFIGURING-FALLBACK-ENTRIES
     # pure-terminfo mode, no termcap => makes the ncurses library smaller and faster
     --disable-termcap           # enable termcap for fallbacks => needs infocmp
-    --without-fallbacks         # no fallback to termcap
 
     # libncurses with widec support
     --enable-widec
     --disable-lib-suffixes
 
-    # misc
-    --enable-term-driver
-    --enable-sp-funcs
+    # pc files
     --enable-pc-files
     --with-pkg-config-libdir="$PKG_CONFIG_PATH"
 
@@ -50,32 +48,33 @@ libs_args=(
     --disable-nls
     --with-gpm=no
     --without-ada
+    --without-tests
+    --without-manpages
 
     # static without debug
     --without-shared
     --without-cxx-shared
     --disable-debug
-    --without-manpages
 )
 
-if is_mingw; then
-    libs_args+=(
-        --disable-home-terminfo         # drop ~/.terminfo from terminfo search-path
-        --disable-symlinks
-    )
-else
-    # *nix system: avoid hardcoded PREFIX
-    libs_args+=(
-        # we are building static executable, cann't ship hardcoded prebuilts path into executables.
-        #
-        # terminfo search dirs, override with env TERMINFO
-        #
-        # from debian:/etc/terminfo/README
-        --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
-        # /usr/share/terminfo is a common path for both Linux and macOS
-        --with-default-terminfo-dir="/usr/share/terminfo"
-    )
-fi
+#if is_mingw; then
+#    libs_args+=(
+#        --disable-home-terminfo         # drop ~/.terminfo from terminfo search-path
+#        --disable-symlinks
+#    )
+#else
+#    # *nix system: avoid hardcoded PREFIX
+#    libs_args+=(
+#        # we are building static executable, cann't ship hardcoded prebuilts path into executables.
+#        #
+#        # terminfo search dirs, override with env TERMINFO
+#        #
+#        # from debian:/etc/terminfo/README
+#        --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
+#        # /usr/share/terminfo is a common path for both Linux and macOS
+#        --with-default-terminfo-dir="/usr/share/terminfo"
+#    )
+#fi
 
 libs_build() {
     # mingw
@@ -86,7 +85,6 @@ libs_build() {
         # nanosleep is only defined in pthread library
         export cf_cv_func_nanosleep=no
 
-
         export BUILD_EXEEXT="$_BINEXT"
         export PATH_SEPARATOR=";"
 
@@ -96,8 +94,26 @@ libs_build() {
             -e "s/\<make_hash\>/make_hash$_BINEXT/g" || die
     fi
 
+    # tic: no No such file or directory
+    #touch no
+
     configure
 
+    # first stage: build tic/infocmp first
+    make PROGS="'tic infocmp'"
+
+    # second statge: generate fallback.c
+    configure --without-database
+
+    ./ncurses/tinfo/MKfallback.sh \
+        "$PREFIX/share/terminfo" \
+        misc/terminfo.src \
+        ./progs/tic \
+        ./progs/infocmp \
+        xterm xterm-256color \
+        > ncurses/fallback.c
+
+    # final stage
     make
 
     # fix ncurses6-config
@@ -105,17 +121,18 @@ libs_build() {
     sed -i misc/ncurses-config \
         -e 's/^RPATH_LIST=.*/RPATH_LIST=/'
 
-    pkgconf misc/ncurses.pc -DNCURSES_STATIC
+    cmdlet.pkgconf misc/ncurses.pc -DNCURSES_STATIC
 
-    pkgfile libncurses  -- make install.libs
+    cmdlet.pkgfile libncurses -- make install.libs
 
-    #       source          target  links...
-    cmdlet  ./progs/tic     tic     infotocap captoinfo
-    cmdlet  ./progs/tset    tset    reset
-    cmdlet  ./progs/clear
-    cmdlet  ./progs/tabs
-    cmdlet  ./progs/tput
-    cmdlet  ./progs/toe
+    #               source          target  links...
+    cmdlet.install  ./progs/infocmp
+    cmdlet.install  ./progs/tic     tic     infotocap captoinfo
+    cmdlet.install  ./progs/tset    tset    reset
+    cmdlet.install  ./progs/clear
+    cmdlet.install  ./progs/tabs
+    cmdlet.install  ./progs/tput
+    cmdlet.install  ./progs/toe
 
     # verify
     check tput
