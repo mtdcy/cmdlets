@@ -22,27 +22,32 @@ set -eo pipefail
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL=en_US.UTF-8
 
-NAME="cmdlets.sh"
+# options
 ARCH="${CMDLETS_ARCH:-}" # auto resolve arch later
-PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
-MANIFEST="$PREBUILTS/.manifest"
-
-CMDLETS_LIST="$PREBUILTS/.cmdlets"
-FILES_LIST="$PREBUILTS/.files"
-
-# user defined repo
 REPO="${CMDLETS_REPO:-https://cmdlets.mtdcy.top/latest}"
+PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_REPO
 
-if [ -z "$ARCH" ]; then
-    if [ "$(uname -s)" = Darwin ]; then
-        ARCH="$(uname -m)-apple-darwin"
-    elif test -n "$MSYSTEM"; then
-        ARCH="$(uname -m)-msys-${MSYSTEM,,}"
-    else
-        ARCH="$(uname -m)-linux-gnu"
-    fi
+# constants
+NAME="cmdlets.sh"
+MANIFEST="$PREBUILTS/.manifest"
+CMDLETS_LIST="$PREBUILTS/.cmdlets"
+FILES_LIST="$PREBUILTS/.files"
+
+# detect architecture
+if test -z "$ARCH"; then
+    case "$(uname -s)" in
+        Darwin)
+            ARCH="$(uname -m)-apple-darwin"
+            ;;
+        Linux)
+            ARCH="$(uname -m)-linux-gnu"
+            ;;
+        *)
+            ARCH="$(uname -m)-w64-mingw32"
+            ;;
+    esac
 fi
 
 usage() {
