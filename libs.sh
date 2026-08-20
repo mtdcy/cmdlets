@@ -1349,7 +1349,11 @@ fetch() {
         for x in "${libs_patches[@]}" "${libs_resources[@]}"; do
             test -n "$x" || continue
             IFS=';|' read -r url sha <<< "$x"
-            _curl_urls "$(_url_file "$url")" "$url"
+            case "$url" in
+                http://* | https://*)
+                    _curl_urls "$(_url_file "$url")" "$url"
+                    ;;
+            esac
         done
     done
 }
