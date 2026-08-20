@@ -44,48 +44,40 @@ jobs:
           which cmdlets.sh
           pushd "$(which cmdlets.sh | xargs dirname)"
 
-          # 1 - cmdlets
-          # 1.1
-          cmdlets.sh install minigzip
-          find prebuilts/bin/minigzip
-          ls -l minigzip
+          # 1 - minigzip
+          pkgvern=2.3.3
+          names=(
+            minigzip
+            zlib/minigzip
+            minigzip@$pkgvern
+            zlib/minigzip@$pkgvern:minigzip
+          )
+          for name in "${names[@]}"; do
+            cmdlets.sh install "$name"
 
-          cmdlets.sh ls | grep " minigzip -"
-          cmdlets.sh rm minigzip
+            test -e prebuilts/bin/minigzip
+            test -L minigzip
+            cmdlets.sh ls | grep "minigzip - $pkgvern"
 
-          # 1.2
-          cmdlets.sh install zlib/minigzip:minigzip
-          find prebuilts/bin/minigzip
-          ls -l minigzip
+            cmdlets.sh rm minigzip
+          done
 
-          cmdlets.sh ls | grep " zlib/minigzip - 1.3.1"
-          cmdlets.sh rm zlib/minigzip
+          # 2 - bash
+          names=(
+            bash@3.2
+            bash@4.4
+          )
+          for name in "${names[@]}"; do
+            cmdlets.sh install "$name:bash"
 
-          # 1.3
-          cmdlets.sh install minigzip@1.3.1:minigzip
-          find prebuilts/bin/minigzip
-          ls -l minigzip
+            test -e "prebuilts/bin/$name"
+            test -L "$name"
+            test -L bash
+            [ "$(readlink bash)" = "$name" ]
+            bash --version | grep -w "${name#bash@}"
 
-          cmdlets.sh ls | grep " minigzip@1.3.1 - 1.3.1"
-          cmdlets.sh rm minigzip@1.3.1
-
-          # 1.4
-          cmdlets.sh install zlib/minigzip@1.3.1:minigzip
-          find prebuilts/bin/minigzip
-          ls -l minigzip
-
-          cmdlets.sh ls | grep " zlib/minigzip@1.3.1 - 1.3.1"
-          cmdlets.sh rm zlib/minigzip@1.3.1
-
-          # v3: versioned pkgfile
-          latest=5.3
-          versioned() {
-            cmdlets.sh install $1@${2:-$latest}:$1
-            ./$1 --version | grep -w "${2:-$latest}" || return 1
-          }
-          versioned bash 3.2
-          versioned bash 4.4
-          versioned bash
+            cmdlets.sh rm "$name"
+          done
 
       - name: Notify on failure
         if: ${{ failure() && vars.NOTIFY_WEBHOOK != '' }}

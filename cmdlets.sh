@@ -237,8 +237,8 @@ _caveats()  { echo "$PREBUILTS/caveats/${1//\//_}";     }
 #       bash@3.2
 #       bash32/bash@3.2
 do_fetch() {
-    local target="${1%.tar.*}"
-                                shift 1
+    local target="${1%.tar.*}" && shift 1
+
     local pkgname pkgfile pkgvern pkgbuild
     local caveats="$(_caveats "$target")"
 
@@ -279,12 +279,14 @@ do_fetch() {
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        IFS=' ' read -r _ pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
+        # must update target name, e.g: bash@3.2 bash32/bash@3.2.57.tar.gz ...
+        IFS=' ' read -r target pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
         do_unzip "$pkgfile" || return 2
 
+        # have to update pkgname here
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
         # caveats: v3 only
