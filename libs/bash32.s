@@ -2,15 +2,18 @@
 #
 # 3.2: a classic version
 
-libs_targets=( linux darwin )
+libs_targets=(linux darwin)
 
 # shellcheck disable=SC2034
-libs_lic="GPL-3.0-or-later"
+libs_lic="GPLv3+"
 libs_ver=3.2.57
-libs_url=https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+libs_url=(
+    https://mirrors.mtdcy.top/gnu/bash/bash-$libs_ver.tar.gz
+    https://ftpmirror.gnu.org/gnu/bash/bash-$libs_ver.tar.gz
+)
 libs_sha=3fa9daf85ebf35068f090ce51283ddeeb3c75eb5bc70b1a4a7cb05868bfe06a4
 
-libs_deps=( ncurses readline libiconv )
+libs_deps=(ncurses readline libiconv)
 
 # this formula is used to compatible check, don't enable any extra features
 libs_args=(
@@ -38,15 +41,15 @@ is_mingw && libs_args+=(
 )
 
 # fix 'error: cannot guess build type'
-is_darwin || libs_args+=( --build="$(uname -m)-unknown-linux-gnu" )
+is_darwin || libs_args+=(--build="$( uname -m)-unknown-linux-gnu")
 
 libs_build() {
     # ISO C99 and later do not support implicit function declarations
     if is_clang; then
-        libs.requires                          \
-            -Wno-int-conversion                \
-            -Wno-implicit-int                  \
-            -Wno-incompatible-pointer-types    \
+        libs.requires \
+            -Wno-int-conversion \
+            -Wno-implicit-int \
+            -Wno-incompatible-pointer-types \
             -Wno-implicit-function-declaration
     fi
 
@@ -69,8 +72,7 @@ libs_build() {
 
     # install versioned bash
     cmdlet bash bash@${libs_ver%.*} bash@${libs_ver%%.*} &&
-
-    check bash@3.2 --version
+        check bash@3.2 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
