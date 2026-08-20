@@ -4,9 +4,9 @@
 libs_ver=7.1.2-13
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
-libs_dep=( glib freetype lcms2 libxml2 liblqr imath zlib )
+libs_deps=(freetype lcms2 libxml2 liblqr imath zlib libintl)
 
-is_mingw || libs_dep+=( fftw )
+is_mingw || libs_deps+=(fftw)
 
 # configure args
 libs_args=(
@@ -48,23 +48,26 @@ libs_args=(
     --enable-static
 )
 
-is_darwin && libs_args+=( --enable-osx-universal-binary=no )
+is_listed glib libs_deps || libs_args+=(--without-glib)
+
+is_darwin && libs_args+=(--enable-osx-universal-binary=no)
 
 # supported formats
-libs_dep+=( libraw        ) && libs_args+=( --with-raw     ) # RAW
-libs_dep+=( libjpeg-turbo ) && libs_args+=( --with-jpeg    ) # JPEG
-libs_dep+=( openjpeg      ) && libs_args+=( --with-openjp2 ) # JPEG 2000
-libs_dep+=( libpng        ) && libs_args+=( --with-png     ) # PNG
-libs_dep+=( libtiff       ) && libs_args+=( --with-tiff    ) # TIFF
-libs_dep+=( libwebp       ) && libs_args+=( --with-webp    ) # WEBP
-libs_dep+=( libheif       ) && libs_args+=( --with-heic    ) # HEIC
-#libs_dep+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
+libs_deps+=(libraw)          && libs_args+=(--with-raw)       # RAW
+libs_deps+=(libjpeg-turbo)   && libs_args+=(--with-jpeg)      # JPEG
+libs_deps+=(openjpeg)        && libs_args+=(--with-openjp2)   # JPEG 2000
+libs_deps+=(libpng)          && libs_args+=(--with-png)       # PNG
+libs_deps+=(libtiff)         && libs_args+=(--with-tiff)      # TIFF
+libs_deps+=(libwebp)         && libs_args+=(--with-webp)      # WEBP
+libs_deps+=(libheif)         && libs_args+=(--with-heic)      # HEIC
+#libs_deps+=( libjxl        ) && libs_args+=( --with-jxl     ) # JPEG-XL
 
 # SVG takes ~5M in executable
-#libs_dep+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+#libs_deps+=( librsvg       ) && libs_args+=( --with-rsvg    ) # SVG
+libs_args+=(--without-rsvg)
 
 # openmp
-is_darwin || libs_args+=( --enable-openmp )
+is_darwin || libs_args+=(--enable-openmp)
 
 libs_build() {
     configure
@@ -85,7 +88,7 @@ libs_build() {
         run utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
     }
 
-    for x in "${libs_dep[@]}"; do
+    for x in "${libs_deps[@]}"; do
         case "$x" in
             libraw)         check_magick_format raw     ;;
             libjpeg-turbo)  check_magick_format jpeg    ;;
