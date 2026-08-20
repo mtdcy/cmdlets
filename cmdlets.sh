@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.0.7
+VERSION=1.0.8
 
 # Changes:
+#  1.0.8    - 20260820      - fix bugs
 #  1.0.7    - 20260815      - new DOMAIN cmdlets.mtdcy.top
 #  1.0.6    - 20260410      - code refactor
 #  1.0.5    - 20260208      - fix update command
@@ -237,8 +238,8 @@ _caveats()  { echo "$PREBUILTS/caveats/${1//\//_}";     }
 #       bash@3.2
 #       bash32/bash@3.2
 do_fetch() {
-    local target="${1%.tar.*}"
-                                shift 1
+    local target="${1%.tar.*}" && shift 1
+
     local pkgname pkgfile pkgvern pkgbuild
     local caveats="$(_caveats "$target")"
 
@@ -279,12 +280,14 @@ do_fetch() {
 
     # cmdlet v3/manifest: name pkgfile sha pkgbuild
     _v3() {
-        IFS=' ' read -r _ pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
+        # must update target name, e.g: bash@3.2 bash32/bash@3.2.57.tar.gz ...
+        IFS=' ' read -r target pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
         test -n "$pkgfile" || return 1
 
         info3 "#3 Fetch $1 < $pkgfile"
         do_unzip "$pkgfile" || return 2
 
+        # have to update pkgname here
         IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
 
         # caveats: v3 only
@@ -595,10 +598,19 @@ do_list() {
 
 # do_process cmd [args...]
 do_process() {
+    # early stage, no resources needed
     case "$1" in
         bootstrap)
             do_bootstrap
-            exit
+            return
+            ;;
+        version)
+            echo "$VERSION"
+            return
+            ;;
+        usage | help)
+            usage
+            return
             ;;
     esac
 
@@ -607,12 +619,10 @@ do_process() {
     # Permission denied
     test -r "$PREBUILTS" || die "Read Permission Denied"
 
+    # pre-install stage
     local ret=0
     local done=1
     case "$1" in
-        version)
-            echo "$VERSION"
-            ;;
         ls | list)
             do_list "${@:2}"
             ;;
@@ -622,9 +632,6 @@ do_process() {
         caveats | info)
             local caveats="$(_caveats "$2")"
             test -s "$caveats" && cat "$caveats" || info "<< no caveats found"
-            ;;
-        usage | help)
-            usage
             ;;
         *)
             done=0
@@ -645,7 +652,7 @@ do_process() {
     touch "$MANIFEST"
     do_curl "${MANIFEST##*/}" "$MANIFEST" || warn "Fetch manifest failed"
 
-    # handle commands
+    # install stage: everything should be ready now
     case "$1" in
         manifest)
             cat "$MANIFEST"
