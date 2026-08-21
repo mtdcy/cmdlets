@@ -255,38 +255,46 @@ _search() {
 
     IFS='@' read -r pkgfile pkgvern  <<< "${1%.tar.*}"
 
-    # pkgname exists?
-    [[ "$pkgfile" =~ / ]] && IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
+    # no latest in v3/manifest
+    [ "$pkgvern" = "latest" ] && unset pkgvern || true
+
+    if [[ "$pkgfile" =~ / ]]; then
+        IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
+    fi
 
     options=("${@:2}")
-    test -n "${options[*]}" || options=(--pkgfile --pkgname)
+    # default options
+    if test -z "${options[*]}"; then
+        if test -n "$pkgvern"; then
+            options=(--pkgfile)
+        else
+            options=(--pkgname)
+        fi
+    fi
 
     for opt in "${options[@]}"; do
         case "$opt" in
             --pkgfile)
-                if [ "$pkgvern" = "latest" ]; then
-                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" | tail -n1 || true
-                elif test -n "$pkgvern"; then
-                    grep "^$pkgfile@$pkgvern \|/$pkgfile@$pkgvern" "$MANIFEST" || true
+                if test -z "$pkgname"; then
+                    grep -E " .*/$pkgfile@$pkgvern" "$MANIFEST" || true
                 else
-                    grep "^$pkgfile \|/$pkgfile@" "$MANIFEST" || true
+                    grep -E " $pkgname/$pkgfile@$pkgvern" "$MANIFEST" || true
                 fi
                 ;;
             --pkgname)
                 : "${pkgname:=$pkgfile}"
 
-                # needs pkgvern when search for pkgname?
-                #if test -z "$pkgvern"; then
-                #    IFS=' '  read -r _ pkgfile _ < <( grep " $pkgname/" "$MANIFEST" | tail -n 1 )
-                #    IFS='/@' read -r _ _ pkgvern <<< "${pkgfile%.tar.*}"
-                #fi
-                grep " $pkgname/.*@$pkgvern" "$MANIFEST" || true
+                grep -E "^$pkgname +$pkgname/.*@$pkgvern" "$MANIFEST" || true
                 ;;
             --any)
                 grep -F "$1" "$MANIFEST" || true
                 ;;
         esac
-    done | uniq
+    done | sort -V -u -s
+    # '-V' : sort versions
+    # '-u' : uniq
+    # '-s' : stable
+    set +x
 }
 
 # v3 only
@@ -295,7 +303,7 @@ do_search() {
 
     while IFS=' ' read -r _ pkgfile _; do
         printf '=> %s\n' "$pkgfile"
-    done < <( _search "$@" | sort -u)
+    done < <( _search "$@" --pkgfile --pkgname)
 }
 
 # replace 'wc -L' which is not availabe on macOS
