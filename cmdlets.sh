@@ -141,11 +141,11 @@ do_curl() (
 
 if tar --version | grep -qFw bsdtar; then
     # bsdtar will output lines 'x path/to/file'
-    _tar() {
+    do_tar() {
         tar "$@" 2>&1 | sed 's/x //'
     }
 else
-    _tar() {
+    do_tar() {
         tar "$@"
     }
 fi
@@ -159,9 +159,9 @@ do_unzip() (
     fi
 
     if test -n "$INSTALLED_FILES"; then
-        _tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$INSTALLED_FILES" | _details
+        do_tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$INSTALLED_FILES" | _details
     else
-        _tar -C "$PREBUILTS" -xvf "$zip" | _details
+        do_tar -C "$PREBUILTS" -xvf "$zip" | _details
     fi
 )
 
