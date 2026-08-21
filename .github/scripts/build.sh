@@ -29,11 +29,15 @@ fi
 # make prepare-host fails on macos-15-intel
 test -n "$BUILDER_NAME" || make prepare-host || true
 
+TAG="$(bash libs.sh target)"
+
 cmdlets=()
 if test -n "$1"; then
     IFS=', ' read -r -a cmdlets <<< "$*"
 else
-    TAG="$(bash libs.sh target)"
+    for x in $(bash libs.sh _target_ls_changed); do
+        bash libs.sh _pkgfile_ready "$x" || cmdlets+=("$x")
+    done
 fi
 
 ret=0

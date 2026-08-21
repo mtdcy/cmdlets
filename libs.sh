@@ -547,6 +547,9 @@ _init_target() {
     # update PATH => tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"
 
+    # v3/manifest => _pkgfile_init
+    export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
+
     # for running test
     # LD_LIBRARY_PATH or rpath?
     #export LD_LIBRARY_PATH=$PREFIX/lib
@@ -556,13 +559,6 @@ _init_target() {
 
     # macos
     export MACOSX_DEPLOYMENT_TARGET
-
-    # prepare v3/manifest
-    export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
-    if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
-        true # ignore error for empty cmdlet repo
-        slogw "no v3/manifest."
-    fi
 
     is_mingw && _BINEXT=".exe" || unset _BINEXT
 
@@ -813,6 +809,18 @@ _pkgfile_curl() {
     fi
 }
 
+# init manifest files and etc.
+_pkgfile_init() {
+    test -f "$_TARGET_MANIFEST" && return 0
+
+    true > "$_TARGET_MANIFEST"
+
+    if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
+        true # ignore error for empty cmdlet repo
+        slogw "no v3/manifest."
+    fi
+}
+
 # fetch pkgfile by pkgname and pkgvern(optional)
 _pkgfile_fetch() {
     local pkgname pkgvern pkginfo pkgfiles
@@ -835,6 +843,7 @@ _pkgfile_fetch() {
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs)
     else
         # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
+        _pkgfile_init
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
@@ -858,6 +867,22 @@ _pkgfile_fetch() {
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
+}
+
+# is pkgfile compile from last commit
+# input: <lib name>
+# output: return 0 if pkfile was built from last commit, otherwise return 1
+_pkgfile_ready() {
+    _load "$1"
+
+    _pkgfile_init
+
+    local hash0 hash1
+
+    hash0="$(_git_ls_hash "$1")"
+    hash1=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "commit_hash=[0-9a-fA-F]+")
+
+    [[ "$hash1" =~ "=$hash0"$ ]] && return 0 || return 1
 }
 
 # filter libs_tar
@@ -975,12 +1000,15 @@ _prepare() {
 _compile() {
     _init_target
 
-    (                    # always start subshell before _load()
+    (                      # always start subshell before _load()
 
         trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
 
         set -eo pipefail
+
+        # find latest commit hash
+        _COMMIT_HASH="$(_git_ls_hash "$1")"
 
         # prepare source codes
         _prepare "$1" || return $?
@@ -1004,7 +1032,7 @@ _compile() {
         rm -rf "$PREFIX/$libs_name"
 
         # v3/manifest: name pkgfile sha build=1
-        touch "$_TARGET_MANIFEST"
+        _pkgfile_init
 
         # read pkgbuild before clear
         _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
@@ -1070,8 +1098,8 @@ depends() {
             is_listed "$x" "${list[@]}" || list+=("$x")
         done
     done < <(
-             IFS='|'
-                      grep -E "^($*):" "$_DEPS_FILE"
+        IFS='|'
+        grep -E "^($*):" "$_DEPS_FILE"
     )
 
     echo "${list[@]}"
@@ -1091,8 +1119,8 @@ rdepends() {
             is_listed "$x" "${list[@]}" || list+=("$x")
         done
     done < <(
-             IFS='|'
-                      grep -E " ($*)" "$_DEPS_FILE"
+        IFS='|'
+        grep -E " ($*)" "$_DEPS_FILE"
     )
 
     echo "${list[@]}"
@@ -1392,7 +1420,16 @@ _git_ls_local() {
     # 2. check unpushed changes
     # no origin/HEAD in workflows, why?
     ! git diff --name-only --exit-code . ||
-        ! git diff --name-only --exit-code "$HEAD" "origin/main"
+        ! git diff --name-only --exit-code "$HEAD" "$(git rev-parse --abbrev-ref --symbolic-full-name @{u})"
+}
+
+# print last commit of file
+# input: <lib name> ...
+# output: multiple lines of short commit hash
+_git_ls_hash() {
+    for x in "$@"; do
+        git log -1 --format="%h" -- "libs/$x.s"
+    done
 }
 
 # make target tag on given commit or HEAD

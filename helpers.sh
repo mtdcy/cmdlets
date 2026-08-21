@@ -1127,7 +1127,7 @@ cmdlet.pkgfile() {
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" "$_TARGET_MANIFEST"
     # new records
-    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=}+1))" >> "$_TARGET_MANIFEST"
+    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=} + 1)) commit_hash=$_COMMIT_HASH" >> "$_TARGET_MANIFEST"
 
     popd || die "popd failed."
 }
