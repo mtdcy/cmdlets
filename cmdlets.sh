@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.0.8
+VERSION=1.1.0
 
 # Changes:
+#  1.1.0    - 20260821      - new stable release
 #  1.0.8    - 20260820      - fix bugs
 #  1.0.7    - 20260815      - new DOMAIN cmdlets.mtdcy.top
 #  1.0.6    - 20260410      - code refactor
