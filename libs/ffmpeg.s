@@ -1,32 +1,32 @@
 # Play, record, convert, and stream audio and video
 
 # shellcheck disable=SC2034
-libs_ver=8.0.3
+libs_ver=9.0.1
 libs_url=https://ffmpeg.org/releases/ffmpeg-$libs_ver.tar.xz
-libs_sha=6136812ea6d4e68bdba27e33c2a94382711cdf4f8602ffef056ff792bd6f9818
+libs_sha=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
 
 . libs/ffmpeg/common.s
 
 libs_build() {
-    if version.ge 7.1.3; then
-        # bug since 7.1.3, see libavcodec/vlc.c:530
-        # https://git.ffmpeg.org/gitweb/ffmpeg.git/commitdiff/d8ffec5bf9a2803f55cc0822a97b7815f24bee83
-        sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
-    fi
+    #if version.ge 7.1.3; then
+    #    # bug since 7.1.3, see libavcodec/vlc.c:530
+    #    # https://git.ffmpeg.org/gitweb/ffmpeg.git/commitdiff/d8ffec5bf9a2803f55cc0822a97b7815f24bee83
+    #    sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
+    #fi
 
-	CC_C='' configure || {
+    CC_C='' configure || {
         cat ffbuild/config.log >> "$_LOGFILE" &&
-        die "configure ffmpeg failed."
+            die "configure ffmpeg failed."
     }
 
     # no docs
     sed -i Makefile \
         -e '/doc\/Makefile/d' \
-        -e '/doc\/examples\/Makefile/d' \
+        -e '/doc\/examples\/Makefile/d'
 
-	make
+    make
 
     # support install seperate libraries
     sed -i ffbuild/common.mak \
@@ -39,7 +39,7 @@ libs_build() {
     sed -i Makefile \
         -e '/tools\/Makefile/d' \
         -e '/fftools\/Makefile/d' \
-        -e '/tests\/Makefile/d' \
+        -e '/tests\/Makefile/d'
 
     for x in avutil avcodec avformat swscale swresample avfilter avdevice; do
         cmdlet.pkgfile "lib$x" -- make.install FFLIBS="$x"
@@ -52,7 +52,7 @@ libs_build() {
 
     cmdlet.check ffmpeg -version
 
-    cmdlet.caveats <<EOF
+    cmdlet.caveats << EOF
 static build ffmpeg @ $libs_ver
 
 $(run ffmpeg -hide_banner -hwaccels)
