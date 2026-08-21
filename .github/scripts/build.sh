@@ -6,9 +6,16 @@ info() {
 
 info "build $*"
 
+# check environments
 pwd -P
 bash --version
-env
+env | grep -Ei 'github|gitea|cmdlet'
+
+# DEBUG: 'vfork: Resource temporarily unavailable'
+echo "=== Soft Limits ==="
+ulimit -a
+echo "=== Hard Limits ==="
+ulimit -Ha
 
 export CMDLET_LOGGING=silent
 export CMDLET_NJOBS="${CMDLET_NJOBS:-1}"
@@ -40,6 +47,11 @@ else
     done
 fi
 
+test -n "${cmdlets[*]}" || {
+    info "no cmdlet to build"
+    exit 0
+}
+
 ret=0
 
 if [[ "$cmdlets" =~ -$ ]]; then
@@ -52,8 +64,12 @@ else
     bash libs.sh build "${cmdlets[@]}" || ret=$?
 fi
 
-# for release actions
-bash libs.sh zip_files || true
+# DEBUG: 'vfork: Resource temporarily unavailable'
+if [ "$ret" -ne 0 ]; then
+    echo "PIDS Max: $(cat /sys/fs/cgroup/pids.max 2> /dev/null || cat /sys/fs/cgroup/pids/pids.max 2> /dev/null || echo 'Not Found')"
+    echo "PIDS Current: $(cat /sys/fs/cgroup/pids.current 2> /dev/null || cat /sys/fs/cgroup/pids/pids.current 2> /dev/null || echo 'Not Found')"
+    grep -E 'CommitLimit|Committed_AS' /proc/meminfo
+fi
 
 # mingw32 is not ready => alway tag to HEAD
 if [ "$ret" -eq 0 ] || [ "$TAG" = "x86_64-w64-mingw32" ]; then

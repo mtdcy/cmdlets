@@ -135,6 +135,7 @@ list_has() {
 }
 
 # target check: ready after _init, at least CC is set.
+is_gcc()            { list_has _TARGET_VARS     gcc;             }
 is_clang()          { list_has _TARGET_VARS     clang;           }
 is_darwin()         { list_has _TARGET_VARS     apple;           }
 is_linux()          { list_has _TARGET_VARS     linux;           }
@@ -451,6 +452,17 @@ _init_target() {
 
     # environments alias
     test -z "$WINDRES" || export RC="$WINDRES"
+
+    if is_gcc; then
+        # vfork: Resource temporarily unavailable
+        if echo "int main(){}" | $CC -fno-vfork -x c - -o /dev/null; then
+            # 用更稳定的标准 fork 系统调用代替 vfork
+            export GCC_COMPILER_FLAGS="-fno-vfork"
+        else
+            # 使用全局环境变量，极大减少 vfork 派生子进程时的开销
+            export CC1="$($CC -print-prog-name=cc1 | xargs realpath)"
+        fi
+    fi
 
     local cflags ldflags
 
@@ -1000,7 +1012,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (                      # always start subshell before _load()
+    (                                        # always start subshell before _load()
 
         trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
@@ -1475,13 +1487,6 @@ _target_ls_changed() {
     done < <( _git_ls_local "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
 
     echo "${list[@]}"
-}
-
-# zip files for release actions
-zip_files() {
-    # log files
-    test -n "$(ls -A "$_TARGET_LOGFILES")" || return 0
-    "$TAR" -C "$_TARGET_LOGFILES" -cf "$_TARGET_LOGFILES-logs.tar.gz" .
 }
 
 env() {
