@@ -394,31 +394,37 @@ do_fetch() {
     fi
 }
 
-# link prebuilts to other place
+# create cmd alias or link prebuilts to other place
 #  input: <targets ...> <destination>
 #  notes: requires coreutils' ln
 do_link() {
     local targets=("${@:1:$(($# - 1))}")
-    local to="${@:$#}"
+    local to="${*:$#}"
 
-    # relative?
-    [[ "$to" =~ ^/ ]] || to="$OLDPWD/$to"
+    # alias     : link bash@3.2 bash                - create bash@3.2 alias in cmdlets.sh PWD
+    # relative  : link bash@3.2 ./bash              - link bash@3.2 to current PWD
+    # absolute  : link bash@3.2 /usr/local/bin/bash - link bash@3.2 to /usr/local/bin
+    [[ "$to" =~ ^\./ ]] && to="$OLDPWD/$to" || true
 
     info "== Link ${targets[*]} => $to"
 
-    if [ ${#targets[@]} -gt 1 ]; then
-        mkdir -pv "$to" | _details
-
-        for x in "${targets[@]}"; do
-            test -e "$x" || x="$PREBUILTS/$x"
-            ln -srfv "$x" "$to" | _details_escape
-        done
-    else
-        mkdir -pv "${to%/*}" | _details
-
-        test -e "$targets" || targets="$PREBUILTS/$targets"
-        ln -srfv -T "$targets" "$to" | _details_escape
+    # prepare directories
+    if [[ "$to" =~ /$ ]]; then
+        mkdir -pv "$to"
+    elif [[ "$to" =~ / ]]; then
+        mkdir -pv "$(dirname "$to")"
     fi
+
+    for target in "${targets[@]}"; do
+        test -e "$target" || target="$PREBUILTS/$target"
+        test -e "$target" || {
+            warn "$target not exists"
+            continue
+        }
+
+        echo "$to => $target"
+        ln -srnfv "$target" "$to" | _details_escape
+    done
 }
 
 # remove installed files of cmdlet
