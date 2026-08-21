@@ -36,6 +36,7 @@ NAME="cmdlets.sh"
 MANIFEST="$PREBUILTS/.manifest"
 CMDLETS_LIST="$PREBUILTS/.cmdlets"
 FILES_LIST="$PREBUILTS/.files"
+CURL_OPTS=(-fsSL)
 
 # deferred command
 DEFERRED=()
@@ -136,13 +137,13 @@ do_curl() (
 
     if [[ "$1" =~ ^https?:// ]]; then
         info "== 📥 $1"
-        curl -fsL -o "$dest" "$1"
+        curl "${CURL_OPTS[@]}" -o "$dest" "$1"
     elif [[ "$REPO" =~ ^flat+ ]]; then
         info "== 📥 $REPO/$ARCH/${1##*/}"
-        curl -fsL -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
+        curl "${CURL_OPTS[@]}" -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
     else
         info "== 📥 $REPO/$ARCH/$1"
-        curl -fsL -o "$dest" "$REPO/$ARCH/$1"
+        curl "${CURL_OPTS[@]}" -o "$dest" "$REPO/$ARCH/$1"
     fi || return $?
     echo ">> ${dest##"$TEMPDIR/"}"
 )
@@ -200,8 +201,19 @@ else
     }
 fi
 
+# edit file in place
+if sed --version > /dev/null 2>&1; then
+    do_sed() {
+        sed -i "$1" "$2"
+    }
+else
+    do_sed() {
+        sed -i '' "$1" "$2"
+    }
+fi
+
 # save package to PREBUILTS
-do_unzip() (
+do_unzip() {
     local zip="$1"
     if ! test -f "$zip"; then
         zip="$TEMPDIR/$1"
@@ -213,7 +225,22 @@ do_unzip() (
     else
         do_tar -C "$PREBUILTS" -xvf "$zip" | _details
     fi
-)
+}
+
+# dump system info
+do_system() {
+    cat << EOF
+$NAME $VERSION
+
+---
+
+curl: $(curl --version | head -n1) ${CURL_OPTS[*]}
+ln  : $(ln --version 2> /dev/null || echo "bsd version")
+sed : $(sed --version 2> /dev/null | head -n1 || echo "bsd version")
+tar : $(tar --version | head -n1)
+grep: $(grep --version | head -n1)
+EOF
+}
 
 # search manifest for package
 #  input: name [--pkgname] [--pkgfile] [--any]
@@ -270,17 +297,6 @@ do_search() {
         printf '=> %s\n' "$pkgfile"
     done < <( _search "$@" | sort -u)
 }
-
-# edit file in place
-if sed --version &> /dev/null; then
-    _edit() {
-        sed -i "$1" "$2"
-    }
-else
-    _edit() {
-        sed -i '' "$1" "$2"
-    }
-fi
 
 # replace 'wc -L' which is not availabe on macOS
 _width() {
@@ -385,7 +401,7 @@ do_fetch() {
     fi
 
     # update installed: name pkgvern pkgbuild
-    _edit "\#^$target #d" "$CMDLETS_LIST"
+    do_sed "\#^$target #d" "$CMDLETS_LIST"
     echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$CMDLETS_LIST"
 
     # ln helper: width from to
@@ -518,8 +534,8 @@ do_remove() {
         done < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n')
 
         # clear recrods
-        _edit "\#^$name #d" "$FILES_LIST"
-        _edit "\#^$name #d" "$CMDLETS_LIST"
+        do_sed "\#^$name #d" "$FILES_LIST"
+        do_sed "\#^$name #d" "$CMDLETS_LIST"
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
@@ -703,6 +719,9 @@ do_process() {
             ;;
         usage | help)
             usage
+            ;;
+        info)
+            do_system
             ;;
         *)
             done=0
