@@ -18,20 +18,16 @@ jobs:
       matrix:
         runner:
           - ubuntu-latest
-          - macos-latest
+          - macos-arm64
+          - macos-intel
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
       - name: Install cmdlets.sh
         shell: bash
         run: |
           export PATH="$HOME/.local/bin:/usr/bin:/bin"
 
-          ./cmdlets.sh bootstrap
+          bash -c "$(curl -fsSL https://cmdlets.mtdcy.top/latest/cmdlets.sh)" install
 
           echo "$PATH" >> $GITHUB_PATH
 
@@ -73,7 +69,7 @@ jobs:
             test -e "prebuilts/bin/$name"
             test -L "$name"
             test -L bash
-            [ "$(readlink bash)" = "$name" ]
+            [ "$(readlink bash)" = "$(readlink "$name")" ]
             bash --version | grep -w "${name#bash@}"
 
             cmdlets.sh rm "$name"
