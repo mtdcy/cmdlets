@@ -158,7 +158,11 @@ do_unzip() (
         do_curl "$1" "$zip" || return $?
     fi
 
-    _tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$TEMPDIR/files" | _details
+    if test -n "$INSTALLED_FILES"; then
+        _tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$INSTALLED_FILES" | _details
+    else
+        _tar -C "$PREBUILTS" -xvf "$zip" | _details
+    fi
 )
 
 # search manifest for package
@@ -250,7 +254,18 @@ do_fetch() {
     local pkgname pkgfile pkgvern pkgbuild
     local caveats="$(_caveats "$target")"
 
-    true > "$TEMPDIR/files"
+    # handle options
+    local install alias
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --install)  install="yes" ;;
+            --alias)    alias="$2" ;;
+        esac
+        shift
+    done
+
+    INSTALLED_FILES="$TEMPDIR/.files"
+    true > "$INSTALLED_FILES"
 
     info "\n🌹 Install cmdlet $target"
 
@@ -261,7 +276,7 @@ do_fetch() {
         do_curl "bin/$1" || return $?
         mv -f "$TEMPDIR/bin/$1" "$PREBUILTS/bin/$1"
         chmod a+x "$PREBUILTS/bin/$1"
-        echo "bin/$1" > "$TEMPDIR/files"
+        echo "bin/$1" > "$INSTALLED_FILES"
     }
 
     # cmdlet v2: name
@@ -330,46 +345,38 @@ do_fetch() {
         else
             printf "%${1}s -> %s\n" "$3" "$2"
         fi
-        ln -sf "$2" "$3"
+        ln -srf "$2" "$3"
     }
 
     target="${target##*/}"                                      # remove pkgname
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
 
     local links=()
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --install)
-                info "== Install target and link(s)"
+    if test -n "$install"; then
+        info "== Install target and link(s)"
 
-                local width=$(grep "^bin/" "$TEMPDIR/files" | _width)
+        local width=$(grep "^bin/" "$INSTALLED_FILES" | _width)
 
-                # cmdlets.sh install bash@3.2:bash
-                if test -n "$2" && [[ ! "$2" =~ ^-- ]]; then
-                    _ln_println "$width" "$PREBUILTS/bin/$target" "$target"
-                    for link in ${2//:/ }; do
-                        [ "$link" = "$target" ] && continue
-                        _ln_println "$width" "$target" "$link"
-                        links+=("$link")
-                    done
-                    shift 1
-                else
-                    while read -r file; do
-                        file="$PREBUILTS/$file"
-                        if test -L "$file"; then
-                            _ln_println "$width" "$(readlink "$file")" "${file##*/}"
-                        else
-                            _ln_println "$width" "$file" "${file##*/}"
-                        fi
-                        links+=("${file##*/}")
-                    done < <( grep "^bin/" "$TEMPDIR/files")
-                fi
-                ;;
-            *)
-                ;;
-        esac
-        shift 1
-    done
+        # install default links
+        while read -r file; do
+            file="$PREBUILTS/$file"
+            if test -L "$file"; then
+                _ln_println "$width" "$(readlink "$file")" "${file##*/}"
+            else
+                _ln_println "$width" "$file" "${file##*/}"
+            fi
+            links+=("${file##*/}")
+        done < <( grep "^bin/" "$INSTALLED_FILES")
+
+        # install user defined links
+        if test -n "$alias"; then
+            for link in ${alias//:/ }; do
+                [ "$link" = "$target" ] && continue
+                _ln_println "$width" "$target" "$link"
+                links+=("$link")
+            done
+        fi
+    fi
 
     # update files list: name files ...
     grep -Ev "^$target " "$FILES_LIST" > "$TEMPDIR/installed"
@@ -377,7 +384,7 @@ do_fetch() {
         printf '%s ' "$target"
         while read -r file; do
             printf '%s ' "$PREBUILTS/$file"
-        done < "$TEMPDIR/files"
+        done < "$INSTALLED_FILES"
 
         # append symlinks
         for link in "${links[@]}"; do
@@ -392,6 +399,8 @@ do_fetch() {
         info "== Caveats:"
         cat "$caveats"
     fi
+
+    unset INSTALLED_FILES
 }
 
 # create cmd alias or link prebuilts to other place
@@ -701,7 +710,7 @@ do_process() {
         install) # fetch cmdlets and install symlinks
             for x in "${@:2}"; do
                 IFS=':' read -r bin alias <<< "$x"
-                ( do_fetch "$bin" --install "$alias" ) || ret=$?
+                ( do_fetch "$bin" --install --alias "$alias" ) || ret=$?
             done
             ;;
         fetch) # fetch cmdlets without install symlinks
