@@ -150,6 +150,48 @@ else
     }
 fi
 
+if ln --version > /dev/null 2>&1; then
+    # gnu ln
+    do_ln() {
+        ln -srf "$@"
+    }
+else
+    # bsd realpath do not have --relative-to
+    # input: <target> <relative to>
+    relative_to() {
+        local target="$(realpath "$1")"
+        local to="$(realpath "$2")"
+        local common="$target"
+        local result=""
+
+        # 循环找出最大公共祖先目录
+        while [ "${to#$common/}" = "$to" ] && [ "$common" != "/" ]; do
+            common=$(dirname "$common")
+            result="../$result"
+        done
+
+        if [ "$common" = "/" ]; then
+            # 如果退到了根目录才有交集
+            result="$result${to#/}"
+        else
+            # 拼接剩余路径
+            result="$result${to#$common/}"
+        fi
+
+        echo "$result"
+    }
+
+    # bsd ln
+    do_ln() {
+        if test -d "$2" || [[ "$2" =~ /$ ]]; then
+            local relative="$(relative_to "$2" "$1")"
+        else
+            local relative="$(relative_to "$(dirname "$2")" "$1")"
+        fi
+        ln -sf "$relative" "$2"
+    }
+fi
+
 # save package to PREBUILTS
 do_unzip() (
     local zip="$1"
@@ -345,7 +387,7 @@ do_fetch() {
         else
             printf "%${1}s -> %s\n" "$3" "$2"
         fi
-        ln -srf "$2" "$3"
+        do_ln "$2" "$3"
     }
 
     target="${target##*/}"                                      # remove pkgname
@@ -405,7 +447,6 @@ do_fetch() {
 
 # create cmd alias or link prebuilts to other place
 #  input: <targets ...> <destination>
-#  notes: requires coreutils' ln
 do_link() {
     local targets=("${@:1:$(($# - 1))}")
     local to="${*:$#}"
@@ -432,7 +473,7 @@ do_link() {
         }
 
         echo "$to => $target"
-        ln -srnfv "$target" "$to" | _details_escape
+        do_ln "$target" "$to" | _details_escape
     done
 }
 
