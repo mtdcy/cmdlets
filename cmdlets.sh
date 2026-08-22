@@ -496,12 +496,12 @@ do_link() {
 }
 
 # remove installed files of cmdlet
-#  input: <cmdlet name>
+#  input: target
 do_remove() {
-    local name="${1%.tar.*}" # formated name
-    local caveats="$(_caveats "$name")"
+    local target="${1%.tar.*}" # formated name
+    local caveats="$(_caveats "$target")"
 
-    info "== 🗑️ Remove $name:"
+    info "== 🗑️ Remove $target:"
 
     test -f "$CMDLETS_LIST" || return 0
     test -s "$caveats" && rm -rf "$caveats" || true
@@ -515,34 +515,38 @@ do_remove() {
         fi
     }
 
-    if grep -q "^$name " "$FILES_LIST"; then
+    if grep -q "^$target " "$FILES_LIST"; then
         # fails with `rm: Argument list too long'
-        #IFS=' ' read -r -a files < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- )
+        #IFS=' ' read -r -a files < <( grep "^$target " "$FILES_LIST" | cut -d' ' -f2- )
         #_rm_println "${files[@]}"
         while read -r file; do
             _rm_println "$file"
-        done < <( grep "^$name " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n')
+        done < <( grep "^$target " "$FILES_LIST" | cut -d' ' -f2- | tr -s ' ' '\n')
 
         # clear recrods
-        do_sed "\#^$name #d" "$FILES_LIST"
-        do_sed "\#^$name #d" "$CMDLETS_LIST"
+        do_sed "\#^$target #d" "$FILES_LIST"
+        do_sed "\#^$target #d" "$CMDLETS_LIST"
+
     else
         # remove links in PREBUILTS/bin
         while read -r link; do
             _rm_println "$link"
-        done < <( find "$PREBUILTS/bin" -type l -lname "$name")
+        done < <( find "$PREBUILTS/bin" -type l -lname "$target")
 
         # remove PREBUILTS/bin/target
-        _rm_println "$PREBUILTS/bin/$name"
-
-        # remove links in executable path
-        while read -r link; do
-            _rm_println "${link#./}"
-        done < <( find . -maxdepth 1 -type l -lname "$name")
+        _rm_println "$PREBUILTS/bin/$target"
 
         # remove target
-        _rm_println "$name"
+        _rm_println "$target"
     fi
+
+    # remove dangling links
+    while read -r link; do
+        _rm_println "${link#./}"
+    done < <(
+        find . -maxdepth 1 -type l -lname "$target"
+        find . -maxdepth 1 -type l -lname "$PREBUILTS/bin/$target"
+    )
 }
 
 do_update_int() {
