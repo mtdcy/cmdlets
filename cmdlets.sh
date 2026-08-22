@@ -136,13 +136,13 @@ do_curl() (
     mkdir -p "${dest%/*}"
 
     if [[ "$1" =~ ^https?:// ]]; then
-        info "== 📥 $1"
+        info "📥 $1"
         curl "${CURL_OPTS[@]}" -o "$dest" "$1"
     elif [[ "$REPO" =~ ^flat+ ]]; then
-        info "== 📥 $REPO/$ARCH/${1##*/}"
+        info "📥 $REPO/$ARCH/${1##*/}"
         curl "${CURL_OPTS[@]}" -o "$dest" "${REPO#flat+}/$ARCH/${1##*/}"
     else
-        info "== 📥 $REPO/$ARCH/$1"
+        info "📥 $REPO/$ARCH/$1"
         curl "${CURL_OPTS[@]}" -o "$dest" "$REPO/$ARCH/$1"
     fi || return $?
     echo ">> ${dest##"$TEMPDIR/"}"
@@ -257,7 +257,7 @@ _search() {
 
 # v3 only
 do_search() {
-    info3 "#3 🔍 Search $*"
+    info3 "🔍 Search $*"
 
     while IFS=' ' read -r _ pkgfile _; do
         printf '=> %s\n' "$pkgfile"
@@ -299,11 +299,11 @@ do_fetch() {
     INSTALLED_FILES="$TEMPDIR/.files"
     true > "$INSTALLED_FILES"
 
-    info "\n!! 🚀 Install cmdlet $target"
+    info "🚀 Install $target"
 
     # cmdlet v1: path/to/file
     _v1() {
-        info1 "#1 📦 Fetch $1"
+        info1 "📦 Fetch $1"
         # curl directly to symlink will override the real file.
         do_curl "bin/$1" || return $?
         mv -f "$TEMPDIR/bin/$1" "$PREBUILTS/bin/$1"
@@ -320,12 +320,12 @@ do_fetch() {
         test -n "$pkgfile" || pkgfile="$pkgname"
 
         local pkginfo="$pkgname/$pkgfile@$pkgvern"
-        info2 "#2 📄 Fetch $1 ($pkginfo)"
+        info2 "📄 Fetch $1 ($pkginfo)"
         do_curl "$pkginfo" || return 1
 
         # v2: sha pkgfile
         IFS=' ' read -r _ pkgfile _ < <( tail -n1 "$TEMPDIR/$pkginfo")
-        info2 "#2 📦 Fetch $1 ($pkgfile)"
+        info2 "📦 Fetch $1 ($pkgfile)"
         do_unzip "$pkgfile" || return 2   # updated files
 
         # v2: update pkgvern
@@ -338,7 +338,7 @@ do_fetch() {
         IFS=' ' read -r target pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
         test -n "$pkgfile" || return 1
 
-        info3 "#3 📦 Fetch $1 ($pkgfile)"
+        info3 "📦 Fetch $1 ($pkgfile)"
         do_unzip "$pkgfile" || return 2
 
         # have to update pkgname here
@@ -393,7 +393,7 @@ do_fetch() {
 
     local links=()
     if test -n "$install"; then
-        info "== ✨ Install target and link(s):"
+        info "✨ Install target and link(s):"
 
         # install default links
         while read -r file; do
@@ -420,7 +420,7 @@ do_fetch() {
                 local name files
                 while IFS=' ' read -r name files; do
                     if [ "$name" != "$target" ] && [[ " $files " = *" $link "* ]]; then
-                        #info "== 🗑️ drop link $link => $(readlink "$link")"
+                        #info "🗑️ drop link $link => $(readlink "$link")"
                         # remove match element
                         read -r -a files <<< "$files"
                         for i in "${!files[@]}"; do
@@ -452,9 +452,11 @@ do_fetch() {
 
     # caveats
     if test -s "$caveats"; then
-        info "== 📝 caveats:"
+        info "📝 caveats:"
         cat "$caveats"
     fi
+
+    echo ''
 
     unset INSTALLED_FILES
 }
@@ -470,7 +472,7 @@ do_link() {
     # absolute  : link bash@3.2 /usr/local/bin/bash - link bash@3.2 to /usr/local/bin
     [[ "$to" =~ ^\./ ]] && to="$OLDPWD/$to" || true
 
-    info "== 🔗 Link ${targets[*]} => $to"
+    info "🔗 Link ${targets[*]} => $to"
 
     # prepare directories
     if [[ "$to" =~ /$ ]]; then
@@ -501,7 +503,7 @@ do_remove() {
     local target="${1%.tar.*}" # formated name
     local caveats="$(_caveats "$target")"
 
-    info "== 🗑️ Remove $target:"
+    info "🗑️ Remove $target:"
 
     test -f "$CMDLETS_LIST" || return 0
     test -s "$caveats" && rm -rf "$caveats" || true
@@ -550,7 +552,7 @@ do_remove() {
 }
 
 do_update_int() {
-    local pkgfile pkgvern pkgbuild options=()
+    local target pkgfile pkgvern curbuild newbuild options=()
     while [ $# -gt 0 ]; do
         case "$1" in
             --force)    options+=(--force)   ;;
@@ -558,38 +560,30 @@ do_update_int() {
         shift 1
     done
 
-    while IFS=' ' read -r pkgfile pkgvern pkgbuild; do
-        info "!! 🚀 Try update $pkgfile ..."
+    while IFS=' ' read -r target pkgvern curbuild; do
+        # name pkgfile sha build
+        IFS=' ' read -r _ pkgfile _ newbuild < <( _search "$target" --pkgfile | tail -n 1)
 
-        if test -z "$pkgbuild"; then
-            info ">> no pkgbuild, always update"
-            do_fetch "$pkgfile" --install
+        if test -z "$pkgfile"; then
+            info "⚠️ No update found for $target"
+        elif [[ "${options[*]}" =~ --force ]]; then
+            info "🚀 Force update $target => $pkgfile $newbuild"
+            do_fetch "$target" --install
+        elif [[ "$pkgfile" = *"@$pkgvern.tar."* ]] && [[ "$curbuild" = "$newbuild" ]]; then
+            info "🟢 No update for $target"
         else
-            local _pkgfile _pkgver _pkgbuild
-
-            # name pkgfile sha build
-            IFS=' ' read -r _ _pkgfile _ _pkgbuild < <( _search "$pkgfile" --pkgfile | tail -n 1)
-
-            if test -z "$_pkgfile"; then
-                warn "no update found"
-            elif [[ "${options[*]}" =~ --force ]]; then
-                info ">> force update > $pkgvern $_pkgbuild"
-                do_fetch "$pkgfile" --install
-            elif [[ "$_pkgfile" != *"@$pkgvern.tar."* ]]; then
-                info ">> new pkgvern > $_pkgfile"
-                do_fetch "$pkgfile" --install
-            elif [ "${_pkgbuild#*=}" -gt "${pkgbuild#*=}" ]; then
-                info ">> new pkgbuild > $pkgvern $_pkgbuild"
-                do_fetch "$pkgfile" --install
-            fi
+            info "🚀 Update $target => $pkgfile $newbuild"
+            do_fetch "$target" --install
         fi
     done < <( sort "$CMDLETS_LIST")
 }
 
 do_fetch_manifest() {
-    info "!! 📄 Fetch manifest"
+    info "📄 Fetch manifest"
     touch "$MANIFEST"
     do_curl cmdlets.manifest "$MANIFEST" || warn "Fetch manifest failed"
+
+    echo '' # new line
 }
 
 do_fetch_cli() {
@@ -654,7 +648,7 @@ do_list() {
 
     # println: width name info
     _ls_println() {
-        printf "   %${1}s - %s\n" "$2" "${*:3}"
+        printf "   %${_WIDTH}s - %s\n" "$1" "${*:2}"
     }
 
     # println: files ...
@@ -671,25 +665,25 @@ do_list() {
     for opt in "${options[@]}"; do
         case "$opt" in
             --cmdlets)
-                info "== 📦 Installed cmdlets:"
-                width="$(cut -d' ' -f1 < "$CMDLETS_LIST" | _width)"
+                info "📦 Installed cmdlets:"
+                _WIDTH="$(cut -d' ' -f1 < "$CMDLETS_LIST" | _width)"
                 while IFS=' ' read -r name pkgvern pkgbuild; do
-                    _ls_println "$width" "$name" "$pkgvern" "$pkgbuild"
-                done < <( sort "$CMDLETS_LIST")
+                    _ls_println "$name" "$pkgvern" "$pkgbuild"
+                done < <( sort -h -k1 "$CMDLETS_LIST")
                 ;;
             --links)
-                info "== 📦 Installed links:"
-                width="$(find . -maxdepth 1 -type l | _width)"
+                info "📦 Installed links:"
+                _WIDTH="$(find . -maxdepth 1 -type l | _width)"
 
                 while read -r link; do
                     real="$(readlink "$link")"
                     [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
-                    _ls_println "$width" "${link##*/}" "$real"
+                    _ls_println "${link##*/}" "$real"
                 done < <( find . -maxdepth 1 -type l | sort -h)
                 ;;
             --files)
                 for x in "${args[@]}"; do
-                    info "== 📦 Installed files of $x:"
+                    info "📦 Installed files of $x:"
                     grep "^$x " "$FILES_LIST" | cut -d' ' -f2- | _ls_files_println || {
                         # print link and target
                         echo "=> $x -> $(readlink "$x")"
@@ -700,8 +694,8 @@ do_list() {
     done
 }
 
-# do_process cmd [args...]
-do_process() {
+# do_main cmd [args...]
+do_main() {
     local done=1 ret=0
     # early stage, no resources needed
     case "$1" in
@@ -822,7 +816,7 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 if [ "$CLI" = "install" ]; then
     do_bootstrap
 else
-    cd "$(dirname "$0")" && do_process "$@" || exit $?
+    cd "$(dirname "$0")" && do_main "$@" || exit $?
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
