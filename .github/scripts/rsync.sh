@@ -27,18 +27,18 @@ fi
 opts=(
     -avz
     # 忽略顶层和第二层的{bin,lib,libexec,include,share}
-    --exclude='/bin/'
-    --exclude='/lib/'
-    --exclude='/libexec/'
-    --exclude='/include/'
-    --exclude='/share/'
-    --exclude='/*/bin/'
-    --exclude='/*/lib/'
-    --exclude='/*/libexec/'
-    --exclude='/*/include/'
-    --exclude='/*/share/'
+    --exclude="/bin/"
+    --exclude="/lib/"
+    --exclude="/libexec/"
+    --exclude="/include/"
+    --exclude="/share/"
+    --exclude="/*/bin/"
+    --exclude="/*/lib/"
+    --exclude="/*/libexec/"
+    --exclude="/*/include/"
+    --exclude="/*/share/"
     # 忽略隐藏文件
-    --exclude='.*'
+    --exclude=".*"
     -e "ssh ${ssh_opt[*]}"
     # no delete here
 )
