@@ -159,48 +159,6 @@ else
     }
 fi
 
-if ln --version > /dev/null 2>&1; then
-    # gnu ln
-    do_ln() {
-        ln -srf "$@"
-    }
-else
-    # bsd realpath do not have --relative-to
-    # input: <target> <relative to>
-    relative_to() {
-        local target="$(realpath "$1")"
-        local to="$(realpath "$2")"
-        local common="$target"
-        local result=""
-
-        # 循环找出最大公共祖先目录
-        while [ "${to#$common/}" = "$to" ] && [ "$common" != "/" ]; do
-            common=$(dirname "$common")
-            result="../$result"
-        done
-
-        if [ "$common" = "/" ]; then
-            # 如果退到了根目录才有交集
-            result="$result${to#/}"
-        else
-            # 拼接剩余路径
-            result="$result${to#$common/}"
-        fi
-
-        echo "$result"
-    }
-
-    # bsd ln
-    do_ln() {
-        if test -d "$2" || [[ "$2" =~ /$ ]]; then
-            local relative="$(relative_to "$2" "$1")"
-        else
-            local relative="$(relative_to "$(dirname "$2")" "$1")"
-        fi
-        ln -sf "$relative" "$2"
-    }
-fi
-
 # edit file in place
 if sed --version > /dev/null 2>&1; then
     do_sed() {
@@ -412,15 +370,23 @@ do_fetch() {
     do_sed "\#^$target #d" "$CMDLETS_LIST"
     echo "$target ${pkgvern:-1.0} $pkgbuild" >> "$CMDLETS_LIST"
 
-    # ln helper: width from to
+    # ln helper: source dest
     _ln_println() {
-        if test -L "$3" && test -e "$3"; then
-            printf "%${1}s -> %s (displace %s)\n" "$3" "$2" "$(readlink "$3")"
+        if test -L "$2" && [ "$(realpath "$2")" != "$(realpath "$1")" ]; then
+            printf "%${_WIDTH}s -> %s (displace %s)\n" "$2" "$1" "$(readlink "$2")"
         else
-            printf "%${1}s -> %s\n" "$3" "$2"
+            printf "%${_WIDTH}s -> %s\n" "$2" "$1"
         fi
-        do_ln "$2" "$3"
+        # '-n' : no dereference links
+        ln -snf "$1" "$2"
     }
+
+    # _println: link
+    _ls_println() {
+        printf "%${_WIDTH}s -> %s (kept)\n" "$1" "$(readlink "$1")"
+    }
+
+    _WIDTH=$(grep "^bin/" "$INSTALLED_FILES" | _width)
 
     target="${target##*/}"                                      # remove pkgname
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
@@ -429,25 +395,41 @@ do_fetch() {
     if test -n "$install"; then
         info "== ✨ Install target and link(s):"
 
-        local width=$(grep "^bin/" "$INSTALLED_FILES" | _width)
-
         # install default links
         while read -r file; do
             file="$PREBUILTS/$file"
-            if test -L "$file"; then
-                _ln_println "$width" "$(readlink "$file")" "${file##*/}"
+            link="${file##*/}"
+
+            # link exists?
+            if test -L "$link" && [ "$(realpath "$link")" != "$(realpath "$file")" ]; then
+                _ls_println "$link"
             else
-                _ln_println "$width" "$file" "${file##*/}"
+                _ln_println "$file" "$link"
+                links+=("$link")
             fi
-            links+=("${file##*/}")
-        done < <( grep "^bin/" "$INSTALLED_FILES")
+        done < <(grep "^bin/" "$INSTALLED_FILES")
 
         # install user defined links
         if test -n "$alias"; then
             for link in ${alias//:/ }; do
                 [ "$link" = "$target" ] && continue
-                _ln_println "$width" "$target" "$link"
+                _ln_println "$target" "$link"
                 links+=("$link")
+
+                # update FILES_LIST by removing existing alias
+                local name files
+                while IFS=' ' read -r name files; do
+                    if [ "$name" != "$target" ] && [[ " $files " = *" $link "* ]]; then
+                        #info "== 🗑️ drop link $link => $(readlink "$link")"
+                        # remove match element
+                        read -r -a files <<< "$files"
+                        for i in "${!files[@]}"; do
+                            [ "${files[i]}" = "$link" ] && unset "files[i]" && break
+                        done
+                        do_sed "\#^$name#d" "$FILES_LIST"
+                            echo "$name ${files[*]}" >> "$FILES_LIST"
+                    fi
+                done < <(grep -F " $link" "$FILES_LIST")
             done
         fi
     fi
@@ -509,7 +491,7 @@ do_link() {
         else
             echo "=> $to => $target"
         fi
-        do_ln "$target" "$to" | _details_escape
+        ln -snf "$target" "$to" | _details_escape
     done
 }
 
