@@ -1,5 +1,5 @@
 ---
-name: Build cmdlets
+name: Build cmdlets latest
 
 on:
   push:
