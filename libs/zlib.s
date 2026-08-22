@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="Zlib"
 libs_ver=2.3.3
+libs_rev=1
 libs_url=https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.3.3.tar.gz
 libs_sha=f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1
 

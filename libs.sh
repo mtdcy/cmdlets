@@ -427,12 +427,8 @@ _init_target() {
         for x in "$@"; do
             IFS=':' read -r k v <<< "$x"
             eval $k="\${CC/%gcc/$v}"
-            if ! test -x "${!k}"; then
-                slogw "${!k} not found."
-                eval $k="\$(which $v)"
-            fi
-            test -x "${!k}" || slogw "$v not found."
-            export $k
+            test -x "${!k}" || eval $k="\$(which $v)"
+            test -x "${!k}" && export "$k" || slogw "$v not found."
         done
     }
     _init_target_binutils "${binutils[@]}"
@@ -455,7 +451,7 @@ _init_target() {
 
     if is_gcc; then
         # vfork: Resource temporarily unavailable
-        if echo "int main(){}" | $CC -fno-vfork -x c - -o /dev/null; then
+        if echo "int main(){}" | $CC -fno-vfork -x c - -o /dev/null > /dev/null 2>&1; then
             # 用更稳定的标准 fork 系统调用代替 vfork
             export GCC_COMPILER_FLAGS="-fno-vfork"
         else
@@ -1012,7 +1008,8 @@ _prepare() {
 _compile() {
     _init_target
 
-    (                                        # always start subshell before _load()
+    (   
+        # always start subshell before _load()
 
         trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
@@ -1513,7 +1510,7 @@ distclean() {
 update() {
     _load "$1"
 
-    slogi ">>>>> update $1 $libs_ver => $2 <<<<<"
+    slogi "$_EMOJI_RUN" ">>>>> update $1 $libs_ver => $2 <<<<<"
     sed -i "libs/$1.s" \
         -e "/libs_ver=/,/libs_build/s/$libs_ver/$2/g" \
         -e "/libs_sha=/s/=.*$/=/" || die
@@ -1522,12 +1519,20 @@ update() {
     _load "$1"
 
     # load again and fetch
-    _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}" || die
+    _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}" || die "No update found"
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_url_file "$libs_url")")
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
-    slogw "<<<<< updated $libs_name => $libs_ver >>>>>"
+    # set libs_rev - cmdlet revision (packaging number)
+    #  - _PKGBUILD : real packaging number
+    if grep -q "^libs_rev=" "libs/$1.s"; then
+        sed "s/libs_rev=.*$/libs_rev=1/" -i "libs/$1.s"
+    else
+        sed "/libs_ver/a libs_rev=1" -i "libs/$1.s"
+    fi
+
+    slogi "$_EMOJI_OK" "<<<<< updated $libs_name => $libs_ver >>>>>"
 }
 
 _on_exit() {
