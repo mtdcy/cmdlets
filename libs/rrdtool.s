@@ -46,6 +46,9 @@ libs_args=(
     --enable-static
 )
 
+# configure: error: --enable-mmap requested but mmap() was not detected
+is_mingw && libs_args+=(--disable-mmap --disable-rrdcached) || true
+
 libs_build() {
     configure
 
