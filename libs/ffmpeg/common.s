@@ -28,7 +28,7 @@ libs_deps+=(
 libs_args+=(
     --enable-pic
     --enable-hardcoded-tables
-    --extra-version=cmdlets
+    --extra-version=static
 
     # toolchain
     --cc="'$CC'"

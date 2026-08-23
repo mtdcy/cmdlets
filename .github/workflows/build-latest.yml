@@ -4,7 +4,7 @@ name: Build cmdlets latest
 on:
   push:
     paths:
-      - libs/**.s
+      - libs/*.s
     branches:
       - main
 

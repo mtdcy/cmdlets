@@ -909,6 +909,10 @@ _supported_targets() {
 }
 
 # _load library
+# input: <cmdlet name>
+# e.g:
+#   _load zlib
+#   _load ffmpeg/ffmpeg4.s  # archived cmdlets
 _load() {
     _init_target
 
@@ -1098,6 +1102,14 @@ depends() {
     _deps_init
 
     local list=() libs deps x
+
+    # handle archived cmdlets
+    for libs in "$@"; do
+        if ! grep -q "^$libs" "$_DEPS_FILE"; then
+            echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
+        fi
+    done
+
     while IFS=': ' read -r libs deps; do
         test -n "$deps" || continue
         #is_listed "$libs" "$@" || continue
