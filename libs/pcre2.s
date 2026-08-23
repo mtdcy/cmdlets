@@ -6,23 +6,31 @@ libs_lic="BSD-3-Clause"
 libs_ver=10.47
 libs_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$libs_ver/pcre2-$libs_ver.tar.bz2
 libs_sha=47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7
-libs_dep=(zlib bzip2)
+
+libs_deps=()
 
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
 
+    --enable-pcre2-8
     --enable-pcre2-16
     --enable-pcre2-32
-    --enable-pcre2grep-libz
-    --enable-pcre2grep-libbz2
-    --enable-jit
+
+    --enable-unicode
+    --enable-newline-is-anycrlf
 
     # static only
     --disable-shared
     --enable-static
 )
+
+if is_mingw; then
+    libs_args+=(--disable-jit)
+else
+    libs_args+=(--enable-jit)
+fi
 
 libs_build() {
     configure
@@ -36,11 +44,11 @@ libs_build() {
         -e 's/echo \$includes *$/& -DPCRE2_STATIC/'
 
     # no prograns or docs
-    pkgfile libpcre2 -- make.install \
-        bin_PROGRAMS=                \
-        dist_man_MANS=               \
-        dist_doc_DATA=               \
-        dist_html_DATA=              \
+    cmdlet.pkgfile libpcre2 -- make.install \
+        bin_PROGRAMS= \
+        dist_man_MANS= \
+        dist_doc_DATA= \
+        dist_html_DATA=
 
     for x in pcre2grep pcre2test; do
         cmdlet.install "$x"
