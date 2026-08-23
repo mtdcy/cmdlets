@@ -1,19 +1,20 @@
 # Round Robin Database
 
 # shellcheck disable=SC2034
-libs_lic='GPLv2'
+libs_lic='GPLv2+'
 libs_ver=1.11.0
 libs_url=https://github.com/oetiker/rrdtool-1.x/releases/download/v1.11.0/rrdtool-1.11.0.tar.gz
 libs_sha=24c345b5c077c1b2b2fcbc1a364f1da051650fb6743ad5213096adc04c862ed4
-libs_dep=( glib cairo pango libpng libxml2 harfbuzz )
+
+libs_deps=(glib cairo pango libpng libxml2)
 # glib with g_regex => regex support
 
-libs_patches=(
-    # Fix -flat_namespace being used on Big Sur and later.
-    https://raw.githubusercontent.com/Homebrew/homebrew-core/1cf441a0/Patches/libtool/configure-big_sur.diff
-    # fix HAVE_DECL checks, upstream pr ref, https://github.com/oetiker/rrdtool-1.x/pull/1262
-    https://github.com/oetiker/rrdtool-1.x/commit/98b2944d3b41f6e19b6a378d7959f569fdbaa9cd.patch?full_index=1
-)
+#libs_patches=(
+#    # Fix -flat_namespace being used on Big Sur and later.
+#    https://raw.githubusercontent.com/Homebrew/homebrew-core/1cf441a0/Patches/libtool/configure-big_sur.diff
+#    # fix HAVE_DECL checks, upstream pr ref, https://github.com/oetiker/rrdtool-1.x/pull/1262
+#    https://github.com/oetiker/rrdtool-1.x/commit/98b2944d3b41f6e19b6a378d7959f569fdbaa9cd.patch?full_index=1
+#)
 
 libs_args=(
     --disable-dependency-tracking

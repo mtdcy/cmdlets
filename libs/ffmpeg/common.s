@@ -18,11 +18,11 @@ libs_deps+=(
     libtheora libvpx
     openh264 kvazaar
     # text libs
-    fribidi libass
+    libass
     # demuxers & muxers
     libxml2
     # filters
-    freetype fribidi # for drawtext, TODO: fontconfig
+    freetype fontconfig fribidi
 )
 
 libs_args+=(
@@ -79,10 +79,6 @@ libs_args+=(
     --enable-libopenh264        # h264 encoding
     --enable-libkvazaar         # hevc encoding
     --enable-libass             # ass subtitles
-    # for drawtext filter
-    #--enable-libfontconfig
-    --enable-libfreetype
-    --enable-libfribidi
 
     # static linked
     --disable-shared
@@ -90,10 +86,15 @@ libs_args+=(
     --pkg-config="'$PKG_CONFIG'"
 )
 
-if version.ge 6.0.0; then
-    libs_deps+=(harfbuzz)
-    libs_args+=(--enable-libharfbuzz)
-fi
+# for drawtext filter
+list_has libs_deps freetype   && libs_args+=(--enable-libfreetype)   || true # 解析字体文件并将其绘制成像素
+list_has libs_deps fontconfig && libs_args+=(--enable-libfontconfig) || true # 管理并寻找合适的字体
+list_has libs_deps fribidi    && libs_args+=(--enable-libfribidi)    || true # 处理 RTL 文字的正确显示顺序
+
+#if version.ge 6.0.0; then
+#    libs_deps+=(harfbuzz)
+#    libs_args+=(--enable-libharfbuzz)
+#fi
 
 if is_darwin; then
     # always enable hwaccels for macOS

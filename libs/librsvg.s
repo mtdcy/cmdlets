@@ -5,7 +5,7 @@ libs_lic="LGPLv2.1+"
 libs_ver=2.61.4
 libs_url=https://download.gnome.org/sources/librsvg/2.61/librsvg-2.61.4.tar.xz
 libs_sha=fca0ea28d1f28f95c8407d2579f4702dac085e7c758644daca8b40d1e072ca0c
-libs_dep=( glib gdk-pixbuf cairo harfbuzz freetype fontconfig pango libpng libxml2 )
+libs_dep=(glib gdk-pixbuf cairo freetype fontconfig pango libpng libxml2)
 
 # configure args
 libs_args=(
@@ -19,6 +19,8 @@ libs_args=(
 )
 
 libs_build() {
+    # package `cargo-c 0.10.24+cargo-0.98.0` requires rustc 1.95 or newer
+    cargo.requires.rustc 1.95
     cargo.requires cargo-c
 
     meson.setup

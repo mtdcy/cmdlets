@@ -6,23 +6,23 @@ libs_ver=1.57.1
 libs_url=https://download.gnome.org/sources/pango/1.57/pango-1.57.1.tar.xz
 libs_sha=e65d6d117080dc3aeeb7d8b4b3b518f7383aa2e6cfce23117c623cd624764c2f
 
-libs_deps=( glib cairo freetype fribidi harfbuzz fontconfig )
-
-libs_patches=(
-    https://gitlab.gnome.org/GNOME/pango/-/commit/4403954455f2b4a815b32e11c44f79b2e665e94c.diff
-)
+libs_deps=(glib cairo freetype fontconfig)
 
 # configure args
 libs_args=(
+    -Dcairo=enabled
+    -Dfreetype=enabled
+    -Dfontconfig=enabled
+
     -Dlibthai=disabled
 
     -Dbuild-examples=false
     -Dbuild-testsuite=false
 )
 
-is_listed cairo      libs_deps && libs_args+=( -Dcairo=enabled      ) || libs_args+=( -Dcairo=disabled      )
-is_listed freetype   libs_deps && libs_args+=( -Dfreetype=enabled   ) || libs_args+=( -Dfreetype=disabled   )
-is_listed fontconfig libs_deps && libs_args+=( -Dfontconfig=enabled ) || libs_args+=( -Dfontconfig=disabled )
+is_listed cairo      libs_deps && libs_args+=(-Dcairo=enabled)      || libs_args+=(-Dcairo=disabled)
+is_listed freetype   libs_deps && libs_args+=(-Dfreetype=enabled)   || libs_args+=(-Dfreetype=disabled)
+is_listed fontconfig libs_deps && libs_args+=(-Dfontconfig=enabled) || libs_args+=(-Dfontconfig=disabled)
 
 libs_build() {
     meson.setup
