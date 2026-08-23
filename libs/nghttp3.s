@@ -2,10 +2,10 @@
 #
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=1.17.0
+libs_ver=1.18.0
 libs_rev=1
-libs_url=https://github.com/ngtcp2/nghttp3/releases/download/v1.17.0/nghttp3-1.17.0.tar.xz
-libs_sha=e8b798272b9282045cb83577dcf7bd7fcd22bb3a43aec0eb1a24f675b4cef0b8
+libs_url=https://github.com/ngtcp2/nghttp3/releases/download/v1.18.0/nghttp3-1.18.0.tar.xz
+libs_sha=aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19
 libs_dep=( )
 
 # configure args

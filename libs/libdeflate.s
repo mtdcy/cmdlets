@@ -2,9 +2,10 @@
 
 # shellcheck disable=SC2034
 libs_lic=MIT
-libs_ver=1.25
-libs_url=https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.25.tar.gz
-libs_sha=d11473c1ad4c57d874695e8026865e38b47116bbcb872bfc622ec8f37a86017d
+libs_ver=1.26
+libs_rev=1
+libs_url=https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.26.tar.gz
+libs_sha=bba03fffc5538576213675ce6968fcff6ce2e67d82e4d5febea2d05f9f13cf85
 libs_dep=( )
 
 libs_args=(

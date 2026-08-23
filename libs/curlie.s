@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="MIT"
 libs_ver=1.8.2
+libs_rev=1
 libs_url=https://github.com/rs/curlie/archive/refs/tags/v1.8.2.tar.gz
 libs_sha=846ca3c5f2cca60c15eaef24949cf49607f09bdd68cbe9d81a2a026e434fa715
 libs_dep=( curl )
