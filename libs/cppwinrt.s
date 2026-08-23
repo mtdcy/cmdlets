@@ -1,6 +1,6 @@
 # C++ language projection for Windows Runtime (WinRT) APIs (mingw-w64)
 
-libs_targets=( windows )
+libs_targets=(windows)
 
 # shellcheck disable=SC2034
 libs_lic=MIT
@@ -13,19 +13,18 @@ libs_build() {
     # Windows and mingw headers are case insensitive
     #  => but our build system runs on Linux which is case sensitive
     #   => rename all files to lower case
-    while read -r x; do
-        x="${x#mingw64/}"
-        mkdir -p "${x%/*}"
-        cp "mingw64/$x" "$(echo "$x" | tr A-Z a-z)" || true
-        sed -i '/include .*Windows\..*\.h/s/.*/\L&/' "$x"
+    mkdir -pv include/winrt/{,impl}
+    while read -r header; do
+        local dest="$(tr A-Z a-z <<< "${header#mingw64/}")"
+        sed '/#include .*Windows\..*\.h/s/.*/\L&/' "$header" > "$dest"
     done < <(find mingw64/include -name "*.h")
 
     # -std=c++20    : error: C++/WinRT requires coroutine support
     # -fpermissive  : error: invalid conversion
     pkgconf libwinrt.pc -std=c++20 -fpermissive
 
-    cmdlet.pkginst libwinrt                        \
-        include/winrt       include/winrt/*.h      \
+    cmdlet.pkginst libwinrt \
+        include/winrt       include/winrt/*.h \
         include/winrt/impl  include/winrt/impl/*.h \
         libwinrt.pc
 
