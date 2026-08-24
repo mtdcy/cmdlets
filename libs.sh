@@ -934,6 +934,20 @@ _load() {
     # update libs_dep to libs_deps, make old build compatible
     test -n "$libs_deps" || libs_deps=("${libs_dep[@]}")
 
+    # compat layer dependencies
+    local compat=(libintl)
+    if is_musl; then
+        compat+=(libargp musl-obstack musl-fts)
+    elif is_mingw; then
+        compat+=(windows cppwinrt)
+    fi
+    if test -n "${compat[*]}"; then
+        is_listed "$libs_name" "${compat[@]}" || libs_deps+=("${compat[@]}")
+    fi
+
+    # dedup
+    IFS=' ' read -r -a libs_deps < <(printf "%s\n" "${libs_deps[@]}" | sort -u | xargs)
+
     # supported targets
     IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}")
 
@@ -1012,7 +1026,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (   
+    (
         # always start subshell before _load()
 
         trap _capture_reset EXIT
@@ -1238,8 +1252,8 @@ build() {
     echo "target : ${_TARGET_VARS[@]}"
     echo ""
 
-    # always prepend with compat
-    _deps_fetch compat "$@"
+    # fetch dependencies
+    _deps_fetch "$@"
 
     slogi $_EMOJI_JOB "Build: $*"
 
