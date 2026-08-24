@@ -152,8 +152,16 @@ host.is_glibc()     { list_has _HOST_VARS       GLIBC;           }
 host.is_linux()     { list_has _HOST_VARS       linux;           }
 host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
 
-gcc.predefined()    { "$CC" -dM -E - < /dev/null | awk '/#define/{print $2":"$3}';  } # awk: format to key:value
-gcc.dumpspecs()     { "$CC" -dumpspecs | sed ':a;N;$!ba;s/:\n/:/g';                 } # sed: format to key:value
+gcc.predefined() {
+    # awk: format to key:value
+    echo "#include <stdio.h>" | "$CC" -dM -E - |
+        awk '/#define/{print $2":"$3}'
+}
+
+gcc.dumpspecs() {
+    # sed: format to key:value
+    "$CC" -dumpspecs | sed ':a;N;$!ba;s/:\n/:/g'
+}
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
@@ -416,6 +424,7 @@ _init_target() {
         NM:nm
         STRIP:strip
         RANLIB:ranlib
+        OBJDUMP:objdump
         PKG_CONFIG:pkg-config
     )
 
@@ -942,7 +951,7 @@ _load() {
     if is_musl; then
         compat+=(libargp musl-obstack musl-fts)
     elif is_mingw; then
-        compat+=(windows cppwinrt)
+        compat+=(cppwinrt)
     fi
     if test -n "${compat[*]}"; then
         is_listed "$libs_name" "${compat[@]}" || libs_deps+=("${compat[@]}")
@@ -1029,7 +1038,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (
+    (   
         # always start subshell before _load()
 
         trap _capture_reset EXIT
@@ -1197,7 +1206,7 @@ _deps_status() {
         if test -f "$PREFIX/.$x.d"; then
             printf "\\033[32m%s%s✔\\033[39m" "$sep" "$x"
         else
-            printf "\\033[31m%s%s✔\\033[39m" "$sep" "$x"
+            printf "\\033[31m%s%s✗\\033[39m" "$sep" "$x"
             ret=1
         fi
         sep=", "
