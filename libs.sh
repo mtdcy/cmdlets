@@ -838,6 +838,7 @@ _pkgfile_init() {
     if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
         slogw "no v3/manifest."
+        true > "$_TARGET_MANIFEST"
     fi
 }
 
@@ -1036,7 +1037,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (
+    (   
         # always start subshell before _load()
 
         trap _capture_reset EXIT
