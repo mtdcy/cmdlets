@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="LGPLv2.1+"
 libs_ver=2.61.4
+libs_rev=1
 libs_url=https://download.gnome.org/sources/librsvg/2.61/librsvg-2.61.4.tar.xz
 libs_sha=fca0ea28d1f28f95c8407d2579f4702dac085e7c758644daca8b40d1e072ca0c
 libs_dep=(glib gdk-pixbuf cairo freetype fontconfig pango libpng libxml2)

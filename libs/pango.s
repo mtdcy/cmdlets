@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="LGPLv2.0+"
 libs_ver=1.57.1
+libs_rev=1
 libs_url=https://download.gnome.org/sources/pango/1.57/pango-1.57.1.tar.xz
 libs_sha=e65d6d117080dc3aeeb7d8b4b3b518f7383aa2e6cfce23117c623cd624764c2f
 
