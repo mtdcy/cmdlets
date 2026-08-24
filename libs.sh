@@ -950,8 +950,6 @@ _load() {
     local compat=(libintl)
     if is_musl; then
         compat+=(libargp musl-obstack musl-fts)
-    elif is_mingw; then
-        compat+=(cppwinrt)
     fi
     if test -n "${compat[*]}"; then
         is_listed "$libs_name" "${compat[@]}" || libs_deps+=("${compat[@]}")
@@ -1038,7 +1036,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (   
+    (
         # always start subshell before _load()
 
         trap _capture_reset EXIT
