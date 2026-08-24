@@ -10,8 +10,8 @@
 # show git tag > branch > commit
 git.version() {
     git describe --tags --exact-match 2> /dev/null ||
-    git symbolic-ref -q --short HEAD ||
-    git rev-parse --short HEAD
+        git symbolic-ref -q --short HEAD ||
+        git rev-parse --short HEAD
 }
 
 # 2026-02-06T21:05:01
@@ -75,35 +75,35 @@ libs.requires() {
     local x y
     for x in "$@"; do
         case "$x" in
-            -std=c++*|-std=gnu++*)
-                cxxflags+=( "$x" )
+            -std=c++* | -std=gnu++*)
+                cxxflags+=("$x")
                 ;;
             -std=*)
-                cflags+=( "$x" )
+                cflags+=("$x")
                 case "$x" in
-                    -std=c89|-std=ansi|-std=gnu89)
-                        cflags+=( $(_cflags_for_c89) )
+                    -std=c89 | -std=ansi | -std=gnu89)
+                        cflags+=($( _cflags_for_c89))
                         ;;
                 esac
                 ;;
-            -l*|-L*|-pthread|-Wl,*)
-                ldflags+=( "$x" )
+            -l* | -L* | -pthread | -Wl,*)
+                ldflags+=("$x")
                 ;;
             -I*)
-                cppflags+=( "$x" )
+                cppflags+=("$x")
                 ;;
             -*)
-                cflags+=( "$x" )
-                cxxflags+=( "$x" )
+                cflags+=("$x")
+                cxxflags+=("$x")
                 ;;
             *)
                 "$PKG_CONFIG" --exists "$x" || die "$x not found."
 
                 for y in $($PKG_CONFIG --cflags "$x"); do
                     case "$y" in
-                        -std=c++*|-std=gnu++*)  cxxflags+=( "$y" )  ;;
-                        -fpermissive)           cxxflags+=( "$y" )  ;;
-                        *)                      cflags+=( "$y" )    ;;
+                        -std=c++* | -std=gnu++*) cxxflags+=("$y")   ;;
+                        -fpermissive)           cxxflags+=("$y")    ;;
+                        *)                      cflags+=("$y")      ;;
                     esac
                 done
 
@@ -162,10 +162,10 @@ _setup() {
     fi
 
     if test -f configure; then
-        sed -i configure                            \
-            -e 's/\<pkg-config\>/\$PKG_CONFIG/g'    \
-            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g'       \
-            || die "setup configure failed."
+        sed -i configure \
+            -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
+            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g' ||
+               die "setup configure failed."
         #1. replace pkg-config with PKG_CONFIG env
         #2. replace PKGCONFIG with PKG_CONFIG
 
@@ -173,10 +173,10 @@ _setup() {
         if grep -Fwq pcre2-config configure && ! grep -Fwq PCRE_CONFIG configure; then
             #1. $(pcre2-config --cflags-posix) => ngrep
             #2. `pcre2-config --cflags-posix`
-            sed -i configure                                                        \
-                -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g'   \
-                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g'     \
-                || die "setup configure failed."
+            sed -i configure \
+                -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g' \
+                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g' ||
+                   die "setup configure failed."
         fi
     fi
 }
@@ -193,25 +193,25 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    local args=( "${libs_args[@]}" "$@" )
+    local args=("${libs_args[@]}" "$@")
 
-    list_has args "--prefix=.*" || args+=( --prefix="$PREFIX" )
+    list_has args "--prefix=.*" || args+=(--prefix="$PREFIX")
 
     if is_xbuild; then
         # some libraries use --target instead of --host, e.g: libvpx
-        { "$cmd" --help || true; } | grep -q -- "--host=" && args+=( --host="$_TARGET" ) || true
+        { "$cmd" --help || true; } | grep -q -- "--host=" && args+=(--host="$_TARGET")   || true
     fi
 
     slogcmd "$cmd" "${args[@]}" || die "configure $libs_name failed."
 }
 
 make() {
-    local cmdline=( "$MAKE" "$@" )
+    local cmdline=("$MAKE" "$@")
 
     # set default njobs
-    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=( -j"$_NJOBS" )
+    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=(-j"$_NJOBS")
 
-    [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=( V=1 )
+    [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=(V=1)
 
     slogcmd "${cmdline[@]}" || die "make $libs_name failed."
 }
@@ -287,14 +287,14 @@ _cmake_init() {
 
     if test -n "$_TARGET"; then
         if is_darwin; then
-            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Darwin )
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Darwin)
         elif is_linux; then
-            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Linux )
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Linux)
         elif is_mingw; then
-            _CMAKE_STD+=( -DCMAKE_SYSTEM_NAME=Windows )
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Windows)
         fi
         # host or docker build, so `uname -m' is reliable
-        _CMAKE_STD+=( -DCMAKE_SYSTEM_PROCESSOR=$(uname -m) )
+        _CMAKE_STD+=(-DCMAKE_SYSTEM_PROCESSOR=$( uname -m))
     fi
 
     export _CMAKE_READY=1
@@ -306,7 +306,10 @@ _cmake_filter_out_defines() {
         case "$1" in
             -D)     shift 2 ;;
             -D*)    shift 1 ;;
-            *)      _options+=( "$1" ); shift ;;
+            *)
+                    _options+=("$1")
+                                        shift
+                                              ;;
         esac
     done
     echo "${_options[@]}"
@@ -315,21 +318,21 @@ _cmake_filter_out_defines() {
 cmake() {
     _cmake_init
 
-    local cmdline=( "$CMAKE" )
+    local cmdline=("$CMAKE")
     case "$(_cmake_filter_out_defines "$@")" in
         --build*)
             export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
-            cmdline+=( "$@" )
+            cmdline+=("$@")
             ;;
         --install*)
             export CMAKE_BUILD_PARALLEL_LEVEL=1
-            cmdline+=( "$@" )
+            cmdline+=("$@")
             ;;
         *)
             # std
-            cmdline+=( "${_CMAKE_STD[@]}" )
+            cmdline+=("${_CMAKE_STD[@]}")
             # append user args
-            cmdline+=( "${libs_args[@]}" "$@" )
+            cmdline+=("${libs_args[@]}" "$@")
             ;;
     esac
 
@@ -356,9 +359,9 @@ cmake.install() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL=1
 
-    local cmdline=( "$CMAKE" )
+    local cmdline=("$CMAKE")
 
-    is_listed "--install" "$@" || cmdline+=( --install . )
+    is_listed "--install" "$@" || cmdline+=(--install .)
 
     slogcmd "${cmdline[@]}" "$@" || die "cmake.install $libs_name failed."
 }
@@ -405,10 +408,10 @@ EOF
 meson() {
     _meson_init
 
-    local cmdline=( "$MESON" )
+    local cmdline=("$MESON")
 
     # std args < meson configure
-    local std=( )
+    local std=()
 
     case "$1" in
         setup)
@@ -431,13 +434,13 @@ meson() {
             #is_darwin || std+=( --prefer-static )
 
             # append user args
-            cmdline+=( setup "${std[@]}" "${libs_args[@]}" "${@:2}" )
+            cmdline+=(setup "${std[@]}" "${libs_args[@]}" "${@:2}")
             ;;
         compile)
-            cmdline+=( "$1" "${std[@]}" "${@:2}" --jobs "$_NJOBS" )
+            cmdline+=("$1" "${std[@]}" "${@:2}" --jobs "$_NJOBS")
             ;;
         *)
-            cmdline+=( "$1" "${std[@]}" "${@:2}" )
+            cmdline+=("$1" "${std[@]}" "${@:2}")
             ;;
     esac
 
@@ -514,11 +517,11 @@ _cargo_init() {
         test -w "$RUSTUP_HOME" || RUSTUP_HOME="$_TARGET_WORKDIR/.rustup"
     fi
 
-    if ! which rustup &>/dev/null; then
+    if ! which rustup &> /dev/null; then
         test -w "$RUSTUP_HOME" || RUSTUP_HOME="$HOME/.rustup"
 
         RUSTUP_INIT_OPTS=(-y --no-modify-path --profile minimal --default-toolchain stable)
-        if which rustup-init &>/dev/null; then
+        if which rustup-init &> /dev/null; then
             _LOGGING=silent echocmd rustup-init "${RUSTUP_INIT_OPTS[@]}"
         else
             _LOGGING=silent echocmd "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- ${RUSTUP_INIT_OPTS[*]}"
@@ -534,7 +537,7 @@ _cargo_init() {
     # docker image RUSTUP_HOME may not be writable
     if test -w "$RUSTUP_HOME"; then
         _LOGGING=silent echocmd rustup default ||
-        _LOGGING=silent echocmd rustup default stable
+            _LOGGING=silent echocmd rustup default stable
     fi
 
     export PATH="$CARGO_HOME/bin:$PATH"
@@ -568,11 +571,11 @@ _cargo_init() {
         CARGO_BUILD_TARGET="${CARGO_BUILD_TARGET/arm64/aarch64}"
     elif is_mingw; then
         [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
-        CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
+            CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
         # win32
         #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
         #  *-windows-gnu => msvcrt
-        CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
+        CARGO_BUILD_TARGET="$(rustup target list --installed | grep windows)"
     else
         # static linked C runtime
         CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
@@ -613,13 +616,13 @@ EOF
 cargo() {
     _cargo_init
 
-    local cmdline=( "$CARGO" "$1" )
+    local cmdline=("$CARGO" "$1")
     case "$1" in
         build)
-            cmdline+=( "${libs_args[@]}" "${@:2}" )
+            cmdline+=("${libs_args[@]}" "${@:2}")
             ;;
         *)
-            cmdline+=( "${@:2}" )
+            cmdline+=("${@:2}")
             ;;
     esac
 
@@ -642,10 +645,16 @@ cargo.setup() {
     local rustflags=() x
     while [ $# -gt 0 ]; do
         case "$1" in
-            -l)     rustflags+=( -l "static=$2" ); shift 1  ;;
-            -l*)    rustflags+=( -l "static=${1#-l}" )      ;;
-            -L)     rustflags+=( -L "$2" ); shift 1         ;;
-            -L*)    rustflags+=( -L "native=${1#-L}" )      ;;
+            -l)
+                    rustflags+=(-l "static=$2")
+                                                   shift 1
+                                                            ;;
+            -l*)    rustflags+=(-l "static=${1#-l}")        ;;
+            -L)
+                    rustflags+=(-L "$2")
+                                            shift 1
+                                                            ;;
+            -L*)    rustflags+=(-L "native=${1#-L}")        ;;
             *)      ;; # ignore other flags
         esac
         shift 1
@@ -687,12 +696,12 @@ cargo.build() {
     } | _LOGGING=silent _capture
 
     # std < libs_args < user args
-    local std=( "${libs_args[@]}" "$@" )
+    local std=("${libs_args[@]}" "$@")
 
     # default: release
-    list_has std "--release|--profile" || std+=( --release )
+    list_has std "--release|--profile" || std+=(--release)
 
-    list_has std "-j|--jobs" || std+=( -j "$_NJOBS" )
+    list_has std "-j|--jobs" || std+=(-j "$_NJOBS")
 
     # If the --target flag (or build.target) is used, then
     # the build.rustflags will only be passed to the compiler for the target.
@@ -707,7 +716,7 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        ( # always start subshell here
+        (   # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -730,7 +739,7 @@ cargo.requires.rustc() {
 cargo.locate() {
     local targets=() x
     for x in "$@"; do
-        targets+=( $(_locate_exe "target/$CARGO_BUILD_TARGET/release/$x") )
+        targets+=($( _locate_exe "target/$CARGO_BUILD_TARGET/release/$x"))
     done
     echo "${targets[@]}"
 }
@@ -823,11 +832,11 @@ _go_filter_ldflags() {
             -ldflags=*)
                 # use xargs to remove quotes
                 IFS=' ' read -r -a args <<< "$(echo "${1#-ldflags=}" | xargs)"
-                _ldflags+=( "${args[@]}" )
+                _ldflags+=("${args[@]}")
                 ;;
             -ldflags)
                 IFS=' ' read -r -a args <<< "$(echo "$2" | xargs)"
-                _ldflags+=( "${args[@]}" )
+                _ldflags+=("${args[@]}")
                 shift
                 ;;
         esac
@@ -842,7 +851,7 @@ _go_filter_options() {
         case "$1" in
             -ldflags=*) ;;
             -ldflags)   shift ;;
-            *)          _options+=( "$1" ) ;;
+            *)          _options+=("$1")   ;;
         esac
         shift
     done
@@ -853,7 +862,7 @@ _go_filter_options() {
 go() {
     _go_init
 
-    local cmdline=( "$GO" "$1" )
+    local cmdline=("$GO" "$1")
     case "$1" in
         build)
             # fix 'invalid go version'
@@ -867,25 +876,25 @@ go() {
             fi
 
             # verbose
-            cmdline+=( -x -v )
+            cmdline+=(-x -v)
 
             #1. static without dwarf and stripped
             #2. add version info
-            local ldflags=( -w -s -X main.version="$libs_ver" )
+            local ldflags=(-w -s -X main.version="$libs_ver")
 
-            [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
+            [ "$CGO_ENABLED" -ne 0 ] || ldflags+=(-extldflags=-static)
 
             # merge user ldflags
-            ldflags+=( $(_go_filter_ldflags "${@:2}") )
+            ldflags+=($( _go_filter_ldflags "${@:2}"))
 
             # set ldflags
-            cmdline+=( -ldflags="'${ldflags[*]}'" )
+            cmdline+=(-ldflags="'${ldflags[*]}'")
 
             # append user options
-            cmdline+=( $(_go_filter_options "${@:2}") )
+            cmdline+=($( _go_filter_options "${@:2}"))
             ;;
         *)
-            cmdline+=( "${@:2}" )
+            cmdline+=("${@:2}")
             ;;
     esac
 
@@ -916,27 +925,27 @@ go.build() {
     _go_init
 
     # static without dwarf and stripped
-    local ldflags=( -w -s )
+    local ldflags=(-w -s)
 
     # go embed version control
     if test -f main.go; then
-        echo "$*" | grep -i main.version    || ldflags+=( -X main.version="$libs_ver" )
-        echo "$*" | grep -i main.build      || ldflags+=( -X main.build="$((${_PKGBUILD#*=}+1))" )
+        echo "$*" | grep -i main.version    || ldflags+=(-X main.version="$libs_ver")
+        echo "$*" | grep -i main.build      || ldflags+=(-X main.build="$((${_PKGBUILD#*=} + 1))")
     fi
 
-    [ "$CGO_ENABLED" -ne 0 ] || ldflags+=( -extldflags=-static )
+    [ "$CGO_ENABLED" -ne 0 ] || ldflags+=(-extldflags=-static)
 
     # merge user ldflags
-    ldflags+=( $(_go_filter_ldflags "$@") )
+    ldflags+=($( _go_filter_ldflags "$@"))
 
     # verbose
-    local std=( -x -v -p "$_NJOBS" )
+    local std=(-x -v -p "$_NJOBS")
 
     # set ldflags
-    std+=( -ldflags="'${ldflags[*]}'" )
+    std+=(-ldflags="'${ldflags[*]}'")
 
     # append user options
-    std+=( $(_go_filter_options "$@") )
+    std+=($( _go_filter_options "$@"))
 
     slogcmd "$GO" build "${std[@]}" || die "go.build $libs_name failed."
 }
@@ -1016,15 +1025,15 @@ _make_pkgfile() {
                 ;;
             *.pc)
                 # shellcheck disable=SC2016
-                sed -i "$x"                                     \
-                    -e 's%^prefix=.*$%prefix=\${PREFIX}%'       \
-                    -e "s%$PREFIX%\${prefix}%g"                 \
-                    || die "update $x failed."
+                sed -i "$x" \
+                    -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
+                    -e "s%$PREFIX%\${prefix}%g" ||
+                       die "update $x failed."
                 ;;
             *.cmake)
-                sed -i "$x"                                     \
-                    -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g"   \
-                    || die "update $x failed."
+                sed -i "$x" \
+                    -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" ||
+                       die "update $x failed."
                 ;;
             bin/*)
                 test -f "$x" || x="$x$_BINEXT"  # tar will report error if not exists
@@ -1042,17 +1051,17 @@ _make_pkgfile() {
                                 # replace hardcoded PREFIX with env
                                 #1. prefix may be single quoted => replace prefix= first
                                 #2. replace others with ${prefix}
-                                sed -i "$x"                                         \
-                                    -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%"  \
-                                    -e "s%$PREFIX%\${prefix}%g"                     \
-                                    || die "update $x failed."
+                                sed -i "$x" \
+                                    -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
+                                    -e "s%$PREFIX%\${prefix}%g" ||
+                                       die "update $x failed."
                                 ;;
                         esac
-                    ;;
+                        ;;
                 esac
                 ;;
         esac
-        files+=( "$x" )
+        files+=("$x")
     done
 
     slogi $_EMOJI_PKGFILE "$1 < ${files[*]}"
@@ -1088,7 +1097,8 @@ cmdlet.pkgfile() {
     local pkgvern="$libs_name/$name@$libs_ver"
 
     # pkginfo is shared by library() and cmdlet(), full versioned
-    local pkginfo="$libs_name/pkginfo@$libs_ver"; touch "$pkginfo"
+    local pkginfo="$libs_name/pkginfo@$libs_ver"
+                                                  touch "$pkginfo"
 
     _make_pkgfile "$pkgfile" "${files[@]}"
 
@@ -1151,25 +1161,27 @@ cmdlet.disclaim() {
 #         share             yyy         \
 #         share/man         zzz
 cmdlet.pkginst() {
-    local name="$1"; shift
+    local name="$1"
+                     shift
 
     slogi $_EMOJI_PKGFILE "$name < $*"
 
     local sub installed
     while [ $# -ne 0 ]; do
-        local file="$1"; shift
+        local file="$1"
+                         shift
         case "$file" in
             # no libtool archive files
             *.la) continue ;;
 
             # set default path for specified files
-            *.h|*.hxx|*.hpp)    [[ "$sub" =~ ^include        ]] || sub="include"        ;;
+            *.h | *.hxx | *.hpp) [[ "$sub" =~ ^include       ]] || sub="include"        ;;
             *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"      ;;
-            *.a|*.so|*.so.*)    [[ "$sub" =~ ^lib            ]] || sub="lib"            ;;
+            *.a | *.so | *.so.*) [[ "$sub" =~ ^lib           ]] || sub="lib"            ;;
             *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
 
             # set sub dir for known directories
-            include|include/*|lib|lib/*|share|share/*|bin)
+            include | include/* | lib | lib/* | share | share/* | bin)
                 sub="$file"
                 mkdir -pv "$PREFIX/$sub"
                 continue
@@ -1183,7 +1195,7 @@ cmdlet.pkginst() {
         [[ "$sub" =~ ^bin ]] && file="$(_locate_exe "$file")"
 
         echocmd cp -rfv "$file" "$PREFIX/$sub" || die "install $file failed."
-        installed+=( "$sub/${file##*/}" )
+        installed+=("$sub/${file##*/}")
     done
 
     cmdlet.pkgfile "$name" "${installed[@]}"
@@ -1215,8 +1227,8 @@ cmdlet.install() {
     fi
 
     # alias
-    local alias=( "${@:3}" ) lnk
-    test -z "$ext" || alias=( "${alias[@]/%/$ext}" )
+    local alias=("${@:3}")   lnk
+    test -z "$ext" || alias=("${alias[@]/%/$ext}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
         _install_alias "$target" "$PREFIX/bin/$lnk"
@@ -1257,7 +1269,7 @@ cmdlet.check() {
                 [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
             fi
 
-        done < <( objdump -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2 )
+        done < <( objdump -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
     else
         slogw "FIXME: $OSTYPE"
     fi
@@ -1318,7 +1330,7 @@ pkginst()   { cmdlet.pkginst "$@";  }
 pkgfile()   { cmdlet.pkgfile "$@";  }
 cmdlet()    { cmdlet.install "$@";  }
 check()     { cmdlet.check "$@";    }
-caveats()   { cmdlet.caveats "$@" ; }
+caveats()   { cmdlet.caveats "$@";  }
 
 # find out which files are installed by `make install'
 inspect() {
@@ -1337,21 +1349,26 @@ inspect() {
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
 cmdlet.pkgconf() {
-    local name="${1%.pc}"; shift
+    local name="${1%.pc}"
+                           shift
 
     local cflags=()
     local ldflags=()
     local requires=()
 
     while [ $# -gt 0 ]; do
-        local arg="$1"; shift 1
+        local arg="$1"
+                        shift 1
         case "$arg" in
-            -I*|-D*)    cflags+=( "$arg" )              ;;
-            -l*|-L*)    ldflags+=( "$arg" )             ;;
-            -framework) ldflags+=( "$arg" "$1" ); shift ;; # -framework AppKit
-            -pthread)   ldflags+=( "$arg" )             ;; # -pthread
-            -*)         cflags+=( "$arg" )              ;; # -DXXX -std=xxx
-            *)          requires+=( "$arg" )            ;;
+            -I* | -D*)  cflags+=("$arg")                ;;
+            -l* | -L*)  ldflags+=("$arg")               ;;
+            -framework)
+                        ldflags+=("$arg" "$1")
+                                                  shift
+                                                        ;; # -framework AppKit
+            -pthread)   ldflags+=("$arg")               ;; # -pthread
+            -*)         cflags+=("$arg")                ;; # -DXXX -std=xxx
+            *)          requires+=("$arg")              ;;
         esac
     done
 
@@ -1365,13 +1382,13 @@ cmdlet.pkgconf() {
         done
 
         # amend arguments to pc file
-        sed -i "$name.pc"                           \
-            -e "/Requires:/s%$% ${requires[*]}%"    \
-            -e "/Cflags:/s%$% ${cflags[*]}%"        \
-            -e "/Libs:/s%$% ${ldflags[*]}%"         \
-            || die "fix $name.pc failed"
+        sed -i "$name.pc" \
+            -e "/Requires:/s%$% ${requires[*]}%" \
+            -e "/Cflags:/s%$% ${cflags[*]}%" \
+            -e "/Libs:/s%$% ${ldflags[*]}%" ||
+               die "fix $name.pc failed"
     else
-        cat <<EOF > "$name.pc"
+        cat << EOF > "$name.pc"
 prefix=\${PREFIX}
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
@@ -1392,7 +1409,8 @@ pkgconf() { cmdlet.pkgconf "$@";  }
 
 # create static library archive
 cmdlet.archive() {
-    local name="${1%.a}"; shift
+    local name="${1%.a}"
+                          shift
 
     slogi $_EMOJI_PKGFILE "$name < $*"
 

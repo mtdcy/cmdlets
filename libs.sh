@@ -141,8 +141,8 @@ is_darwin()         { list_has _TARGET_VARS     apple;           }
 is_linux()          { list_has _TARGET_VARS     linux;           }
 is_glibc()          { list_has _TARGET_VARS     gnu;             }
 is_musl()           { list_has _TARGET_VARS     musl;            }
-is_win64()          { list_has _TARGET_VARS     w64;             }
-is_mingw()          { list_has _TARGET_VARS     "mingw.*";       }
+is_win64()          { list_has _TARGET_VARS     w64 x86_64;      }
+is_mingw()          { list_has _TARGET_VARS     mingw32;         }
 is_posix()          { list_has _TARGET_VARS     posix;           }
 is_amd64()          { list_has _TARGET_VARS     x86_64;          }
 is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64"; }
@@ -151,6 +151,9 @@ is_intel()          { list_has _TARGET_VARS     "x86_64|x86";    }
 host.is_glibc()     { list_has _HOST_VARS       GLIBC;           }
 host.is_linux()     { list_has _HOST_VARS       linux;           }
 host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
+
+gcc.predefined()    { "$CC" -dM -E - < /dev/null | awk '/#define/{print $2":"$3}';  } # awk: format to key:value
+gcc.dumpspecs()     { "$CC" -dumpspecs | sed ':a;N;$!ba;s/:\n/:/g';                 } # sed: format to key:value
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
@@ -427,8 +430,8 @@ _init_target() {
         for x in "$@"; do
             IFS=':' read -r k v <<< "$x"
             eval $k="\${CC/%gcc/$v}"
-            test -x "${!k}" || eval $k="\$(which $v)"
-            test -x "${!k}" && export "$k" || slogw "$v not found."
+            test -x "${!k}" || eval $k="\$(which $v)" || die "$v not found"
+            export "$k"
         done
     }
     _init_target_binutils "${binutils[@]}"
@@ -441,6 +444,7 @@ _init_target() {
     IFS=' :-()' read -r -a _TARGET_VARS < <({
         "$CC" --version 2>&1 | grep -oE "gcc|clang"
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
+        "$CC" -### -x c /dev/null -o /dev/null 2>&1 | grep -oP -- "[\" ]-l\K[^\" ]+"
     } | xargs)
     IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
@@ -496,12 +500,11 @@ _init_target() {
         is_posix && cflags+=(-D_POSIX)
 
         # XXX: allow link with certain dlls?
-        ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+        ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
 
-        # ucrt: https://stackoverflow.com/questions/57528555/how-do-i-build-against-the-ucrt-with-mingw-w64
-        #"$CC" -dumpspecs > "$_TARGET_WORKDIR/.specs"
-        #sed -i 's/-lmsvcrt/-lucrt/g' "$_TARGET_WORKDIR/.specs"
-        #cflags+=( -specs="$_TARGET_WORKDIR/.specs" -D_UCRT )
+        # msvcrt or ucrt: follow builder toolchain settings
+        #  - mingw-w64  : msvcrt
+        #  - llvm-mingw : ucrt
     else
         #1. static linking => two '--' vs ldflags
         #2. tell compiler to place each function and data into its own section
@@ -1514,12 +1517,6 @@ _target_ls_changed() {
 
 env() {
     /usr/bin/env | grep -v "^PROMPT"
-}
-
-gcc.macros() {
-    _init_target
-
-    echo | "$CC" -dM -E -
 }
 
 clean() {
