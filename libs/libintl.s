@@ -90,8 +90,15 @@ char *dcngettext(const char *domainname, const char *msgid1, const char *msgid2,
 }
 EOF
 
-    "$CC" $CFLAGS $CPPFLAGS -c libintl.c -o libintl.o
-    "$AR" cr libintl.a libintl.o
+    # -O0: no optimization
+    #  libintl.c 太简单了，可能优化成内联或弱符号，导致 libintl.a 出现找不到符号的情况
+    slogcmd "$CC" $CFLAGS $CPPFLAGS -O0 -c libintl.c -o libintl.o
+
+    if is_darwin; then
+        slogcmd libtool -static -o libintl.a libintl.o
+    else
+        slogcmd "$AR" rcs libintl.a libintl.o
+    fi
 
     cmdlet.pkgconf libintl0.pc -lintl # used to force link our libintl
     cmdlet.pkgconf libintl.pc -lintl
