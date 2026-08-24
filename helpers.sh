@@ -7,6 +7,8 @@
 # warning: variable not assigned
 # shellcheck disable=SC2154
 
+: "${_LIBS_BUILDDIR:=.build}"
+
 # show git tag > branch > commit
 git.version() {
     git describe --tags --exact-match 2> /dev/null ||
@@ -230,11 +232,6 @@ _cmake_init() {
 
     _libs_init
 
-    # defaults:
-    : "${LIBS_BUILDDIR:=build-$PPID}"
-
-    export LIBS_BUILDDIR
-
     if test -n "$_TARGET"; then
         case "$_TARGET" in
             *-linux-*)  export CMAKE_SYSTEM_NAME=Linux      ;;
@@ -344,9 +341,9 @@ cmake.setup() {
     export CMAKE_BUILD_PARALLEL_LEVEL=1
 
     # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$LIBS_BUILDDIR" "${_CMAKE_STD[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
+    slogcmd "$CMAKE" -S . -B "$_LIBS_BUILDDIR" "${_CMAKE_STD[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
 
-    pushd "$LIBS_BUILDDIR" || die
+    pushd "$_LIBS_BUILDDIR" || die
 }
 
 cmake.build() {
@@ -370,10 +367,6 @@ _meson_init() {
     test -z "$_MESON_READY" || return 0
 
     _libs_init
-
-    : "${LIBS_BUILDDIR:=build-$PPID}"
-
-    export LIBS_BUILDDIR
 
     # meson 似乎不支持 CPPFLAGS
     CFLAGS+=" $CPPFLAGS"
@@ -498,10 +491,10 @@ meson.setup() {
     #  => use pkg-config and `-Wl,-Bstatic -latomic' instead
 
     # std < libs_args < user args
-    slogcmd "$MESON" setup "$LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup $libs_name failed."
+    slogcmd "$MESON" setup "$_LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup $libs_name failed."
 
     # enter builddir before return
-    pushd "$LIBS_BUILDDIR" || die
+    pushd "$_LIBS_BUILDDIR" || die
 }
 
 meson.compile() {
