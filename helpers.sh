@@ -395,7 +395,6 @@ cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
 
 [properties]
-sys_root = '$PREFIX'
 pkg_config_path = ['$PKG_CONFIG_PATH']
 pkg_config_libdir = ['$PKG_CONFIG_LIBDIR']
 EOF
