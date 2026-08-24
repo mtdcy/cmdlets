@@ -393,12 +393,24 @@ system = 'windows'          # Target operating system
 cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
-
-[properties]
-pkg_config_path = ['$PKG_CONFIG_PATH']
-pkg_config_libdir = ['$PKG_CONFIG_LIBDIR']
 EOF
 
+        # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
+        #  => set find_program extensions
+        export PATHEXT=".exe"
+    fi
+
+    cat << EOF >> meson-static.ini
+[properties]
+# pkg-config & cmake 搜索路径
+pkg_config_path = ['$PKG_CONFIG_PATH']
+# https://mesonbuild.com/Builtin-options.html
+# 似乎 pkg_config_libdir 不再是内置选项
+cmake_prefix_path = ['$PREFIX']
+EOF
+
+    # meson 交叉编译时会将 CFLAGS 等判断为 build machine flags
+    if is_mingw; then
         # meson 交叉编译似乎不支持 CPPFLAGS
         CFLAGS+=" $CPPFLAGS"
         CXXFLAGS+=" $CPPFLAGS"
@@ -412,10 +424,6 @@ EOF
                 echo -en "]\n"
             } >> meson-static.ini
         done
-
-        # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
-        #  => set find_program extensions
-        export PATHEXT=".exe"
     fi
 
     export _MESON_READY=1
@@ -732,7 +740,7 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (                                  # always start subshell here
+        (                                         # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
