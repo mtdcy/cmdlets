@@ -71,8 +71,7 @@ if [ "$ret" -ne 0 ]; then
     grep -E 'CommitLimit|Committed_AS' /proc/meminfo
 fi
 
-# mingw32 is not ready => alway tag to HEAD
-if [ "$ret" -eq 0 ] || [ "$TAG" = "x86_64-w64-mingw32" ]; then
+if [ "$ret" -eq 0 ]; then
     bash libs.sh maketag
 elif [ -n "$CMDLET_WEBHOOK" ]; then
     text="Build cmdlets (${cmdlets[*]}) failed

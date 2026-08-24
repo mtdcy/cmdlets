@@ -1,7 +1,7 @@
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 
 # Core application library for GNOME and GTK
-# GLib is a general-purpose, portable utility pkginst, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
+# GLib is a general-purpose, portable utility package, which provides many useful data types, macros, type conversions, string utilities, file utilities, a mainloop abstraction, and so on.
 
 # patches are needed to build with mingw
 libs_stable_minor=1
@@ -11,7 +11,8 @@ libs_lic=LGPLv2.1+
 libs_ver=2.89.3
 libs_url=https://download.gnome.org/sources/glib/${libs_ver%.*}/glib-$libs_ver.tar.xz
 libs_sha=09fd1e99f991067749ad66090e482ec4bd6514ad53abb4e9fbbdc2a4d2753532
-libs_dep=( zlib pcre2 libiconv libffi )
+
+libs_deps=(zlib pcre2 libiconv libffi)
 
 libs_args=(
     --wrap-mode=nodownload
@@ -19,6 +20,7 @@ libs_args=(
     # GLib libraries
     -Dglib_assert=true
     -Dglib_checks=true
+    -Dglib_debug=disabled
 
     # Disable dtrace; see https://trac.macports.org/ticket/30413
     # and https://gitlab.gnome.org/GNOME/glib/-/issues/653
@@ -33,19 +35,13 @@ libs_args=(
     -Dnls=disabled
 
     # disabled features
+    -Dxattr=false
     -Dselinux=disabled
     -Dsysprof=disabled
     -Dlibmount=disabled
     -Dman-pages=disabled
-    -Dglib_debug=disabled
+    -Dgtk_doc=false
     -Dtests=false
-)
-
-# avoid hardcode PREFIX
-is_mingw || libs_args+=(
-    -Dlocalstatedir=/var
-    -Druntime_dir=/var/run
-    -Dgio_module_dir=/usr/lib/gio/modules   # OR set env GIO_MODULE_DIR
 )
 
 # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-glib2/PKGBUILD
@@ -55,12 +51,19 @@ if is_mingw; then
         -Dfile_monitor_backend=win32
     )
 
-    libs_patches=(
-        https://gitlab.gnome.org/GNOME/glib/-/commit/7e69f88480a4bf8d9653efd0310c4c25390a0c8b.patch
-        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0002-disable_glib_compile_schemas_warning.patch
+    #libs_patches=(
+    #    https://gitlab.gnome.org/GNOME/glib/-/commit/7e69f88480a4bf8d9653efd0310c4c25390a0c8b.patch
+    #    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0002-disable_glib_compile_schemas_warning.patch
 
-        # cppwinrt is cpp project but glib defines gwin32 codes as c code.
-        https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0004-disable-explicit-ms-bitfields.patch
+    #    # cppwinrt is cpp project but glib defines gwin32 codes as c code.
+    #    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-glib2/0004-disable-explicit-ms-bitfields.patch
+    #)
+else
+    # avoid hardcode PREFIX
+    libs_args+=(
+        -Dlocalstatedir=/var
+        -Druntime_dir=/var/run
+        -Dgio_module_dir=/dev/null # use env GIO_MODULE_DIR instead
     )
 fi
 
@@ -69,23 +72,18 @@ fi
 
 # shellcheck disable=SC2086
 libs_build() {
-    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"
-
-    # ERROR: Subproject gvdb is buildable: NO
-    #rm -rf subprojects/gvdb
-
-    # sed -i '/libintl_deps/d' glib/meson.build
     libs.requires iconv
 
-    if is_mingw; then
-        libs.requires libwinrt
-    fi
+    # fix 'error: format string is not a string literal (potentially insecure)'
+    # fix 'error: format string is not a string literal'
+    export CFLAGS+=" -Wno-format-security -Wno-format-nonliteral"
 
     # stub libintl:
     # Dependency intl found: YES unknown (cached)
     # meson.build:2345:2: ERROR: Assert failed: libintl.type_name() == 'internal'
     #  => build fails after internal libintl installed
-    sed -i '/assert(libintl.*internal.)/d' meson.build
+    #sed -i '/assert(libintl.*internal.)/d' meson.build
+    sed -i '/^libintl = /s/\<intl\>/libintl0/' meson.build
 
     meson.setup
 
@@ -95,32 +93,32 @@ libs_build() {
     # Fix libiconv dependency
     #sed -e '/Requires:/s/$/& libiconv/' \
     #    -i meson-private/glib-2.0.pc || die
-    pkgconf meson-private/glib-2.0.pc libiconv
+    cmdlet.pkgconf meson-private/glib-2.0.pc libiconv
 
-    pkgfile libglib -- meson.install --tags devel
+    cmdlet.pkgfile libglib -- meson.install --tags devel
 
     # Fix missing libinotify.a
     if test -f "gio/inotify/libinotify.a"; then
-        pkgconf libinotify.pc -linotify
-        pkginst libinotify gio/inotify/libinotify.a libinotify.pc
+        cmdlet.pkgconf libinotify.pc -linotify
+        cmdlet.pkginst libinotify gio/inotify/libinotify.a libinotify.pc
     fi
 
     # gobject
-    pkginst gobject bin                     \
-        gobject/gobject-query               \
-        gobject/glib-genmarshal             \
-        gobject/glib-mkenums                \
+    cmdlet.pkginst gobject bin \
+        gobject/gobject-query \
+        gobject/glib-genmarshal \
+        gobject/glib-mkenums
 
     # gio
-    pkginst gio bin                         \
-        gio/gio                             \
-        gio/gdbus                           \
-        gio/gsettings                       \
-        gio/gresource                       \
-        gio/gio-querymodules                \
-        gio/glib-compile-schemas            \
-        gio/glib-compile-resources          \
-        gio/gdbus-2.0/codegen/gdbus-codegen \
+    cmdlet.pkginst gio bin \
+        gio/gio \
+        gio/gdbus \
+        gio/gsettings \
+        gio/gresource \
+        gio/gio-querymodules \
+        gio/glib-compile-schemas \
+        gio/glib-compile-resources \
+        gio/gdbus-2.0/codegen/gdbus-codegen
 
 }
 

@@ -375,19 +375,24 @@ _meson_init() {
 
     export LIBS_BUILDDIR
 
+    # meson 似乎不支持 CPPFLAGS
+    CFLAGS+=" $CPPFLAGS"
+    CXXFLAGS+=" $CPPFLAGS"
+
     cat << EOF > meson-static.ini
 [binaries]
 c = '$CC'
 cpp = '$CXX'
 ar = '$AR'
+ld = '$LD'
 strip = '$STRIP'
-windres = '$WINDRES'
 pkgconfig = '$PKG_CONFIG'
 EOF
 
     # cross compile
     if is_mingw; then
         cat << EOF >> meson-static.ini
+windres = '$WINDRES'
 exe_wrapper = 'wine'
 
 [host_machine]
@@ -395,7 +400,26 @@ system = 'windows'          # Target operating system
 cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
+
+[properties]
+sys_root = '$PREFIX'
+pkg_config_path = ['$PKG_CONFIG_PATH']
+pkg_config_libdir = ['$PKG_CONFIG_LIBDIR']
 EOF
+
+        # meson 交叉编译似乎不支持 CPPFLAGS
+        CFLAGS+=" $CPPFLAGS"
+        CXXFLAGS+=" $CPPFLAGS"
+
+        for arg in c_args:CFLAGS c_link_args:LDFLAGS cpp_args:CXXFLAGS cpp_link_args:LDFLAGS; do
+            IFS=':' read -r args name <<< "$arg"
+            eval "local flags=( \${$name} )"
+            {
+                echo -en "host.$args = ["
+                printf "'%s'," "${flags[@]}" | sed -e 's/,$//'
+                echo -en "]\n"
+            } >> meson-static.ini
+        done
 
         # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
         #  => set find_program extensions
@@ -716,7 +740,7 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (   # always start subshell here
+        (                                  # always start subshell here
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -1269,7 +1293,7 @@ cmdlet.check() {
                 [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
             fi
 
-        done < <( objdump -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
+        done < <( "$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
     else
         slogw "FIXME: $OSTYPE"
     fi
