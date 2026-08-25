@@ -1101,7 +1101,9 @@ _deps_init() {
 
     _init_target
 
+    # envs
     export _DEPS_FILE="$_TARGET_WORKDIR/.deps"
+    export _DEPS_STATUS_MISSING="$_TARGET_WORKDIR/.deps_missed"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
@@ -1200,22 +1202,29 @@ _deps_status() {
     local deps
     IFS=' ' read -r -a deps < <(depends "$@")
 
-    local sep="" x ret=0
+    true > "$_DEPS_STATUS_MISSING"
+
+    local missing=() sep="\\033[39m" x ret=0
     for x in "${deps[@]}"; do
         if test -f "$PREFIX/.$x.d"; then
-            printf "\\033[32m%s%s✔\\033[39m" "$sep" "$x"
+            printf "%s%s\\033[32m✔\\033[39m" "$sep" "$x"
         else
-            printf "\\033[31m%s%s✗\\033[39m" "$sep" "$x"
+            printf "%s%s\\033[31m✗\\033[39m" "$sep" "$x"
+            missing+=("$x")
             ret=1
         fi
         sep=", "
     done
+
+    test -z "${missing[*]}" || echo "${missing[@]}" > "$_DEPS_STATUS_MISSING"
 
     return $ret
 }
 
 #
 _deps_fetch() {
+    _deps_init
+
     # no pkgfiles
     is_true CMDLET_PKGFILES || return 0
 
@@ -1234,6 +1243,8 @@ _deps_fetch() {
 }
 
 _deps_missing() {
+    _deps_init
+
     local deps x list=()
     IFS=' ' read -r -a deps < <(depends "$@")
     for x in "${deps[@]}"; do
@@ -1285,31 +1296,29 @@ build() {
 
     # continue on error
     _build_targets() {
-        local libs=("$@")   fails=() i
+        local libs=("$@") fails=() i
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
             slogi $_EMOJI_NOTE "Compile: #$((i + 1))/${#libs[@]} $name"
 
-            local x supported
-
             # check for supported targets
-            for x in "$name" $(depends "$name"); do
-                IFS=' ' read -r -a supported < <( _load_targets "$x")  || die "load targets failed."
-                list_has supported "$_TARGET_NAME" || {
-                    slogw "no support for $_TARGET_NAME ($x)"
-                    unset supported
-                    break
-                }
-            done
-            is_true supported || continue
-
-            # show dependencies status
-            slogi $_EMOJI_NOTE "Status: $(_deps_status "$name")" || {
-                slogw "$name: missing dependencies"
-                fails+=("$name")
+            local supported
+            IFS=' ' read -r -a supported < <( _load_targets "$name")  || die "Load targets failed."
+            list_has supported "$_TARGET_NAME" || {
+                slogw "$name: no support for $_TARGET_NAME"
                 continue
             }
+
+            # show dependencies status
+            slogi $_EMOJI_NOTE "Depends: $(_deps_status "$name")" || true
+
+            if test -s "$_DEPS_STATUS_MISSING"; then
+                sloge "$name: missing dependencies: $(cat "$_DEPS_STATUS_MISSING")"
+                fails+=("$name")
+                echo ''
+                continue
+            fi
 
             time _compile "$name" || fails+=("$name")
         done
