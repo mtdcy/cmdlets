@@ -7,7 +7,7 @@ libs_ver=1.25.0
 libs_url=https://ftpmirror.gnu.org/gnu/wget/wget-$libs_ver.tar.gz
 libs_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
 
-libs_deps=( zlib libiconv libunistring libidn2 libpsl openssl )
+libs_deps=(zlib pcre2 libiconv libunistring libidn2 libpsl openssl)
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
@@ -15,7 +15,7 @@ libs_args=(
 
     # avoid hardcode PREFIX
     --sysconfdir=/etc
-    --localedir=/no-locale
+    --localedir=/dev/null
 
     --with-zlib
     --with-libidn
@@ -48,6 +48,16 @@ libs_args=(
 libs_build() {
     # wget configure did not handle static libraries well
     export LIBS="$($PKG_CONFIG --libs-only-l libcrypto)"
+
+    if is_mingw; then
+        # Work around gnulib conflict with mingw-w64
+        # https://github.com/coreutils/gnulib/issues/20
+        export gl_cv_var___daylight=__daylight
+
+        if libs.func.exists time.h nanosleep; then
+            echo "" > lib/nanosleep.c
+        fi
+    fi
 
     configure
 
