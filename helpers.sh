@@ -1044,7 +1044,7 @@ _make_pkgfile() {
             # no gettext(i18n & i10n) files
             */gettext/*)    rm -f "$x" && continue ;;
             *.a)
-                echocmd "$STRIP" -x "$x"
+                # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
                 echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
@@ -1064,7 +1064,8 @@ _make_pkgfile() {
 
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
-                    PE32+*)             echocmd "$STRIP" --strip-all "$x"   ;;
+                    # NEVER strip PE32+ target with --strip-all
+                    PE32+*)             echocmd "$STRIP" --strip-debug "$x" ;;
                     ELF*)               echocmd "$STRIP" --strip-all "$x"   ;;
                     Mach-O*executable)  echocmd "$STRIP" "$x"               ;;
 

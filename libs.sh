@@ -533,6 +533,10 @@ _init_target() {
         ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
     fi
 
+    # gcc and linker debug
+    # cflags+=(-v)
+    # ldflags+=(-Wl,--verbose)
+
     # toolchain scripts, for debugging and options embedding
     _init_target_script() {
         eval -- export REAL_$1="\$$2"
