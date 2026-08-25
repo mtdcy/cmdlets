@@ -181,6 +181,11 @@ _EMOJI_RUN="🟢"
 _EMOJI_WARN="🟠"
 _EMOJI_ERROR="❌"
 
+_COLOR_RED='\033[0;31m'
+_COLOR_GREEN='\033[0;32m'
+_COLOR_YELLOW='\033[1;33m'
+_COLOR_NC='\033[0m'
+
 # slog [error|info|warn] [emoji] "message"
 _slog() {
     local date="$(date '+%m-%d %H:%M:%S')"
@@ -192,13 +197,13 @@ _slog() {
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
     case "$1" in
         error)
-            message="[$date] \\033[31m$message\\033[39m"
+            message="[$date] $_COLOR_RED$message$_COLOR_NC"
             ;;
         warn)
-            message="[$date] \\033[33m$message\\033[39m"
+            message="[$date] $_COLOR_YELLOW$message$_COLOR_NC"
             ;;
         info | *)
-            message="[$date] \\033[32m$message\\033[39m"
+            message="[$date] $_COLOR_GREEN$message$_COLOR_NC"
             ;;
     esac
     echo -e "$message" >&2
@@ -669,7 +674,7 @@ _curl_urls() {
                 timeout="${url#*=}"
                 ;;
             http*)
-                slogi $_EMOJI_URL "$url"
+                slogi $_EMOJI_URL "Fetch < $_COLOR_NC$url => ${zip#"$_ROOT_/"}"
                 CURL_TIMEOUT="$timeout" _curl "$url" "$zip" && break
                 ;;
             *)
@@ -686,7 +691,7 @@ _curl_urls() {
 #  input: zipfile
 #  env: ZIP_SKIP=1
 _unzip() {
-    slogi $_EMOJI_DIR "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Extract $_COLOR_NC${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -772,7 +777,7 @@ _url_fetch() {
         IFS='#' read -r url hash <<< "$2"
         test -n "$hash" || hash="$libs_ver"
 
-        slogi $_EMOJI_GIT "$url#$hash"
+        slogi $_EMOJI_GIT "Clone $_COLOR_NC$url#$hash"
 
         test -d .git || # reuse sources
             git clone --recurse-submodules "$url" . || die "git clone $1 failed."
@@ -982,7 +987,7 @@ _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 # prepare source code or die
 #  input: name
 _prepare() {
-    slogi $_EMOJI_FILE "libs/$1.s"
+    slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
 
     _load "$1" || die "load $1 failed."
 
@@ -994,7 +999,7 @@ _prepare() {
 
     cd "$workdir"
 
-    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_ROOT_/"}"
 
     # libs_url: fetch and unzip into workdir, support mirrors
     test -z "$libs_url" || _url_fetch "$libs_sha" "${libs_url[@]}"
@@ -1281,16 +1286,16 @@ build() {
     # fetch dependencies
     _deps_fetch "$@"
 
-    slogi $_EMOJI_JOB "Build: $*"
+    slogi $_EMOJI_JOB "Targets $_COLOR_NC$*"
 
     local libs=() x
 
     # check dependencies: rebuild libs
     IFS=' ' read -r -a libs  < <( _deps_missing "$@")
 
-    # dependencies
+    # missing dependencies
     if test -n "${libs[*]}"; then
-        slogi $_EMOJI_PKGFILE "Depends: ${libs[*]}"
+        slogi $_EMOJI_PKGFILE "Missing $_COLOR_NC${libs[*]}"
     fi
 
     # sort and append requested libs
@@ -1304,7 +1309,7 @@ build() {
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
-            slogi $_EMOJI_NOTE "Compile: #$((i + 1))/${#libs[@]} $name"
+            slogi $_EMOJI_NOTE "Compile $_COLOR_NC$name -- #$((i + 1))/${#libs[@]}"
 
             # check for supported targets
             local supported
@@ -1315,7 +1320,7 @@ build() {
             }
 
             # show dependencies status
-            slogi $_EMOJI_NOTE "Depends: $(_deps_status "$name")" || true
+            slogi $_EMOJI_NOTE "Depends $_COLOR_NC$(_deps_status "$name")" || true
 
             if test -s "$_DEPS_STATUS_MISSING"; then
                 sloge "$name: missing dependencies: $(cat "$_DEPS_STATUS_MISSING")"
@@ -1333,6 +1338,7 @@ build() {
         }
     }
 
+    echo '' # new line
     _build_targets "${libs[@]}" || {
         true # always return errno 127
         sloge "build failed #$?."
@@ -1347,7 +1353,7 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}")
 
-    slogi $_EMOJI_JOB "${libs[*]}"
+    slogi $_EMOJI_JOB "Check $_COLOR_NC${libs[*]}"
 
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
