@@ -1579,6 +1579,14 @@ update() {
     slogi "$_EMOJI_OK" "<<<<< updated $libs_name => $libs_ver >>>>>"
 }
 
+# print defined macros
+# input: <include headers>
+macros() {
+    _init_target
+
+    printf "#include <%s>\n" "$@" | "$CC" "$CPPFLAGS" -dM -E -v -
+}
+
 _on_exit() {
     wait
 
