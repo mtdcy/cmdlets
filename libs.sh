@@ -576,7 +576,7 @@ _init_target() {
     # update PATH => tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"
 
-    # v3/manifest => _pkgfile_init
+    # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
 
     # for running test
@@ -633,7 +633,7 @@ _init_target() {
 # curl url
 #  input: url zip
 #  env: CURL_TIMEOUT=3
-_curl() {
+_curl_timeout() {
     local source="$1"
 
     local opts=(-fsSL --connect-timeout "${CURL_TIMEOUT:-3}")
@@ -675,7 +675,7 @@ _curl_urls() {
                 ;;
             http*)
                 slogi $_EMOJI_URL "Fetch < $_COLOR_NC$url => ${zip#"$_ROOT_/"}"
-                CURL_TIMEOUT="$timeout" _curl "$url" "$zip" && break
+                CURL_TIMEOUT="$timeout" _curl_timeout "$url" "$zip" && break
                 ;;
             *)
                 test -f "$url" && break
@@ -767,7 +767,7 @@ _url_file() {
 
 # unzip url to workdir or die
 #  input: sha urls...
-_url_fetch() {
+_fetch_url() {
     local sha="$1"
 
     if [[ "${2%#*}" =~ \.git$ ]]; then
@@ -808,21 +808,10 @@ _url_fetch() {
     fi
 }
 
-# v3/git releases
-_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
-
-_pkgfile_url() {
-    if _is_flat_repo; then
-        echo "${_TARGET_REPO#flat+}/${1##*/}"
-    else
-        echo "$_TARGET_REPO/$1"
-    fi
-}
-
 # curl and unzip pkgfile to PREFIX
 #  input: pkgfile [zipfile]
-_pkgfile_curl() {
-    local url="$(_pkgfile_url "$1")"
+_curl_pkgfile() {
+    local url="$_TARGET_REPO/$1"
     local zip="$2"
 
     test -n "$zip" || zip="$TEMPDIR/${1##*/}"
@@ -839,12 +828,12 @@ _pkgfile_curl() {
 }
 
 # init manifest files and etc.
-_pkgfile_init() {
+_init_pkgfile() {
     test -f "$_TARGET_MANIFEST" && return 0
 
     true > "$_TARGET_MANIFEST"
 
-    if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
+    if ! _curl_pkgfile cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
         slogw "no v3/manifest."
         true > "$_TARGET_MANIFEST"
@@ -852,12 +841,12 @@ _pkgfile_init() {
 }
 
 # fetch pkgfile by pkgname and pkgvern(optional)
-_pkgfile_fetch() {
+_fetch_pkgfile() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
 
-    slogi "$_EMOJI_PKGFILE Fetch package $1"
+    slogi $_EMOJI_PKGFILE "Fetch pkgfile $1"
 
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgvern <<< "$1"
@@ -868,12 +857,12 @@ _pkgfile_fetch() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
+    if _curl_pkgfile "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs)
     else
         # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
-        _pkgfile_init
+        _init_pkgfile
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
@@ -893,7 +882,7 @@ _pkgfile_fetch() {
     local x
     for x in "${pkgfiles[@]}"; do
         echo ""
-        _pkgfile_curl "$x" || slogw "fetch $x failed"
+        _curl_pkgfile "$x" || slogw "fetch $x failed"
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
@@ -905,7 +894,7 @@ _pkgfile_fetch() {
 _pkgfile_ready() {
     _load "$1"
 
-    _pkgfile_init
+    _init_pkgfile
 
     local hash0 hash1
 
@@ -944,6 +933,8 @@ _load() {
 
     local file="libs/$1.s"
     local name="${1##*/}"
+
+    test -f "$file" || die "$file not exists"
 
     # sed: delete all lines after __END__
     sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
@@ -1002,7 +993,7 @@ _prepare() {
     slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_ROOT_/"}"
 
     # libs_url: fetch and unzip into workdir, support mirrors
-    test -z "$libs_url" || _url_fetch "$libs_sha" "${libs_url[@]}"
+    test -z "$libs_url" || _fetch_url "$libs_sha" "${libs_url[@]}"
 
     local x patch
 
@@ -1012,7 +1003,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _url_fetch "$sha" "$url"
+            ZIP_SKIP=0 _fetch_url "$sha" "$url"
         done
     fi
 
@@ -1022,7 +1013,7 @@ _prepare() {
         case "$patch" in
             http://* | https://*)
                 local file="$(_url_file "$patch")"
-                test -f "$file" || _curl "$patch" "$file"
+                test -f "$file" || _curl_timeout "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
             *)
@@ -1077,9 +1068,6 @@ _compile() {
 
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
-
-        # v3/manifest: name pkgfile sha build=1
-        _pkgfile_init
 
         # read pkgbuild before clear
         _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
@@ -1275,6 +1263,7 @@ build() {
     fi
 
     _init_target
+    _init_pkgfile
 
     slogi $_EMOJI_ROSE "cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE}"
 
@@ -1309,6 +1298,7 @@ build() {
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
+            echo '' # new line
             slogi $_EMOJI_NOTE "Compile $_COLOR_NC$name -- #$((i + 1))/${#libs[@]}"
 
             # check for supported targets
@@ -1325,7 +1315,6 @@ build() {
             if test -s "$_DEPS_STATUS_MISSING"; then
                 sloge "$name: missing dependencies: $(cat "$_DEPS_STATUS_MISSING")"
                 fails+=("$name")
-                echo ''
                 continue
             fi
 
@@ -1338,9 +1327,7 @@ build() {
         }
     }
 
-    echo '' # new line
     _build_targets "${libs[@]}" || {
-        true # always return errno 127
         sloge "build failed #$?."
         return 127
     }
@@ -1368,7 +1355,7 @@ pkgfiles() {
 
     local ret=0 x
     for x in "$@"; do
-        _pkgfile_fetch "$x" || ret=$?
+        _fetch_pkgfile "$x" || ret=$?
     done
 
     return $?
