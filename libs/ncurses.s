@@ -15,20 +15,29 @@ libs_patches=(
     https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-ncurses/ncurses-6.3-pkgconfig.patch
 )
 
+FALLBACKS="linux,screen,screen-256color,xterm,xterm-256color,vt100"
+
 # build a simple and fast ncurses library
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
 
-    --disable-overwrite         # put headers in subdir, omit link to -lcurses
+    --with-normal
+    --with-pkg-config
+    --enable-pc-files
+    --with-pkg-config-libdir="$PKG_CONFIG_PATH"
 
-    # terminfo => use fallback, @see second stage
+    # libncursesw
+    --enable-widec
+    --disable-lib-suffixes
+
+    # terminfo
     # The system's tic program is used to install the terminal database, even for cross-compiles.
-    #--disable-database          # terminfo database
-    #--with-fallbacks="xterm,xterm-256color,ansi"
-    --disable-home-terminfo     # drop ~/.terminfo from terminfo search-path
-    # --datadir                 # terminfo location
+    --with-fallbacks="$FALLBACKS"   # builtin terminfo
+    #--disable-database             # fallback still needs database
+    --disable-db-install            # do not install database
+    --enable-home-terminfo          # search ~/.terminfo for terminfo
 
     # terminfo(ncurses) vs termcap(obsolete)
     #  => Modern systems predominantly use terminfo
@@ -36,13 +45,8 @@ libs_args=(
     # pure-terminfo mode, no termcap => makes the ncurses library smaller and faster
     --disable-termcap           # enable termcap for fallbacks => needs infocmp
 
-    # libncurses with widec support
-    --enable-widec
-    --disable-lib-suffixes
-
-    # pc files
-    --enable-pc-files
-    --with-pkg-config-libdir="$PKG_CONFIG_PATH"
+    # legacy: -lcurses
+    --disable-overwrite         # put headers in subdir, omit link to -lcurses
 
     # disabled features
     --disable-nls
@@ -57,63 +61,47 @@ libs_args=(
     --disable-debug
 )
 
-#if is_mingw; then
-#    libs_args+=(
-#        --disable-home-terminfo         # drop ~/.terminfo from terminfo search-path
-#        --disable-symlinks
-#    )
-#else
-#    # *nix system: avoid hardcoded PREFIX
-#    libs_args+=(
-#        # we are building static executable, cann't ship hardcoded prebuilts path into executables.
-#        #
-#        # terminfo search dirs, override with env TERMINFO
-#        #
-#        # from debian:/etc/terminfo/README
-#        --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo"
-#        # /usr/share/terminfo is a common path for both Linux and macOS
-#        --with-default-terminfo-dir="/usr/share/terminfo"
-#    )
-#fi
+# 现代 Ncurses 源码在检测到 --host=*mingw* 时，会自动开启对 Windows 控制台和 Windows 10+ 虚拟终端（Virtual Terminal）的支持。
+if is_mingw; then
+    libs_args+=(
+        --build=$(uname -m)-linux-gnu
+        --host=$(uname -m)-w64-mingw32
+        --disable-symlinks
+    )
+else
+    libs_args+=(
+        --enable-symlinks
+    )
+fi
 
 libs_build() {
-    # mingw
+    #1. build unix/host tools tic/infocmp
+    (   
+        mkdir -pv .host && cd .host
+        unset CC CXX CPP CFLAGS CXXFLAGS LD LDFLAGS
+        unset PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
+        slogcmd ../configure --without-ada --disable-overwrite --with-normal
+        make PROGS="'tic infocmp'"
+        cd ..
+    ) || return 1
+
+    #2. build for targets
     if is_mingw; then
         # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-ncurses/PKGBUILD
         # It passes X_OK to access() on Windows which isn't supported with ucrt
         CFLAGS+=" -D__USE_MINGW_ACCESS"
+
         # nanosleep is only defined in pthread library
         export cf_cv_func_nanosleep=no
-
-        export BUILD_EXEEXT="$_BINEXT"
-        export PATH_SEPARATOR=";"
-
-        # EXT not working for these scripts
-        sed -i ncurses/tinfo/MKcaptab.sh \
-            -i ncurses/tinfo/MKuserdefs.sh \
-            -e "s/\<make_hash\>/make_hash$_BINEXT/g" || die
     fi
 
-    # tic: no No such file or directory
-    #touch no
+    export CFLAGS+=" -DNCURSES_STATIC"
 
-    configure
+    # build with fallback.c
+    configure \
+        --with-tic-path="$PWD/.host/progs/tic" \
+        --with-infocmp="$PWD/.host/progs/infocmp"
 
-    # first stage: build tic/infocmp first
-    make PROGS="'tic infocmp'"
-
-    # second statge: generate fallback.c
-    configure --without-database
-
-    ./ncurses/tinfo/MKfallback.sh \
-        "$PREFIX/share/terminfo" \
-        misc/terminfo.src \
-        ./progs/tic \
-        ./progs/infocmp \
-        xterm xterm-256color \
-        > ncurses/fallback.c
-
-    # final stage
     make
 
     # fix ncurses6-config
