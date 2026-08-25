@@ -3,9 +3,11 @@
 # shellcheck disable=SC2034
 
 libs_lic="BSD-3-Clause"
-libs_ver=1.16.0
+libs_ver=1.17.0
+libs_rev=1
 libs_url=https://github.com/webmproject/libvpx/archive/v$libs_ver.tar.gz
-libs_sha=7a479a3c66b9f5d5542a4c6a1b7d3768a983b1e5c14c60a9396edc9b649e015c
+libs_rev=1
+libs_sha=1020f184046187baa2985dbde38e0691f49c44088bca7a1842b0236c6081dc0a
 
 libs_args=(
     --disable-dependency-tracking

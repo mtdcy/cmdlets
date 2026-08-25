@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='Apache-2.0'
 libs_ver=1.2.16
+libs_rev=1
 libs_url=https://www.stunprotocol.org/stunserver-1.2.16.tgz
 libs_sha=4479e1ae070651dfc4836a998267c7ac2fba4f011abcfdca3b8ccd7736d4fd26
 libs_dep=( boost )
@@ -23,6 +24,7 @@ libs_build() {
 
     caveats << EOF
 static built stun client and server @ $libs_ver
+libs_rev=1
 
 Example:
     stuclient --mode behavior stun.miwifi.com

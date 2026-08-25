@@ -4,7 +4,9 @@
 
 libs_lic='GPL-3.0-or-later'
 libs_ver=1.25.0
+libs_rev=1
 libs_url=https://ftpmirror.gnu.org/gnu/wget/wget-$libs_ver.tar.gz
+libs_rev=1
 libs_sha=766e48423e79359ea31e41db9e5c289675947a7fcf2efdcedb726ac9d0da3784
 
 libs_deps=( zlib libiconv libunistring libidn2 libpsl openssl )

@@ -2,6 +2,7 @@
 
 # shellcheck disable=SC2034
 libs_ver=7.99
+libs_rev=1
 libs_url=https://nmap.org/dist/nmap-7.99.tar.bz2
 libs_sha=df512492ffd108e53a27a06f26d8635bbe89e0e569455dc8ffef058c035d51b2
 libs_dep=( zlib libpcap liblinear libssh2 openssl pcre2 )

@@ -10,6 +10,7 @@ libs_lic='MPL-2.0'
 libs_stable_minor=1 # update revision only
 
 libs_ver=9.20.24
+libs_rev=1
 libs_url=https://downloads.isc.org/isc/bind9/9.20.24/bind-9.20.24.tar.xz
 libs_sha=989fef1fc88ea59d04cd86f854dca5a4616a20a9968bcdde3c1a3668ab36be08
 libs_dep=( zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc urcu )

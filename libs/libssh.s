@@ -2,7 +2,9 @@
 #
 # shellcheck disable=SC2034
 libs_ver=0.11.5
+libs_rev=1
 libs_url=https://www.libssh.org/files/0.11/libssh-$libs_ver.tar.xz
+libs_rev=1
 libs_sha=6898ba9dd836d618b71dc7a4bb786a502c173cef5cafbf20fe5e0567ba4ea30c
 libs_dep=( zlib openssl )
 

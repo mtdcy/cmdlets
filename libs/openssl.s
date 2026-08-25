@@ -5,9 +5,10 @@
 
 # shellcheck disable=SC2034
 libs_lic='Apache-2.0'
-libs_ver=3.6.3
-libs_url=https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz
-libs_sha=243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1
+libs_ver=3.6.4
+libs_rev=1
+libs_url=https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz
+libs_sha=9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef
 libs_dep=()
 
 libs_args=(
@@ -98,6 +99,7 @@ libs_build() {
 
     cmdlet.caveats << EOF
 prebuilt static openssl @ $libs_ver
+libs_rev=1
 
 $(run apps/openssl version -a)
 

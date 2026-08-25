@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='SSH-OpenSSH'
 libs_ver=10.2p1
+libs_rev=1
 libs_url=https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.2p1.tar.gz
 libs_sha=ccc42c0419937959263fa1dbd16dafc18c56b984c03562d2937ce56a60f798b2
 libs_dep=( ldns openssl libedit libxcrypt zlib )

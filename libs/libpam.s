@@ -5,6 +5,7 @@ libs_targets=( linux )
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=1.7.2
+libs_rev=1
 libs_url=https://github.com/linux-pam/linux-pam/releases/download/v1.7.2/Linux-PAM-1.7.2.tar.xz
 libs_sha=3d86b6383fb5fd9eb9578d2cd47d92801191f4bf3f9bc61419bfefc8aa1e531a
 libs_dep=( libnsl libtirpc libxcrypt )

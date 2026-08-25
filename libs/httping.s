@@ -9,6 +9,7 @@ libs_targets=( linux darwin )
 # shellcheck disable=SC2034
 libs_lic='AGPL'
 libs_ver=4.4.0
+libs_rev=1
 libs_url=https://github.com/folkertvanheusden/HTTPing/archive/refs/tags/v4.4.0.tar.gz
 libs_sha=87fa2da5ac83c4a0edf4086161815a632df38e1cc230e1e8a24a8114c09da8fd
 

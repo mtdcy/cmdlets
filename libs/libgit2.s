@@ -3,7 +3,9 @@
 # shellcheck disable=SC2034
 libs_lic=GPLv2
 libs_ver=1.9.7
+libs_rev=1
 libs_url=https://github.com/libgit2/libgit2/archive/refs/tags/v$libs_ver.tar.gz
+libs_rev=1
 libs_sha=1a4fbe7589e814777ae76b64734ad80f4ecad22cd33a22682a2aaea4ae5375e7
 
 libs_deps=( zlib pcre2 )

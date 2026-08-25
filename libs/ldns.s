@@ -5,6 +5,7 @@ libs_stable=1
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=1.8.3
+libs_rev=1
 libs_url=(
     https://github.com/NLnetLabs/ldns/archive/refs/tags/1.8.3.tar.gz
     https://nlnetlabs.nl/downloads/ldns/ldns-1.8.3.tar.gz

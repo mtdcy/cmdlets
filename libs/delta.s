@@ -5,7 +5,9 @@ libs_desc="A syntax-highlighting pager for git, diff, grep, and blame output"
 
 libs_lic='MIT'
 libs_ver=0.19.2
+libs_rev=1
 libs_url=https://github.com/dandavison/delta/archive/refs/tags/$libs_ver.tar.gz
+libs_rev=1
 libs_sha=f59b86f8c8dda4d76a3ba34b8553777a20c3b461646917d8e480fac6531bba9f
 
 libs_deps=( zlib libgit2 pcre2 oniguruma )
@@ -32,6 +34,7 @@ libs_build() {
 
     caveats <<EOF
 delta @ $libs_ver
+libs_rev=1
 
 Usage:
 

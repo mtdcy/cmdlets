@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='GPL-2.0+'
 libs_ver=1.37
+libs_rev=1
 libs_url=https://github.com/aria2/aria2/releases/download/release-1.37.0/aria2-1.37.0.tar.xz
 libs_sha=60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b
 libs_dep=( zlib libxml2 libssh2 sqlite )
