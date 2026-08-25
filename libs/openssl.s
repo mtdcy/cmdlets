@@ -34,14 +34,14 @@ libs_args=(
     no-module
 )
 
-is_linux  && libs_args+=( "linux-$(uname -m)" )
+if is_linux; then
+    libs_args+=("linux-$( uname -m)")
+elif is_darwin; then
+    libs_args+=("darwin64-$( uname -m)-cc" enable-ec_nistp_64_gcc_128)
+elif is_mingw; then
+    libs_args+=("mingw64")
 
-is_darwin && libs_args+=( "darwin64-$(uname -m)-cc" enable-ec_nistp_64_gcc_128 )
-
-# https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-openssl/PKGBUILD
-if is_mingw; then
-    libs_args+=( mingw64 )
-
+    # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-openssl/PKGBUILD
     libs_patches=(
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/002-relocation.patch
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-openssl/004-arch-suffix.patch
@@ -70,6 +70,11 @@ libs_build() {
             -e '/^"mingw"/ s/-fomit-frame-pointer -O3 -Wall/-O2 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions --param=ssp-buffer-size=4/'
 
         slogcmd patch --reverse -p1 -i 4a7d9705f30842b402058324a6947938fe3486ec.patch
+
+        # 1. 在编译 OpenSSL 前，强行在其报错文件的最顶部灌入 Windows 官方标准的 IOCTL 宏定义
+        sed -i ssl/quic/quic_reactor.c \
+            -e '1s/^/#ifndef SIO_UDP_CONNRESET\n#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)\n#endif\n/' \
+            -e '1s/^/#ifndef SIO_UDP_NETRESET\n#define SIO_UDP_NETRESET _WSAIOW(IOC_VENDOR, 15)\n#endif\n/'
     fi
 
     slogcmd ./Configure "${libs_args[@]}" || return 1
@@ -84,7 +89,7 @@ libs_build() {
     local txt="This is a secret message"
     for cipher in aes-256-cbc aes-256-cfb chacha20; do
         echo "$txt" | run apps/openssl enc -$cipher -a -salt -pass pass:passwd > encrypted.txt
-        local decrypted="$(cat encrypted.txt | run apps/openssl enc -$cipher -a -d -salt -pass pass:passwd 2>/dev/null)"
+        local decrypted="$(cat encrypted.txt | run apps/openssl enc -$cipher -a -d -salt -pass pass:passwd 2> /dev/null)"
         [ "$decrypted" = "$txt" ] || die "openssl cipher $cipher failed: |$decrypted|"
     done
 
@@ -110,6 +115,5 @@ $(run apps/openssl list -engines)
     OR set env OPENSSL_ENGINES instead
 EOF
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
