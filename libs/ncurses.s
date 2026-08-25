@@ -91,8 +91,10 @@ libs_build() {
         # It passes X_OK to access() on Windows which isn't supported with ucrt
         CFLAGS+=" -D__USE_MINGW_ACCESS"
 
-        # nanosleep is only defined in pthread library
-        export cf_cv_func_nanosleep=no
+        if libs.func.exists time.h nanosleep; then
+            export gl_cv_func_nanosleep=yes
+            export ac_cv_func_nanosleep=yes
+        fi
     fi
 
     export CFLAGS+=" -DNCURSES_STATIC"
