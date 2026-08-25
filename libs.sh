@@ -945,7 +945,7 @@ _load() {
     test -n "$libs_deps" || libs_deps=("${libs_dep[@]}")
 
     # compat layer dependencies
-    local compat=(libintl)
+    local compat=()
     if is_musl; then
         compat+=(libargp musl-obstack musl-fts)
     fi

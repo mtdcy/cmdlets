@@ -14,7 +14,7 @@ libs_url=https://download.gnome.org/sources/glib/${libs_ver%.*}/glib-$libs_ver.t
 libs_rev=1
 libs_sha=1cdbb799f558832e6f14b8337b5fd599c6918ab144977b55e05e00a5e2e84a2c
 
-libs_deps=(zlib pcre2 libiconv libffi)
+libs_deps=(zlib pcre2 libiconv libffi libintl)
 
 libs_args=(
     --wrap-mode=nodownload
