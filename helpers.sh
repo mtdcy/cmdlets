@@ -29,6 +29,14 @@ libs.depends() {
     eval -- "$*" || { unset libs_dep libs_args libs_build; }
 }
 
+# check if a func symbol exists
+# input: <include header> <function name>
+libs.func.exists() {
+    mkdir -p ".conftest"
+    echo -e "#include <$1>\nvoid *p = (void)$2;" > ".conftest/$2.c"
+    "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
+}
+
 # find samples by name
 samples() {
     find "$_ROOT_/samples" -type f -name "$*" | xargs
