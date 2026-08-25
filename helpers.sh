@@ -33,7 +33,7 @@ libs.depends() {
 # input: <include header> <function name>
 libs.func.exists() {
     mkdir -p ".conftest"
-    echo -e "#include <$1>\nvoid *p = (void)$2;" > ".conftest/$2.c"
+    echo -e "#include <$1>\nvoid *p = (void*)$2;" > ".conftest/$2.c"
     "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
 }
 
@@ -46,7 +46,9 @@ samples() {
 _locate_exe() {
     if test -f "$1"; then
         echo "$1"
-    elif [[ ! "$1" =~ $_BINEXT$ ]]; then
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
         echo "$1$_BINEXT"
     fi
 }
@@ -54,7 +56,13 @@ _locate_exe() {
 # locate executable in workdir or PREFIX
 _locate_bin() {
     local bin="$(_locate_exe "$1")"
-    test -f "$bin" && echo "$bin" || _locate_exe "$PREFIX/bin/$1"
+    if test -f "$bin"; then
+        echo "$bin"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$PREFIX/bin/$1"
+    else
+        _locate_exe "$PREFIX/bin/$1"
+    fi
 }
 
 _cflags_for_c89() {
@@ -748,7 +756,8 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (                                         # always start subshell here
+        # always start subshell here
+        (   
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -1068,7 +1077,7 @@ _make_pkgfile() {
                        die "update $x failed."
                 ;;
             bin/*)
-                test -f "$x" || x="$x$_BINEXT"  # tar will report error if not exists
+                x="$(_locate_exe "$x")" # tar will report error if not exists
 
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
@@ -1239,13 +1248,12 @@ cmdlet.install() {
     slogi $_EMOJI_PKGFILE "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
 
     # executable
-    local bin="$(_locate_exe "$1")" ext
+    local bin="$(_locate_exe "$1")"
     test -f "$bin" || die "$bin not found."
-    test -n "$_BINEXT" && [[ "$bin" =~ $_BINEXT$ ]] && ext="$_BINEXT"
 
     # target
     local target="$PREFIX/bin/${2:-"${bin##*/}"}"
-    [[ "$target" =~ $ext$ ]] || target="$target$ext"
+    [[ "$target" =~ "$_BINEXT"$ ]] || target="$target$_BINEXT"
     echocmd "$INSTALL" -m755 "$bin" "$target" || die "install $libs_name failed"
 
     if is_mingw; then
@@ -1263,7 +1271,7 @@ cmdlet.install() {
 
     # alias
     local alias=("${@:3}") lnk
-    test -z "$ext" || alias=("${alias[@]/%/$ext}")
+    test -z "$_BINEXT" || alias=("${alias[@]/%/$_BINEXT}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
         _make_alias "$target" "$lnk"

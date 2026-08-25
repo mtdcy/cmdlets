@@ -183,7 +183,7 @@ _EMOJI_ERROR="❌"
 
 _COLOR_RED='\033[0;31m'
 _COLOR_GREEN='\033[0;32m'
-_COLOR_YELLOW='\033[1;33m'
+_COLOR_YELLOW='\033[0;33m'
 _COLOR_NC='\033[0m'
 
 # slog [error|info|warn] [emoji] "message"
@@ -209,12 +209,9 @@ _slog() {
     echo -e "$message" >&2
 }
 
-slogi() { _slog info                "$@"; }
-slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
-sloge() {
-          _slog error $_EMOJI_ERROR "$@"
-                                          return 1
-}
+slogi() { _slog info                "$@";             }
+slogw() { _slog warn  $_EMOJI_WARN  "$@";             }
+sloge() { _slog error $_EMOJI_ERROR "$@" && return 1; }
 
 die()   {
     _capture_reset # in case Ctrl-C happens
