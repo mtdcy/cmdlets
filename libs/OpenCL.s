@@ -1,7 +1,8 @@
 # OpenCL ICD Loader
 
 # darwin: use OpenCL.framework instead
-libs_targets=( linux windows )
+# windows: use mingw headers
+libs_targets=(linux)
 
 # shellcheck disable=SC2034
 libs_lic="GPL"
@@ -21,7 +22,7 @@ libs_args=(
 
 # shellcheck disable=SC2086
 libs_build() {
-    (
+    (   
         # build OpenCL Headers
         pushd OpenCL-Headers-$libs_ver || die
 
