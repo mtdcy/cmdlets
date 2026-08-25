@@ -1242,21 +1242,23 @@ cmdlet.install() {
 
     if is_mingw; then
         # no symbolic links for win32
-        _install_alias() {
-            echocmd cp -f "$1" "$2"
+        _make_alias() {
+            #echocmd cp -f "$1" "$2"
+            slogi "$_EMOJI_RUN" "make alias $2 => $1"
+            "$CC" $CFLAGS $LDFLAGS -DTARGET="\"${1##*/}\"" "$_ROOT_/win32/alias.c" -o "${1%/*}/$2"
         }
     else
-        _install_alias() {
-            echocmd ln -srf "$1" "$2"
+        _make_alias() {
+            echocmd ln -srf "$1" "${1%/*}/$2"
         }
     fi
 
     # alias
-    local alias=("${@:3}")   lnk
+    local alias=("${@:3}") lnk
     test -z "$ext" || alias=("${alias[@]/%/$ext}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
-        _install_alias "$target" "$PREFIX/bin/$lnk"
+        _make_alias "$target" "$lnk"
     done
 
     # pack
