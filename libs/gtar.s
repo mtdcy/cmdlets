@@ -41,23 +41,22 @@ libs_build() {
     # fix commit, https://git.savannah.gnu.org/cgit/tar.git/commit/?id=8632df39, remove in next release
     export LIBS="-liconv"
 
-    configure &&
+    configure
 
-    make V=1 &&
+    make V=1
 
     # simple test
     {
         echo "test" > test.txt
         ./src/tar -czvf test.tar.gz test.txt
         [ "test" = "$(./src/tar -xOzf test.tar.gz)" ]
-    } &&
+    }     || die "test failed"
 
     # provide default 'tar' and 'gtar'
-    cmdlet src/tar gtar tar &&
+    cmdlet.install src/tar gtar
 
     # visual verify
-    check gtar --version
+    cmdlet.check gtar --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

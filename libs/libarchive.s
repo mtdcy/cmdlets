@@ -63,12 +63,7 @@ libs_build() {
 
     cmdlet.pkgfile libarchive -- make install bin_PROGRAMS= man_MANS=
 
-    # mingw/windows: use bsdtar as default tar prog
-    if is_mingw; then
-        cmdlet.install bsdtar bsdtar tar
-    else
-        cmdlet.install bsdtar bsdtar
-    fi
+    cmdlet.install bsdtar bsdtar tar
 
     cmdlet.check bsdtar --help
 }
