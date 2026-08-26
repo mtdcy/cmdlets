@@ -5,7 +5,7 @@
 libs_ver=2.5.4
 libs_url=https://github.com/uclouvain/openjpeg/archive/v$libs_ver.tar.gz
 libs_sha=a695fbe19c0165f295a8531b1e4e855cd94d0875d2f88ec4b61080677e27188a
-libs_dep=( )
+libs_dep=()
 
 libs_args=(
     -DBUILD_SHARED_LIBS=OFF
@@ -18,9 +18,11 @@ libs_args=(
 )
 
 libs_build() {
-    cmake . && make || return $?
+    cmake.setup
 
-    pkgfile libopenjp2 -- make install
+    cmake.build
+
+    pkgfile libopenjp2 -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
