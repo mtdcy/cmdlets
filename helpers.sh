@@ -1265,7 +1265,7 @@ cmdlet.install() {
     if is_mingw; then
         # no symbolic links for win32
         _make_alias() {
-            slogi "$_EMOJI_RUN" "make alias $name => $1"
+            slogi "$_EMOJI_RUN" "make alias $2 => $1"
             "$CC" $CFLAGS $LDFLAGS -DTARGET="\"${1##*/}\"" "$_ROOT_/win32/alias.c" -o "${1%/*}/$2"
         }
     else
