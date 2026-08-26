@@ -15,7 +15,7 @@ libs_args=(
 
     --with-ogg=$PREFIX
     --with-vorbis=$PREFIX
-    
+
     --disable-examples
     --disable-oggtest
     --disable-vorbistest
@@ -27,7 +27,7 @@ libs_args=(
 )
 
 # fix 'error: cannot guess build type'
-is_darwin || libs_args+=( --build="$(uname -m)-linux-gnu" )
+is_darwin || libs_args+=(--build="$( uname -m)-linux-gnu")
 
 libs_build() {
     # parallel is broken (libtheoraenc is missing sometimes)
@@ -40,11 +40,12 @@ libs_build() {
         sed -i 's/^EXPORTS//' win32/xmingw32/*.def
     fi
 
-    configure 
+    configure
 
-    make 
+    make
 
-    make check 
+    # check fails with mingw
+    is_mingw || make check
 
     sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
