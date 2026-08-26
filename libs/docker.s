@@ -2,6 +2,8 @@
 #
 # Docker clients
 
+libs_targets=(! windows)
+
 # shellcheck disable=SC2034,SC2248
 libs_ver=29.7.2
 libs_url=https://github.com/docker/cli/archive/refs/tags/v$libs_ver.tar.gz
