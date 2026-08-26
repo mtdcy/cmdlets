@@ -23,10 +23,15 @@ libs_args=(
     --disable-man
 )
 
-is_listed libiconv  "${libs_deps[@]}" && libs_args+=( --with-libiconv      ) || libs_args+=( --without-libiconv-prefix )
-is_listed pcre2     "${libs_deps[@]}" && libs_args+=( --enable-perl-regexp ) || libs_args+=( --disable-perl-regexp     )
+is_listed libiconv  "${libs_deps[@]}" && libs_args+=(--with-libiconv)        || libs_args+=(--without-libiconv-prefix)
+is_listed pcre2     "${libs_deps[@]}" && libs_args+=(--enable-perl-regexp)   || libs_args+=(--disable-perl-regexp)
 
 libs_build() {
+    # fix error: redefinition of 'nanosleep'
+    if libs.func.exists time.h nanosleep; then
+        echo "" > gnulib-tests/nanosleep.c
+    fi
+
     # note: egrep & fgrep are obsolescent;
     configure
 
@@ -41,6 +46,5 @@ libs_build() {
     # check: grep with pcre
     echo FOO | run grep -P '(?i)foo' || die "check grep with pcre failed"
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
