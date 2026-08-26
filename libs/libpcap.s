@@ -2,9 +2,6 @@
 #
 # Portable library for network traffic capture
 
-# disable libpcap for now, until Npcap is ready
-libs_targets=( linux darwin )
-
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=1.10.6
@@ -27,9 +24,10 @@ libs_args=(
 
 is_listed libnetfilter libs_deps && libs_args+=( -DBUILD_WITH_LIBNL=ON ) || libs_args+=( -DBUILD_WITH_LIBNL=OFF )
 
-# windows: needs Npcap drivers
+# windows: requires install Npcap drivers first
 if is_mingw; then
-    libs_deps+=( openssl )
+    # ENABLE_REMOTE requires openssl, which is default for win32
+    libs_deps+=( openssl ) 
     libs_args+=( -DPCAP_TYPE=null )
 fi
 
@@ -54,16 +52,20 @@ libs_build() {
     cmake.build 
 
     # fix pc files
-    is_mingw && pkgconf libpcap.pc $($PKG_CONFIG --libs-only-l --static openssl)
+    if is_listed openssl libs_deps; then
+        cmdlet.pkgconf libpcap.pc $($PKG_CONFIG --libs-only-l --static openssl)
+    fi
 
     # fix pcap-config
     sed -i pcap-config \
         -e 's/^static=.*/static=1/' \
         -e 's/^static_pcap_only=.*/static_pcap_only=1/' \
 
-    pkgfile $libs_name -- cmake.install --component Unspecified
+    cmdlet.pkgfile $libs_name -- cmake.install --component Unspecified
 
-    is_mingw && cmdlet.install run/rpcapd.exe || true
+    if is_mingw; then
+        cmdlet.install run/rpcapd.exe
+    fi
 }
 
 __END__
