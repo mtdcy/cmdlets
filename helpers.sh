@@ -25,66 +25,9 @@ deparallelize() {
     export _NJOBS=1
 }
 
+# deprecated
 libs.depends() {
     eval -- "$*" || { unset libs_dep libs_args libs_build; }
-}
-
-# check if a func symbol exists
-# input: <include header> <function name>
-libs.func.exists() {
-    mkdir -p ".conftest"
-    echo -e "#include <$1>\nvoid *p = (void*)$2;" > ".conftest/$2.c"
-    "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
-}
-
-# find samples by name
-samples() {
-    find "$_ROOT_/samples" -type f -name "$*" | xargs
-}
-
-# locate executable by path
-_locate_exe() {
-    if test -f "$1"; then
-        echo "$1"
-    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
-        echo "$1"
-    else
-        echo "$1$_BINEXT"
-    fi
-}
-
-# locate executable in PREFIX/bin or workdir
-_locate_bin() {
-    local bin="$(_locate_exe "$PREFIX/bin/$1")"
-    if test -f "$bin"; then
-        echo "$bin"
-    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
-        echo "$1"
-    else
-        _locate_exe "$1"
-    fi
-}
-
-_cflags_for_c89() {
-    local flags=()
-
-    if is_clang; then
-        flags+=(
-            -Wno-int-conversion
-            -Wno-implicit-int
-            -Wno-incompatible-pointer-types
-            -Wno-implicit-function-declaration
-        )
-    else
-        flags+=(
-            -Wno-error=int-conversion
-            -Wno-error=implicit-int
-            -Wno-error=incompatible-pointer-types
-            -Wno-error=implicit-function-declaration
-        )
-    fi
-
-    echo "${flags[@]}"
 }
 
 libs.requires() {
@@ -135,6 +78,68 @@ libs.requires() {
     CPPFLAGS+=" ${cppflags[*]}"
 
     export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+}
+
+# 兼容 c89 + K&R
+libs.requires.c89() {
+    local flags=(
+        -Wno-error=int-conversion
+        -Wno-error=implicit-int
+        -Wno-error=incompatible-pointer-types
+        -Wno-error=implicit-function-declaration
+        # 补丁：允许 foo() 这种未指定具体形参的旧声明
+        -Wno-error=strict-prototypes
+        -Wno-error=old-style-definition
+    )
+
+    if is_clang; then
+        flags+=(
+            -Wno-error=deprecated-non-prototype
+        )
+    else
+        flags+=(
+            # cc1: error: '-Wno-error=deprecated-non-prototype'
+            -Wno-deprecated-non-prototype
+        )
+    fi
+
+    export CFLAGS="$CFLAGS ${flags[*]}"
+}
+
+# check if a func symbol exists
+# input: <include header> <function name>
+libs.func.exists() {
+    mkdir -p ".conftest"
+    echo -e "#include <$1>\nvoid *p = (void*)$2;" > ".conftest/$2.c"
+    "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
+}
+
+# find samples by name
+samples() {
+    find "$_ROOT_/samples" -type f -name "$*" | xargs
+}
+
+# locate executable by path
+_locate_exe() {
+    if test -f "$1"; then
+        echo "$1"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        echo "$1$_BINEXT"
+    fi
+}
+
+# locate executable in PREFIX/bin or workdir
+_locate_bin() {
+    local bin="$(_locate_exe "$PREFIX/bin/$1")"
+    if test -f "$bin"; then
+        echo "$bin"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        _locate_exe "$1"
+    fi
 }
 
 _libs_init() {
