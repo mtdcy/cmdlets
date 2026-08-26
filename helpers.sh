@@ -374,7 +374,7 @@ cmake.build() {
 
     # bug fix
     # it seems configure_file() malformatted pc files
-    find .. -type f -name "*.pc" -exec sed -i 's/-l-l/-l/g' {} +
+    find . -type f -name "*.pc" -exec sed -i 's/-l-l/-l/g' {} +
 }
 
 cmake.install() {
@@ -1406,23 +1406,18 @@ inspect() {
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
 cmdlet.pkgconf() {
-    local name="${1%.pc}"
-                           shift
+    local name="${1%.pc}" && shift
 
     local cflags=()
     local ldflags=()
     local requires=()
 
     while [ $# -gt 0 ]; do
-        local arg="$1"
-                        shift 1
+        local arg="$1" && shift 1
         case "$arg" in
             -I* | -D*)  cflags+=("$arg")                ;;
             -l* | -L*)  ldflags+=("$arg")               ;;
-            -framework)
-                        ldflags+=("$arg" "$1")
-                                                  shift
-                                                        ;; # -framework AppKit
+            -framework) ldflags+=("$arg" "$1") && shift ;; # -framework AppKit
             -pthread)   ldflags+=("$arg")               ;; # -pthread
             -*)         cflags+=("$arg")                ;; # -DXXX -std=xxx
             *)          requires+=("$arg")              ;;
@@ -1439,11 +1434,9 @@ cmdlet.pkgconf() {
         done
 
         # amend arguments to pc file
-        sed -i "$name.pc" \
-            -e "/Requires:/s%$% ${requires[*]}%" \
-            -e "/Cflags:/s%$% ${cflags[*]}%" \
-            -e "/Libs:/s%$% ${ldflags[*]}%" ||
-               die "fix $name.pc failed"
+        test -z "${requires[*]}" || sed -i "/Requires:/s%$% ${requires[*]}%" "$name.pc"
+        test -z "${ldflags[*]}" || sed -i "/Libs:/s%$% ${ldflags[*]}%" "$name.pc"
+        test -z "${cflags[*]}" || sed -i "/Cflags:/s%$% ${cflags[*]}%" "$name.pc"
     else
         cat << EOF > "$name.pc"
 prefix=\${PREFIX}
