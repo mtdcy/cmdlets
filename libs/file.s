@@ -9,9 +9,13 @@ libs_ver=5.46
 libs_url=https://astron.com/pub/file/file-$libs_ver.tar.gz
 libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
 
-libs_deps=( zlib bzip2 xz zstd )
+# mingw: HAVE_FORK
+#   file couldn't use those compression libraries
+#   because It requires fork function.
+#   see: https://github.com/file/file/blob/FILE5_46/src/compress.c#L229
+libs_deps=(zlib bzip2 xz zstd)
 
-is_mingw && libs_deps+=( libgnurx )
+is_mingw && libs_deps+=(libgnurx)
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
 libs_resources=(
@@ -46,11 +50,13 @@ libs_args=(
     --enable-static
 )
 
-is_listed zlib  "${libs_deps[@]}" && libs_args+=( --enable-zlib    ) || libs_args+=( --disable-zlib    )
-is_listed bzip2 "${libs_deps[@]}" && libs_args+=( --enable-bzlib   ) || libs_args+=( --disable-bzlib   )
-is_listed xz    "${libs_deps[@]}" && libs_args+=( --enable-xzlib   ) || libs_args+=( --disable-xzlib   )
-is_listed zstd  "${libs_deps[@]}" && libs_args+=( --enable-zstdlib ) || libs_args+=( --disable-zstdlib )
-is_listed lzip  "${libs_deps[@]}" && libs_args+=( --enable-lzlib   ) || libs_args+=( --disable-lzlib   )
+is_mingw && libs_args+=(--disable-libseccomp)
+
+is_listed zlib  "${libs_deps[@]}" && libs_args+=(--enable-zlib)      || libs_args+=(--disable-zlib)
+is_listed bzip2 "${libs_deps[@]}" && libs_args+=(--enable-bzlib)     || libs_args+=(--disable-bzlib)
+is_listed xz    "${libs_deps[@]}" && libs_args+=(--enable-xzlib)     || libs_args+=(--disable-xzlib)
+is_listed zstd  "${libs_deps[@]}" && libs_args+=(--enable-zstdlib)   || libs_args+=(--disable-zstdlib)
+is_listed lzip  "${libs_deps[@]}" && libs_args+=(--enable-lzlib)     || libs_args+=(--disable-lzlib)
 
 # usage of the new file cmd
 #
@@ -62,7 +68,12 @@ is_listed lzip  "${libs_deps[@]}" && libs_args+=( --enable-lzlib   ) || libs_arg
 libs_build() {
     MAGIC_INSTALL_PATH="share/misc"
 
-    configure 
+    if is_mingw; then
+        CFLAGS+=" -Wno-incompatible-pointer-types"
+    fi
+    export CFLAGS
+
+    configure
 
     # 1. user magic ~/.magic.mgc or ~/.magic or ~/.magic/magic.mgc
     # 2. relative .magic.mgc in current dir
@@ -79,7 +90,7 @@ libs_build() {
 
     cmdlet.pkginst magic.mgc "$MAGIC_INSTALL_PATH" magic/magic.mgc
 
-    cmdlet.install src/file 
+    cmdlet.install src/file
 
     cmdlet.check file --version
 
