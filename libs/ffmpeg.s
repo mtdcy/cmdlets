@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_ver=9.0.1
-libs_rev=1
+libs_rev=2
 libs_url=https://ffmpeg.org/releases/ffmpeg-$libs_ver.tar.xz
-libs_rev=1
+libs_rev=2
 libs_sha=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
 
 FFMPEG_VARS="${FFMPEG_VARS:-gpl,lgpl,nonfree,hwaccels,huge,ffplay}"
@@ -56,7 +56,7 @@ libs_build() {
 
     cmdlet.caveats << EOF
 static build ffmpeg @ $libs_ver
-libs_rev=1
+libs_rev=2
 
 $(run ffmpeg -hide_banner -hwaccels)
 EOF

@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2034
 libs_ver=7.1.2-13
-libs_rev=2
+libs_rev=3
 libs_url=https://github.com/ImageMagick/ImageMagick/archive/refs/tags/$libs_ver.tar.gz
-libs_rev=2
+libs_rev=3
 libs_sha=3617bffe497690ffe5b731227d026db1150e138ddb129481a1e202442e558512
 libs_deps=(freetype lcms2 libxml2 liblqr imath zlib libintl)
 
@@ -113,7 +113,7 @@ Configuration and resource files:
 
     cmdlets.sh install ImageMagick
     cmdlets.sh link share/ImageMagick-${libs_ver%%.*} ~/.config/ImageMagick
-libs_rev=2
+libs_rev=3
 
     OR you can set MAGICK_CONFIGURE_PATH to where the files are.
 EOF

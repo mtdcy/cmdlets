@@ -2,9 +2,11 @@
 
 # shellcheck disable=SC2034
 libs_lic="GPL-2.0"
-libs_ver=4.2
+libs_ver=4.3
+libs_rev=1
 libs_url=http://ftp.videolan.org/pub/videolan/x265/x265_$libs_ver.tar.gz
-libs_sha=40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210
+libs_rev=1
+libs_sha=83c53e4c8bbb8f1e33ed59e10a7d621d1d7801ca853910c3eb41f038b8ffb121
 
 HIGH_BIT_DEPTH=0
 
@@ -31,8 +33,8 @@ fi
 # cmake 4 workaround, from homebrew
 # report AppleClang as Clang
 #libs_patches=(
-#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04.24e200a1ee9c45c167
-#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4.20812072289af91492a8
+#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04.34.300a1ee9c45c167
+#    https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4.30812072289af914.3a8
 #)
 
 # shellcheck disable=SC2015
