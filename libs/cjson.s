@@ -15,6 +15,13 @@ libs_args=(
 )
 
 libs_build() {
+    if is_clang; then
+        # fix error: 'strtod' was marked unused but was used [-Werror,-Wused-but-marked-unused]
+        CFLAGS+=" -Wno-error=used-but-marked-unused"
+    fi
+
+    export CFLAGS
+
     mkdir -p build
 
     cmake -S . -B build
