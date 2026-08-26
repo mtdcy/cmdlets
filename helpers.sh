@@ -371,6 +371,10 @@ cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
     slogcmd "$CMAKE" --build . "$@" || die "cmake.build $libs_name failed."
+
+    # bug fix
+    # it seems configure_file() malformatted pc files
+    find .. -type f -name "*.pc" -exec sed -i 's/-l-l/-l/g' {} +
 }
 
 cmake.install() {
