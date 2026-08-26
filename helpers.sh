@@ -597,28 +597,24 @@ _cargo_init() {
 
     # cargo logging
     #export CARGO_LOG=cargo::core::compiler::fingerprint=trace,cargo_util::paths=trace
-    export CARGO_LOG=cargo::core::compiler=trace
-    export CC_ENABLE_DEBUG_OUTPUT=1
+    #export CARGO_LOG=cargo::core::compiler=trace
+    #export CC_ENABLE_DEBUG_OUTPUT=1
 
-    # search for libraries in PREFIX
-    #  => linker=$LD fails for some crates
-    CARGO_BUILD_RUSTFLAGS="--verbose -L native=$PREFIX/lib -C linker=$CC"
+    # 优先级 : -config > RUSTFLAGS > CARGO_BUILD_RUSTFLAGS (优先级最低，但最稳健)
+    #  linker=$LD : fails for some crates
+    CARGO_BUILD_RUSTFLAGS="--verbose -C linker=$CC"
+    #  ** 优先级高的彻底覆盖低优先级的变量参数 **
+    unset RUSTFLAGS
 
     if is_darwin; then
-        CARGO_BUILD_TARGET="$(uname -m)-apple-darwin"
-
         # rustc use aarch64 instead of arm64 for macos
-        CARGO_BUILD_TARGET="${CARGO_BUILD_TARGET/arm64/aarch64}"
+        CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
     elif is_mingw; then
-        [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
-            CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
         # win32
         #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
         #  *-windows-gnu => msvcrt
-        CARGO_BUILD_TARGET="$(rustup target list --installed | grep windows)"
+        CARGO_BUILD_TARGET="$(rustup target list --installed | grep -E "$(uname -m)-.*-windows" | head -n1)"
     else
-        # static linked C runtime
-        CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
         # musl
         CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
     fi
@@ -680,29 +676,34 @@ cargo.setup() {
     # XXX: -lxxx in LDFLAGS will append to rsut cc before RUSTFLAGS, and the -Lyyy will be ignored.
     #  => which cause libs.requires and LDFLAGS not working as expected.
     #   => pollute RUSTFLAGS with LDFLAGS
-    set -- $LDFLAGS "$@"
+    set -- $CFLAGS $CPPFLAGS $LDFLAGS "$@"
 
     local rustflags=() x
     while [ $# -gt 0 ]; do
+        # -C link-arg : 追加模式
         case "$1" in
-            -l)
-                    rustflags+=(-l "static=$2")
-                                                   shift 1
-                                                            ;;
-            -l*)    rustflags+=(-l "static=${1#-l}")        ;;
-            -L)
-                    rustflags+=(-L "$2")
-                                            shift 1
-                                                            ;;
-            -L*)    rustflags+=(-L "native=${1#-L}")        ;;
-            *)      ;; # ignore other flags
+            -fPIC | -DPIC)          rustflags+=(-C relocation-model=pic)        ;;
+            -O*)                    rustflags+=(-C opt-level="${1#-O}")         ;;
+            -I)                     rustflags+=(-L "dependency=$2") && shift 1  ;;
+            -I*)                    rustflags+=(-L "dependency=${1#-I}")        ;;
+            -l)                     rustflags+=(-l "static=$2") && shift 1      ;;
+            -l*)                    rustflags+=(-l "static=${1#-l}")            ;;
+            -L)                     rustflags+=(-L "$2") && shift 1             ;;
+            -L*)                    rustflags+=(-L "native=${1#-L}")            ;;
+            -D)                     rustflags+=(--cfg "$2") && shift 1          ;;
+            -D*)                    rustflags+=(--cfg "${1#-D}")                ;;
+            -Wl,*)                  rustflags+=(-C link-arg="$1")               ;;
+            -static)                rustflags+=(-C link-arg=-static)            ;;
+            -static-libgcc)         rustflags+=(-C target-feature=+crt-static)  ;;
+            -fdata-sections)        rustflags+=(-C link-dead-code=no)           ;;
+            -ffunction-sections)    rustflags+=(-C link-dead-code=no)           ;;
+            *)  ;; # ignore other flags
         esac
         shift 1
     done
 
-    #export RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS $RUSTFLAGS ${rustflags[*]}"
-    export RUSTFLAGS+="${rustflags[*]}"
-    # RUSTFLAGS will append to CARGO_BUILD_RUSTFLAGS when cargo build
+    # 优先级 : -config > RUSTFLAGS > CARGO_BUILD_RUSTFLAGS (优先级最低，但最稳健)
+    export CARGO_BUILD_RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS ${rustflags[*]}"
 
     # set env for static libraries
     for x in "${libs_deps[@]}"; do
@@ -729,7 +730,7 @@ cargo.build() {
     # remember envs
     {
         echo -e "\n---\ncargo envs:"
-        env #| grep -E "CARGO|RUST"
+        env
         echo -e "\n---\nrustc cfgs:"
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
