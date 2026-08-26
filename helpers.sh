@@ -42,7 +42,7 @@ samples() {
     find "$_ROOT_/samples" -type f -name "$*" | xargs
 }
 
-# locate executable in workdir
+# locate executable by path
 _locate_exe() {
     if test -f "$1"; then
         echo "$1"
@@ -53,15 +53,15 @@ _locate_exe() {
     fi
 }
 
-# locate executable in workdir or PREFIX
+# locate executable in PREFIX/bin or workdir
 _locate_bin() {
-    local bin="$(_locate_exe "$1")"
+    local bin="$(_locate_exe "$PREFIX/bin/$1")"
     if test -f "$bin"; then
         echo "$bin"
     elif [[ "$1" =~ "$_BINEXT"$ ]]; then
-        echo "$PREFIX/bin/$1"
+        echo "$1"
     else
-        _locate_exe "$PREFIX/bin/$1"
+        _locate_exe "$1"
     fi
 }
 
@@ -1246,22 +1246,26 @@ cmdlet.pkginst() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet.install() {
-    slogi $_EMOJI_PKGFILE "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
+    local name="${2:-"${1##*/}"}"
+
+    # append _BINEXT?
+    test -z "$_BINEXT" || [[ "$name" =~ "$_BINEXT"$ ]] || name+="$_BINEXT"
+
+    slogi $_EMOJI_PKGFILE "install cmdlet $1 => $name (alias ${*:3})"
 
     # executable
     local bin="$(_locate_exe "$1")"
     test -f "$bin" || die "$bin not found."
 
     # target
-    local target="$PREFIX/bin/${2:-"${bin##*/}"}"
+    local target="$PREFIX/bin/${name:-"${bin##*/}"}"
     [[ "$target" =~ "$_BINEXT"$ ]] || target="$target$_BINEXT"
     echocmd "$INSTALL" -m755 "$bin" "$target" || die "install $libs_name failed"
 
     if is_mingw; then
         # no symbolic links for win32
         _make_alias() {
-            #echocmd cp -f "$1" "$2"
-            slogi "$_EMOJI_RUN" "make alias $2 => $1"
+            slogi "$_EMOJI_RUN" "make alias $name => $1"
             "$CC" $CFLAGS $LDFLAGS -DTARGET="\"${1##*/}\"" "$_ROOT_/win32/alias.c" -o "${1%/*}/$2"
         }
     else
