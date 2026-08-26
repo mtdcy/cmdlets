@@ -29,6 +29,7 @@ export LANG=C
         CMDLET_NJOBS=${CMDLET_NJOBS:-1}         # no parallel build by default
      CMDLET_PKGFILES=${CMDLET_PKGFILES:-1}      # use pkgfiles as deps
         CMDLET_CHECK=${CMDLET_CHECK:-0}         # build/check rdepends
+      CMDLET_VERBOSE=${CMDLET_VERBOSE:-0}       # build with verbose mode
 
 # toolchain prefix
 
@@ -41,17 +42,13 @@ fi
 
 # target variables:
 #
-#   _TARGET         : target triplet for compiler prefix
+#   _TARGET         : target triplet
 #
-#   _TARGET_ARCH    : target architecture triplet
 #   _TARGET_NAME    : target name like linux, darwin, windows
 #   _TARGET_VARS    : target variables for is_xxx
 #   _TARGET_REPO    : target pkgfiles repo
 #
 #   _TARGET_NAMES   : supported targets name
-#
-# target, default: musl-gcc
-_TARGET="${CMDLET_TARGET:-}"
 
 # supported targets
 _TARGET_NAMES=(linux darwin windows)
@@ -307,37 +304,31 @@ _init_host() {
 
     _ROOT_="$(pwd -P)"
 
-    # default _TARGET
-    if test -z "$_TARGET" && test -n "$BUILDER_NAME"; then
+    # _TARGET: toolchain prefix
+    if test -n "$BUILDER_NAME"; then
+        # run with builder docker image
         case "$BUILDER_NAME" in
-            linux/*)    _TARGET="$(uname -m)-linux-musl"   ;;
-            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"  ;;
+            linux/*)    _TARGET="$(uname -m)-linux-gnu"     ;;
+            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"   ;;
         esac
-    fi
-
-    # => target arch triplet
-    if test -n "$_TARGET"; then
-        _TARGET_ARCH="$_TARGET"
     else
+        # run with host machine
         case "$OSTYPE" in
-            linux-*)    _TARGET_ARCH="$(uname -m)-linux-gnu"    ;;
-            darwin*)    _TARGET_ARCH="$(uname -m)-apple-darwin" ;;
-            *)          _TARGET_ARCH="$(uname -m)-$OSTYPE"      ;;
+            linux-*)    _TARGET="$(uname -m)-linux-gnu"     ;;
+            darwin*)    _TARGET="$(uname -m)-apple-darwin"  ;;
+            *)          _TARGET="$(uname -m)-$OSTYPE"       ;;
         esac
     fi
 
-    # historic: linux-musl <=> linux-gnu
-    [[ "$_TARGET_ARCH" =~ -musl$ ]] && _TARGET_ARCH="${_TARGET_ARCH/%-musl/-gnu}"
-
-    _TARGET_REPO="$_TARGET_REPO/$_TARGET_ARCH"
+    _TARGET_REPO="$_TARGET_REPO/$_TARGET"
 
     # prepare variables
-    PREFIX="$_ROOT_/prebuilts/$_TARGET_ARCH"
+    PREFIX="$_ROOT_/prebuilts/$_TARGET"
 
     # private variables
-    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET_ARCH"
+    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET"
     _TARGET_PACKAGES="$_ROOT_/packages"
-    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET_ARCH"
+    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET"
 
     mkdir -p "$PREFIX" "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
@@ -356,6 +347,7 @@ _init_host() {
         "TAR:gtar,tar"
         "FILE:file"
         "PRINTF:printf" # supersedes shell's printf
+        "PKG_CONFIG:pkg-config"
     )
 
     is_arm64 || host_tools+=(
@@ -395,61 +387,57 @@ _init_host() {
 _init_target() {
     test -z "$CC" || return 0
 
-    # find out CC
-    test -n "$_TARGET" && CC="$_TARGET-gcc" || CC=gcc
+    test -n "$_TARGET" || die "missing _TARGET"
 
-    case "$OSTYPE" in
-        darwin*)    CC="$(xcrun --find "$CC")" ;;
-        *)          CC="$(which "$CC")" ;;
-    esac
+    #1. prepend out toolchain wrappers
+    #2. tools like glib-compile-resources needs seat in PATH
+    export PATH="$_ROOT_/toolchain:$PREFIX/bin:$PATH"
+
+    # keep env CC for historic reason
+    export CC=gcc
+    export CXX=g++
 
     # test gcc
-    "$CC" -v &> /dev/null
+    "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
 
-    die_on_error "$CC is not recognized."
-
-    case $("$CC" -dumpmachine) in
+    case "$_TARGET" in
         *-w64-*)    _TARGET_NAME=windows    ;;
         *-darwin*)  _TARGET_NAME=darwin     ;;
         *)          _TARGET_NAME=linux      ;;
     esac
 
-    # toolchain utils
-    export CC
-    export CXX="${CC/%gcc/g++}"
-
-    # binutils
+    # binutils envs
     local binutils=(
         AR:ar
         AS:as
         LD:ld
         NM:nm
         STRIP:strip
-        RANLIB:ranlib
+        OBJCOPY:objcopy
         OBJDUMP:objdump
-        PKG_CONFIG:pkg-config
+        RANLIB:ranlib
+        READELF:readelf
     )
 
     # target specific toolchain utils
-    case "$("$CC" -dumpmachine)" in
-        *-w64-* | *-mingw32) binutils+=(WINDRES:windres DLLTOOL:dlltool)  ;;
+    case "$_TARGET_NAME" in
+        windows)
+            binutils+=(
+                WINDRES:windres
+                DLLTOOL:dlltool
+            )
+            _BINEXT=".exe"
+            ;;
+        *)
+            unset _BINEXT
+            ;;
     esac
 
-    # XXX: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ar: No such file or directory
-    _init_target_binutils() {
-        local x k v
-        for x in "$@"; do
-            IFS=':' read -r k v <<< "$x"
-            eval $k="\${CC/%gcc/$v}"
-            test -x "${!k}" || eval $k="\$(which $v)" || die "$v not found"
-            export "$k"
-        done
-    }
-    _init_target_binutils "${binutils[@]}"
-
-    # force posix compatible, e.g: libwinpthread
-    test -x "$CC-posix"  && export CC="$CC-posix"   || true
-    test -x "$CXX-posix" && export CXX="$CXX-posix" || true
+    # set binutils envs
+    for x in "${binutils[@]}"; do
+        IFS=':' read -r k v <<< "$x"
+        export $k="${CC/%gcc/$v}"
+    done
 
     # for target checks
     IFS=' :-()' read -r -a _TARGET_VARS < <({
@@ -459,10 +447,7 @@ _init_target() {
     } | xargs)
     IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
-    export _TARGET _TARGET_ARCH _TARGET_NAME _TARGET_VARS _TARGET_REPO _TARGET_NAMES
-
-    # environments alias
-    test -z "$WINDRES" || export RC="$WINDRES"
+    export ${!_TARGET@}
 
     if is_gcc; then
         # vfork: Resource temporarily unavailable
@@ -479,7 +464,7 @@ _init_target() {
 
     # common flags for c/c++
     cflags=(
-        -g0 -Os             # optimize for size
+        -g0 -Os
         -fPIC -DPIC         # PIC
         -Wno-error          # no warnings as errors
     )
@@ -487,109 +472,73 @@ _init_target() {
         -L$PREFIX/lib       # prebuilts
     )
 
-    # macOS does not support statically linked binaries
-    if is_darwin; then
-        cflags+=(
-            # ISO C99 and later do not support implicit function declarations
-            -Wno-implicit-function-declaration
-            -Wno-deprecated-non-prototype
-            -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
-        )
-        ldflags+=(-Wl,-dead_strip)
-    elif is_mingw; then
-        # mingw windows headers
-        #echo "#include <windows.h>" > "$TEMPDIR/test.c"
-        #local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
-        #cflags+=( -I"$inc" )
+    case "$_TARGET_NAME" in
+        darwin)
+            # macOS does not support statically linked binaries
+            cflags+=(
+                # ISO C99 and later do not support implicit function declarations
+                -Wno-implicit-function-declaration
+                -Wno-deprecated-non-prototype
+                -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
+            )
+            ldflags+=(-Wl,-dead_strip)
 
-        # wine windows headers and libraries
-        #cflags+=( -I/usr/include/wine/windows )
-        #ldflags+=( -L/usr/lib/wine/$(uname -m)-windows )
+            export MACOSX_DEPLOYMENT_TARGET
+            ;;
+        windows)
+            cflags+=(--static -ffunction-sections -fdata-sections)
 
-        cflags+=(--static -ffunction-sections -fdata-sections)
+            is_posix && cflags+=(-D_POSIX)
 
-        is_posix && cflags+=(-D_POSIX)
+            # XXX: allow link with certain dlls?
+            ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
 
-        # XXX: allow link with certain dlls?
-        ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
+            # 解决静态库与 DLL 符号错配的问题
+            ldflags+=(-Wl,--enable-auto-import)
 
-        # 解决静态库与 DLL 符号错配的问题
-        ldflags+=(-Wl,--enable-auto-import)
+            # msvcrt or ucrt: follow builder toolchain settings
+            #  - mingw-w64  : msvcrt
+            #  - llvm-mingw : ucrt
+            ;;
+        *)
+            #1. static linking => two '--' vs ldflags
+            #2. tell compiler to place each function and data into its own section
+            cflags+=(--static -ffunction-sections -fdata-sections)
 
-        # msvcrt or ucrt: follow builder toolchain settings
-        #  - mingw-w64  : msvcrt
-        #  - llvm-mingw : ucrt
-    else
-        #1. static linking => two '--' vs ldflags
-        #2. tell compiler to place each function and data into its own section
-        cflags+=(
-            --static
-            -ffunction-sections
-            -fdata-sections
-        )
+            # remove unused sections, need -ffunction-sections and -fdata-sections
+            ldflags+=(-Wl,-gc-sections)
 
-        # remove unused sections, need -ffunction-sections and -fdata-sections
-        ldflags+=(-Wl,-gc-sections)
+            # Security: FULL RELRO
+            ldflags+=(-Wl,-z,relro,-z,now)
 
-        # Security: FULL RELRO
-        ldflags+=(-Wl,-z,relro,-z,now)
+            # disable dynamic linking and link used symbols only
+            ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+            ;;
+    esac
 
-        # disable dynamic linking and link used symbols only
-        ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+    if is_true CMDLET_VERBOSE; then
+        cflags+=(-v)
+        ldflags+=(-Wl,--verbose)
     fi
 
-    # gcc and linker debug
-    # cflags+=(-v)
-    # ldflags+=(-Wl,--verbose)
-
-    # toolchain scripts, for debugging and options embedding
-    _init_target_script() {
-        eval -- export REAL_$1="\$$2"
-        export $2="$_ROOT_/scripts/$1"
-    }
-
-    # no all build system support command with arguments
-    _init_target_script cc          CC
-    _init_target_script cxx         CXX
-    _init_target_script ld          LD
-    _init_target_script as          AS
-    _init_target_script ar          AR
-    _init_target_script nm          NM
-    _init_target_script ranlib      RANLIB
-    _init_target_script pkg_config  PKG_CONFIG
-
-    OBJC="$CC"
     CPP="$CC -E"
     CFLAGS="${cflags[*]}"
     CXXFLAGS="${cflags[*]}"
-    OBJCFLAGS="${cflags[*]}"
     CPPFLAGS="-I$PREFIX/include"
     LDFLAGS="${ldflags[*]}"
+    OBJC="$CC"
+    OBJCFLAGS="${cflags[*]}"
 
-    export CFLAGS OBJCFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+    export CPP CFLAGS CXXFLAGS CPPFLAGS LDFLAGS OBJC OBJCFLAGS
 
     # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
-    PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-    export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
-
-    # update PATH => tools like glib-compile-resources needs seat in PATH
-    export PATH="$PREFIX/bin:$PATH"
+    export _TARGET_PKG_CONFIG="$PKG_CONFIG"
+    export PKG_CONFIG="$(which pkg-config)"
+    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 
     # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
-
-    # for running test
-    # LD_LIBRARY_PATH or rpath?
-    #export LD_LIBRARY_PATH=$PREFIX/lib
-    # rpath is meaningless for static libraries and executables, and
-    # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
-    # will help find out the mistakes.
-
-    # macos
-    export MACOSX_DEPLOYMENT_TARGET
-
-    is_mingw && _BINEXT=".exe" || unset _BINEXT
 
     # linux mingw for windows target with wine
     if is_mingw && test -n "$WINEPREFIX"; then
@@ -1452,7 +1401,7 @@ prepare() {
 }
 
 target() {
-    echo "$_TARGET_ARCH"
+    echo "$_TARGET"
 }
 
 # print remote branch hash
