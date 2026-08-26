@@ -50,7 +50,7 @@ libs_build() {
 
     # fix pc file
     if is_mingw; then
-        cmdlet.pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject
+        cmdlet.pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject -lole32
     fi
 
     cmdlet.pkgfile libOpenCL -- cmake.install
