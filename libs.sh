@@ -513,6 +513,9 @@ _init_target() {
         # XXX: allow link with certain dlls?
         ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
 
+        # 解决静态库与 DLL 符号错配的问题
+        ldflags+=(-Wl,--enable-auto-import)
+
         # msvcrt or ucrt: follow builder toolchain settings
         #  - mingw-w64  : msvcrt
         #  - llvm-mingw : ucrt
