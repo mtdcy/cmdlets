@@ -3,8 +3,10 @@
 libs_desc="Parallel, indexed, xz compressor"
 libs_lic='BSD-2-Clause'
 libs_ver=1.0.7
+libs_rev=1
 libs_url=(
     https://github.com/vasi/pixz/releases/download/v$libs_ver/pixz-$libs_ver.tar.gz
+libs_rev=1
 )
 libs_sha=d1b6de1c0399e54cbd18321b8091bbffef6d209ec136d4466f398689f62c3b5f
 libs_dep=( libarchive  xz libxslt )
@@ -27,6 +29,7 @@ libs_build() {
 
     caveats << EOF
 static built pixz @ $libs_ver
+libs_rev=1
 
 Usage:
     tar -I pixz -xf archive.tar.xz -C /tmp

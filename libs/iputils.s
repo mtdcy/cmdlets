@@ -5,6 +5,7 @@ libs_targets=( linux )
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
 libs_ver=20250605
+libs_rev=1
 libs_url=https://github.com/iputils/iputils/archive/refs/tags/20250605.tar.gz
 libs_sha=19e680c9eef8c079da4da37040b5f5453763205b4edfb1e2c114de77908927e4
 
