@@ -25,8 +25,8 @@ libs_args=(
     --disable-man
 )
 
-is_listed mpfr      libs_deps && libs_args+=( --with-mpfr     ) || libs_args+=( --without-mpfr     )
-is_listed readline  libs_deps && libs_args+=( --with-readline ) || libs_args+=( --without-readline )
+is_listed mpfr      libs_deps && libs_args+=(--with-mpfr)       || libs_args+=(--without-mpfr)
+is_listed readline  libs_deps && libs_args+=(--with-readline)   || libs_args+=(--without-readline)
 
 libs_build() {
     # refer to: https://github.com/macports/macports-ports/blob/master/lang/gawk/Portfile
@@ -34,7 +34,7 @@ libs_build() {
 
     libs.requires readline mpfr
 
-    # regex.h
+    # local support/regex.h first (libgnurx also provides regex.h)
     sed -i support/regex.c \
         -i support/dfa.h \
         -e 's/<regex.h>/"regex.h"/g'
@@ -44,34 +44,64 @@ libs_build() {
         cp pc/* ./ || true
         cp pc/awklib/* awklib/
 
+        #1. fix VPATH
+        #2. append CFLAGS
+        #3. no regex
         sed -i Makefile \
-            -e '/VPATH/s/;/:/g' \
-            -e 's/CC=gcc //g' \
-            -e 's/CFLAGS = /CFLAGS += \$(CPPFLAGS) /g' \
-            -e 's/LF2=".*" //g'
+            -e '/^VPATH/s/;/:/g'
+            #-e 's/^CFLAGS =/CFLAGS +=/g'
+            #-e '/LIBOBJS/s/regex\$O//' \
+            #-e 's/regex.h//g'
 
-        export LF2="$LDFLAGS -lws2_32"
+        # no fork
+        sed -i 's/#ifdef SIGPIPE/#if 0/g' awk.h
 
-        make mingw32 
+        # force init predefined macros
+        sed -i '/#ifdef _UCRT/i #include <stdint.h>' pc/mbc32.h
+
+        # fix error: use of undeclared identifier '__mb_cur_max'
+        sed -i '/^#.*MB_CUR_MAX/d' custom.h
+
+        # fix error: duplicate symbol: strcoll
+        sed -i 's/#undef HAVE_STRCOLL/#define HAVE_STRCOLL 1/g' config.h
+
+        libs.requires.c89
+
+        CFLAGS+=" -D__USE_MINGW_ANSI_STDIO"
+        CFLAGS+=" -DHAVE_MPFR"
+        CFLAGS+=" -DHAVE_LIBREADLINE"
+
+        LDFLAGS+=" -lgmp -lmpfr -lws2_32"
+
+        # override CC CFLAGS LDFLAGS
+        make gawk.exe \
+            CF="'$CFLAGS $CPPFLAGS'" \
+            LF2="'$LDFLAGS'" \
+            O=.o OBJ=popen.o LNK=LMINGW32
     else
         configure
 
-        make 
+        make
     fi
 
-    # gawk: invalid char ''' in expression
-    #  => cmd.exe does not treat single quotes as quotation marks, passing them directly to gawk
-    echo '{ gsub(/World/, "Hello"); print }' > gsub.awk
+    # wine: Call from 00006FFFFF3DD887 to unimplemented function ucrtbase.dll.mbrtoc32, aborting
+    if is_mingw && test -n "$WINEPREFIX"; then
+        slogw "skill gawk test with wine"
+    else
+        # gawk: invalid char ''' in expression
+        #  => cmd.exe does not treat single quotes as quotation marks, passing them directly to gawk
+        echo '{ gsub(/World/, "Hello"); print }' > gsub.awk
 
-    # check => XXX: there always 5 FAILs
-    #make check &&
-    [ "HelloHello" = "$(run ./gawk -f gsub.awk <<< "HelloWorld")" ] || die "test failed"
+        # check => XXX: there always 5 FAILs
+        #make check &&
+        [ "HelloHello" = "$(run ./gawk -f gsub.awk <<< "HelloWorld")" ] || die "test failed"
+    fi
 
     #make install-exec &&
     cmdlet.install gawk gawk awk
 
     # visual verify
-    cmdlet.check gawk --version
+    cmdlet.check gawk
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
