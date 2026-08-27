@@ -41,11 +41,6 @@ libs.requires() {
                 ;;
             -std=*)
                 cflags+=("$x")
-                case "$x" in
-                    -std=c89 | -std=ansi | -std=gnu89)
-                        cflags+=($( _cflags_for_c89))
-                        ;;
-                esac
                 ;;
             -l* | -L* | -pthread | -Wl,*)
                 ldflags+=("$x")
@@ -68,14 +63,16 @@ libs.requires() {
                     esac
                 done
 
-                LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+                ldflags+=" $($PKG_CONFIG --libs-only-l "$x")"
                 ;;
         esac
     done
 
+    # append flags
     CFLAGS+=" ${cflags[*]}"
     CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
     CPPFLAGS+=" ${cppflags[*]}"
+    LDFLAGS+=" ${ldflags[*]}"
 
     export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 }
