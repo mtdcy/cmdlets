@@ -282,14 +282,33 @@ _capture_stderr() {
 #   pkgfile git bin/git bin/git-*       # glob works fine
 #
 #  Cons:
-#   --prefix="'$PREFIX'"                # must be quoted twice
+#   --prefix="'$PREFIX'"                # must be quoted twice [ FIXED ]
 echocmd() {
+
+    local quoted=() x k v
+    for x in "$@"; do
+        case "$x" in
+            *=*)
+                IFS='=' read -r k v <<< "$x"
+                #1. historic: unquoted value first `CFLAGS="'$CFLAGS $CPPFLAGS'"
+                #2. then quoted again
+                quoted+=("$(printf '%s="%s"' "$k" "$(eval -- "echo $v")")")
+                ;;
+            \'*\') # already quoted like 'xxx'
+                quoted+=("$(printf '"%s"' "$(eval -- "echo $x")")")
+                ;;
+            *) # escape chars
+                quoted+=("$(printf '%q' "$x")")
+                ;;
+        esac
+    done
+
     # stderr: grep won't filter out the command
-    echo "$@" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
+    echo -e "\n✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
     #  => logging as plain by default so grep will works
-    eval -- "$*" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
+    eval -- "${quoted[*]}" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
 }
 
 # slogcmd <command>

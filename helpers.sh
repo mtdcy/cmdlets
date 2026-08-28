@@ -1077,7 +1077,7 @@ _make_pkgfile() {
             */gettext/*)    rm -f "$x" && continue ;;
             *.a)
                 # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
-                echocmd "$RANLIB" "$x"
+                "$RANLIB" "$x"
                 ;;
             *.pc)
                 # shellcheck disable=SC2016
@@ -1097,9 +1097,9 @@ _make_pkgfile() {
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
                     # NEVER strip PE32+ target with --strip-all
-                    PE32+*)             echocmd "$STRIP" --strip-debug "$x" ;;
-                    ELF*)               echocmd "$STRIP" --strip-all "$x"   ;;
-                    Mach-O*executable)  echocmd "$STRIP" "$x"               ;;
+                    PE32+*)             "$STRIP" --strip-debug "$x" ;;
+                    ELF*)               "$STRIP" --strip-all "$x"   ;;
+                    Mach-O*executable)  "$STRIP" "$x"               ;;
 
                     *"shell script"*)
                         case "$x" in
