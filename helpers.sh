@@ -205,7 +205,7 @@ _setup() {
 configure() {
     _setup
 
-    local cmd
+    local cmd args=()
 
     test -f configure && cmd="./configure" || cmd="../configure"
 
@@ -213,14 +213,22 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    local args=("${libs_args[@]}" "$@")
+    # std args
+    while read -r feat; do
+        case "$feat" in
+            --prefix=*)  args+=(--prefix="$PREFIX") ;;
+            --disable-option-checking | --disable-dependency-tracking | --enable-silent-rules)
+                args+=("$feat")
+                ;;
+            --host=*)
+                # some libraries use --target instead of --host, e.g: libvpx
+                is_xbuild && args+=(--host="$_TARGET") || true
+                ;;
+        esac
+    done < <("$cmd" --help | grep -oE " --[^\ /\[]+" | sort -u)
 
-    list_has args "--prefix=.*" || args+=(--prefix="$PREFIX")
-
-    if is_xbuild; then
-        # some libraries use --target instead of --host, e.g: libvpx
-        { "$cmd" --help || true; } | grep -q -- "--host=" && args+=(--host="$_TARGET")   || true
-    fi
+    # user args > libs_args > std args
+    args+=("${libs_args[@]}" "$@")
 
     slogcmd "$cmd" "${args[@]}" || die "configure $libs_name failed."
 }
