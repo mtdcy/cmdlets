@@ -1,5 +1,7 @@
 # Top-like interface for container metrics
 
+libs_targets=(! windows)
+
 # shellcheck disable=SC2034
 libs_lic="MIT"
 libs_ver=0.7.7

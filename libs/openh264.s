@@ -20,6 +20,10 @@ libs_args=(
 )
 
 libs_build() {
+    if is_mingw; then
+        sed -i 's/^OS=.*$/OS=mingw_nt/' Makefile
+    fi
+
     make "${libs_args[@]}"
 
     pkgfile libopenh264 -- make install-static "${libs_args[@]}"
@@ -29,6 +33,5 @@ libs_build() {
         cmdlet.check "$x"
     done
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

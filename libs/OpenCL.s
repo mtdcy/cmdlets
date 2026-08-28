@@ -1,7 +1,7 @@
 # OpenCL ICD Loader
 
 # darwin: use OpenCL.framework instead
-libs_targets=( linux windows )
+libs_targets=(! darwin)
 
 # shellcheck disable=SC2034
 libs_lic="GPL"
@@ -21,7 +21,7 @@ libs_args=(
 
 # shellcheck disable=SC2086
 libs_build() {
-    (
+    (   
         # build OpenCL Headers
         pushd OpenCL-Headers-$libs_ver || die
 
@@ -48,10 +48,12 @@ libs_build() {
 
     cmake.build
 
-    # fix linked win32 libraries
-    is_mingw && pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+    # fix pc file
+    if is_mingw; then
+        cmdlet.pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject -lole32
+    fi
 
-    pkgfile libOpenCL -- cmake.install
+    cmdlet.pkgfile libOpenCL -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

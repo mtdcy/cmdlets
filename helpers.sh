@@ -25,50 +25,9 @@ deparallelize() {
     export _NJOBS=1
 }
 
+# deprecated
 libs.depends() {
     eval -- "$*" || { unset libs_dep libs_args libs_build; }
-}
-
-# find samples by name
-samples() {
-    find "$_ROOT_/samples" -type f -name "$*" | xargs
-}
-
-# locate executable in workdir
-_locate_exe() {
-    if test -f "$1"; then
-        echo "$1"
-    elif [[ ! "$1" =~ $_BINEXT$ ]]; then
-        echo "$1$_BINEXT"
-    fi
-}
-
-# locate executable in workdir or PREFIX
-_locate_bin() {
-    local bin="$(_locate_exe "$1")"
-    test -f "$bin" && echo "$bin" || _locate_exe "$PREFIX/bin/$1"
-}
-
-_cflags_for_c89() {
-    local flags=()
-
-    if is_clang; then
-        flags+=(
-            -Wno-int-conversion
-            -Wno-implicit-int
-            -Wno-incompatible-pointer-types
-            -Wno-implicit-function-declaration
-        )
-    else
-        flags+=(
-            -Wno-error=int-conversion
-            -Wno-error=implicit-int
-            -Wno-error=incompatible-pointer-types
-            -Wno-error=implicit-function-declaration
-        )
-    fi
-
-    echo "${flags[@]}"
 }
 
 libs.requires() {
@@ -82,11 +41,6 @@ libs.requires() {
                 ;;
             -std=*)
                 cflags+=("$x")
-                case "$x" in
-                    -std=c89 | -std=ansi | -std=gnu89)
-                        cflags+=($( _cflags_for_c89))
-                        ;;
-                esac
                 ;;
             -l* | -L* | -pthread | -Wl,*)
                 ldflags+=("$x")
@@ -109,16 +63,80 @@ libs.requires() {
                     esac
                 done
 
-                LDFLAGS+=" $($PKG_CONFIG --libs-only-l "$x")"
+                ldflags+=" $($PKG_CONFIG --libs-only-l "$x")"
                 ;;
         esac
     done
 
+    # append flags
     CFLAGS+=" ${cflags[*]}"
     CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
     CPPFLAGS+=" ${cppflags[*]}"
+    LDFLAGS+=" ${ldflags[*]}"
 
     export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+}
+
+# 兼容 c89 + K&R
+libs.requires.c89() {
+    local flags=(
+        -Wno-error=int-conversion
+        -Wno-error=implicit-int
+        -Wno-error=incompatible-pointer-types
+        -Wno-error=implicit-function-declaration
+        # 补丁：允许 foo() 这种未指定具体形参的旧声明
+        -Wno-error=strict-prototypes
+        -Wno-error=old-style-definition
+    )
+
+    if is_clang; then
+        flags+=(
+            -Wno-error=deprecated-non-prototype
+        )
+    else
+        flags+=(
+            # cc1: error: '-Wno-error=deprecated-non-prototype'
+            -Wno-deprecated-non-prototype
+        )
+    fi
+
+    export CFLAGS="$CFLAGS ${flags[*]}"
+}
+
+# check if a func symbol exists
+# input: <include header> <function name>
+libs.func.exists() {
+    mkdir -p ".conftest"
+    echo -e "#include <$1>\nvoid *p = (void*)$2;" > ".conftest/$2.c"
+    "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
+}
+
+# find samples by name
+samples() {
+    find "$_ROOT_/samples" -type f -name "$*" | xargs
+}
+
+# locate executable by path
+_locate_exe() {
+    if test -f "$1"; then
+        echo "$1"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        echo "$1$_BINEXT"
+    fi
+}
+
+# locate executable in PREFIX/bin or workdir
+_locate_bin() {
+    local bin="$(_locate_exe "$PREFIX/bin/$1")"
+    if test -f "$bin"; then
+        echo "$bin"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        _locate_exe "$1"
+    fi
 }
 
 _libs_init() {
@@ -187,7 +205,7 @@ _setup() {
 configure() {
     _setup
 
-    local cmd
+    local cmd args=()
 
     test -f configure && cmd="./configure" || cmd="../configure"
 
@@ -195,14 +213,22 @@ configure() {
 
     test -f "$cmd" || die "configure not found."
 
-    local args=("${libs_args[@]}" "$@")
+    # std args
+    while read -r feat; do
+        case "$feat" in
+            --prefix=*)  args+=(--prefix="$PREFIX") ;;
+            --disable-option-checking | --disable-dependency-tracking | --enable-silent-rules)
+                args+=("$feat")
+                ;;
+            --host=*)
+                # some libraries use --target instead of --host, e.g: libvpx
+                is_xbuild && args+=(--host="$_TARGET") || true
+                ;;
+        esac
+    done < <("$cmd" --help | grep -oE " --[^\ /\[]+" | sort -u)
 
-    list_has args "--prefix=.*" || args+=(--prefix="$PREFIX")
-
-    if is_xbuild; then
-        # some libraries use --target instead of --host, e.g: libvpx
-        { "$cmd" --help || true; } | grep -q -- "--host=" && args+=(--host="$_TARGET")   || true
-    fi
+    # user args > libs_args > std args
+    args+=("${libs_args[@]}" "$@")
 
     slogcmd "$cmd" "${args[@]}" || die "configure $libs_name failed."
 }
@@ -350,6 +376,10 @@ cmake.build() {
     _cmake_init
     export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
     slogcmd "$CMAKE" --build . "$@" || die "cmake.build $libs_name failed."
+
+    # bug fix
+    # it seems configure_file() malformatted pc files
+    find . -type f -name "*.pc" -exec sed -i 's/-l-l/-l/g' {} +
 }
 
 cmake.install() {
@@ -393,12 +423,24 @@ system = 'windows'          # Target operating system
 cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
-
-[properties]
-pkg_config_path = ['$PKG_CONFIG_PATH']
-pkg_config_libdir = ['$PKG_CONFIG_LIBDIR']
 EOF
 
+        # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
+        #  => set find_program extensions
+        export PATHEXT=".exe"
+    fi
+
+    cat << EOF >> meson-static.ini
+[properties]
+# pkg-config & cmake 搜索路径
+pkg_config_path = ['$PKG_CONFIG_PATH']
+# https://mesonbuild.com/Builtin-options.html
+# 似乎 pkg_config_libdir 不再是内置选项
+cmake_prefix_path = ['$PREFIX']
+EOF
+
+    # meson 交叉编译时会将 CFLAGS 等判断为 build machine flags
+    if is_mingw; then
         # meson 交叉编译似乎不支持 CPPFLAGS
         CFLAGS+=" $CPPFLAGS"
         CXXFLAGS+=" $CPPFLAGS"
@@ -412,10 +454,6 @@ EOF
                 echo -en "]\n"
             } >> meson-static.ini
         done
-
-        # gdk-pixbuf: ERROR: Program 'glib-compile-resources' not found or not executable
-        #  => set find_program extensions
-        export PATHEXT=".exe"
     fi
 
     export _MESON_READY=1
@@ -573,28 +611,24 @@ _cargo_init() {
 
     # cargo logging
     #export CARGO_LOG=cargo::core::compiler::fingerprint=trace,cargo_util::paths=trace
-    export CARGO_LOG=cargo::core::compiler=trace
-    export CC_ENABLE_DEBUG_OUTPUT=1
+    #export CARGO_LOG=cargo::core::compiler=trace
+    #export CC_ENABLE_DEBUG_OUTPUT=1
 
-    # search for libraries in PREFIX
-    #  => linker=$LD fails for some crates
-    CARGO_BUILD_RUSTFLAGS="--verbose -L native=$PREFIX/lib -C linker=$CC"
+    # 优先级 : -config > RUSTFLAGS > CARGO_BUILD_RUSTFLAGS (优先级最低，但最稳健)
+    #  linker=$LD : fails for some crates
+    CARGO_BUILD_RUSTFLAGS="--verbose -C linker=$CC"
+    #  ** 优先级高的彻底覆盖低优先级的变量参数 **
+    unset RUSTFLAGS
 
     if is_darwin; then
-        CARGO_BUILD_TARGET="$(uname -m)-apple-darwin"
-
         # rustc use aarch64 instead of arm64 for macos
-        CARGO_BUILD_TARGET="${CARGO_BUILD_TARGET/arm64/aarch64}"
+        CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
     elif is_mingw; then
-        [[ "$($CC -print-file-name=libmsvcrt.a)" =~ ^/ ]] &&
-            CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
         # win32
         #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
         #  *-windows-gnu => msvcrt
-        CARGO_BUILD_TARGET="$(rustup target list --installed | grep windows)"
+        CARGO_BUILD_TARGET="$(rustup target list --installed | grep -E "$(uname -m)-.*-windows" | head -n1)"
     else
-        # static linked C runtime
-        CARGO_BUILD_RUSTFLAGS+=" -C target-feature=+crt-static"
         # musl
         CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
     fi
@@ -656,29 +690,34 @@ cargo.setup() {
     # XXX: -lxxx in LDFLAGS will append to rsut cc before RUSTFLAGS, and the -Lyyy will be ignored.
     #  => which cause libs.requires and LDFLAGS not working as expected.
     #   => pollute RUSTFLAGS with LDFLAGS
-    set -- $LDFLAGS "$@"
+    set -- $CFLAGS $CPPFLAGS $LDFLAGS "$@"
 
     local rustflags=() x
     while [ $# -gt 0 ]; do
+        # -C link-arg : 追加模式
         case "$1" in
-            -l)
-                    rustflags+=(-l "static=$2")
-                                                   shift 1
-                                                            ;;
-            -l*)    rustflags+=(-l "static=${1#-l}")        ;;
-            -L)
-                    rustflags+=(-L "$2")
-                                            shift 1
-                                                            ;;
-            -L*)    rustflags+=(-L "native=${1#-L}")        ;;
-            *)      ;; # ignore other flags
+            -fPIC | -DPIC)          rustflags+=(-C relocation-model=pic)        ;;
+            -O*)                    rustflags+=(-C opt-level="${1#-O}")         ;;
+            -I)                     rustflags+=(-L "dependency=$2") && shift 1  ;;
+            -I*)                    rustflags+=(-L "dependency=${1#-I}")        ;;
+            -l)                     rustflags+=(-l "static=$2") && shift 1      ;;
+            -l*)                    rustflags+=(-l "static=${1#-l}")            ;;
+            -L)                     rustflags+=(-L "$2") && shift 1             ;;
+            -L*)                    rustflags+=(-L "native=${1#-L}")            ;;
+            -D)                     rustflags+=(--cfg "$2") && shift 1          ;;
+            -D*)                    rustflags+=(--cfg "${1#-D}")                ;;
+            -Wl,*)                  rustflags+=(-C link-arg="$1")               ;;
+            -static)                rustflags+=(-C link-arg=-static)            ;;
+            -static-libgcc)         rustflags+=(-C target-feature=+crt-static)  ;;
+            -fdata-sections)        rustflags+=(-C link-dead-code=no)           ;;
+            -ffunction-sections)    rustflags+=(-C link-dead-code=no)           ;;
+            *)  ;; # ignore other flags
         esac
         shift 1
     done
 
-    #export RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS $RUSTFLAGS ${rustflags[*]}"
-    export RUSTFLAGS+="${rustflags[*]}"
-    # RUSTFLAGS will append to CARGO_BUILD_RUSTFLAGS when cargo build
+    # 优先级 : -config > RUSTFLAGS > CARGO_BUILD_RUSTFLAGS (优先级最低，但最稳健)
+    export CARGO_BUILD_RUSTFLAGS="$CARGO_BUILD_RUSTFLAGS ${rustflags[*]}"
 
     # set env for static libraries
     for x in "${libs_deps[@]}"; do
@@ -705,7 +744,7 @@ cargo.build() {
     # remember envs
     {
         echo -e "\n---\ncargo envs:"
-        env #| grep -E "CARGO|RUST"
+        env
         echo -e "\n---\nrustc cfgs:"
         "$RUSTC" --print cfg --target "$CARGO_BUILD_TARGET"
         echo -e "---\n"
@@ -732,7 +771,8 @@ cargo.requires() {
 
     local x
     for x in "$@"; do
-        (                                  # always start subshell here
+        # always start subshell here
+        (   
             # follow cargo's setting instead of ours to build host tools
             unset PREFIX CC CPP CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
             unset CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
@@ -1036,7 +1076,7 @@ _make_pkgfile() {
             # no gettext(i18n & i10n) files
             */gettext/*)    rm -f "$x" && continue ;;
             *.a)
-                echocmd "$STRIP" -x "$x"
+                # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
                 echocmd "$RANLIB" "$x"
                 ;;
             *.pc)
@@ -1052,11 +1092,12 @@ _make_pkgfile() {
                        die "update $x failed."
                 ;;
             bin/*)
-                test -f "$x" || x="$x$_BINEXT"  # tar will report error if not exists
+                x="$(_locate_exe "$x")" # tar will report error if not exists
 
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
-                    PE32+*)             echocmd "$STRIP" --strip-all "$x"   ;;
+                    # NEVER strip PE32+ target with --strip-all
+                    PE32+*)             echocmd "$STRIP" --strip-debug "$x" ;;
                     ELF*)               echocmd "$STRIP" --strip-all "$x"   ;;
                     Mach-O*executable)  echocmd "$STRIP" "$x"               ;;
 
@@ -1219,35 +1260,28 @@ cmdlet.pkginst() {
 
 # cmdlet executable [name] [alias ...]
 cmdlet.install() {
-    slogi $_EMOJI_PKGFILE "install cmdlet $1 => ${2:-"${1##*/}"} (alias ${*:3})"
+    local name="${2:-"${1##*/}"}"
+
+    # append _BINEXT?
+    test -z "$_BINEXT" || [[ "$name" =~ "$_BINEXT"$ ]] || name+="$_BINEXT"
+
+    slogi $_EMOJI_PKGFILE "install cmdlet $1 => $name (alias ${*:3})"
 
     # executable
-    local bin="$(_locate_exe "$1")" ext
+    local bin="$(_locate_exe "$1")"
     test -f "$bin" || die "$bin not found."
-    test -n "$_BINEXT" && [[ "$bin" =~ $_BINEXT$ ]] && ext="$_BINEXT"
 
     # target
-    local target="$PREFIX/bin/${2:-"${bin##*/}"}"
-    [[ "$target" =~ $ext$ ]] || target="$target$ext"
+    local target="$PREFIX/bin/${name:-"${bin##*/}"}"
+    [[ "$target" =~ "$_BINEXT"$ ]] || target="$target$_BINEXT"
     echocmd "$INSTALL" -m755 "$bin" "$target" || die "install $libs_name failed"
 
-    if is_mingw; then
-        # no symbolic links for win32
-        _install_alias() {
-            echocmd cp -f "$1" "$2"
-        }
-    else
-        _install_alias() {
-            echocmd ln -srf "$1" "$2"
-        }
-    fi
-
     # alias
-    local alias=("${@:3}")   lnk
-    test -z "$ext" || alias=("${alias[@]/%/$ext}")
+    local alias=("${@:3}") lnk
+    test -z "$_BINEXT" || alias=("${alias[@]/%/$_BINEXT}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
-        _install_alias "$target" "$PREFIX/bin/$lnk"
+        create_entry "$target" "$PREFIX/bin/$lnk"
     done
 
     # pack
@@ -1365,23 +1399,18 @@ inspect() {
 # create pkg config file
 #  input: name -l.. -L.. -I.. -D..
 cmdlet.pkgconf() {
-    local name="${1%.pc}"
-                           shift
+    local name="${1%.pc}" && shift
 
     local cflags=()
     local ldflags=()
     local requires=()
 
     while [ $# -gt 0 ]; do
-        local arg="$1"
-                        shift 1
+        local arg="$1" && shift 1
         case "$arg" in
             -I* | -D*)  cflags+=("$arg")                ;;
             -l* | -L*)  ldflags+=("$arg")               ;;
-            -framework)
-                        ldflags+=("$arg" "$1")
-                                                  shift
-                                                        ;; # -framework AppKit
+            -framework) ldflags+=("$arg" "$1") && shift ;; # -framework AppKit
             -pthread)   ldflags+=("$arg")               ;; # -pthread
             -*)         cflags+=("$arg")                ;; # -DXXX -std=xxx
             *)          requires+=("$arg")              ;;
@@ -1398,11 +1427,9 @@ cmdlet.pkgconf() {
         done
 
         # amend arguments to pc file
-        sed -i "$name.pc" \
-            -e "/Requires:/s%$% ${requires[*]}%" \
-            -e "/Cflags:/s%$% ${cflags[*]}%" \
-            -e "/Libs:/s%$% ${ldflags[*]}%" ||
-               die "fix $name.pc failed"
+        test -z "${requires[*]}" || sed -i "/Requires:/s%$% ${requires[*]}%" "$name.pc"
+        test -z "${ldflags[*]}" || sed -i "/Libs:/s%$% ${ldflags[*]}%" "$name.pc"
+        test -z "${cflags[*]}" || sed -i "/Cflags:/s%$% ${cflags[*]}%" "$name.pc"
     else
         cat << EOF > "$name.pc"
 prefix=\${PREFIX}

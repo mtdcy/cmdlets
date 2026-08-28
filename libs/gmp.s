@@ -11,7 +11,8 @@ libs_url=(
     https://ftpmirror.gnu.org/gnu/gmp/gmp-$libs_ver.tar.xz
 )
 libs_sha=a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
-libs_dep=()
+
+libs_deps=()
 
 # bad patch level, use libs_resources instead
 is_mingw && libs_resources=(
@@ -31,23 +32,28 @@ libs_args=(
     --enable-static
 )
 
-is_arm64 && libs_args+=( --disable-assembly )
+if is_mingw; then
+    # fix undefined symbol 'foo'
+    libs_args+=(--disable-assembly)
+else
+    is_intel && libs_args+=(--enable-fat) || libs_args+=(--disable-assembly)
+fi
 
 libs_build() {
     # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-gmp/PKGBUILD
-    export CFLAGS+=" -Wno-attributes -Wno-ignored-attributes"
+    CFLAGS+=" -Wno-attributes -Wno-ignored-attributes"
 
     if is_mingw; then
         slogcmd patch -Np2 -i do-not-use-dllimport.diff
         slogcmd patch -Np1 -i gmp-staticlib.diff
-
-        #libs_args+=( --build="$_TARGET" )
     fi
+
+    export CFLAGS
 
     bootstrap
 
-    # CC_FOR_BUILD  : configure: error: Cannot determine executable suffix
-    CC_FOR_BUILD=gcc configure
+    # CC_FOR_BUILD : configure: error: Cannot determine executable suffix
+    CC_FOR_BUILD="$HOSTCC" configure
 
     make
 

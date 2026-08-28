@@ -1,8 +1,9 @@
-# shellcheck disable=SC2034
-libs_name="gtar"
-libs_desc="GNU version of the tar archiving utility"
+# GNU version of the tar archiving utility
 
-libs_lic='GPL-3.0-or-later'
+libs_targets=(! windows)
+
+# shellcheck disable=SC2034
+libs_lic="GPLv3+"
 libs_ver=1.35
 libs_url=https://ftpmirror.gnu.org/gnu/tar/tar-$libs_ver.tar.xz
 libs_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
@@ -43,9 +44,9 @@ is_darwin || libs_args+=(
     --enable-static
 )
 
-is_linux || libs_args+=( --without-xattrs )
+is_linux || libs_args+=(--without-xattrs)
 
-is_mingw && libs_args+=( --build=x86_64-linux-gnu )
+is_mingw && libs_args+=(--build=x86_64-linux-gnu)
 
 # rmt: avoid hardcoded $PREFIX into executable
 #  => default path on Linux, no rmt on macOS.
@@ -74,7 +75,7 @@ libs_build() {
     } || die "gtar test failed."
 
     # provide default 'tar' and 'gtar'
-    cmdlet.install src/tar gtar tar 
+    cmdlet.install src/tar gtar tar
 
     # visual verify
     cmdlet.check gtar --version

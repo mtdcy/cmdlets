@@ -3,6 +3,8 @@
 # HEAD version for feature inspection:
 #   #1. DON'T use this version as default interpreter
 
+libs_targets=(! windows)
+
 # shellcheck disable=SC2034
 libs_lic=GPLv3+
 libs_ver=5.3.15
@@ -36,7 +38,7 @@ libs_args=(
     --without-bash-malloc
 )
 
-is_mingw || libs_args+=(
+libs_args+=(
     # enable features for HEAD version
     --enable-alias
     --enable-alt-array-implementation
@@ -69,11 +71,6 @@ is_mingw || libs_args+=(
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=(--build="$( uname -m)-unknown-linux-gnu")
 
-is_mingw && libs_resources=(
-    https://mirrors.ustc.edu.cn/cygwin/x86_64/release/cygwin/cygwin-3.7.0-0.395.ga7c614986ab2-x86_64.tar.xz
-    https://mirrors.ustc.edu.cn/cygwin/x86_64/release/cygwin/cygwin-devel/cygwin-devel-3.7.0-0.395.ga7c614986ab2-x86_64.tar.xz
-)
-
 libs_build() {
     for x in bash53-*; do
         slogi "$_EMOJI_RUN" "patch $x"
@@ -92,9 +89,6 @@ libs_build() {
         # https://github.com/robxu9/bash-static/blob/master/custom/bash-musl-strtoimax-debian-1023053.patch
         sed -i 's/bash_cv_func_strtoimax =.*;/bash_cv_func_strtoimax = no;/' m4/strtoimax.m4
         autoconf -f
-    elif is_mingw; then
-        export CFLAGS+=" -I$PWD/usr/include -Dmain=WinMain"
-        export LDFLAGS+=" -L$PWD/usr/lib -lcygwin"
     fi
 
     configure
@@ -107,7 +101,5 @@ libs_build() {
     # check
     cmdlet.check bash --version
 }
-
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

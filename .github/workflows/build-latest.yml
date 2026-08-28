@@ -17,7 +17,7 @@ on:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    container: lcr.io/mtdcy/builder:ubuntu-22.04
+    container: lcr.io/mtdcy/builder:ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -106,10 +106,10 @@ jobs:
           - machine: macos-intel
           # for x86_64-linux-gnu
           - machine: ubuntu-latest
-            builder: lcr.io/mtdcy/builder:ubuntu-22.04
+            builder: lcr.io/mtdcy/builder:ubuntu-latest
           # for aarch64-linux-gnu
           - machine: ubuntu-latest-arm
-            builder: lcr.io/mtdcy/builder:ubuntu-22.04
+            builder: lcr.io/mtdcy/builder:ubuntu-latest
           # for x86_64-w64-mingw32
           - machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:mingw64-latest

@@ -5,10 +5,11 @@ libs_stable=1
 # shellcheck disable=SC2034
 libs_name=coreutils
 libs_lic="MIT"
-libs_ver=0.7.0
+libs_ver=0.10.0
+libs_rev=1
 libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=dc56a3c4632742357d170d60a7dcecb9693de710daeaafa3ad925750b1905522
-libs_dep=( libiconv )
+libs_sha=f8e68cd0e3629378f047544ead272161a83211c43f4985a9f52944e5db8f1a44
+libs_dep=(libiconv)
 
 # multicall core utils
 uu_links=(
@@ -19,13 +20,13 @@ uu_links=(
     # path
     pwd basename dirname
     # files
-    cat tee tail 
+    cat tee tail
     # utils
     sort uniq cut tr wc
 )
 
 # symbolic link related
-is_mingw || uu_links+=( 
+is_mingw || uu_links+=(
     install ln unlink readlink realpath
 )
 
@@ -37,7 +38,7 @@ uu_utils=(
 
 # md5 and sha
 uu_utils+=(
-    base32 
+    base32
     base64
     md5sum
     sha1sum

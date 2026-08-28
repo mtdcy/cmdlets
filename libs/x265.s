@@ -4,8 +4,10 @@
 libs_lic="GPL-2.0"
 libs_ver=4.3
 libs_rev=1
-libs_url=http://ftp.videolan.org/pub/videolan/x265/x265_$libs_ver.tar.gz
-libs_rev=1
+libs_url=(
+    https://github.com/Multicorewareinc/x265/releases/download/$libs_ver/x265_$libs_ver.tar.gz
+    http://ftp.videolan.org/pub/videolan/x265/x265_$libs_ver.tar.gz
+)
 libs_sha=83c53e4c8bbb8f1e33ed59e10a7d621d1d7801ca853910c3eb41f038b8ffb121
 
 HIGH_BIT_DEPTH=0
@@ -40,9 +42,8 @@ fi
 # shellcheck disable=SC2015
 # shellcheck disable=SC2164
 libs_build() {
-    # -static-libstdc++: force static libstdc++.a
     # -Wl,-Bsymbolic: fix relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol `x265_entropyStateBits'
-    is_darwin || export LDFLAGS+=" -static-libstdc++ -Wl,-Bsymbolic"
+    #is_linux && export LDFLAGS+=" -Wl,-Bsymbolic" || true
 
     main_args=(
         -DEXTRA_LINK_FLAGS=-L.
@@ -73,7 +74,7 @@ libs_build() {
         )
 
         # 12 bit
-        (
+        (   
             cd 12bit
             cmake "${high_args[@]}" -DMAIN12=ON ../source &&
                 make x265-static &&
@@ -81,7 +82,7 @@ libs_build() {
         ) || return 1
 
         # 10bit
-        (
+        (   
             cd 10bit
             cmake "${high_args[@]}" -DENABLE_HDR10_PLUS=ON ../source &&
                 make x265-static &&
@@ -113,8 +114,10 @@ EOF
 
     # bugfix:
     # 1. x265 hard code libstdc++.a into x265.pc
+    # 2. something went wrong with configure_file()
     sed -i x265.pc \
-        -e 's%/.*/libstdc++.a%-lstdc++%' || die "fix x265.pc failed"
+        -e 's%/.*/libstdc++.a%-lstdc++%' \
+        -e 's/-l-l/-l/g' || die "fix x265.pc failed"
 
     pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
 

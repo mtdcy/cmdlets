@@ -6,25 +6,22 @@ libs_ver=3.8.9
 libs_url=https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
 libs_sha=888c934f9d95648ecb9163dc8e23ab80a476ecb81a8f1154704a227b5b676dde
 
-libs_deps=( libb2 lz4 xz zstd bzip2 expat zlib libiconv pcre2 )
+libs_deps=( libb2 lz4 xz zstd bzip2 expat zlib lzo libiconv pcre2 )
+# includes all kinds of compressed files
 
 libs_args=(
     --disable-option-checking
     --enable-silent-rules
     --disable-dependency-tracking
 
-    --with-libiconv
-
-    --without-lzo2      # Use lzop binary instead of lzo2 due to GPL
-
     # programs
     --enable-bsdtar=static
-    --enable-bsdcpio=static
     --enable-bsdunzip=static
 
     # disabled features
     --disable-largefile
     --without-selinux
+    --disable-bsdcpio
     --disable-acl
     --disable-nls
 
@@ -47,6 +44,7 @@ is_listed zlib     libs_deps && libs_args+=( --with-zlib   ) || libs_args+=( --w
 is_listed libb2    libs_deps && libs_args+=( --with-libb2  ) || libs_args+=( --without-libb2  )
 is_listed bzip2    libs_deps && libs_args+=( --with-bz2lib ) || libs_args+=( --without-bz2lib )
 is_listed lz4      libs_deps && libs_args+=( --with-lz4    ) || libs_args+=( --without-lz4    )
+is_listed lzo      libs_deps && libs_args+=( --with-lzo2   ) || libs_args+=( --without-lzo2   )
 is_listed xz       libs_deps && libs_args+=( --with-lzma   ) || libs_args+=( --without-lzma   )
 is_listed zstd     libs_deps && libs_args+=( --with-zstd   ) || libs_args+=( --without-zstd   )
 
@@ -65,9 +63,7 @@ libs_build() {
 
     cmdlet.pkgfile libarchive -- make install bin_PROGRAMS= man_MANS=
 
-    for x in tar cpio; do
-        cmdlet.install bsd$x
-    done
+    cmdlet.install bsdtar bsdtar tar
 
     cmdlet.check bsdtar --help
 }

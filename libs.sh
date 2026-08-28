@@ -29,6 +29,7 @@ export LANG=C
         CMDLET_NJOBS=${CMDLET_NJOBS:-1}         # no parallel build by default
      CMDLET_PKGFILES=${CMDLET_PKGFILES:-1}      # use pkgfiles as deps
         CMDLET_CHECK=${CMDLET_CHECK:-0}         # build/check rdepends
+      CMDLET_VERBOSE=${CMDLET_VERBOSE:-0}       # build with verbose mode
 
 # toolchain prefix
 
@@ -41,17 +42,13 @@ fi
 
 # target variables:
 #
-#   _TARGET         : target triplet for compiler prefix
+#   _TARGET         : target triplet
 #
-#   _TARGET_ARCH    : target architecture triplet
 #   _TARGET_NAME    : target name like linux, darwin, windows
 #   _TARGET_VARS    : target variables for is_xxx
 #   _TARGET_REPO    : target pkgfiles repo
 #
 #   _TARGET_NAMES   : supported targets name
-#
-# target, default: musl-gcc
-_TARGET="${CMDLET_TARGET:-}"
 
 # supported targets
 _TARGET_NAMES=(linux darwin windows)
@@ -181,6 +178,11 @@ _EMOJI_RUN="🟢"
 _EMOJI_WARN="🟠"
 _EMOJI_ERROR="❌"
 
+_COLOR_RED='\033[0;31m'
+_COLOR_GREEN='\033[0;32m'
+_COLOR_YELLOW='\033[0;33m'
+_COLOR_NC='\033[0m'
+
 # slog [error|info|warn] [emoji] "message"
 _slog() {
     local date="$(date '+%m-%d %H:%M:%S')"
@@ -192,24 +194,21 @@ _slog() {
     # https://github.com/yonchu/shell-color-pallet/blob/master/color16
     case "$1" in
         error)
-            message="[$date] \\033[31m$message\\033[39m"
+            message="[$date] $_COLOR_RED$message$_COLOR_NC"
             ;;
         warn)
-            message="[$date] \\033[33m$message\\033[39m"
+            message="[$date] $_COLOR_YELLOW$message$_COLOR_NC"
             ;;
         info | *)
-            message="[$date] \\033[32m$message\\033[39m"
+            message="[$date] $_COLOR_GREEN$message$_COLOR_NC"
             ;;
     esac
     echo -e "$message" >&2
 }
 
-slogi() { _slog info                "$@"; }
-slogw() { _slog warn  $_EMOJI_WARN  "$@"; }
-sloge() {
-          _slog error $_EMOJI_ERROR "$@"
-                                          return 1
-}
+slogi() { _slog info                "$@";             }
+slogw() { _slog warn  $_EMOJI_WARN  "$@";             }
+sloge() { _slog error $_EMOJI_ERROR "$@" && return 1; }
 
 die()   {
     _capture_reset # in case Ctrl-C happens
@@ -305,37 +304,31 @@ _init_host() {
 
     _ROOT_="$(pwd -P)"
 
-    # default _TARGET
-    if test -z "$_TARGET" && test -n "$BUILDER_NAME"; then
+    # _TARGET: toolchain prefix
+    if test -n "$BUILDER_NAME"; then
+        # run with builder docker image
         case "$BUILDER_NAME" in
-            linux/*)    _TARGET="$(uname -m)-linux-musl"   ;;
-            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"  ;;
+            linux/*)    _TARGET="$(uname -m)-linux-gnu"     ;;
+            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"   ;;
         esac
-    fi
-
-    # => target arch triplet
-    if test -n "$_TARGET"; then
-        _TARGET_ARCH="$_TARGET"
     else
+        # run with host machine
         case "$OSTYPE" in
-            linux-*)    _TARGET_ARCH="$(uname -m)-linux-gnu"    ;;
-            darwin*)    _TARGET_ARCH="$(uname -m)-apple-darwin" ;;
-            *)          _TARGET_ARCH="$(uname -m)-$OSTYPE"      ;;
+            linux-*)    _TARGET="$(uname -m)-linux-gnu"     ;;
+            darwin*)    _TARGET="$(uname -m)-apple-darwin"  ;;
+            *)          _TARGET="$(uname -m)-$OSTYPE"       ;;
         esac
     fi
 
-    # historic: linux-musl <=> linux-gnu
-    [[ "$_TARGET_ARCH" =~ -musl$ ]] && _TARGET_ARCH="${_TARGET_ARCH/%-musl/-gnu}"
-
-    _TARGET_REPO="$_TARGET_REPO/$_TARGET_ARCH"
+    _TARGET_REPO="$_TARGET_REPO/$_TARGET"
 
     # prepare variables
-    PREFIX="$_ROOT_/prebuilts/$_TARGET_ARCH"
+    PREFIX="$_ROOT_/prebuilts/$_TARGET"
 
     # private variables
-    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET_ARCH"
+    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET"
     _TARGET_PACKAGES="$_ROOT_/packages"
-    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET_ARCH"
+    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET"
 
     mkdir -p "$PREFIX" "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
@@ -354,6 +347,7 @@ _init_host() {
         "TAR:gtar,tar"
         "FILE:file"
         "PRINTF:printf" # supersedes shell's printf
+        "PKG_CONFIG:pkg-config"
     )
 
     is_arm64 || host_tools+=(
@@ -393,61 +387,57 @@ _init_host() {
 _init_target() {
     test -z "$CC" || return 0
 
-    # find out CC
-    test -n "$_TARGET" && CC="$_TARGET-gcc" || CC=gcc
+    test -n "$_TARGET" || die "missing _TARGET"
 
-    case "$OSTYPE" in
-        darwin*)    CC="$(xcrun --find "$CC")" ;;
-        *)          CC="$(which "$CC")" ;;
-    esac
+    #1. prepend out toolchain wrappers
+    #2. tools like glib-compile-resources needs seat in PATH
+    export PATH="$_ROOT_/toolchain:$PREFIX/bin:$PATH"
+
+    # keep env CC for historic reason
+    export CC=gcc
+    export CXX=g++
 
     # test gcc
-    "$CC" -v &> /dev/null
+    "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
 
-    die_on_error "$CC is not recognized."
-
-    case $("$CC" -dumpmachine) in
+    case "$_TARGET" in
         *-w64-*)    _TARGET_NAME=windows    ;;
         *-darwin*)  _TARGET_NAME=darwin     ;;
         *)          _TARGET_NAME=linux      ;;
     esac
 
-    # toolchain utils
-    export CC
-    export CXX="${CC/%gcc/g++}"
-
-    # binutils
+    # binutils envs
     local binutils=(
         AR:ar
         AS:as
         LD:ld
         NM:nm
         STRIP:strip
-        RANLIB:ranlib
+        OBJCOPY:objcopy
         OBJDUMP:objdump
-        PKG_CONFIG:pkg-config
+        RANLIB:ranlib
+        READELF:readelf
     )
 
     # target specific toolchain utils
-    case "$("$CC" -dumpmachine)" in
-        *-w64-* | *-mingw32) binutils+=(WINDRES:windres DLLTOOL:dlltool)  ;;
+    case "$_TARGET_NAME" in
+        windows)
+            binutils+=(
+                WINDRES:windres
+                DLLTOOL:dlltool
+            )
+            _BINEXT=".exe"
+            ;;
+        *)
+            unset _BINEXT
+            ;;
     esac
 
-    # XXX: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ar: No such file or directory
-    _init_target_binutils() {
-        local x k v
-        for x in "$@"; do
-            IFS=':' read -r k v <<< "$x"
-            eval $k="\${CC/%gcc/$v}"
-            test -x "${!k}" || eval $k="\$(which $v)" || die "$v not found"
-            export "$k"
-        done
-    }
-    _init_target_binutils "${binutils[@]}"
-
-    # force posix compatible, e.g: libwinpthread
-    test -x "$CC-posix"  && export CC="$CC-posix"   || true
-    test -x "$CXX-posix" && export CXX="$CXX-posix" || true
+    # set binutils envs
+    for x in "${binutils[@]}"; do
+        IFS=':' read -r k v <<< "$x"
+        export $k="${CC/%gcc/$v}"
+    done
 
     # for target checks
     IFS=' :-()' read -r -a _TARGET_VARS < <({
@@ -457,10 +447,7 @@ _init_target() {
     } | xargs)
     IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
-    export _TARGET _TARGET_ARCH _TARGET_NAME _TARGET_VARS _TARGET_REPO _TARGET_NAMES
-
-    # environments alias
-    test -z "$WINDRES" || export RC="$WINDRES"
+    export ${!_TARGET@}
 
     if is_gcc; then
         # vfork: Resource temporarily unavailable
@@ -477,7 +464,7 @@ _init_target() {
 
     # common flags for c/c++
     cflags=(
-        -g0 -Os             # optimize for size
+        -g0 -Os
         -fPIC -DPIC         # PIC
         -Wno-error          # no warnings as errors
     )
@@ -485,102 +472,73 @@ _init_target() {
         -L$PREFIX/lib       # prebuilts
     )
 
-    # macOS does not support statically linked binaries
-    if is_darwin; then
-        cflags+=(
-            # ISO C99 and later do not support implicit function declarations
-            -Wno-implicit-function-declaration
-            -Wno-deprecated-non-prototype
-            -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
-        )
-        ldflags+=(-Wl,-dead_strip)
-    elif is_mingw; then
-        # mingw windows headers
-        #echo "#include <windows.h>" > "$TEMPDIR/test.c"
-        #local inc="$( "$CC" -v -H "$TEMPDIR/test.c" 2>&1 | grep -oE "/.*/windows.h" -m1 | xargs dirname )"
-        #cflags+=( -I"$inc" )
+    case "$_TARGET_NAME" in
+        darwin)
+            # macOS does not support statically linked binaries
+            cflags+=(
+                # ISO C99 and later do not support implicit function declarations
+                -Wno-implicit-function-declaration
+                -Wno-deprecated-non-prototype
+                -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
+            )
+            ldflags+=(-Wl,-dead_strip)
 
-        # wine windows headers and libraries
-        #cflags+=( -I/usr/include/wine/windows )
-        #ldflags+=( -L/usr/lib/wine/$(uname -m)-windows )
+            export MACOSX_DEPLOYMENT_TARGET
+            ;;
+        windows)
+            cflags+=(--static -ffunction-sections -fdata-sections)
 
-        cflags+=(--static -ffunction-sections -fdata-sections)
+            is_posix && cflags+=(-D_POSIX)
 
-        is_posix && cflags+=(-D_POSIX)
+            # XXX: allow link with certain dlls?
+            ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
 
-        # XXX: allow link with certain dlls?
-        ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
+            # 解决静态库与 DLL 符号错配的问题
+            ldflags+=(-Wl,--enable-auto-import)
 
-        # msvcrt or ucrt: follow builder toolchain settings
-        #  - mingw-w64  : msvcrt
-        #  - llvm-mingw : ucrt
-    else
-        #1. static linking => two '--' vs ldflags
-        #2. tell compiler to place each function and data into its own section
-        cflags+=(
-            --static
-            -ffunction-sections
-            -fdata-sections
-        )
+            # msvcrt or ucrt: follow builder toolchain settings
+            #  - mingw-w64  : msvcrt
+            #  - llvm-mingw : ucrt
+            ;;
+        *)
+            #1. static linking => two '--' vs ldflags
+            #2. tell compiler to place each function and data into its own section
+            cflags+=(--static -ffunction-sections -fdata-sections)
 
-        # remove unused sections, need -ffunction-sections and -fdata-sections
-        ldflags+=(-Wl,-gc-sections)
+            # remove unused sections, need -ffunction-sections and -fdata-sections
+            ldflags+=(-Wl,-gc-sections)
 
-        # Security: FULL RELRO
-        ldflags+=(-Wl,-z,relro,-z,now)
+            # Security: FULL RELRO
+            ldflags+=(-Wl,-z,relro,-z,now)
 
-        # disable dynamic linking and link used symbols only
-        ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+            # disable dynamic linking and link used symbols only
+            ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+            ;;
+    esac
+
+    if is_true CMDLET_VERBOSE; then
+        cflags+=(-v)
+        ldflags+=(-Wl,--verbose)
     fi
 
-    # toolchain scripts, for debugging and options embedding
-    _init_target_script() {
-        eval -- export REAL_$1="\$$2"
-        export $2="$_ROOT_/scripts/$1"
-    }
-
-    # no all build system support command with arguments
-    _init_target_script cc          CC
-    _init_target_script cxx         CXX
-    _init_target_script ld          LD
-    _init_target_script as          AS
-    _init_target_script ar          AR
-    _init_target_script nm          NM
-    _init_target_script ranlib      RANLIB
-    _init_target_script pkg_config  PKG_CONFIG
-
-    OBJC="$CC"
     CPP="$CC -E"
     CFLAGS="${cflags[*]}"
     CXXFLAGS="${cflags[*]}"
-    OBJCFLAGS="${cflags[*]}"
     CPPFLAGS="-I$PREFIX/include"
     LDFLAGS="${ldflags[*]}"
+    OBJC="$CC"
+    OBJCFLAGS="${cflags[*]}"
 
-    export CFLAGS OBJCFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+    export CPP CFLAGS CXXFLAGS CPPFLAGS LDFLAGS OBJC OBJCFLAGS
 
     # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
-    PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-    export PKG_CONFIG_LIBDIR PKG_CONFIG_PATH
+    export _TARGET_PKG_CONFIG="$PKG_CONFIG"
+    export PKG_CONFIG="$(which pkg-config)"
+    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 
-    # update PATH => tools like glib-compile-resources needs seat in PATH
-    export PATH="$PREFIX/bin:$PATH"
-
-    # v3/manifest => _pkgfile_init
+    # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
-
-    # for running test
-    # LD_LIBRARY_PATH or rpath?
-    #export LD_LIBRARY_PATH=$PREFIX/lib
-    # rpath is meaningless for static libraries and executables, and
-    # to avoid link shared libraries accidently, undefine LD_LIBRARY_PATH
-    # will help find out the mistakes.
-
-    # macos
-    export MACOSX_DEPLOYMENT_TARGET
-
-    is_mingw && _BINEXT=".exe" || unset _BINEXT
 
     # linux mingw for windows target with wine
     if is_mingw && test -n "$WINEPREFIX"; then
@@ -624,7 +582,7 @@ _init_target() {
 # curl url
 #  input: url zip
 #  env: CURL_TIMEOUT=3
-_curl() {
+_curl_timeout() {
     local source="$1"
 
     local opts=(-fsSL --connect-timeout "${CURL_TIMEOUT:-3}")
@@ -665,8 +623,8 @@ _curl_urls() {
                 timeout="${url#*=}"
                 ;;
             http*)
-                slogi $_EMOJI_URL "$url"
-                CURL_TIMEOUT="$timeout" _curl "$url" "$zip" && break
+                slogi $_EMOJI_URL "Fetch < $_COLOR_NC$url => ${zip#"$_ROOT_/"}"
+                CURL_TIMEOUT="$timeout" _curl_timeout "$url" "$zip" && break
                 ;;
             *)
                 test -f "$url" && break
@@ -682,7 +640,7 @@ _curl_urls() {
 #  input: zipfile
 #  env: ZIP_SKIP=1
 _unzip() {
-    slogi $_EMOJI_DIR "${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Extract $_COLOR_NC${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -758,7 +716,7 @@ _url_file() {
 
 # unzip url to workdir or die
 #  input: sha urls...
-_url_fetch() {
+_fetch_url() {
     local sha="$1"
 
     if [[ "${2%#*}" =~ \.git$ ]]; then
@@ -768,7 +726,7 @@ _url_fetch() {
         IFS='#' read -r url hash <<< "$2"
         test -n "$hash" || hash="$libs_ver"
 
-        slogi $_EMOJI_GIT "$url#$hash"
+        slogi $_EMOJI_GIT "Clone $_COLOR_NC$url#$hash"
 
         test -d .git || # reuse sources
             git clone --recurse-submodules "$url" . || die "git clone $1 failed."
@@ -799,21 +757,10 @@ _url_fetch() {
     fi
 }
 
-# v3/git releases
-_is_flat_repo() { [[ "$_TARGET_REPO" =~ ^flat+ ]]; }
-
-_pkgfile_url() {
-    if _is_flat_repo; then
-        echo "${_TARGET_REPO#flat+}/${1##*/}"
-    else
-        echo "$_TARGET_REPO/$1"
-    fi
-}
-
 # curl and unzip pkgfile to PREFIX
 #  input: pkgfile [zipfile]
-_pkgfile_curl() {
-    local url="$(_pkgfile_url "$1")"
+_curl_pkgfile() {
+    local url="$_TARGET_REPO/$1"
     local zip="$2"
 
     test -n "$zip" || zip="$TEMPDIR/${1##*/}"
@@ -830,12 +777,12 @@ _pkgfile_curl() {
 }
 
 # init manifest files and etc.
-_pkgfile_init() {
+_init_pkgfile() {
     test -f "$_TARGET_MANIFEST" && return 0
 
     true > "$_TARGET_MANIFEST"
 
-    if ! _pkgfile_curl cmdlets.manifest "$_TARGET_MANIFEST"; then
+    if ! _curl_pkgfile cmdlets.manifest "$_TARGET_MANIFEST"; then
         true # ignore error for empty cmdlet repo
         slogw "no v3/manifest."
         true > "$_TARGET_MANIFEST"
@@ -843,12 +790,12 @@ _pkgfile_init() {
 }
 
 # fetch pkgfile by pkgname and pkgvern(optional)
-_pkgfile_fetch() {
+_fetch_pkgfile() {
     local pkgname pkgvern pkginfo pkgfiles
 
     # priority: v2 > v3, no v1 package
 
-    slogi "$_EMOJI_PKGFILE Fetch package $1"
+    slogi $_EMOJI_PKGFILE "Fetch pkgfile $1"
 
     # zlib@1.3.1
     IFS='@' read -r pkgname pkgvern <<< "$1"
@@ -859,12 +806,12 @@ _pkgfile_fetch() {
     pkginfo="$pkgname/pkginfo@$pkgvern"
 
     # prefer v2 pkginfo than v3 manifest for developers
-    if ! _is_flat_repo && _pkgfile_curl "$pkginfo"; then
+    if _curl_pkgfile "$pkginfo"; then
         # v2: 98945d2bc86df9be328fc134e4b8bc2254aeacf1d5050fc7b3e11942b1d00671 zlib/libz@1.3.1.tar.gz
         IFS=' ' read -r -a pkgfiles < <( grep -oE " $pkgname/.*@[0-9.]+\.tar\.gz" "$TEMPDIR/pkginfo@$pkgvern" | xargs)
     else
         # v3: libz zlib/libz@1.3.1.tar.gz 7de3e57ccdef64333719f70e6523154cfe17a3618d382c386fe630bac3801bed build=1
-        _pkgfile_init
+        _init_pkgfile
 
         # v3: no pkgvern => find out latest version
         if test -z "$pkgvern" || [ "$pkgvern" = "latest" ]; then
@@ -884,7 +831,7 @@ _pkgfile_fetch() {
     local x
     for x in "${pkgfiles[@]}"; do
         echo ""
-        _pkgfile_curl "$x" || slogw "fetch $x failed"
+        _curl_pkgfile "$x" || slogw "fetch $x failed"
     done
 
     touch "$PREFIX/.$pkgname.d" # mark as ready
@@ -896,7 +843,7 @@ _pkgfile_fetch() {
 _pkgfile_ready() {
     _load "$1"
 
-    _pkgfile_init
+    _init_pkgfile
 
     local hash0 hash1
 
@@ -936,6 +883,8 @@ _load() {
     local file="libs/$1.s"
     local name="${1##*/}"
 
+    test -f "$file" || die "$file not exists"
+
     # sed: delete all lines after __END__
     sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
 
@@ -948,7 +897,7 @@ _load() {
     test -n "$libs_deps" || libs_deps=("${libs_dep[@]}")
 
     # compat layer dependencies
-    local compat=(libintl)
+    local compat=()
     if is_musl; then
         compat+=(libargp musl-obstack musl-fts)
     fi
@@ -978,7 +927,7 @@ _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 # prepare source code or die
 #  input: name
 _prepare() {
-    slogi $_EMOJI_FILE "libs/$1.s"
+    slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
 
     _load "$1" || die "load $1 failed."
 
@@ -990,10 +939,10 @@ _prepare() {
 
     cd "$workdir"
 
-    slogi $_EMOJI_DIR "${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_ROOT_/"}"
 
     # libs_url: fetch and unzip into workdir, support mirrors
-    test -z "$libs_url" || _url_fetch "$libs_sha" "${libs_url[@]}"
+    test -z "$libs_url" || _fetch_url "$libs_sha" "${libs_url[@]}"
 
     local x patch
 
@@ -1003,7 +952,7 @@ _prepare() {
         for x in "${libs_resources[@]}"; do
             IFS=';|' read -r url sha <<< "$x"
             # never strip component of resources zip
-            ZIP_SKIP=0 _url_fetch "$sha" "$url"
+            ZIP_SKIP=0 _fetch_url "$sha" "$url"
         done
     fi
 
@@ -1013,7 +962,7 @@ _prepare() {
         case "$patch" in
             http://* | https://*)
                 local file="$(_url_file "$patch")"
-                test -f "$file" || _curl "$patch" "$file"
+                test -f "$file" || _curl_timeout "$patch" "$file"
                 slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
                 ;;
             *)
@@ -1069,9 +1018,6 @@ _compile() {
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
 
-        # v3/manifest: name pkgfile sha build=1
-        _pkgfile_init
-
         # read pkgbuild before clear
         _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
         test -n "$_PKGBUILD" || _PKGBUILD="build=0"
@@ -1101,7 +1047,9 @@ _deps_init() {
 
     _init_target
 
+    # envs
     export _DEPS_FILE="$_TARGET_WORKDIR/.deps"
+    export _DEPS_STATUS_MISSING="$_TARGET_WORKDIR/.deps_missed"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
@@ -1200,22 +1148,29 @@ _deps_status() {
     local deps
     IFS=' ' read -r -a deps < <(depends "$@")
 
-    local sep="" x ret=0
+    true > "$_DEPS_STATUS_MISSING"
+
+    local missing=() sep="\\033[39m" x ret=0
     for x in "${deps[@]}"; do
         if test -f "$PREFIX/.$x.d"; then
-            printf "\\033[32m%s%s✔\\033[39m" "$sep" "$x"
+            printf "%s%s\\033[32m✔\\033[39m" "$sep" "$x"
         else
-            printf "\\033[31m%s%s✗\\033[39m" "$sep" "$x"
+            printf "%s%s\\033[31m✗\\033[39m" "$sep" "$x"
+            missing+=("$x")
             ret=1
         fi
         sep=", "
     done
+
+    test -z "${missing[*]}" || echo "${missing[@]}" > "$_DEPS_STATUS_MISSING"
 
     return $ret
 }
 
 #
 _deps_fetch() {
+    _deps_init
+
     # no pkgfiles
     is_true CMDLET_PKGFILES || return 0
 
@@ -1234,6 +1189,8 @@ _deps_fetch() {
 }
 
 _deps_missing() {
+    _deps_init
+
     local deps x list=()
     IFS=' ' read -r -a deps < <(depends "$@")
     for x in "${deps[@]}"; do
@@ -1255,6 +1212,7 @@ build() {
     fi
 
     _init_target
+    _init_pkgfile
 
     slogi $_EMOJI_ROSE "cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE}"
 
@@ -1266,16 +1224,16 @@ build() {
     # fetch dependencies
     _deps_fetch "$@"
 
-    slogi $_EMOJI_JOB "Build: $*"
+    slogi $_EMOJI_JOB "Targets $_COLOR_NC$*"
 
     local libs=() x
 
     # check dependencies: rebuild libs
     IFS=' ' read -r -a libs  < <( _deps_missing "$@")
 
-    # dependencies
+    # missing dependencies
     if test -n "${libs[*]}"; then
-        slogi $_EMOJI_PKGFILE "Depends: ${libs[*]}"
+        slogi $_EMOJI_PKGFILE "Missing $_COLOR_NC${libs[*]}"
     fi
 
     # sort and append requested libs
@@ -1285,31 +1243,29 @@ build() {
 
     # continue on error
     _build_targets() {
-        local libs=("$@")   fails=() i
+        local libs=("$@") fails=() i
         for i in "${!libs[@]}"; do
             local name="${libs[i]}"
 
-            slogi $_EMOJI_NOTE "Compile: #$((i + 1))/${#libs[@]} $name"
-
-            local x supported
+            echo '' # new line
+            slogi $_EMOJI_NOTE "Compile $_COLOR_NC$name -- #$((i + 1))/${#libs[@]}"
 
             # check for supported targets
-            for x in "$name" $(depends "$name"); do
-                IFS=' ' read -r -a supported < <( _load_targets "$x")  || die "load targets failed."
-                list_has supported "$_TARGET_NAME" || {
-                    slogw "no support for $_TARGET_NAME ($x)"
-                    unset supported
-                    break
-                }
-            done
-            is_true supported || continue
-
-            # show dependencies status
-            slogi $_EMOJI_NOTE "Status: $(_deps_status "$name")" || {
-                slogw "$name: missing dependencies"
-                fails+=("$name")
+            local supported
+            IFS=' ' read -r -a supported < <( _load_targets "$name")  || die "Load targets failed."
+            list_has supported "$_TARGET_NAME" || {
+                slogw "$name: no support for $_TARGET_NAME"
                 continue
             }
+
+            # show dependencies status
+            slogi $_EMOJI_NOTE "Depends $_COLOR_NC$(_deps_status "$name")" || true
+
+            if test -s "$_DEPS_STATUS_MISSING"; then
+                sloge "$name: missing dependencies: $(cat "$_DEPS_STATUS_MISSING")"
+                fails+=("$name")
+                continue
+            fi
 
             time _compile "$name" || fails+=("$name")
         done
@@ -1321,7 +1277,6 @@ build() {
     }
 
     _build_targets "${libs[@]}" || {
-        true # always return errno 127
         sloge "build failed #$?."
         return 127
     }
@@ -1334,7 +1289,7 @@ build() {
 
     IFS=' ' read -r -a libs < <( _deps_sort "${libs[@]}")
 
-    slogi $_EMOJI_JOB "${libs[*]}"
+    slogi $_EMOJI_JOB "Check $_COLOR_NC${libs[*]}"
 
     # always use pkgfiles for rdepends
     CMDLET_PKGFILES=1 _deps_fetch "${libs[@]}"
@@ -1349,7 +1304,7 @@ pkgfiles() {
 
     local ret=0 x
     for x in "$@"; do
-        _pkgfile_fetch "$x" || ret=$?
+        _fetch_pkgfile "$x" || ret=$?
     done
 
     return $?
@@ -1446,7 +1401,7 @@ prepare() {
 }
 
 target() {
-    echo "$_TARGET_ARCH"
+    echo "$_TARGET"
 }
 
 # print remote branch hash
@@ -1564,6 +1519,35 @@ update() {
     fi
 
     slogi "$_EMOJI_OK" "<<<<< updated $libs_name => $libs_ver >>>>>"
+}
+
+# print defined macros
+# input: <include headers>
+macros() {
+    _init_target
+
+    printf "#include <%s>\n" "$@" | "$CC" "$CPPFLAGS" -dM -E -v -
+}
+
+# create an entry for target
+#  input: <target> <entry name>
+#
+#  note:
+#   e.g: create_entry path/to/target path/to/entry
+#    entry must inside target or its parent dir
+create_entry() {
+    local dir="${2%/*}" # destination directory
+    local target="${1#"$dir/"}" # relative path
+
+    slogi "$_EMOJI_RUN" "new entry ${2##*/} => $target"
+
+    _init_target
+
+    if is_mingw; then
+        "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_ROOT_/win32/entry.c" -o "$2"
+    else
+        ln -sfv "$target" "$2"
+    fi
 }
 
 _on_exit() {
