@@ -1529,6 +1529,27 @@ macros() {
     printf "#include <%s>\n" "$@" | "$CC" "$CPPFLAGS" -dM -E -v -
 }
 
+# create an entry for target
+#  input: <target> <entry name>
+#
+#  note:
+#   e.g: create_entry path/to/target path/to/entry
+#    entry must inside target or its parent dir
+create_entry() {
+    local dir="${2%/*}" # destination directory
+    local target="${1#"$dir/"}" # relative path
+
+    slogi "$_EMOJI_RUN" "new entry ${2##*/} => $target"
+
+    _init_target
+
+    if is_mingw; then
+        "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_ROOT_/win32/entry.c" -o "$2"
+    else
+        ln -sfv "$target" "$2"
+    fi
+}
+
 _on_exit() {
     wait
 

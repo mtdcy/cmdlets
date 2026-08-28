@@ -1276,24 +1276,12 @@ cmdlet.install() {
     [[ "$target" =~ "$_BINEXT"$ ]] || target="$target$_BINEXT"
     echocmd "$INSTALL" -m755 "$bin" "$target" || die "install $libs_name failed"
 
-    if is_mingw; then
-        # no symbolic links for win32
-        _make_alias() {
-            slogi "$_EMOJI_RUN" "make alias $2 => $1"
-            "$CC" $CFLAGS $LDFLAGS -DTARGET="\"${1##*/}\"" "$_ROOT_/win32/alias.c" -o "${1%/*}/$2"
-        }
-    else
-        _make_alias() {
-            echocmd ln -srf "$1" "${1%/*}/$2"
-        }
-    fi
-
     # alias
     local alias=("${@:3}") lnk
     test -z "$_BINEXT" || alias=("${alias[@]/%/$_BINEXT}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
-        _make_alias "$target" "$lnk"
+        create_entry "$target" "$PREFIX/bin/$lnk"
     done
 
     # pack
