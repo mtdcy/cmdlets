@@ -4,9 +4,11 @@
 # shellcheck disable=SC2034
 libs_name=shfmt
 libs_lic="BSD-3-Clause"
-libs_ver=3.13.1
+libs_ver=3.14.0
+libs_rev=1
 libs_url=https://github.com/mvdan/sh/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=b31aad2d4c26b0c6e8ebe894d59022520bbebce33e082d7d29e4325eee35d308
+libs_rev=1
+libs_sha=f193c946e2882c4fa04935cd583f60e2cab60344209bd982a3a5933c4192aad8
 libs_dep=()
 
 # configure args
