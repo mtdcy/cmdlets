@@ -15,7 +15,9 @@ libs_patches=(
     https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-ncurses/ncurses-6.3-pkgconfig.patch
 )
 
-FALLBACKS="linux,screen,screen-256color,xterm,xterm-256color,vt100"
+# why screen-256color fails on macOS
+#FALLBACKS="linux,screen,screen-256color,xterm,xterm-256color,vt100"
+FALLBACKS="linux,screen,xterm,xterm-256color,vt100"
 
 # build a simple and fast ncurses library
 libs_args=(
@@ -102,7 +104,7 @@ libs_build() {
     # build with fallback.c
     configure \
         --with-tic-path="$PWD/.host/progs/tic" \
-        --with-infocmp="$PWD/.host/progs/infocmp"
+        --with-infocmp-path="$PWD/.host/progs/infocmp"
 
     make
 
