@@ -113,7 +113,7 @@ libs.func.exists() {
 
 # find samples by name
 samples() {
-    find "$_ROOT_/samples" -type f -name "$*" | xargs
+    find "$_TOPDIR/samples" -type f -name "$*" | xargs
 }
 
 # locate executable by path
@@ -860,11 +860,11 @@ _go_init() {
     test -z "$GOROOT" || export PATH="$GOROOT/bin:$PATH"
 
     # The GOPATH directory should not be set to, or contain, the GOROOT directory.
-    #  using _ROOT_/.go when build with docker =>  go cache can be reused. otherwise
+    #  using _TOPDIR/.go when build with docker =>  go cache can be reused. otherwise
     #  set GOPATH in host profile
-    export GOPATH="${GOPATH:-$_ROOT_/.go}"
-    #export GOCACHE="$_ROOT_/.go/go-build"
-    export GOMODCACHE="$_ROOT_/.go/pkg/mod" # OR pkg installed to workdir
+    export GOPATH="${GOPATH:-$_TOPDIR/.go}"
+    #export GOCACHE="$_TOPDIR/.go/go-build"
+    export GOMODCACHE="$_TOPDIR/.go/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
@@ -1077,7 +1077,7 @@ _make_pkgfile() {
             */gettext/*)    rm -f "$x" && continue ;;
             *.a)
                 # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
-                echocmd "$RANLIB" "$x"
+                "$RANLIB" "$x"
                 ;;
             *.pc)
                 # shellcheck disable=SC2016
@@ -1097,9 +1097,9 @@ _make_pkgfile() {
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
                     # NEVER strip PE32+ target with --strip-all
-                    PE32+*)             echocmd "$STRIP" --strip-debug "$x" ;;
-                    ELF*)               echocmd "$STRIP" --strip-all "$x"   ;;
-                    Mach-O*executable)  echocmd "$STRIP" "$x"               ;;
+                    PE32+*)             "$STRIP" --strip-debug "$x" ;;
+                    ELF*)               "$STRIP" --strip-all "$x"   ;;
+                    Mach-O*executable)  "$STRIP" "$x"               ;;
 
                     *"shell script"*)
                         case "$x" in

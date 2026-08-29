@@ -4,6 +4,7 @@
 # shellcheck disable=SC2018
 # shellcheck disable=SC2019
 # shellcheck disable=SC2031
+# shellcheck disable=SC2054
 # shellcheck disable=SC2086
 # shellcheck disable=SC2115
 # shellcheck disable=SC2154
@@ -69,13 +70,12 @@ fi
 # build args
 _NJOBS="${CMDLET_NJOBS:-1}"
 
-# clear envs => setup by _init
-unset PREFIX _ROOT_ CC
-# => PREFIX is a widely used variable
-
 # defaults
-: "${MACOSX_DEPLOYMENT_TARGET:=11.0}"
+MACOSX_DEPLOYMENT_TARGET=11.0
 # check: otool -l <path_to_binary> | grep minos
+
+# clear envs => setup by _init
+unset _TOPDIR
 
 is_true() {
     local opt="$1"
@@ -282,14 +282,33 @@ _capture_stderr() {
 #   pkgfile git bin/git bin/git-*       # glob works fine
 #
 #  Cons:
-#   --prefix="'$PREFIX'"                # must be quoted twice
+#   --prefix="'$PREFIX'"                # must be quoted twice [ FIXED ]
 echocmd() {
+
+    local quoted=() x k v
+    for x in "$@"; do
+        case "$x" in
+            *=*)
+                IFS='=' read -r k v <<< "$x"
+                #1. historic: unquoted value first `CFLAGS="'$CFLAGS $CPPFLAGS'"
+                #2. then quoted again
+                quoted+=("$(printf '%s="%s"' "$k" "$(eval -- "echo $v")")")
+                ;;
+            \'*\') # already quoted like 'xxx'
+                quoted+=("$(printf '"%s"' "$(eval -- "echo $x")")")
+                ;;
+            *) # escape chars
+                quoted+=("$(printf '%q' "$x")")
+                ;;
+        esac
+    done
+
     # stderr: grep won't filter out the command
-    echo "$@" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
+    echo -e "\n✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
     #  => logging as plain by default so grep will works
-    eval -- "$*" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
+    eval -- "${quoted[*]}" 2>&1 | _LOGGING=${_LOGGING:-plain} _capture
 }
 
 # slogcmd <command>
@@ -300,9 +319,9 @@ slogcmd() {
 }
 
 _init_host() {
-    test -z "$_ROOT_" || return 0
+    test -z "$_TOPDIR" || return 0
 
-    _ROOT_="$(pwd -P)"
+    _TOPDIR="$(pwd -P)"
 
     # _TARGET: toolchain prefix
     if test -n "$BUILDER_NAME"; then
@@ -319,22 +338,6 @@ _init_host() {
             *)          _TARGET="$(uname -m)-$OSTYPE"       ;;
         esac
     fi
-
-    _TARGET_REPO="$_TARGET_REPO/$_TARGET"
-
-    # prepare variables
-    PREFIX="$_ROOT_/prebuilts/$_TARGET"
-
-    # private variables
-    _TARGET_WORKDIR="$_ROOT_/out/$_TARGET"
-    _TARGET_PACKAGES="$_ROOT_/packages"
-    _TARGET_LOGFILES="$_ROOT_/logs/$_TARGET"
-
-    mkdir -p "$PREFIX" "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
-    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
-
-    # PREFIX is a well known env
-    export PREFIX _ROOT_ "${!_TARGET@}"
 
     local host_tools=(
         "HOSTCC:gcc,cc"
@@ -389,22 +392,39 @@ _init_target() {
 
     test -n "$_TARGET" || die "missing _TARGET"
 
-    #1. prepend out toolchain wrappers
-    #2. tools like glib-compile-resources needs seat in PATH
-    export PATH="$_ROOT_/toolchain:$PREFIX/bin:$PATH"
-
-    # keep env CC for historic reason
-    export CC=gcc
-    export CXX=g++
-
-    # test gcc
-    "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
-
     case "$_TARGET" in
         *-w64-*)    _TARGET_NAME=windows    ;;
         *-darwin*)  _TARGET_NAME=darwin     ;;
         *)          _TARGET_NAME=linux      ;;
     esac
+
+    # prepare target variables and resources
+    PREFIX="$_TOPDIR/prebuilts/$_TARGET"
+    mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
+
+    _TARGET_REPO="$_TARGET_REPO/$_TARGET"
+    _TARGET_WORKDIR="$_TOPDIR/out/$_TARGET"
+    _TARGET_PACKAGES="$_TOPDIR/packages"
+    _TARGET_LOGFILES="$_TOPDIR/logs/$_TARGET"
+    _TARGET_TOOLCHAIN="$_TOPDIR/toolchain"
+
+    mkdir -p "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
+
+    # PREFIX is a well known env
+    export PREFIX "${!_TARGET@}"
+
+    # update PATH
+    # tools like glib-compile-resources needs seat in PATH
+    export PATH="$PREFIX/bin:$PATH"
+
+    # NEVER append our toolchain wrappers into PATH, OR
+    # env like CC_FOR_BUILD will fails
+    # ALWAYS use absolute paths for toochain envs
+    export CC="$_TARGET_TOOLCHAIN/gcc"
+    export CXX="$_TARGET_TOOLCHAIN/g++"
+
+    # test gcc
+    "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
 
     # binutils envs
     local binutils=(
@@ -433,10 +453,16 @@ _init_target() {
             ;;
     esac
 
+    # setup target pkg-config
+    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
+    export PKG_CONFIG="$_TARGET_TOOLCHAIN/pkg-config"
+    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+
     # set binutils envs
     for x in "${binutils[@]}"; do
         IFS=':' read -r k v <<< "$x"
-        export $k="${CC/%gcc/$v}"
+        export $k="$_TARGET_TOOLCHAIN/$v"
     done
 
     # for target checks
@@ -469,7 +495,7 @@ _init_target() {
         -Wno-error          # no warnings as errors
     )
     ldflags=(
-        -L$PREFIX/lib       # prebuilts
+        -L"$PREFIX/lib"     # prebuilts
     )
 
     case "$_TARGET_NAME" in
@@ -530,12 +556,6 @@ _init_target() {
     OBJCFLAGS="${cflags[*]}"
 
     export CPP CFLAGS CXXFLAGS CPPFLAGS LDFLAGS OBJC OBJCFLAGS
-
-    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
-    export _TARGET_PKG_CONFIG="$PKG_CONFIG"
-    export PKG_CONFIG="$(which pkg-config)"
-    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 
     # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
@@ -623,7 +643,7 @@ _curl_urls() {
                 timeout="${url#*=}"
                 ;;
             http*)
-                slogi $_EMOJI_URL "Fetch < $_COLOR_NC$url => ${zip#"$_ROOT_/"}"
+                slogi $_EMOJI_URL "Fetch < $_COLOR_NC$url => ${zip#"$_TOPDIR/"}"
                 CURL_TIMEOUT="$timeout" _curl_timeout "$url" "$zip" && break
                 ;;
             *)
@@ -640,7 +660,7 @@ _curl_urls() {
 #  input: zipfile
 #  env: ZIP_SKIP=1
 _unzip() {
-    slogi $_EMOJI_DIR "Extract $_COLOR_NC${1#"$_ROOT_/"} => ${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Extract $_COLOR_NC${1#"$_TOPDIR/"} => ${PWD#"$_TOPDIR/"}"
 
     [ -r "$1" ] || die "unzip $1 failed, permission denied?"
 
@@ -939,7 +959,7 @@ _prepare() {
 
     cd "$workdir"
 
-    slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_ROOT_/"}"
+    slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_TOPDIR/"}"
 
     # libs_url: fetch and unzip into workdir, support mirrors
     test -z "$libs_url" || _fetch_url "$libs_sha" "${libs_url[@]}"
@@ -1182,7 +1202,7 @@ _deps_fetch() {
     # check dependencies: libraries updated or not ready
     for x in "${deps[@]}"; do
         test -e "$PREFIX/.$x.d" || pkgfiles+=("$x")
-        [ "$_ROOT_/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+        [ "$_TOPDIR/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
     done
 
     test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
@@ -1334,15 +1354,15 @@ search() {
     for x in "$@"; do
         # binaries ?
         slogi "Search binaries ..."
-        find "$PREFIX/bin" -name "$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/bin" -name "$x*" 2> /dev/null | sed "s%^$_TOPDIR/%%"
 
         # libraries?
         slogi "Search libraries ..."
-        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/lib" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_TOPDIR/%%"
 
         # headers?
         slogi "Search headers ..."
-        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_ROOT_/%%"
+        find "$PREFIX/include" -name "$x*" -o -name "lib$x*" 2> /dev/null | sed "s%^$_TOPDIR/%%"
 
         # pkg-config?
         slogi "Search pkgconfig for $x ..."
@@ -1544,7 +1564,7 @@ create_entry() {
     _init_target
 
     if is_mingw; then
-        "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_ROOT_/win32/entry.c" -o "$2"
+        "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_TOPDIR/win32/entry.c" -o "$2"
     else
         ln -sfv "$target" "$2"
     fi
