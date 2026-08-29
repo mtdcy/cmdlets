@@ -9,7 +9,6 @@ NAME="${0##*/}"
 : "${PREFIX:=prebuilt/$(uname -m)-linux-gnu}"
 : "${_TARGET:=}" # no default
 : "${_LOGFILE:=toolchain.log}"
-: "${_TARGET_PKG_CONFIG:=pkg-config}"
 
 # pipe stderr
 exec 3>&2
@@ -41,6 +40,7 @@ if ! test -f "$PRESET"; then
             echo "${tool//+/x}='$(which "$tool")'"
         done
     else
+        echo "toolchain=$TOOLCHAIN"
         for tool in "${TOOLS[@]}"; do
             echo "${tool//+/x}='$TOOLCHAIN-$tool'"
         done
@@ -62,10 +62,16 @@ case "$NAME" in
         : "${PKG_CONFIG_PATH:=$PREFIX/lib/pkgconfig}"
         : "${PKG_CONFIG_LIBDIR:=$PREFIX/lib}"
 
+        # pkg-config from toolchain or host
+        test -n "$toolchain" && EXE="$toolchain-pkg-config" || EXE=pkg-config
+
+        # fallback to host pkg-config
+        which "$EXE" &> /dev/null || EXE="$(which pkg-config)"
+
         export PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
 
         # must set -o pipefail
-        "$_TARGET_PKG_CONFIG" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a "$_LOGFILE"
+        "$EXE" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a "$_LOGFILE"
 
         exit
         ;;

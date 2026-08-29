@@ -392,6 +392,12 @@ _init_target() {
 
     test -n "$_TARGET" || die "missing _TARGET"
 
+    case "$_TARGET" in
+        *-w64-*)    _TARGET_NAME=windows    ;;
+        *-darwin*)  _TARGET_NAME=darwin     ;;
+        *)          _TARGET_NAME=linux      ;;
+    esac
+
     # prepare target variables and resources
     PREFIX="$_TOPDIR/prebuilts/$_TARGET"
     mkdir -p "$PREFIX"/{bin,include,lib{,/pkgconfig}}
@@ -400,28 +406,25 @@ _init_target() {
     _TARGET_WORKDIR="$_TOPDIR/out/$_TARGET"
     _TARGET_PACKAGES="$_TOPDIR/packages"
     _TARGET_LOGFILES="$_TOPDIR/logs/$_TARGET"
+    _TARGET_TOOLCHAIN="$_TOPDIR/toolchain"
 
     mkdir -p "$_TARGET_WORKDIR" "$_TARGET_PACKAGES" "$_TARGET_LOGFILES"
 
     # PREFIX is a well known env
     export PREFIX "${!_TARGET@}"
 
-    #1. prepend out toolchain wrappers
-    #2. tools like glib-compile-resources needs seat in PATH
-    export PATH="$_TOPDIR/toolchain:$PREFIX/bin:$PATH"
+    # update PATH
+    # tools like glib-compile-resources needs seat in PATH
+    export PATH="$PREFIX/bin:$PATH"
 
-    # keep env CC for historic reason
-    export CC=gcc
-    export CXX=g++
+    # NEVER append our toolchain wrappers into PATH, OR
+    # env like CC_FOR_BUILD will fails
+    # ALWAYS use absolute paths for toochain envs
+    export CC="$_TARGET_TOOLCHAIN/gcc"
+    export CXX="$_TARGET_TOOLCHAIN/g++"
 
     # test gcc
     "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
-
-    case "$_TARGET" in
-        *-w64-*)    _TARGET_NAME=windows    ;;
-        *-darwin*)  _TARGET_NAME=darwin     ;;
-        *)          _TARGET_NAME=linux      ;;
-    esac
 
     # binutils envs
     local binutils=(
@@ -450,10 +453,16 @@ _init_target() {
             ;;
     esac
 
+    # setup target pkg-config
+    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
+    export PKG_CONFIG="$_TARGET_TOOLCHAIN/pkg-config"
+    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+
     # set binutils envs
     for x in "${binutils[@]}"; do
         IFS=':' read -r k v <<< "$x"
-        export $k="${CC/%gcc/$v}"
+        export $k="$_TARGET_TOOLCHAIN/$v"
     done
 
     # for target checks
@@ -547,12 +556,6 @@ _init_target() {
     OBJCFLAGS="${cflags[*]}"
 
     export CPP CFLAGS CXXFLAGS CPPFLAGS LDFLAGS OBJC OBJCFLAGS
-
-    # => PKG_CONFIG_PATH and PKG_CONFIG_LIBDIR are set in wrapper, but libraries like ncurses still need this
-    export _TARGET_PKG_CONFIG="$PKG_CONFIG"
-    export PKG_CONFIG="$(which pkg-config)"
-    export PKG_CONFIG_LIBDIR="$PREFIX/lib"
-    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 
     # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
