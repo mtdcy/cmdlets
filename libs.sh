@@ -1006,7 +1006,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (   
+    (
         # always start subshell before _load()
 
         trap _capture_reset EXIT
@@ -1534,7 +1534,7 @@ update() {
     #  - _PKGBUILD : real packaging number
     sed -i "libs/$1.s" \
         -e '/^libs_rev=.*$/d' \
-        -e '/^libs_ver=/i libs_rev=1'
+        -e '/^libs_ver=/a libs_rev=1'
 
     slogi "$_EMOJI_OK" "<<<<< updated $libs_name => $libs_ver >>>>>"
 }

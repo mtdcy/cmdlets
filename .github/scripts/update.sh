@@ -15,7 +15,7 @@ for lib in libs/*.s; do
     [[ "$lib" =~ ^_ || "$lib" == ALL ]] && continue
 
     # update
-    (   
+    (
         . libs.sh
         _load "$lib"
 
@@ -66,7 +66,7 @@ if test -n "${rdepends[*]}"; then
         read -r rev < <(grep -oP "libs_rev=\K\S+" "libs/$dep.s" | head -n1) || true
         sed -i "libs/$dep.s" \
             -e '/^libs_rev=.*$/d' \
-            -e "/^libs_ver=/i libs_rev=$((rev + 1))"
+            -e "/^libs_ver=/a libs_rev=$((rev + 1))"
         echo "  updated $dep revision => ${rev:-1}" >> "$commits"
 
         git add "libs/$dep.s"
