@@ -1532,11 +1532,9 @@ update() {
 
     # set libs_rev - cmdlet revision (packaging number)
     #  - _PKGBUILD : real packaging number
-    if grep -q "^libs_rev=" "libs/$1.s"; then
-        sed "s/libs_rev=.*$/libs_rev=1/" -i "libs/$1.s"
-    else
-        sed "/libs_ver/a libs_rev=1" -i "libs/$1.s"
-    fi
+    sed -i "libs/$1.s" \
+        -e '/^libs_rev=.*$/d' \
+        -e '/^libs_ver=/i libs_rev=1'
 
     slogi "$_EMOJI_OK" "<<<<< updated $libs_name => $libs_ver >>>>>"
 }
