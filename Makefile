@@ -228,6 +228,10 @@ DOCKER_ARGS += -v /etc/localtime:/etc/localtime:ro
 DOCKER_ARGS += -w $(WORKDIR)
 DOCKER_ARGS += -v $(WORKDIR):$(WORKDIR):rw
 
+# mount git & ssh settings
+DOCKER_ARGS += -v ~/.gitconfig:/home/buildbot/.gitconfig
+DOCKER_ARGS += -v ~/.ssh:/home/buildbot/.ssh
+
 # envs
 DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
 
