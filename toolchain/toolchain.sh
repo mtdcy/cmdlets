@@ -10,6 +10,11 @@ NAME="${0##*/}"
 : "${_TARGET:=}" # no default
 : "${_LOGFILE:=toolchain.log}"
 
+die() {
+    echo "❌ $*"
+    exit 1
+}
+
 # pipe stderr
 exec 3>&2
 exec 2> >(tee -a "$_LOGFILE" >&3)
@@ -18,16 +23,21 @@ PRESET="${0%/*}/presets/${_TARGET:-default}.txt"
 
 # toolchain: gcc, g++, nm, ld, ...
 if ! test -f "$PRESET"; then
-    TOOLS=(gcc g++ ld ar as nm objcopy objdump ranlib strip readelf)
-
     # set toolchain prefix
     case "$_TARGET" in
         *-linux-gnu)    TOOLCHAIN="$(uname -m)-linux-musl"      ;;
         *-w64-mingw32)  TOOLCHAIN="$(uname -m)-w64-mingw32"     ;;
     esac
 
+    TOOLS=(gcc g++ ld ar as nm objcopy objdump ranlib strip)
+
     case "$_TARGET" in
-        *-w64-*) TOOLS+=(dlltool windres) ;;
+        *-darwin*)  TOOLS+=(otool) ;;
+        *)          TOOLS+=(readelf) ;;
+    esac
+
+    case "$_TARGET" in
+        *-w64-*)    TOOLS+=(dlltool windres) ;;
     esac
 
     mkdir -p "${PRESET%/*}"
@@ -79,5 +89,7 @@ esac
 
 # find out the real executable
 EXE="$(eval "echo \${${NAME//+/x}}")"
+
+test -n "$EXE" || EXE="$(which "$NAME")" || die "no $NAME found"
 
 exec "$EXE" "$@"

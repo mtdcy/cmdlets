@@ -1,3 +1,4 @@
+toolchain=x86_64-w64-mingw32
 gcc='x86_64-w64-mingw32-gcc'
 gxx='x86_64-w64-mingw32-g++'
 ld='x86_64-w64-mingw32-ld'
