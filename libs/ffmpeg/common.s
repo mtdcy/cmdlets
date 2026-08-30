@@ -44,15 +44,15 @@ libs_args+=(
     #--enable-shared
 )
 
-if test -n "$_TARGET"; then
-    libs_args+=(--host-cc="gcc")
+is_xbuild && libs_args+=(--enable-cross-compile)
 
-    case "$_TARGET" in
-        *-mingw32)  libs_args+=(--target-os=mingw32)    ;;
-        *-darwin*)  libs_args+=(--target-os=darwin)     ;;
-        *)          libs_args+=(--target-os=linux)      ;;
-    esac
-fi
+libs_args+=(--host-cc="$HOSTCC")
+
+case "$_TARGET" in
+    *-mingw32)  libs_args+=(--target-os=mingw32)    ;;
+    *-darwin*)  libs_args+=(--target-os=darwin)     ;;
+    *)          libs_args+=(--target-os=linux)      ;;
+esac
 
 # pthreads or winpthread(mingw/win32)
 libs_args+=(--enable-pthreads)
