@@ -4,6 +4,7 @@
 
 libs_lic='GPL-3.0-or-later'
 libs_ver=3.12
+libs_rev=1
 libs_url=https://ftpmirror.gnu.org/gnu/grep/grep-$libs_ver.tar.xz
 libs_sha=2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9
 libs_deps=(libiconv pcre2)

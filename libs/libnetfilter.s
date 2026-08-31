@@ -7,9 +7,10 @@ libs_lic='LGPLv2+'
 
 # use libnftnl version as pkgvern
 # libnftnl is a userspace library providing a low-level netlink programming interface (API) to the in-kernel nf_tables subsystem.
-libs_ver=1.3.1
+libs_ver=1.3.2
+libs_rev=1
 libs_url=https://www.netfilter.org/projects/libnftnl/files/libnftnl-$libs_ver.tar.xz
-libs_sha=607da28dba66fbdeccf8ef1395dded9077e8d19f2995f9a4d45a9c2f0bcffba8
+libs_sha=c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0
 libs_dep=( libmnl )
 
 libs_resources=(

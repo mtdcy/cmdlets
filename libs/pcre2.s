@@ -3,9 +3,10 @@
 # shellcheck disable=SC2034
 libs_des="Perl compatible regular expressions library with a new API"
 libs_lic="BSD-3-Clause"
-libs_ver=10.47
+libs_ver=10.48
+libs_rev=1
 libs_url=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$libs_ver/pcre2-$libs_ver.tar.bz2
-libs_sha=47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7
+libs_sha=b6c68fdf6f3ac31388b50aa89ff0fc49c00c987c16e7b5146491d12003f2c8ed
 
 libs_deps=()
 

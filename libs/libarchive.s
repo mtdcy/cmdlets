@@ -3,6 +3,7 @@
 libs_desc="Multi-format archive and compression library"
 libs_lic='BSD-2-Clause'
 libs_ver=3.8.9
+libs_rev=1
 libs_url=https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
 libs_sha=888c934f9d95648ecb9163dc8e23ab80a476ecb81a8f1154704a227b5b676dde
 

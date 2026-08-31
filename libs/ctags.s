@@ -4,6 +4,7 @@
 libs_name=ctags
 libs_lic="GPL-2.0-only"
 libs_ver=6.2.1
+libs_rev=1
 libs_url=https://github.com/universal-ctags/ctags/releases/download/v$libs_ver/universal-ctags-$libs_ver.tar.gz
 libs_sha=2c63efe9e0e083dc50e6fdd8c5414781cc8873d8c8940cf553c01870ed962f8c
 libs_dep=(pcre2 libyaml jansson libxml2 libiconv)

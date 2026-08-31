@@ -9,9 +9,8 @@ libs_stable_minor=1
 # shellcheck disable=SC2034
 libs_lic=LGPLv2.1+
 libs_ver=2.89.4
-libs_rev=1
+libs_rev=2
 libs_url=https://download.gnome.org/sources/glib/${libs_ver%.*}/glib-$libs_ver.tar.xz
-libs_rev=1
 libs_sha=1cdbb799f558832e6f14b8337b5fd599c6918ab144977b55e05e00a5e2e84a2c
 
 libs_deps=(zlib pcre2 libiconv libffi libintl)

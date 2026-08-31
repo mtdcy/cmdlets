@@ -7,6 +7,7 @@ libs_stable=1
 # shellcheck disable=SC2034
 libs_lic='GPLv2+'
 libs_ver=1.0.6.1
+libs_rev=1
 libs_url=https://www.netfilter.org/projects/nftables/files/nftables-$libs_ver.tar.xz
 libs_sha=bef0c9cfdca5f8b988957046c2cb33ef9869730593da0eacae4748201acf1116
 libs_dep=( gmp jansson libedit libnetfilter ) # libxtables

@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="LGPLv2.1,MPLv1.1"
 libs_ver=1.18.4
-libs_rev=1
+libs_rev=2
 libs_url=https://cairographics.org/releases/cairo-1.18.4.tar.xz
 libs_sha=445ed8208a6e4823de1226a74ca319d3600e83f6369f99b14265006599c32ccb
 

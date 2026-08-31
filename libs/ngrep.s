@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='BSD'
 libs_ver=1.49.0
+libs_rev=1
 libs_url=https://github.com/jpr5/ngrep/archive/refs/tags/v1.49.0.tar.gz
 libs_sha=6c94b31681316b7469a3ace92d2aeec7c9f490bd6782453dff2ade0e289a3348
 libs_dep=( libpcap pcre2 )

@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='GPL-2.0-only'
 libs_ver=1.5beta7
+libs_rev=1
 libs_url=https://github.com/mct/tcptraceroute/archive/refs/tags/tcptraceroute-1.5beta7.tar.gz
 libs_sha=57fd2e444935bc5be8682c302994ba218a7c738c3a6cae00593a866cd85be8e7
 libs_dep=( libpcap libnet )

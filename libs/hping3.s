@@ -4,6 +4,7 @@
 
 # shellcheck disable=SC2034
 libs_ver=3.0.0-alpha-2
+libs_rev=1
 libs_url=https://mirrors.wikimedia.org/ubuntu/pool/universe/h/hping3/hping3_3.a2.ds2.orig.tar.gz
 libs_sha=be027ed1bc1ebebd2a91c48936493024c3895e789c8490830e273ee7fe6fc09d
 libs_dep=( libpcap )

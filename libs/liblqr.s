@@ -5,9 +5,8 @@
 
 libs_lic='LGPL-3.0-only'
 libs_ver=0.4.3
-libs_rev=1
+libs_rev=2
 libs_url=https://github.com/carlobaldassi/liblqr/archive/refs/tags/v$libs_ver.tar.gz
-libs_rev=1
 libs_sha=64b0c4ac76d39cca79501b3f53544af3fc5f72b536ac0f28d2928319bfab6def
 libs_dep=( glib )
 

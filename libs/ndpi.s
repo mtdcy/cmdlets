@@ -3,6 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='LGPLv3+'
 libs_ver=4.14
+libs_rev=1
 libs_url=https://github.com/ntop/nDPI/archive/refs/tags/4.14.tar.gz
 libs_sha=954135ee14ad6bd74a78a10db560b534b8f2083ad0615f5c1a2c376fff0301e0
 libs_dep=( json-c libpcap )

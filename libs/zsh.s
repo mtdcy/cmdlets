@@ -2,6 +2,7 @@
 #
 # shellcheck disable=SC2034
 libs_ver=5.9
+libs_rev=1
 libs_url=https://www.zsh.org/pub/zsh-$libs_ver.tar.xz
 libs_sha=9b8d1ecedd5b5e81fbf1918e876752a7dd948e05c1a0dba10ab863842d45acd5
 libs_dep=( ncurses pcre2 )

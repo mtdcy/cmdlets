@@ -5,6 +5,7 @@ libs_targets=(linux)
 # shellcheck disable=SC2034
 libs_lic="MIT"
 libs_ver=1.26.0
+libs_rev=1
 libs_url=(
     https://github.com/sailfishos-mirror/wayland/archive/refs/tags/$libs_ver.tar.gz
     #https://gitlab.freedesktop.org/wayland/wayland/-/releases/$libs_ver/downloads/wayland-$libs_ver.tar.gz
