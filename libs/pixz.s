@@ -3,7 +3,7 @@
 libs_desc="Parallel, indexed, xz compressor"
 libs_lic='BSD-2-Clause'
 libs_ver=1.0.7
-libs_rev=2
+libs_rev=3
 libs_url=(
     https://github.com/vasi/pixz/releases/download/v$libs_ver/pixz-$libs_ver.tar.gz
 )

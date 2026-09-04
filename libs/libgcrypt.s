@@ -2,9 +2,8 @@
 #
 # shellcheck disable=SC2034
 libs_ver=1.12.3
-libs_rev=1
+libs_rev=2
 libs_url=https://github.com/gpg/libgcrypt/archive/refs/tags/libgcrypt-$libs_ver.tar.gz
-libs_rev=1
 libs_sha=4c8878f8cd4617af6dc56e2aaa99b6d69acf2e73db68ecdfefa2c7e7ce3e31db
 libs_dep=( libxml2 libgpg-error )
 

@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic='GPLv2+'
 libs_ver=1.11.0
-libs_rev=2
+libs_rev=3
 libs_url=https://github.com/oetiker/rrdtool-1.x/releases/download/v1.11.0/rrdtool-1.11.0.tar.gz
 libs_sha=24c345b5c077c1b2b2fcbc1a364f1da051650fb6743ad5213096adc04c862ed4
 

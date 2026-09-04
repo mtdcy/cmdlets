@@ -6,7 +6,7 @@ libs_targets=( linux darwin )
 
 libs_lic='MIT'
 libs_ver=1.21.0
-libs_rev=1
+libs_rev=2
 libs_url=https://github.com/orf/gping/archive/refs/tags/gping-v1.21.0.tar.gz
 libs_sha=350c091923f67fdc72847e12368b2f207015be200ea1d781bce422a2a884d1c6
 libs_dep=( )

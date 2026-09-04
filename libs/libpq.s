@@ -4,7 +4,7 @@
 # shellcheck disable=SC2034
 libs_lic='PostgreSQL'
 libs_ver=18.0
-libs_rev=2
+libs_rev=3
 libs_url=https://github.com/postgres/postgres/archive/refs/tags/REL_18_0.tar.gz
 libs_sha=d9071ab45c2c45a3c8371495539ea7d2ed4d8035f72de20cb7cddfe23081cb82
 libs_dep=( zlib readline libxslt openssl krb5 )

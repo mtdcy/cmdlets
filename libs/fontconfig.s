@@ -4,6 +4,7 @@
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=2.18.3
+libs_rev=1
 libs_url=(
     https://github.com/sailfishos-mirror/fontconfig/archive/refs/tags/$libs_ver.tar.gz
     #https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/$libs_ver/fontconfig-$libs_ver.tar.gz

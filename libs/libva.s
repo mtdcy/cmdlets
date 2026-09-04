@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 libs_lic="MIT"
 libs_ver=2.24.1
-libs_rev=1
+libs_rev=2
 libs_url=https://github.com/intel/libva/releases/download/$libs_ver/libva-$libs_ver.tar.bz2
 libs_sha=eec6050b52876f229bd35e9df17cd31a06785e18e6f7990c445b584628483d67
 
