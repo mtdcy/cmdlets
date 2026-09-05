@@ -1,11 +1,12 @@
 # Library for command-line editing
 #
 # BE CAREFUL: macOS provide libedit
-libs_stable=1
+
+# shellcheck disable=SC2034
+libs_stable=1 # depends on patches
 
 READLINE_URL=https://mirrors.tuna.tsinghua.edu.cn/gnu/readline
 
-# shellcheck disable=SC2034
 libs_lic='GPLv3.0+'
 libs_ver=8.3
 libs_url=(
@@ -14,7 +15,7 @@ libs_url=(
 )
 libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
 
-libs_deps=( ncurses )
+libs_deps=(ncurses)
 
 libs_resources=(
     $READLINE_URL/readline-$libs_ver-patches/readline83-001
@@ -22,13 +23,21 @@ libs_resources=(
     $READLINE_URL/readline-$libs_ver-patches/readline83-003
 )
 
-# https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-readline
 if is_mingw; then
+    # https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-readline
     libs_patches+=(
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0001-sigwinch.patch
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0002-event-hook.patch
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0003-no-winsize.patch
         https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-readline/0004-locale.patch
+    )
+elif is_cygwin; then
+    # https://github.com/msys2/MSYS2-packages/tree/master/readline
+    libs_patches+=(
+        #https://github.com/msys2/MSYS2-packages/raw/refs/heads/master/readline/readline-6.3-msys2.patch
+        https://github.com/msys2/MSYS2-packages/raw/refs/heads/master/readline/readline-6.3-paste-utf8.patch
+        https://github.com/msys2/MSYS2-packages/raw/refs/heads/master/readline/readline-7.0.3-3.clipboard.patch
+        #https://github.com/msys2/MSYS2-packages/raw/refs/heads/master/readline/readline-7.0.3-3.src.patch
     )
 fi
 
@@ -56,6 +65,8 @@ libs_build() {
 
     # set ncurses cflags and ldflags
     libs.requires ncurses
+    # 解决链接 ncurses 后 'UP' 等符号多重定义的问题
+    libs.requires -DNCURSES_VERSION -DNEED_EXTERN_PC
 
     # hack: readline do not respect LDFLAGS
     export CFLAGS="$CFLAGS $LDFLAGS"
@@ -78,6 +89,5 @@ libs_build() {
 
     cmdlet.check readline
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

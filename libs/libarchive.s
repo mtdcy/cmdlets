@@ -64,7 +64,7 @@ libs_build() {
 
     cmdlet.pkgfile libarchive -- make install bin_PROGRAMS= man_MANS=
 
-    cmdlet.install bsdtar bsdtar tar
+    cmdlet.install bsdtar
 
     cmdlet.check bsdtar --help
 }

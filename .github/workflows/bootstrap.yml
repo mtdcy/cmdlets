@@ -1,0 +1,63 @@
+---
+name: Build Windows bootstrap
+
+on:
+  push:
+    paths:
+      - bootstrap.windows.sh
+      - .github/workflows/bootstrap.yml
+    branches:
+      - cygwin64-gcc
+
+  workflow_dispatch:
+
+jobs:
+  make-bootstrap-files:
+    runs-on: ubuntu-latest
+    container: lcr.io/mtdcy/builder:cygwin64-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build
+        id: build
+        shell: bash
+        run: |-
+          set -ex
+
+          mkdir -pv bootstrap/prebuilts
+
+          bash bootstrap.windows.sh
+
+          rel=$(date +%y%m%d)
+
+          tar -C bootstrap --owner=root --group=root -czf bootstrap.windows-$rel.tar.gz .
+
+          echo "rel=$rel" >> "$GITHUB_OUTPUT"
+
+      - name: Release
+        uses: actions/gitea-release-action@v1
+        with:
+          token: ${{ secrets.COMMIT_TOKEN }}
+          name: ${{ steps.build.outputs.rel }}
+          files: |-
+            bootstrap.windows-*.tar.gz
+
+      - name: Notify on failure
+        if: ${{ failure() && vars.NOTIFY_WEBHOOK != '' }}
+        shell: bash
+        run: |-
+          curl --version
+          curl -vL ${{ vars.NOTIFY_WEBHOOK }} \
+              -H 'Content-Type: application/json' \
+              --data @<(cat <<EOF
+              {
+                "token": "${{ secrets.NOTIFY_TOKEN }}",
+                "title": "${{ github.repository }} ${{ job.status }}",
+                "text":  "$(git show --abbrev-commit -s ${{ github.sha }} | sed 's/$/\\n/g')"
+              }
+          EOF
+              )

@@ -29,27 +29,23 @@ libs_build() {
     # https://github.com/spack/spack/issues/23964
     export GTKDOCIZE=echo
 
-    # hack gnulib error() function
-    #  Fix: multiple definition of `error' when building git
-    sed -i 's/^error (/_hack_gl_error (/' gl/error.c
-    sed -i gl/error.in.h \
-        -e 's/_GL_FUNCDECL_SYS (error,/_GL_FUNCDECL_SYS (_hack_gl_error,/g' \
-        -e 's/_GL_CXXALIAS_SYS (error,/_GL_CXXALIAS_SYS (_hack_gl_error,/g'  \
-        -e 's/return error (/return _hack_gl_error (/g' \
-        -e '/_GL_CXXALIAS_SYS (_hack_gl_error/i #define error(...) _hack_gl_error(__VA_ARGS__)'
+    # https://gitlab.com/libidn/libidn2/-/issues/108
+    AUTOPOINT=true autoreconf -fiv
 
-    configure &&
+    # ac_cv_func_error_at_line:
+    #  fix error: undefined reference to `rpl_error'
+    configure ac_cv_func_error_at_line=yes
 
-    make &&
+    make
 
     # check & install
-    make check &&
+    make check
 
-    pkgfile libidn2 -- make install SUBDIRS=lib &&
+    cmdlet.pkgfile libidn2 -- make install SUBDIRS=lib
 
-    cmdlet  src/idn2 &&
+    cmdlet.install src/idn2
 
-    check   idn2 --version
+    cmdlet.check idn2 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

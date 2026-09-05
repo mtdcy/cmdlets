@@ -31,6 +31,22 @@ PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_REPO
 
+# detect architecture
+if test -z "$ARCH"; then
+    case "$(uname -s)" in
+        Darwin)
+            ARCH="$(uname -m)-apple-darwin"
+            ;;
+        Linux)
+            ARCH="$(uname -m)-linux-gnu"
+            ;;
+        CYGWIN*)
+            ARCH="$(uname -m)-pc-cygwin"
+            unset PREBUILTS # use root /
+            ;;
+    esac
+fi
+
 # constants
 CLI="$0"
 NAME="cmdlets.sh"
@@ -41,21 +57,6 @@ CURL_OPTS=(-fsSL)
 
 # deferred command
 DEFERRED=()
-
-# detect architecture
-if test -z "$ARCH"; then
-    case "$(uname -s)" in
-        Darwin)
-            ARCH="$(uname -m)-apple-darwin"
-            ;;
-        Linux)
-            ARCH="$(uname -m)-linux-gnu"
-            ;;
-        *)
-            ARCH="$(uname -m)-w64-mingw32"
-            ;;
-    esac
-fi
 
 usage() {
     cat << EOF
@@ -134,7 +135,7 @@ _exists() (
 do_curl() (
     local dest="${2:-$TEMPDIR/$1}"
 
-    mkdir -p "${dest%/*}"
+    mkdir -p "$(dirname "$dest")"
 
     if [[ "$1" =~ ^https?:// ]]; then
         info "📥 $1"
@@ -180,9 +181,9 @@ do_unzip() {
     fi
 
     if test -n "$INSTALLED_FILES"; then
-        do_tar -C "$PREBUILTS" -xvf "$zip" | tee -a "$INSTALLED_FILES" | _details
+        do_tar -C "${PREBUILTS:-/}" -xvf "$zip" | tee -a "$INSTALLED_FILES" | _details
     else
-        do_tar -C "$PREBUILTS" -xvf "$zip" | _details
+        do_tar -C "${PREBUILTS:-/}" -xvf "$zip" | _details
     fi
 }
 
@@ -678,7 +679,7 @@ do_list() {
 
                 while read -r link; do
                     real="$(readlink "$link")"
-                    [[ "$real" =~ ^"$PREBUILTS" ]] || test -L "$real" || continue
+                    [[ "$real" =~ ^"${PREBUILTS:-/}" ]] || test -L "$real" || continue
                     _ls_println "${link##*/}" "$real"
                 done < <( find . -maxdepth 1 -type l | sort -h)
                 ;;
@@ -718,10 +719,7 @@ do_main() {
     esac
     [ "$done" -ne 1 ] || exit "$ret"
 
-    mkdir -pv "$PREBUILTS"/{bin,share,caveats}
-
-    # Permission denied
-    test -r "$PREBUILTS" || die "Read Permission Denied"
+    mkdir -pv "$PREBUILTS"/{bin,share,caveats} || die "Permission Denied?"
 
     # pre-install stage
     ret=0
@@ -753,9 +751,6 @@ do_main() {
     esac
 
     [ "$done" -ne 1 ] || exit "$ret"
-
-    # Permission denied
-    test -w "$PREBUILTS" || die "Write Permission Denied?"
 
     # always try to update manifest
     do_fetch_manifest
@@ -798,10 +793,7 @@ do_main() {
     exit "$ret"
 }
 
-LOCKFILE="/tmp/cmdlets_${CLI//\//_}.lock"
-test -f "$LOCKFILE" && die "cmdlets is locked."
-
-true > "$LOCKFILE"
+LOCKFILE=.$NAME.lock
 
 _on_exit() {
     rm -rf "$LOCKFILE"
@@ -817,7 +809,10 @@ TEMPDIR="$(mktemp -d)" && trap _on_exit EXIT
 if [ "$CLI" = "install" ]; then
     do_bootstrap
 else
-    cd "$(dirname "$0")" && do_main "$@" || exit $?
+    cd "$(dirname "$0")"
+    test -f "$LOCKFILE" && die "cmdlets is locked."
+    true > "$LOCKFILE"
+    do_main "$@"
 fi
 
 # vim:ft=sh:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

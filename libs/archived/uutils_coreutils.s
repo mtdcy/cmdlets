@@ -1,0 +1,85 @@
+# Cross-platform Rust rewrite of the GNU coreutils
+
+# shellcheck disable=SC2034
+libs_stable=1
+libs_targets=(! cygwin)
+
+libs_name=coreutils
+libs_lic="MIT"
+libs_ver=0.10.0
+libs_rev=1
+libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
+libs_sha=f8e68cd0e3629378f047544ead272161a83211c43f4985a9f52944e5db8f1a44
+libs_dep=(libiconv)
+
+# gnu compatible utils (for bsd systems like darwin)
+uu_links=(
+    sort uniq cut tr wc realpath
+)
+
+# make huge utils for windows
+is_mingw && uu_links+=(
+    # basic
+    ls rm cp yes true
+    mkdir mktemp
+    # print
+    echo printf
+    # path
+    pwd basename dirname
+    # files
+    touch cat tee head tail
+    # disk
+    du df
+    # user
+    whoami env
+    # misc
+    uname sleep date
+) || uu_links+=(
+    # symbolic link related
+    ln link unlink readlink install
+)
+
+# standalone utils
+uu_utils=(
+    numfmt nproc
+    more date
+)
+
+# md5 and sha
+uu_utils+=(
+    base32
+    base64
+    md5sum
+    sha1sum
+    sha256sum
+    sha512sum
+)
+
+libs_args=(
+    --release
+    --verbose
+)
+
+libs_build() {
+    # v0.8.0: tee is broken
+    cmdlet.disclaim 0.8.0
+
+    # libiconv has no pc file
+    # export LIBICONV_NO_PKG_CONFIG=1
+    export LIBICONV_STATIC=1
+
+    cargo.setup
+
+    cargo.build --features "${uu_links[*]}" --no-default-features
+
+    cmdlet.install $(cargo.locate coreutils) coreutils "${uu_links[@]}"
+
+    for x in "${uu_utils[@]}"; do
+        cargo.build -p "uu_$x"
+        cmdlet.install $(cargo.locate $x)
+    done
+
+    cmdlet.check coreutils --version
+}
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
