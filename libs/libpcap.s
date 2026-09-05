@@ -4,10 +4,10 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=1.10.6
+libs_ver=1.10.7
 libs_rev=1
-libs_url=https://www.tcpdump.org/release/libpcap-1.10.6.tar.gz
-libs_sha=872dd11337fe1ab02ad9d4fee047c9da244d695c6ddf34e2ebb733efd4ed8aa9
+libs_url=https://www.tcpdump.org/release/libpcap-1.10.7.tar.gz
+libs_sha=0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31
 
 libs_deps=( )
 
