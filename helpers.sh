@@ -261,12 +261,6 @@ _cmake_init() {
 
     _libs_init
 
-    case "$_TARGET_NAME" in
-        windows | cygwin)   export CMAKE_SYSTEM_NAME=Windows    ;;
-        darwin)             export CMAKE_SYSTEM_NAME=Darwin     ;;
-        *)                  export CMAKE_SYSTEM_NAME=Linux      ;;
-    esac
-
     # asm
     is_arm64 || {
         export CMAKE_ASM_COMPILER="$NASM"
@@ -304,8 +298,13 @@ _cmake_init() {
         darwin)
             _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Darwin)
             ;;
-        windows | cygwin)
+        windows)
             _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Windows)
+            # alway search -lxxx for libxxx.a
+            _CMAKE_STD+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
+            ;;
+        cygwin)
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=CYGWIN)
             # alway search -lxxx for libxxx.a
             _CMAKE_STD+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
             ;;
