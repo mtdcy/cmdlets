@@ -1,82 +1,94 @@
-# Cross-platform Rust rewrite of the GNU coreutils
-
-libs_stable=1
+# GNU File, Shell, and Text utilities
 
 # shellcheck disable=SC2034
+libs_stable=1
+
 libs_name=coreutils
-libs_lic="MIT"
-libs_ver=0.10.0
+libs_lic=GPLv3+
+libs_ver=9.11
 libs_rev=1
-libs_url=https://github.com/uutils/coreutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=f8e68cd0e3629378f047544ead272161a83211c43f4985a9f52944e5db8f1a44
-libs_dep=(libiconv)
-
-# multicall core utils
-uu_links=(
-    # basic
-    ls rm cp yes true
-    # print
-    echo printf
-    # path
-    pwd basename dirname
-    # files
-    cat tee tail
-    # utils
-    sort uniq cut tr wc
+libs_url=(
+    https://mirrors.aliyun.com/gnu/coreutils/coreutils-9.11.tar.xz
+    https://ftpmirror.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz
 )
-
-# symbolic link related
-is_mingw || uu_links+=(
-    install ln unlink readlink realpath
-)
-
-# standalone utils
-uu_utils=(
-    numfmt nproc
-    more date
-)
-
-# md5 and sha
-uu_utils+=(
-    base32
-    base64
-    md5sum
-    sha1sum
-    sha256sum
-    sha512sum
-)
+libs_sha=394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3
+libs_dep=(gmp)
 
 libs_args=(
-    --release
-    --verbose
+
+    # disabled features
+    --disable-acl
+    --disable-assert
+    --disable-xattr
+    --without-selinux
+
+    --disable-nls
+    --without-libintl-prefix
+    --without-libiconv-prefix
 )
 
-#if is_mingw; then
-#    libs_args+=( --features windows )
-#else
-#    libs_args+=( --features "'${uu_links[*]} ${uu_utils[*]}'" )
-#fi
+list_has libs_dep gmp       && libs_args+=(--with-libgmp)
+list_has libs_dep openssl   && libs_args+=(--with-openssl)
+
+# gnu utils (for bsd systems like darwin)
+_utils=(ls sort uniq cut tr wc realpath)
+
+# symlinks related
+#  no symlinks for mingw
+is_mingw || _utils+=(
+    ln link unlink readlink
+)
+
+# make huge utils for windows
+if is_cygwin || is_mingw; then
+    _utils+=(
+        # basic
+        rm cp mv yes true false
+        test '[' nohup
+        mkdir mktemp mkfifo
+        # print
+        echo printf
+        # path
+        pwd basename dirname
+        # files
+        touch cat tee head tail od
+        # misc
+        uname sleep
+    )
+fi
+
+is_cygwin && _utils+=(
+    # user
+    id who whoami users groups env
+    # disk
+    du df
+    # perm
+    chmod chown
+)
+
+# useful tools
+_tools=(
+    date # gnu/bsd 语法完全断层
+    numfmt
+    nproc
+    # md5 and sha
+    base32 base64 md5sum sha1sum sha256sum sha512sum
+)
 
 libs_build() {
-    # v0.8.0: tee is broken
-    cmdlet.disclaim 0.8.0
+    # disclaim rust coreutils
+    cmdlet.disclaim 0.10.0
 
-    # libiconv has no pc file
-    # export LIBICONV_NO_PKG_CONFIG=1
-    export LIBICONV_STATIC=1
+    configure
 
-    cargo.setup
+    make
 
-    cargo.build --features "'${uu_links[*]}'"
+    cmdlet.pkginst coreutils bin \
+        $(printf "src/%s " "${_utils[@]}")
 
-    cmdlet.install $(cargo.locate coreutils) coreutils "${uu_links[@]}"
-
-    for x in "${uu_utils[@]}"; do
-        cargo.build -p "uu_$x"
-        cmdlet.install $(cargo.locate $x)
+    for x in "${_tools[@]}"; do
+        cmdlet.install src/$x
     done
-
-    cmdlet.check coreutils --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

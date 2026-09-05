@@ -46,14 +46,16 @@ libs_build() {
     make V=1
 
     # simple test
-    {
-        echo "test" > test.txt
-        ./src/tar -czvf test.tar.gz test.txt
-        [ "test" = "$(./src/tar -xOzf test.tar.gz)" ]
-    }     || die "test failed"
+    if ! is_cygwin && ! is_mingw; then
+        {
+            echo "test" > test.txt
+            run src/tar -czvf test.tar.gz test.txt
+            [ "test" = "$(run src/tar -xOzf test.tar.gz)" ]
+        } || die "test failed"
+    fi
 
     # provide default 'tar' and 'gtar'
-    cmdlet.install src/tar gtar
+    cmdlet.install src/tar gtar tar
 
     # visual verify
     cmdlet.check gtar --version

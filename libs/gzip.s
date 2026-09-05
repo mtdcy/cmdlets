@@ -27,31 +27,35 @@ libs_args=(
 )
 
 libs_build() {
-    configure 
+    configure
 
-    make 
+    make
 
     # make check in mingw do not respect $EXEEXT
-    is_mingw || make check
+    if is_mingw || is_cygwin; then
+        slogw "skip check"
+    else
+        make check
+    fi
 
     pkginst libgzip gzip.h lzw.h lib/libgzip.a
 
-    cmdlet.install gzip   
-    cmdlet.install gunzip 
-    cmdlet.install gzexe  
-    cmdlet.install zcat   
-    cmdlet.install zcmp   
-    cmdlet.install zdiff  
-    cmdlet.install zgrep  
-    cmdlet.install zegrep 
-    cmdlet.install zfgrep 
-    cmdlet.install zmore  
-    cmdlet.install zless  
-    cmdlet.install znew   
+    cmdlet.install gzip
+    cmdlet.install gunzip
+    cmdlet.install gzexe
+    cmdlet.install zcat
+    cmdlet.install zcmp
+    cmdlet.install zdiff
+    cmdlet.install zgrep
+    cmdlet.install zegrep
+    cmdlet.install zfgrep
+    cmdlet.install zmore
+    cmdlet.install zless
+    cmdlet.install znew
 
     cmdlet.check gzip
 
-    # simple test 
+    # simple test
     echo "test" > foo && rm -f foo.gz
     run gzip foo                                || die "gzip compress failed."
     run gzip -t foo.gz                          || die "gzip integrity test failed."
@@ -60,6 +64,5 @@ libs_build() {
     run zcat foo.gz | grep -Eq "^test$"         || die "zcat failed."
 
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

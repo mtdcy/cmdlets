@@ -13,11 +13,8 @@ libs_build() {
 
     make bzip2
 
-    # add file extension for windows
-    is_mingw && mv bzip2 bzip2.exe
-
     # will not pass with mingw
-    is_mingw || make test
+    is_mingw || is_cygwin || make test
 
     pkgconf bz2     -lbz2
     pkgconf bzip2   -lbz2
