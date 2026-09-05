@@ -1,8 +1,8 @@
-prebuilts/
-packages/
-artifacts/
-out/
-logs/
+/prebuilts/
+/packages/
+/artifacts/
+/out/
+/logs/
 cmdlets.env*
 .ccache
 *.swp
@@ -19,3 +19,4 @@ pkg-config.log
 .history
 toolchain.log
 .vars
+*.log

@@ -224,6 +224,9 @@ configure() {
                 # some libraries use --target instead of --host, e.g: libvpx
                 is_xbuild && args+=(--host="$_TARGET") || true
                 ;;
+            --build=*)
+                is_xbuild && args+=(--build="$("$HOSTCC" -dumpmachine)") || true
+                ;;
         esac
     done < <("$cmd" --help | grep -oE " --[^\ /\[]+" | sort -u)
 
@@ -258,12 +261,11 @@ _cmake_init() {
 
     _libs_init
 
-    if test -n "$_TARGET"; then
-        case "$_TARGET" in
-            *-linux-*)  export CMAKE_SYSTEM_NAME=Linux      ;;
-            *-mingw*)   export CMAKE_SYSTEM_NAME=Windows    ;;
-        esac
-    fi
+    case "$_TARGET_NAME" in
+        windows | cygwin)   export CMAKE_SYSTEM_NAME=Windows    ;;
+        darwin)             export CMAKE_SYSTEM_NAME=Darwin     ;;
+        *)                  export CMAKE_SYSTEM_NAME=Linux      ;;
+    esac
 
     # asm
     is_arm64 || {
@@ -298,27 +300,26 @@ _cmake_init() {
         -DCMAKE_VERBOSE_MAKEFILE=ON
     )
 
-    # alway search -lxxx for libxxx.a
-    is_mingw && _CMAKE_STD+=(
-        -DCMAKE_STATIC_LIBRARY_PREFIX="lib"
-        -DCMAKE_STATIC_LIBRARY_SUFFIX=".a"
-    )
+    case "$_TARGET_NAME" in
+        darwin)
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Darwin)
+            ;;
+        windows | cygwin)
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Windows)
+            # alway search -lxxx for libxxx.a
+            _CMAKE_STD+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
+            ;;
+        *)
+            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Linux)
+            ;;
+    esac
+
+    # host or docker build, so `uname -m' is reliable
+    _CMAKE_STD+=(-DCMAKE_SYSTEM_PROCESSOR="$(uname -m)")
 
     # sysroot
     #local sysroot="$("$CC" -print-sysroot)"
     #test -z "$sysroot" || _CMAKE_STD+=( -DCMAKE_SYSROOT="'$sysroot'" )
-
-    if test -n "$_TARGET"; then
-        if is_darwin; then
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Darwin)
-        elif is_linux; then
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Linux)
-        elif is_mingw; then
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Windows)
-        fi
-        # host or docker build, so `uname -m' is reliable
-        _CMAKE_STD+=(-DCMAKE_SYSTEM_PROCESSOR=$( uname -m))
-    fi
 
     export _CMAKE_READY=1
 }
@@ -550,6 +551,12 @@ meson.install() {
 _cargo_init() {
     test -z "$_CARGO_READY" || return 0
 
+    # target *-pc-cygwin is not available
+    if is_cygwin; then
+        slogw "no cargo/rust support for cygwin"
+        exit 0
+    fi
+
     _libs_init
 
     # find out rustup: $_TARGET_WORKDIR > $HOME > system
@@ -623,11 +630,18 @@ _cargo_init() {
     if is_darwin; then
         # rustc use aarch64 instead of arm64 for macos
         CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
+    elif is_cygwin; then
+        # target not ready
+        CARGO_BUILD_TARGET="$(uname -m)-pc-cygwin"
     elif is_mingw; then
         # win32
         #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
         #  *-windows-gnu => msvcrt
-        CARGO_BUILD_TARGET="$(rustup target list --installed | grep -E "$(uname -m)-.*-windows" | head -n1)"
+        if is_clang; then
+            CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnullvm"
+        else
+            CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
+        fi
     else
         # musl
         CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
@@ -1233,9 +1247,10 @@ cmdlet.pkginst() {
 
             # set default path for specified files
             *.h | *.hxx | *.hpp) [[ "$sub" =~ ^include       ]] || sub="include"        ;;
-            *.cmake)            [[ "$sub" =~ ^lib/cmake      ]] || sub="lib/cmake"      ;;
+            *.cmake)             [[ "$sub" =~ ^lib/cmake     ]] || sub="lib/cmake"      ;;
             *.a | *.so | *.so.*) [[ "$sub" =~ ^lib           ]] || sub="lib"            ;;
-            *.pc)               [[ "$sub" =~ ^lib/pkgconfig  ]] || sub="lib/pkgconfig"  ;;
+            *.pc)                [[ "$sub" =~ ^lib/pkgconfig ]] || sub="lib/pkgconfig"  ;;
+            *.dll)               [[ "$sub" =~ ^bin           ]] || sub="bin" ;;
 
             # set sub dir for known directories
             include | include/* | lib | lib/* | share | share/* | bin)
@@ -1281,7 +1296,7 @@ cmdlet.install() {
     test -z "$_BINEXT" || alias=("${alias[@]/%/$_BINEXT}")
     for lnk in "${alias[@]}"; do
         rm -f "$PREFIX/bin/$lnk" || true
-        create_entry "$target" "$PREFIX/bin/$lnk"
+        make_entry "$target" "$PREFIX/bin/$lnk"
     done
 
     # pack
@@ -1300,29 +1315,31 @@ cmdlet.check() {
     echocmd "$FILE" -b "$bin"
 
     # check linked libraries
-    if is_linux; then
-        "$FILE" -b "$bin" | grep -Fw "dynamically linked" && {
-            echocmd ldd "$bin"
-            die "$bin is dynamically linked."
-        } || true
-    elif is_darwin; then
-        _LOGGING=plain echocmd otool -L "$bin" | grep -qE "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
-    elif is_mingw; then
-        local dll system32="system32"
-        while read -r dll; do
-            [[ "$dll" =~ KERNEL32.dll|msvcrt.dll ]] && continue
+    case "$_TARGET_NAME" in
+        linux)
+            "$FILE" -b "$bin" | grep -Fw "dynamically linked" && {
+                echocmd ldd "$bin"
+                die "$bin is dynamically linked."
+            } || true
+            ;;
+        darwin)
+            _LOGGING=plain echocmd otool -L "$bin" | grep -qE "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
+            ;;
+        windows | cygwin)
+            local dll system32="system32"
+            while read -r dll; do
+                [[ "$dll" =~ KERNEL32.dll|msvcrt.dll ]] && continue
 
-            if test -n "$WINEPREFIX"; then
-                is_win64 || system32="syswow64"
-                find "$WINEPREFIX/drive_c/windows/$system32" -iname "$dll" || die "unexpected dll $dll"
-            else
-                [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
-            fi
+                if test -n "$WINEPREFIX"; then
+                    is_win64 || system32="syswow64"
+                    find "$WINEPREFIX/drive_c/windows/$system32" -iname "$dll" || die "unexpected dll $dll"
+                else
+                    [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
+                fi
 
-        done < <( "$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
-    else
-        slogw "FIXME: $OSTYPE"
-    fi
+            done < <( "$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
+            ;;
+    esac
 
     # check version if options/arguments provide
     if [ $# -gt 1 ]; then
