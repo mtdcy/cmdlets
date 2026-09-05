@@ -6,6 +6,10 @@
 #endif
 #include <windows.h>
 
+#if !defined(TARGET)
+char TARGET[128] = "__CMDLET_TARGET_PLACEHOLDER__";
+#endif
+
 int main(int argc, char* const argv[]) {
   char exe_path[MAX_PATH];
   GetModuleFileNameA(NULL, exe_path, MAX_PATH);
@@ -26,8 +30,6 @@ int main(int argc, char* const argv[]) {
   // 4. 动态拼接在同一目录下的真实目标文件名（由编译参数 -D 注入，如
   // "main_tool.exe"）
   strcat(exe_path, TARGET);
-
-  // printf("%s\n", exe_path);
 
   // 5. 完美无损透传参数，原地替换进程
 #ifdef __CYGWIN__

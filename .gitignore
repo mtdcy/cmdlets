@@ -21,3 +21,5 @@ toolchain.log
 .vars
 *.log
 /bootstrap
+/win32/make_entry
+/win32/template.exe

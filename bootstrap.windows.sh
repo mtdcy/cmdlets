@@ -54,8 +54,9 @@ test -f bootstrap/bin/curl-ca-bundle.crt ||
 info "Prepare shell environment"
 bash libs.sh make_entry bootstrap/bin/bash.exe bootstrap/bin/sh.exe
 
-cp -f cmdlets.sh        bootstrap
-cp -f win32/cygwin1.dll bootstrap/bin
+cp -f cmdlets.sh            bootstrap
+cp -f win32/cygwin1.dll     bootstrap/bin
+cp -f win32/make_entry.exe  bootstrap/bin
 
 cat << 'EOF' > bootstrap/etc/fstab
 # -------------------------------------------------------------------
