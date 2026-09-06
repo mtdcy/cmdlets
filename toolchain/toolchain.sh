@@ -3,13 +3,15 @@
 set -eo pipefail
 
 # multicall name
-NAME="${0##*/}"
+NAME="$(basename "$0")"
 
-# defaults
-: "${PREFIX:=prebuilt/$(uname -m)-linux-gnu}"
-: "${_TARGET:=$CMDLET_TARGET}"
-: "${_TARGET_WORKDIR:=out/$_TARGET}"
-: "${_LOGFILE:=toolchain.log}"
+# target env
+: "${_TARGET:=$(uname -m)-linux-gnu}"
+
+# extra envs
+: "${PREFIX:=prebuilts/$_TARGET}"
+: "${_WORKDIR:=out/$_TARGET}"
+: "${_LOGFILE:=$_WORKDIR/toolchain.log}"
 
 die() {
     echo "❌ $*"
@@ -20,7 +22,7 @@ die() {
 exec 3>&2
 exec 2> >(tee -a "$_LOGFILE" >&3)
 
-CONFIG="$_TARGET_WORKDIR/$_TARGET.cfg"
+CONFIG="$_WORKDIR/$_TARGET.cfg"
 
 # toolchain: gcc, g++, nm, ld, ...
 if ! test -f "$CONFIG"; then
@@ -63,15 +65,17 @@ fi
 # load toolchain file
 . "$CONFIG"
 
+# escaped name
+ESCAPED="$(sed -e 's/+/x/g' -e 's/-/_/g' -e 's/ /_/g' <<< "$NAME")"
+
 # find out the real executable
-EXE="$(eval "echo \${${NAME//+/x}}")"
+EXE="${!ESCAPED}"
 
-test -n "$EXE" || EXE="$(which "$NAME")" || die "no $NAME found"
-
+: "${EXE:=$NAME}"
 {
-    printf '☘️ %s ' "${EXE:-$NAME}"
+    printf '☘️ %s ' "$EXE"
     printf '%q ' "$@"
-    printf '\n\n'
+    printf '\n'
 } >> "$_LOGFILE"
 
 case "$NAME" in
@@ -79,19 +83,11 @@ case "$NAME" in
         : "${PKG_CONFIG_PATH:=$PREFIX/lib/pkgconfig}"
         : "${PKG_CONFIG_LIBDIR:=$PREFIX/lib}"
 
-        # pkg-config from toolchain or host
-        test -n "$toolchain" && EXE="$toolchain-pkg-config" || EXE=pkg-config
-
-        # fallback to host pkg-config
-        which "$EXE" &> /dev/null || EXE="$(which pkg-config)"
-
         export PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
 
         # append result to _LOGFILE as pkg-config usually runs inside $()
         # must set -o pipefail
         "$EXE" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a "$_LOGFILE"
-
-        exit
         ;;
     *)
         exec "$EXE" "$@"
