@@ -7,7 +7,7 @@ on:
       - bootstrap.windows.sh
       - .github/workflows/bootstrap.yml
     branches:
-      - cygwin64-gcc
+      - main
 
   workflow_dispatch:
 
