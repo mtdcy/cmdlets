@@ -26,7 +26,6 @@ libs_args=(
     --with-curses
     --enable-readline
     --with-installed-readline
-    --enable-static-link
 
     # no nls nor libintl
     --disable-nls
@@ -35,6 +34,8 @@ libs_args=(
     # https://github.com/robxu9/bash-static/blob/master/build.sh
     --without-bash-malloc
 )
+
+is_darwin || libs_args+=(--enable-static-link)
 
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=(--build="$( uname -m)-unknown-linux-gnu")

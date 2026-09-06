@@ -26,18 +26,18 @@ CONFIG="$_WORKDIR/$_TARGET.cfg"
 
 # toolchain: gcc, g++, nm, ld, ...
 if ! test -f "$CONFIG"; then
-    TOOLS=(gcc g++ ld ar as nm objcopy objdump ranlib strip)
+    TOOLS=(gcc g++ ld ar as nm objdump ranlib strip)
 
     case "$_TARGET" in
         *-windows* | *-mingw* | *-cygwin*)
-            TOOLS+=(dlltool windres)
+            TOOLS+=(objcopy dlltool windres)
             TOOLCHAIN="$_TARGET"
             ;;
         *-darwin*)
             TOOLS+=(otool)
             ;;
         *)
-            TOOLS+=(readelf)
+            TOOLS+=(objcopy readelf)
 
             # prefer musl-gcc > gnu-gcc
             TOOLCHAIN="$(uname -m)-linux-musl"

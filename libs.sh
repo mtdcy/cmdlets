@@ -146,10 +146,10 @@ _INTERESTED_MACROS_=(
 )
 
 # target tests:
-is_darwin()         { list_has _TARGET_VARS     __apple__;                      }
-is_linux()          { list_has _TARGET_VARS     __linux__;                      }
-is_cygwin()         { list_has _TARGET_VARS     __CYGWIN__;                     } # !! cygwin is unix !! #
-is_mingw()          { list_has _TARGET_VARS     __MINGW32__;                    }
+is_darwin()         { list_has _TARGET_VARS     "apple|__apple__";              }
+is_linux()          { list_has _TARGET_VARS     "linux|__linux__";              }
+is_cygwin()         { list_has _TARGET_VARS     "cygwin|__CYGWIN__";            } # !! cygwin is unix !! #
+is_mingw()          { list_has _TARGET_VARS     "mingw32|__MINGW32__";          }
 
 # gcc/clang tests:
 is_clang()          { list_has _TARGET_VARS     __clang__;                      }
