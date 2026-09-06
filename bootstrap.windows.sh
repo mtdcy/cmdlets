@@ -10,15 +10,14 @@
 
 set -eo pipefail
 
-#MINGW_TOOLS=(coreutils)
-MINGW_ARCH="$(uname -m)-w64-mingw32"
+export CMDLETS_PREBUILTS=bootstrap
+export CMDLETS_ARCH="$(uname -m)-pc-cygwin"
 
-CYGWIN_ARCH="$(uname -m)-pc-cygwin"
 CYGWIN_TOOLS=(
     # core
-    coreutils bash grep gawk gsed curl
+    coreutils bash grep gawk gsed findutils
     # extend
-    findutils
+    openssl curl git less
     # compress and decompress
     gtar gzip xz
 )
@@ -34,22 +33,36 @@ die() {
 
 # Linux FHS
 info "Create Linux FHS"
-mkdir -pv bootstrap/{bin,lib,etc,tmp,usr/{bin,lib},home/cmdlets,root}
+mkdir -pv bootstrap/{bin,lib,etc/ssl/certs,tmp,home/cmdlets,root}
+mkdir -pv bootstrap/usr/{bin,lib}
+# cygwin 会自动处理 /usr/bin 与 /bin 之间的关系
 
 info "Download bootstrap files"
-export CMDLETS_PREBUILTS=bootstrap
 
-for x in "${MINGW_TOOLS[@]}"; do
-    CMDLETS_ARCH="$MINGW_ARCH" bash cmdlets.sh fetch "$x"
-done
+bash cmdlets.sh fetch "${CYGWIN_TOOLS[@]}"
 
-for x in "${CYGWIN_TOOLS[@]}"; do
-    CMDLETS_ARCH="$CYGWIN_ARCH" bash cmdlets.sh fetch "$x"
-done
+info "Prepare CA Certificates"
+cat << 'EOF' > bootstrap/update-ca-certificates
+#!/bin/bash
+## !! no symlinks here !! ##
 
-info "Download curl ca-bundle.crt"
-test -f bootstrap/bin/curl-ca-bundle.crt ||
-    curl --insecure https://curl.se/ca/cacert.pem -o bootstrap/bin/curl-ca-bundle.crt
+: "${CA_ROOT:=}"
+: "${CA_CERT:=$CA_ROOT/etc/ssl/certs/ca-bundle.crt}"
+
+mkdir -pv "${CA_CERT%/*}"
+
+echo "-- ✨ curl ca certs file"
+curl --insecure -fvSL https://curl.se/ca/cacert.pem -o "$CA_CERT"
+
+echo "-- ✨ set alternative ca certs file path"
+
+#1. OpenSSL default cert.pem
+cp -fv "$CA_CERT" $CA_ROOT/etc/ssl/cert.pem
+#2. curl in-place ca-bundle.crt
+cp -fv "$CA_CERT" $CA_ROOT/bin/curl-ca-bundle.crt
+EOF
+chmod a+x bootstrap/update-ca-certificates
+CA_ROOT=bootstrap ./bootstrap/update-ca-certificates
 
 info "Prepare shell environment"
 bash libs.sh make_entry bootstrap/bin/bash.exe bootstrap/bin/sh.exe
@@ -87,7 +100,7 @@ export USER="cmdlets"
 export LOGIN="cmdlets"
 export HOME="/home/cmdlets"
 
-export PATH=/bin:/usr/bin:$PATH
+export PATH=/bin:$PATH
 export TERM=xterm-256color
 export PS1="[\e[31mcmdlets\e[m] \e[34m\w \e[32m\$\e[m "
 
@@ -95,6 +108,7 @@ export LS_COLORS='no=00;37:fi=00:di=34;40:ln=35;40:so=32;40:pi=33;40:ex=31;40:bd
 
 alias ll='ls -lha --color=auto'
 alias grep='grep --color=auto'
+alias which='command -v'
 
 echo "🌹 Welcome to cmdlets Shell Env! 🌹"
 $SHELL --version | head -n1
@@ -102,21 +116,42 @@ $SHELL --version | head -n1
 cd "$HOME" || cd /
 EOF
 
+info "Prepare Program Entrance"
+
 cat << 'EOF' > bootstrap/shell.bat
 @echo off
-
+setlocal
 set "PATH=%~dp0;%~dp0bin;%PATH%"
 
-sh.exe -login -i
+if "%~1"=="" (
+    "%~dp0bin\bash.exe" -login -i
+) else (
+    "%~dp0bin\bash.exe" -c "%*"
+)
 EOF
 sed -i 's/$/\r/' bootstrap/shell.bat
 
 cat << 'EOF' > bootstrap/cmdlets.bat
 @echo off
-
+setlocal
 set "PATH=%~dp0;%~dp0bin;%PATH%"
 
-sh.exe -c cmdlets.sh" %*
+"%~dp0bin\bash.exe" -c "cmdlets.sh %*"
 exit /b %errorlevel%
 EOF
 sed -i 's/$/\r/' bootstrap/cmdlets.bat
+
+cat << 'EOF' > bootstrap/git.bat
+@echo off
+setlocal
+set "PATH=%~dp0;%~dp0bin;%PATH%"
+
+set "SSL_CERT_FILE=%~dp0etc\ssl\cert.pem"
+set "GIT_EXEC_PATH=%~dp0bin"
+set "MERGE_TOOLS_DIR=%GIT_EXEC_PATH%\mergetools"
+set "GIT_TEMPLATE_DIR=%~dp0share\git-core\templates"
+
+"%~dp0bin\git.exe" %*
+exit /b %errorlevel%
+EOF
+sed -i 's/$/\r/' bootstrap/git.bat

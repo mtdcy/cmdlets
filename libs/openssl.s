@@ -16,7 +16,11 @@ libs_args=(
 
     --libdir=lib
 
-    # host paths
+    # host ca paths (OPENSSLDIR)
+    #  X509_CERT_FILE : <OPENSSLDIR>/cert.pem
+    #   => override by env:SSL_CERT_FILE
+    #  X509_CERT_DIR  : <OPENSSLDIR>/certs
+    #   => override by env:SSL_CERT_DIR
     --openssldir=/etc/ssl
 
     --api=3.0
@@ -86,7 +90,7 @@ libs_build() {
     make ENGINESDIR= MODULESDIR=
 
     # simple tests/ssl
-    # cygwin: Verification error: unable to get local issuer certificate
+    # wine+cygwin: Verification error: unable to get local issuer certificate
     if ! is_cygwin; then
         echo | run apps/openssl s_client -connect baidu.com:443 | grep -q "Verification: OK" || die "openssl connect failed"
 
@@ -102,7 +106,7 @@ libs_build() {
     cmdlet.pkgfile libopenssl -- make install_dev
 
     cmdlet.install apps/openssl
-    cmdlet.install tools/c_rehash
+    cmdlet.install tools/c_rehash # legacy tools, use openssl rehash instead
 
     # verify
     cmdlet.check openssl version -a

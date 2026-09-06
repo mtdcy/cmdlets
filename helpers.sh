@@ -36,6 +36,8 @@ libs.requires() {
     local x y
     for x in "$@"; do
         case "$x" in
+            -j)     _NJOBS=1    ;; # only support -j 1
+            -j1)    _NJOBS=1    ;;
             -std=c++* | -std=gnu++*)
                 cxxflags+=("$x")
                 ;;
@@ -413,13 +415,16 @@ pkgconfig = '$PKG_CONFIG'
 EOF
 
     # cross compile
-    if is_mingw; then
+    if is_mingw || is_cygwin; then
+        local _system='windows'
+        is_cygwin && _system='cygwin'
+
         cat << EOF >> meson-static.ini
 windres = '$WINDRES'
 exe_wrapper = 'wine'
 
 [host_machine]
-system = 'windows'          # Target operating system
+system = '$_system'         # Target operating system
 cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
@@ -478,7 +483,7 @@ meson() {
                 -Ddefault_library=static    # prefer static project libraries
             )
 
-            if is_mingw; then
+            if is_mingw || is_cygwin; then
                 std+=(--cross-file=meson-static.ini)
             else
                 std+=(--native-file=meson-static.ini)
@@ -515,7 +520,7 @@ meson.setup() {
         -Ddefault_library=static    # prefer static project libraries
     )
 
-    if is_mingw; then
+    if is_mingw || is_cygwin; then
         std+=(--cross-file=meson-static.ini)
     else
         std+=(--native-file=meson-static.ini)
@@ -1252,7 +1257,7 @@ cmdlet.pkginst() {
             *.dll)               [[ "$sub" =~ ^bin           ]] || sub="bin" ;;
 
             # set sub dir for known directories
-            include | include/* | lib | lib/* | share | share/* | bin)
+            include | include/* | lib | lib/* | share | share/* | bin | bin/* | libexec | libexec/*)
                 sub="$file"
                 mkdir -pv "$PREFIX/$sub"
                 continue
