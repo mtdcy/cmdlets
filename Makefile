@@ -37,6 +37,7 @@ ENVS := CMDLET_NJOBS    \
 		CMDLET_LOGGING  \
 		CMDLET_MIRRORS  \
 		CMDLET_REPO     \
+		CMDLET_VERBOSE 	\
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -234,6 +235,11 @@ DOCKER_ARGS += -v ~/.ssh:/home/buildbot/.ssh
 
 # envs
 DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
+
+# SSH_CLIENT
+ifneq ($(SSH_CLIENT),)
+DOCKER_ARGS += -e SSH_CLIENT="$(SSH_CLIENT)"
+endif
 
 ifeq ($(shell test -t 0 && echo tty),tty)
 DOCKER_RUNC = docker run --rm -it $(DOCKER_ARGS) $(DOCKER_IMAGE)

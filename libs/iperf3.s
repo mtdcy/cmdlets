@@ -1,12 +1,12 @@
 # Update of iperf: measures TCP, UDP, and SCTP bandwidth
 #
 # shellcheck disable=SC2034
+libs_targets=(! windows)
 
 libs_lic='BSD-3-Clause'
 libs_ver=3.18
 libs_rev=1
 libs_url=https://github.com/esnet/iperf/releases/download/$libs_ver/iperf-$libs_ver.tar.gz
-libs_rev=1
 libs_sha=c0618175514331e766522500e20c94bfb293b4424eb27d7207fb427b88d20bab
 libs_dep=(openssl)
 
@@ -22,13 +22,21 @@ libs_args=(
 )
 
 libs_build() {
+    # iperf3 do not use pkg-config to detect openssl required libs
+    if is_cygwin; then
+        export LIBS=-lcrypt32
+
+        # casesensitive issue
+        sed -i 's/Windows.h/windows.h/g' src/iperf_api.c
+    fi
+
     configure
 
     make
 
     # check
     #make check &&
-    cmdlet.install ./src/iperf3
+    cmdlet.install ./src/iperf3 iperf3 iperf
 
     # verify
     cmdlet.check iperf3

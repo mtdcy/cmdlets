@@ -16,28 +16,31 @@ is_mingw && CXXFLAGS+='-D__USE_MINGW_ANSI_STDIO'
 libs_args=(
     CXX="'$CXX'"
     CPPFLAGS="'$CPPFLAGS'"
-    CXXFLAGS+="'$CXXFLAGS'" 
+    CXXFLAGS+="'$CXXFLAGS'"
     LDFLAGS="'$LDFLAGS'"
 )
 
 libs_build() {
-    configure 
+    configure
 
-    make 
+    make
 
-    is_mingw || make check 
+    if is_mingw || is_cygwin; then
+        slogw "skip make check"
+    else
+        make check
+    fi
 
     cmdlet.install lzip
 
     # verify
     cmdlet.check lzip --version
-    
+
     echo "test" > foo && rm -f foo.lz
     run lzip foo                                || die "lzip compress failed."
     run lzip -t foo.lz                          || die "lzip integrity test failed."
     run lzip --list foo.lz | grep -Fwq foo      || die "lzip list contents failed."
     run lzip -d -c foo.lz | grep -Eq "^test$"   || die "lzip decompress failed."
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

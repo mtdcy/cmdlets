@@ -1,9 +1,16 @@
 #include <process.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef __CYGWIN__
+#include <unistd.h>
+#endif
 #include <windows.h>
 
-int main(int argc, const char* const argv[]) {
+#if !defined(TARGET)
+char TARGET[128] = "__CMDLET_TARGET_PLACEHOLDER__";
+#endif
+
+int main(int argc, char* const argv[]) {
   char exe_path[MAX_PATH];
   GetModuleFileNameA(NULL, exe_path, MAX_PATH);
 
@@ -24,10 +31,12 @@ int main(int argc, const char* const argv[]) {
   // "main_tool.exe"）
   strcat(exe_path, TARGET);
 
-  // printf("%s\n", exe_path);
-
   // 5. 完美无损透传参数，原地替换进程
+#ifdef __CYGWIN__
+  execv(exe_path, argv);
+#else
   _execv(exe_path, argv);
+#endif
 
   return 127;
 }

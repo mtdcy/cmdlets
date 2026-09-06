@@ -3,12 +3,15 @@
 set -eo pipefail
 
 # multicall name
-NAME="${0##*/}"
+NAME="$(basename "$0")"
 
-# defaults
-: "${PREFIX:=prebuilt/$(uname -m)-linux-gnu}"
-: "${_TARGET:=}" # no default
-: "${_LOGFILE:=toolchain.log}"
+# target env
+: "${_TARGET:=$(uname -m)-linux-gnu}"
+
+# extra envs
+: "${PREFIX:=prebuilts/$_TARGET}"
+: "${_WORKDIR:=out/$_TARGET}"
+: "${_LOGFILE:=$_WORKDIR/toolchain.log}"
 
 die() {
     echo "❌ $*"
@@ -19,28 +22,30 @@ die() {
 exec 3>&2
 exec 2> >(tee -a "$_LOGFILE" >&3)
 
-PRESET="${0%/*}/presets/${_TARGET:-default}.txt"
+CONFIG="$_WORKDIR/$_TARGET.cfg"
 
 # toolchain: gcc, g++, nm, ld, ...
-if ! test -f "$PRESET"; then
-    # set toolchain prefix
-    case "$_TARGET" in
-        *-linux-gnu)    TOOLCHAIN="$(uname -m)-linux-musl"      ;;
-        *-w64-mingw32)  TOOLCHAIN="$(uname -m)-w64-mingw32"     ;;
-    esac
-
+if ! test -f "$CONFIG"; then
     TOOLS=(gcc g++ ld ar as nm objcopy objdump ranlib strip)
 
     case "$_TARGET" in
-        *-darwin*)  TOOLS+=(otool) ;;
-        *)          TOOLS+=(readelf) ;;
+        *-windows* | *-mingw* | *-cygwin*)
+            TOOLS+=(dlltool windres)
+            TOOLCHAIN="$_TARGET"
+            ;;
+        *-darwin*)
+            TOOLS+=(otool)
+            ;;
+        *)
+            TOOLS+=(readelf)
+
+            # prefer musl-gcc > gnu-gcc
+            TOOLCHAIN="$(uname -m)-linux-musl"
+            which "$TOOLCHAIN-gcc" > /dev/null 2>&1 || TOOLCHAIN="$_TARGET"
+            ;;
     esac
 
-    case "$_TARGET" in
-        *-w64-*)    TOOLS+=(dlltool windres) ;;
-    esac
-
-    mkdir -p "${PRESET%/*}"
+    mkdir -p "${CONFIG%/*}"
     if which xcrun > /dev/null 2>&1; then
         for tool in "${TOOLS[@]}"; do
             echo "${tool//+/x}='$(xcrun --find "$tool")'"
@@ -54,15 +59,21 @@ if ! test -f "$PRESET"; then
         for tool in "${TOOLS[@]}"; do
             echo "${tool//+/x}='$TOOLCHAIN-$tool'"
         done
-    fi > "$PRESET"
+    fi > "$CONFIG"
 fi
 
 # load toolchain file
-. "$PRESET"
+. "$CONFIG"
 
+# escaped name
+ESCAPED="$(sed -e 's/+/x/g' -e 's/-/_/g' -e 's/ /_/g' <<< "$NAME")"
+
+# find out the real executable
+EXE="${!ESCAPED}"
+
+: "${EXE:=$NAME}"
 {
-    printf '\n'
-    printf '☘️ %s ' "$NAME"
+    printf '☘️ %s ' "$EXE"
     printf '%q ' "$@"
     printf '\n'
 } >> "$_LOGFILE"
@@ -72,24 +83,13 @@ case "$NAME" in
         : "${PKG_CONFIG_PATH:=$PREFIX/lib/pkgconfig}"
         : "${PKG_CONFIG_LIBDIR:=$PREFIX/lib}"
 
-        # pkg-config from toolchain or host
-        test -n "$toolchain" && EXE="$toolchain-pkg-config" || EXE=pkg-config
-
-        # fallback to host pkg-config
-        which "$EXE" &> /dev/null || EXE="$(which pkg-config)"
-
         export PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
 
+        # append result to _LOGFILE as pkg-config usually runs inside $()
         # must set -o pipefail
         "$EXE" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a "$_LOGFILE"
-
-        exit
+        ;;
+    *)
+        exec "$EXE" "$@"
         ;;
 esac
-
-# find out the real executable
-EXE="$(eval "echo \${${NAME//+/x}}")"
-
-test -n "$EXE" || EXE="$(which "$NAME")" || die "no $NAME found"
-
-exec "$EXE" "$@"

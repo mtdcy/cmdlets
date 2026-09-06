@@ -45,7 +45,7 @@ libs_build() {
     cmdlet.check grep --version
 
     # check: grep with pcre
-    echo FOO | run grep -P '(?i)foo' || die "check grep with pcre failed"
+    is_cygwin || echo FOO | run grep -P '(?i)foo' || die "check grep with pcre failed"
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

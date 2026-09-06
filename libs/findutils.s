@@ -1,30 +1,47 @@
-# Rust implementation of findutils: xargs find
+# Collection of GNU find, xargs, and locate
 
 # shellcheck disable=SC2034
-libs_desc="Rust implementation of findutils"
+libs_desc="Collection of GNU find, xargs, and locate"
 
-libs_lic='MIT'
-libs_ver=0.10.0
-libs_url=https://github.com/uutils/findutils/archive/refs/tags/$libs_ver.tar.gz
-libs_sha=e36ae3937f889bc59cfbd65820a642baa695c58d7fa1e387e41857e710f40419
+libs_lic='GPL-3.0-or-later'
+libs_ver=4.10.0
+libs_url=https://ftpmirror.gnu.org/gnu/findutils/findutils-$libs_ver.tar.xz
+libs_sha=1387e0b67ff247d2abde998f90dfbf70c1491391a59ddfecb8ae698789f0a4f5
 libs_dep=()
 
 libs_args=(
-    --release
-    --verbose
+    # static only
+    --enable-static --disable-shared
+
+    # always disable nls for single static executable, or
+    #  => PREFIX/share/locale will hardcoded into executable
+    --disable-nls
+    --without-libintl-prefix
+    --without-libiconv-prefix
 )
 
 libs_build() {
-    cargo.setup
+    # disclaim rust findutils versions
+    cmdlet.disclaim 0.10.0
 
-    cargo.build
+    configure
 
-    cmdlet "$(cargo.locate find)"
+    make
 
-    cmdlet "$(cargo.locate xargs)"
+    # test only find
+    make -C find check
 
+    # pack xargs with find
+    cmdlet.pkginst findutils bin \
+        ./find/find ./xargs/xargs
+
+    # seperate packing
+    cmdlet.install ./find/find
+
+    cmdlet.install ./xargs/xargs
+
+    # verify
     check find --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

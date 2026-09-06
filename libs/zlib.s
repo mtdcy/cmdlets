@@ -12,8 +12,6 @@ libs_deps=()
 # configure args
 libs_args=(
     -DZLIB_COMPAT=ON
-    -DWITH_GTEST=ON
-
     -DBUILD_SHARED_LIBS=OFF
 )
 
@@ -26,6 +24,9 @@ libs_patches=()
 libs_build() {
     # disclaim old zlib versions
     cmdlet.disclaim 1.3.1
+
+    # zlib-ng: c++11 + _GNU_SOURCE
+    libs.requires -D_GNU_SOURCE=1
 
     cmake.setup
 

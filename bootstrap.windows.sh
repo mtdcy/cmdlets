@@ -1,150 +1,157 @@
 #!/bin/bash
 # =============================================================================
 #  bootstrap.windows.sh - Prepare Windows tools using cmdlets.sh
-#  
+#
 #  Copyright (c) 2026, mtdcy.chen@gmail.com
 #  Licensed under BSD 2-Clause License
 #
 #  Usage: ./bootstrap.windows.sh
-#    Downloads Windows (mingw64) tools for cmdlets.bat
 # =============================================================================
 
 set -eo pipefail
 
-# Configuration
-export CMDLETS_ARCH=x86_64-w64-mingw32
-export CMDLETS_PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
+export CMDLETS_PREBUILTS=bootstrap
+export CMDLETS_ARCH="$(uname -m)-pc-cygwin"
 
-# Default packages (name:rename)
-DEFAULT_PACKAGES=(
-    "curl"
-    "bsdtar:tar"
+CYGWIN_TOOLS=(
+    # core
+    coreutils bash grep gawk gsed findutils
+    # extend
+    openssl curl git less
+    # compress and decompress
+    gtar gzip xz
 )
 
-# =============================================================================
-# Main
-# =============================================================================
+info() {
+    echo -e "-- ✨ \\033[32m$*\\033[39m" 1>&2
+}
 
-echo "============================================================================="
-echo "  cmdlets.bat Bootstrap for Windows (mingw64)"
-echo "============================================================================="
-echo ""
-echo "Architecture: $CMDLETS_ARCH"
-echo "Prebuilts:    $CMDLETS_PREBUILTS"
-echo ""
-
-# Check if cmdlets.sh exists
-if [ ! -f "cmdlets.sh" ]; then
-    echo "ERROR: cmdlets.sh not found in current directory"
+die() {
+    echo -e "** ❌ \\033[31m$*\\033[39m" 1>&2
     exit 1
-fi
+}
 
-# Create prebuilts directory
-mkdir -p "$CMDLETS_PREBUILTS"
+# Linux FHS
+info "Create Linux FHS"
+mkdir -pv bootstrap/{bin,lib,etc/ssl/certs,tmp,home/cmdlets,root}
+mkdir -pv bootstrap/usr/{bin,lib}
+# cygwin 会自动处理 /usr/bin 与 /bin 之间的关系
 
-# Install packages
-echo "Installing packages..."
-echo ""
+info "Download bootstrap files"
 
-for pkg_entry in "${DEFAULT_PACKAGES[@]}"; do
-    # Parse package name and optional rename
-    PKG_NAME="${pkg_entry%%:*}"
-    PKG_RENAME="${pkg_entry#*:}"
-    
-    # If no rename, use original name
-    if [ "$PKG_RENAME" = "$pkg_entry" ]; then
-        PKG_RENAME="$PKG_NAME"
-    fi
-    
-    echo "Installing $PKG_NAME..."
-    
-    # Check if already installed
-    if [ -f "$CMDLETS_PREBUILTS/.cmdlets" ] && grep -q "^$PKG_NAME" "$CMDLETS_PREBUILTS/.cmdlets" 2>/dev/null; then
-        if [ "$PKG_RENAME" = "tar" ]; then
-            if [ -f "$CMDLETS_PREBUILTS/bin/tar.exe" ] || [ -f "$CMDLETS_PREBUILTS/bin/bsdtar.exe" ]; then
-                echo "  Already installed, skipping"
-                continue
-            fi
-        else
-            if [ -f "$CMDLETS_PREBUILTS/bin/${PKG_NAME}.exe" ]; then
-                echo "  Already installed, skipping"
-                continue
-            fi
-        fi
-    fi
-    
-    # Fetch package using cmdlets.sh
-    if bash cmdlets.sh fetch "$PKG_NAME" 2>&1; then
-        # Rename if needed
-        if [ "$PKG_RENAME" != "$PKG_NAME" ] && [ "$PKG_RENAME" = "tar" ]; then
-            if [ -f "$CMDLETS_PREBUILTS/bin/bsdtar.exe" ] && [ ! -f "$CMDLETS_PREBUILTS/bin/tar.exe" ]; then
-                cp "$CMDLETS_PREBUILTS/bin/bsdtar.exe" "$CMDLETS_PREBUILTS/bin/tar.exe"
-                echo "  Created tar.exe from bsdtar.exe"
-            fi
-        fi
-        echo "  Installed successfully"
-    else
-        echo "  WARNING: Failed to install $PKG_NAME"
-    fi
-    echo ""
-done
+bash cmdlets.sh fetch "${CYGWIN_TOOLS[@]}"
 
-# Summary
-echo "============================================================================="
-echo "  Bootstrap Summary"
-echo "============================================================================="
-echo ""
+info "Prepare CA Certificates"
+cat << 'EOF' > bootstrap/update-ca-certificates
+#!/bin/bash
+## !! no symlinks here !! ##
 
-# Verify installation (based on DEFAULT_PACKAGES)
-echo "Verifying installation..."
+: "${CA_ROOT:=}"
+: "${CA_CERT:=$CA_ROOT/etc/ssl/certs/ca-bundle.crt}"
 
-FAILED=0
-for pkg_entry in "${DEFAULT_PACKAGES[@]}"; do
-    PKG_NAME="${pkg_entry%%:*}"
-    PKG_RENAME="${pkg_entry#*:}"
-    
-    if [ "$PKG_RENAME" = "$pkg_entry" ]; then
-        PKG_RENAME="$PKG_NAME"
-    fi
-    
-    # Check for the renamed binary or original
-    if [ "$PKG_RENAME" = "tar" ]; then
-        if [ -f "$CMDLETS_PREBUILTS/bin/tar.exe" ] || [ -f "$CMDLETS_PREBUILTS/bin/bsdtar.exe" ]; then
-            echo "  OK: $PKG_RENAME.exe"
-        else
-            echo "  MISSING: $PKG_RENAME.exe"
-            FAILED=1
-        fi
-    else
-        if [ -f "$CMDLETS_PREBUILTS/bin/${PKG_NAME}.exe" ]; then
-            echo "  OK: $PKG_NAME.exe"
-        else
-            echo "  MISSING: $PKG_NAME.exe"
-            FAILED=1
-        fi
-    fi
-done
+mkdir -pv "${CA_CERT%/*}"
 
-echo ""
+echo "-- ✨ curl ca certs file"
+curl --insecure -fvSL https://curl.se/ca/cacert.pem -o "$CA_CERT"
 
-# Check installed packages
-if [ -f "$CMDLETS_PREBUILTS/.cmdlets" ]; then
-    echo "Installed packages:"
-    cat "$CMDLETS_PREBUILTS/.cmdlets"
-    echo ""
-fi
+echo "-- ✨ set alternative ca certs file path"
 
-echo "============================================================================="
-echo "  Bootstrap completed"
-echo "============================================================================="
-echo ""
-echo "You can now use cmdlets.bat in Windows environment:"
-echo "  cmdlets.bat fetch <package>"
-echo "  cmdlets.bat list"
-echo "  cmdlets.bat search <pattern>"
-echo ""
+#1. OpenSSL default cert.pem
+cp -fv "$CA_CERT" $CA_ROOT/etc/ssl/cert.pem
+#2. curl in-place ca-bundle.crt
+cp -fv "$CA_CERT" $CA_ROOT/bin/curl-ca-bundle.crt
+EOF
+chmod a+x bootstrap/update-ca-certificates
+CA_ROOT=bootstrap ./bootstrap/update-ca-certificates
 
-# Exit with error if verification failed
-if [ $FAILED -ne 0 ]; then
-    exit 1
-fi
+info "Prepare shell environment"
+bash libs.sh make_entry bootstrap/bin/bash.exe bootstrap/bin/sh.exe
+
+cp -f cmdlets.sh            bootstrap
+cp -f win32/cygwin1.dll     bootstrap/bin
+cp -f win32/make_entry.exe  bootstrap/bin
+
+cat << 'EOF' > bootstrap/etc/fstab
+# -------------------------------------------------------------------
+# bash.exe/cygwin 虚拟文件系统动态挂载表 (fstab)
+# -------------------------------------------------------------------
+# 1. 利用 none / cygdrive 机制，自动把 Windows 的盘符重定向到 /media/c 下
+none /media cygdrive binary,user,noacl 0 0
+
+# 2. 将当前 bash.exe 所在的物理根目录，无感锁死硬映射为 POSIX 的虚拟根目录 '/'
+. / mini_rootfs binary,user,noacl 0 0
+EOF
+
+cat << 'EOF' > bootstrap/etc/nsswitch.conf
+# -------------------------------------------------------------------
+# 专属于 cmdlets 的动态用户自愈转换表 (nsswitch.conf)
+# -------------------------------------------------------------------
+# 让 passwd 引擎完全放弃 files(静态文件)，直接锁定全新的 db(动态算力)
+passwd: db
+group: db
+
+db_home: /home/%U
+db_shell: /bin/bash
+EOF
+
+cat << 'EOF' > bootstrap/etc/profile
+# etc/profile
+export USER="cmdlets"
+export LOGIN="cmdlets"
+export HOME="/home/cmdlets"
+
+export PATH=/bin:$PATH
+export TERM=xterm-256color
+export PS1="[\e[31mcmdlets\e[m] \e[34m\w \e[32m\$\e[m "
+
+export LS_COLORS='no=00;37:fi=00:di=34;40:ln=35;40:so=32;40:pi=33;40:ex=31;40:bd=31;40:cd=31;40:su=31;40:sg=31;40:tw=31;40:ow=31;40:'
+
+alias ll='ls -lha --color=auto'
+alias grep='grep --color=auto'
+alias which='command -v'
+
+echo "🌹 Welcome to cmdlets Shell Env! 🌹"
+$SHELL --version | head -n1
+
+cd "$HOME" || cd /
+EOF
+
+info "Prepare Program Entrance"
+
+cat << 'EOF' > bootstrap/shell.bat
+@echo off
+setlocal
+set "PATH=%~dp0;%~dp0bin;%PATH%"
+
+if "%~1"=="" (
+    "%~dp0bin\bash.exe" -login -i
+) else (
+    "%~dp0bin\bash.exe" -c "%*"
+)
+EOF
+sed -i 's/$/\r/' bootstrap/shell.bat
+
+cat << 'EOF' > bootstrap/cmdlets.bat
+@echo off
+setlocal
+set "PATH=%~dp0;%~dp0bin;%PATH%"
+
+"%~dp0bin\bash.exe" -c "cmdlets.sh %*"
+exit /b %errorlevel%
+EOF
+sed -i 's/$/\r/' bootstrap/cmdlets.bat
+
+cat << 'EOF' > bootstrap/git.bat
+@echo off
+setlocal
+set "PATH=%~dp0;%~dp0bin;%PATH%"
+
+set "SSL_CERT_FILE=%~dp0etc\ssl\cert.pem"
+set "GIT_EXEC_PATH=%~dp0bin"
+set "MERGE_TOOLS_DIR=%GIT_EXEC_PATH%\mergetools"
+set "GIT_TEMPLATE_DIR=%~dp0share\git-core\templates"
+
+"%~dp0bin\git.exe" %*
+exit /b %errorlevel%
+EOF
+sed -i 's/$/\r/' bootstrap/git.bat

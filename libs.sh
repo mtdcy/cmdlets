@@ -24,7 +24,6 @@ export LANG=C
       CMDLET_LOGGING=${CMDLET_LOGGING:-tty}     # tty,plain,silent
       CMDLET_MIRRORS=${CMDLET_MIRRORS:-}        # package mirrors, and go/cargo/etc
          CMDLET_REPO=${CMDLET_REPO:-}           # cmdlet pkgfiles repo
-       CMDLET_TARGET=${CMDLET_TARGET:-}
 
 # build options     =
         CMDLET_NJOBS=${CMDLET_NJOBS:-1}         # no parallel build by default
@@ -51,8 +50,11 @@ fi
 #
 #   _TARGET_NAMES   : supported targets name
 
+# user defined target
+_TARGET="$CMDLET_TARGET"
+
 # supported targets
-_TARGET_NAMES=(linux darwin windows)
+_TARGET_NAMES=(linux darwin windows cygwin)
 
 # pkgfiles repo
 _TARGET_REPO="${CMDLET_REPO:-https://cmdlets.mtdcy.top/latest}"
@@ -131,34 +133,43 @@ list_has() {
     return 0
 }
 
-# target check: ready after _init, at least CC is set.
-is_gcc()            { list_has _TARGET_VARS     gcc;             }
-is_clang()          { list_has _TARGET_VARS     clang;           }
-is_darwin()         { list_has _TARGET_VARS     apple;           }
-is_linux()          { list_has _TARGET_VARS     linux;           }
-is_glibc()          { list_has _TARGET_VARS     gnu;             }
-is_musl()           { list_has _TARGET_VARS     musl;            }
-is_win64()          { list_has _TARGET_VARS     w64 x86_64;      }
-is_mingw()          { list_has _TARGET_VARS     mingw32;         }
-is_posix()          { list_has _TARGET_VARS     posix;           }
-is_amd64()          { list_has _TARGET_VARS     x86_64;          }
-is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64"; }
-is_intel()          { list_has _TARGET_VARS     "x86_64|x86";    }
+_INTERESTED_MACROS_=(
+    __linux__
+    __apple__
+    __WINNT__
+    __clang__
+    __GNUC__
+    __WIN32__
+    __WIN64__
+    __CYGWIN__
+    __MINGW32__
+)
 
-host.is_glibc()     { list_has _HOST_VARS       GLIBC;           }
-host.is_linux()     { list_has _HOST_VARS       linux;           }
-host.is_darwin()    { list_has _HOST_VARS       "darwin.*";      }
+# target tests:
+is_darwin()         { list_has _TARGET_VARS     __apple__;                      }
+is_linux()          { list_has _TARGET_VARS     __linux__;                      }
+is_cygwin()         { list_has _TARGET_VARS     __CYGWIN__;                     } # !! cygwin is unix !! #
+is_mingw()          { list_has _TARGET_VARS     __MINGW32__;                    }
 
-gcc.predefined() {
-    # awk: format to key:value
-    echo "#include <stdio.h>" | "$CC" -dM -E - |
-        awk '/#define/{print $2":"$3}'
-}
+# gcc/clang tests:
+is_clang()          { list_has _TARGET_VARS     __clang__;                      }
+is_gcc()            { list_has _TARGET_VARS     __GNUC__;                       }
+is_posix()          { list_has _TARGET_VARS     posix;                          }
+is_glibc()          { list_has _TARGET_VARS     gnu;                            }
+is_musl()           { list_has _TARGET_VARS     musl;                           }
 
-gcc.dumpspecs() {
-    # sed: format to key:value
-    "$CC" -dumpspecs | sed ':a;N;$!ba;s/:\n/:/g'
-}
+# architecture tests:
+is_amd64()          { list_has _TARGET_VARS     x86_64;                         }
+is_arm64()          { list_has _TARGET_VARS     "arm64|aarch64";                }
+is_intel()          { list_has _TARGET_VARS     "x86_64|x86";                   }
+
+# windows(mingw) tests:
+is_win64()          { list_has _TARGET_VARS     __WIN64__;                      }
+
+# host tests:
+host.is_glibc()     { list_has _HOST_VARS       GLIBC;                          }
+host.is_linux()     { list_has _HOST_VARS       linux;                          }
+host.is_darwin()    { list_has _HOST_VARS       "darwin.*";                     }
 
 # cross building?
 is_xbuild() { ! $CC -dumpmachine | grep -qi "$(uname -s)";    }
@@ -327,8 +338,9 @@ _init_host() {
     if test -n "$BUILDER_NAME"; then
         # run with builder docker image
         case "$BUILDER_NAME" in
-            linux/*)    _TARGET="$(uname -m)-linux-gnu"     ;;
-            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"   ;;
+            linux/*)    _TARGET="$(uname -m)-linux-musl"    ;;
+            mingw/*)    _TARGET="$(uname -m)-w64-mingw32"   ;; # for windows bootstrap files only
+            cygwin/*)   _TARGET="$(uname -m)-pc-cygwin"     ;; # preferred windows target
         esac
     else
         # run with host machine
@@ -393,6 +405,7 @@ _init_target() {
     test -n "$_TARGET" || die "missing _TARGET"
 
     case "$_TARGET" in
+        *-cygwin)   _TARGET_NAME=cygwin     ;;
         *-w64-*)    _TARGET_NAME=windows    ;;
         *-darwin*)  _TARGET_NAME=darwin     ;;
         *)          _TARGET_NAME=linux      ;;
@@ -417,6 +430,14 @@ _init_target() {
     # tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"
 
+    # init _LOGFILE for toolchain.sh
+    export _LOGFILE="$_TOPDIR/init.log"
+    {
+        echo "---"
+        env
+        echo "---"
+    } > "$_LOGFILE"
+
     # NEVER append our toolchain wrappers into PATH, OR
     # env like CC_FOR_BUILD will fails
     # ALWAYS use absolute paths for toochain envs
@@ -424,7 +445,7 @@ _init_target() {
     export CXX="$_TARGET_TOOLCHAIN/g++"
 
     # test gcc
-    "$CC" -v &> /dev/null || "$CC IS NOT RECOGNIZED"
+    "$CC" -v &> /dev/null || die "$CC IS NOT RECOGNIZED"
 
     # binutils envs
     local binutils=(
@@ -441,7 +462,7 @@ _init_target() {
 
     # target specific toolchain utils
     case "$_TARGET_NAME" in
-        windows)
+        windows | cygwin)
             binutils+=(
                 WINDRES:windres
                 DLLTOOL:dlltool
@@ -467,9 +488,11 @@ _init_target() {
 
     # for target checks
     IFS=' :-()' read -r -a _TARGET_VARS < <({
-        "$CC" --version 2>&1 | grep -oE "gcc|clang"
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
-        "$CC" -### -x c /dev/null -o /dev/null 2>&1 | grep -oP -- "[\" ]-l\K[^\" ]+"
+        "$CC" -dM -E - < /dev/null | grep -oE "$(
+            IFS='|'
+            echo "${_INTERESTED_MACROS_[*]}"
+        )"
     } | xargs)
     IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
@@ -526,6 +549,10 @@ _init_target() {
             #  - mingw-w64  : msvcrt
             #  - llvm-mingw : ucrt
             ;;
+        cygwin)
+            cflags+=(-ffunction-sections -fdata-sections)
+            ldflags+=(-Wl,-gc-sections -static -static-libstdc++ -static-libgcc)
+            ;;
         *)
             #1. static linking => two '--' vs ldflags
             #2. tell compiler to place each function and data into its own section
@@ -542,10 +569,15 @@ _init_target() {
             ;;
     esac
 
-    if is_true CMDLET_VERBOSE; then
-        cflags+=(-v)
-        ldflags+=(-Wl,--verbose)
-    fi
+    case "$CMDLET_VERBOSE" in
+        1)
+            ldflags+=(-Wl,--trace)
+            ;;
+        2)
+            cflags+=(-v)
+            ldflags+=(-Wl,--verbose)
+            ;;
+    esac
 
     CPP="$CC -E"
     CFLAGS="${cflags[*]}"
@@ -560,12 +592,14 @@ _init_target() {
     # v3/manifest => _init_pkgfile
     export _TARGET_MANIFEST="$PREFIX/cmdlets.manifest"
 
-    # linux mingw for windows target with wine
-    if is_mingw && test -n "$WINEPREFIX"; then
+    # linux + wine
+    if test -n "$WINEPREFIX"; then
         WINE="$(which wine 2> /dev/null)" || true
 
         # no wine debug infomations
         WINEDEBUG=-all
+
+        is_cygwin && cp win32/cygwin1.dll "$WINEPREFIX/drive_c/windows/system32/"
 
         # wine: '/wine' is not owned by you
         #  : workflows start with --entrypoint=''
@@ -1006,7 +1040,7 @@ _prepare() {
 _compile() {
     _init_target
 
-    (
+    (   
         # always start subshell before _load()
 
         trap _capture_reset EXIT
@@ -1234,11 +1268,11 @@ build() {
     _init_target
     _init_pkgfile
 
-    slogi $_EMOJI_ROSE "cmdlets builder $(cat .version) @ ${BUILDER_NAME:-$OSTYPE}"
+    slogi $_EMOJI_ROSE "cmdlets builder $(cat .version)"
 
     echo ""
-    echo "host   : ${_HOST_VARS[@]}"
-    echo "target : ${_TARGET_VARS[@]}"
+    echo "host   : ${_HOST_VARS[*]}"
+    echo "target : ${_TARGET_VARS[*]}"
     echo ""
 
     # fetch dependencies
@@ -1503,11 +1537,18 @@ env() {
 }
 
 clean() {
-    rm -rf "$_TARGET_WORKDIR" "$_TARGET_LOGFILES"
+    _init_target
+
+    rm -rf "$_TARGET_WORKDIR"
+    rm -rf "$_TARGET_LOGFILES"
+    rm -f  "$_TARGET_MANIFEST"  # force fetch manifest again
+
     exit 0 # always exit here
 }
 
 distclean() {
+    _init_target
+
     rm -rf "$PREFIX" && clean || true
 }
 
@@ -1551,9 +1592,9 @@ macros() {
 #  input: <target> <entry name>
 #
 #  note:
-#   e.g: create_entry path/to/target path/to/entry
+#   e.g: make_entry path/to/target path/to/entry
 #    entry must inside target or its parent dir
-create_entry() {
+make_entry() {
     local dir="${2%/*}" # destination directory
     local target="${1#"$dir/"}" # relative path
 
@@ -1561,11 +1602,14 @@ create_entry() {
 
     _init_target
 
-    if is_mingw; then
-        "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_TOPDIR/win32/entry.c" -o "$2"
-    else
-        ln -sfv "$target" "$2"
-    fi
+    case "$_TARGET_NAME" in
+        windows | cygwin)
+            "$CC" $CFLAGS $LDFLAGS -DTARGET="\"$target\"" "$_TOPDIR/win32/entry.c" -o "$2"
+            ;;
+        *)
+            ln -sfv "$target" "$2"
+            ;;
+    esac
 }
 
 _on_exit() {
