@@ -27,7 +27,7 @@ libs_build() {
 
     cmdlet.pkgconf lib/libnghttp2.pc -DNGHTTP2_STATICLIB
 
-    cmdlet.pkgfile libnghttp2 -- make.install
+    cmdlet.pkgfile libnghttp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

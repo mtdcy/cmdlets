@@ -45,7 +45,7 @@ libs_build() {
 
     pkgconf libnftables.pc -lnftables -lgmp -ljansson -ledit -lmnl -lnftnl
 
-    cmdlet.pkgfile libnftables -- make.install sbin_PROGRAMS=
+    cmdlet.pkgfile libnftables -- make install sbin_PROGRAMS=
 
     cmdlet.install ./src/nft
 

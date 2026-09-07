@@ -38,7 +38,7 @@ libs_build() {
 
     pkgconf lib/libngtcp2.pc -DNGTCP2_STATICLIB
 
-    pkgfile libngtcp2 -- make.install
+    pkgfile libngtcp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

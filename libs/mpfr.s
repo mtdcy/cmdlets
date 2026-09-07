@@ -31,7 +31,7 @@ libs_build() {
     configure && make && make check || return $?
 
     # nobase_dist_doc_DATA: no examples
-    cmdlet.pkgfile libmpfr -- make.install nobase_dist_doc_DATA=
+    cmdlet.pkgfile libmpfr -- make install nobase_dist_doc_DATA=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

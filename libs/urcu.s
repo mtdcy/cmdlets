@@ -29,7 +29,7 @@ libs_build() {
 
     make
 
-    cmdlet.pkgfile liburcu -- make.install SUBDIRS="'include src'"
+    cmdlet.pkgfile liburcu -- make install SUBDIRS="'include src'"
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

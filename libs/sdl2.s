@@ -17,7 +17,7 @@ libs_args=(
 libs_build() {
     configure && make || return $?
 
-    pkgfile libSDL2 -- make.install
+    pkgfile libSDL2 -- make install
 }
 
 

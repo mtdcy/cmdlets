@@ -24,12 +24,12 @@ libs_args=(
 libs_build() {
     configure
 
-    make.all
+    make all
 
     # fix pc file
     pkgconf libjq.pc -lm -lonig -lpthread -pthread
 
-    cmdlet.pkgfile libjq -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libjq -- make install bin_PROGRAMS=
 
     cmdlet.install jq
 

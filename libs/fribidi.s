@@ -23,7 +23,7 @@ libs_build() {
 
     make
 
-    cmdlet.pkgfile libfribidi -- make.install SUBDIRS=lib
+    cmdlet.pkgfile libfribidi -- make install SUBDIRS=lib
 
     cmdlet.install bin/fribidi
 

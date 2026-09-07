@@ -77,12 +77,12 @@ libs_build() {
     configure
 
     # build and install only static libraries
-    make.all bin_PROGRAMS=
+    make all bin_PROGRAMS=
 
     # fix libelf.pc with musl libraries
     pkgconf config/libelf.pc -largp -lfts -lobstack
 
-    pkgfile libelf -- make.install bin_PROGRAMS=
+    pkgfile libelf -- make install bin_PROGRAMS=
 }
 
 # patch: enable static build

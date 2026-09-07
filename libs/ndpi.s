@@ -29,9 +29,9 @@ libs_build() {
         -e '/^NDPI_LIBS/s/\$(NDPI_LIB_SHARED)//' \
         -e '/NDPI_LIB_SHARED_BASE/d'
 
-    make.all
+    make all
 
-    cmdlet.pkgfile libndpi -- make.install
+    cmdlet.pkgfile libndpi -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

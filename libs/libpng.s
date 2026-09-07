@@ -33,7 +33,7 @@ libs_build() {
     sed -i libpng16-config \
         -e 's/\${libs}/\${all_libs}/g'
 
-    cmdlet.pkgfile libpng -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libpng -- make install bin_PROGRAMS=
 
     for x in pngfix pngtest pngimage png-fix-itxt; do
         cmdlet.install "$x"

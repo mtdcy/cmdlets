@@ -43,7 +43,7 @@ libs_build() {
         -e '/tests\/Makefile/d'
 
     for x in avutil avcodec avformat swscale swresample avfilter avdevice; do
-        cmdlet.pkgfile "lib$x" -- make.install FFLIBS="$x"
+        cmdlet.pkgfile "lib$x" -- make install FFLIBS="$x"
     done
 
     # install tools

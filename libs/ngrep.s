@@ -16,7 +16,7 @@ libs_args=(
 libs_build() {
     configure
 
-    make.all
+    make all
 
     cmdlet.install  ngrep
 

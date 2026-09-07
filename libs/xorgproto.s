@@ -20,9 +20,9 @@ libs_build() {
     sed -i Makefile \
         -e '/pkgconfigdir =/s/datadir/libdir/' || die
 
-    make.all
+    make all
 
-    pkgfile $libs_name -- make.install
+    pkgfile $libs_name -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

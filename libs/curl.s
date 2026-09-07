@@ -81,7 +81,7 @@ libs_build() {
 
     pkgconf libcurl.pc -DCURL_STATICLIB
 
-    pkgfile libcurl -- make.install bin_PROGRAMS=
+    pkgfile libcurl -- make install bin_PROGRAMS=
 
     cmdlet.install src/curl
 

@@ -72,7 +72,7 @@ libs_build() {
     fi
 
     # install libmagic
-    cmdlet.pkgfile libmagic -- make.install -C src bin_PROGRAMS=
+    cmdlet.pkgfile libmagic -- make install -C src bin_PROGRAMS=
 
     # install file program
     if is_cygwin; then

@@ -45,7 +45,7 @@ libs_build() {
         -e 's/echo \$includes *$/& -DPCRE2_STATIC/'
 
     # no prograns or docs
-    cmdlet.pkgfile libpcre2 -- make.install \
+    cmdlet.pkgfile libpcre2 -- make install \
         bin_PROGRAMS= \
         dist_man_MANS= \
         dist_doc_DATA= \

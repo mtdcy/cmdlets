@@ -22,7 +22,7 @@ libs_build() {
 
     configure
 
-    make.all
+    make all
 
     cmdlet.install  src/nload
 

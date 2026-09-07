@@ -243,22 +243,25 @@ configure() {
 }
 
 make() {
-    local cmdline=("$MAKE" "$@")
+    local opts=() targets=() x njobs verbose
 
-    # set default njobs
-    [[ "${cmdline[*]}" =~ -j[0-9\ ]* ]] || cmdline+=(-j"$_NJOBS")
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -j)         njobs="$2" && shift ;;
+            -j*)        njobs="${1#-j}"     ;;
+            V=*)        verbose="$1"        ;;
+            *=*)        opts+=("$1")        ;;
+            *)          targets+=("$1")     ;;
+        esac
+        shift
+    done
 
-    [[ "${cmdline[*]}" =~ \ V=[0-9]+ ]] || cmdline+=(V=1)
+    [[ " ${targets[*]} " =~ " "(install|check)" " ]] && njobs=1
 
-    slogcmd "${cmdline[@]}" || die "make $libs_name failed."
-}
+    test -z "$njobs"   || opts+=("-j$njobs")
+    test -n "$verbose" && opts+=("$verbose") || opts+=("V=1")
 
-make.all() {
-    slogcmd "$MAKE" all "-j$_NJOBS" V=1 "$@" || die "make.all $libs_name failed."
-}
-
-make.install() {
-    slogcmd "$MAKE" install -j1 "$@" || die "make.install $libs_name failed."
+    slogcmd "$MAKE" "${targets[@]}" "${opts[@]}" || die "make $libs_name failed."
 }
 
 # setup cmake environments

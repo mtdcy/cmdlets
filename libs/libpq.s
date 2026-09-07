@@ -58,10 +58,10 @@ libs_build() {
     make -C src/interfaces MAKELEVEL=0
 
     # install only static client libraries
-    #cmdlet.pkgfile libpq-headers -- make.install -C src/include
-    cmdlet.pkgfile libpqcommon -- make.install -C src/common
-    cmdlet.pkgfile libpgport   -- make.install -C src/port
-    cmdlet.pkgfile libpq       -- make.install -C src/interfaces
+    #cmdlet.pkgfile libpq-headers -- make install -C src/include
+    cmdlet.pkgfile libpqcommon -- make install -C src/common
+    cmdlet.pkgfile libpgport   -- make install -C src/port
+    cmdlet.pkgfile libpq       -- make install -C src/interfaces
 
 #   for x in src/include src/interfaces src/common src/port; do
 #       make -C "$x" install \

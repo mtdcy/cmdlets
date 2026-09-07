@@ -58,7 +58,7 @@ libs_build() {
         pkgconf config/gdlib.pc -DGD_STATIC_BUILD -DBGDWIN32
     fi
 
-    cmdlet.pkgfile "$libs_name" -- make.install bin_PROGRAMS= bin_SCRIPTS=
+    cmdlet.pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

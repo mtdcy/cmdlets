@@ -47,14 +47,14 @@ libs_build() {
 
     configure
 
-    cmdlet.pkgfile libnftnl -- make.install
+    cmdlet.pkgfile libnftnl -- make install
 
     # netfilter extra libraries
     libnetfilter() {
         (   
             cd "$1"-*
             configure
-            cmdlet.pkgfile "$1@$2" -- make.install
+            cmdlet.pkgfile "$1@$2" -- make install
         ) || die "build $1 failed"
     }
 
