@@ -6,7 +6,7 @@ libs_stable=1
 libs_lic=GPLv3+
 libs_ver=5.3
 libs_rev=3
-libs_url=${_LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/bash/bash-5.3.tar.gz
+libs_url=${LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/bash/bash-5.3.tar.gz
 libs_sha=6c377fd89688d0ce9bef112ce82c83418f1b6d5457ad6ea2ef2d8558bd552f2c
 
 # debian/ubuntu patches

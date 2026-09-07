@@ -4,7 +4,7 @@
 
 libs_lic=GPLv3+
 libs_ver=3.12
-libs_url=${_LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/diffutils/diffutils-3.12.tar.xz
+libs_url=${LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/diffutils/diffutils-3.12.tar.xz
 libs_sha=7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd
 
 libs_args=(

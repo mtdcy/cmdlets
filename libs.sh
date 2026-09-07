@@ -971,6 +971,9 @@ _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 _prepare() {
     slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
 
+    # load libs helpers
+    . helpers.sh
+
     _load "$1" || die "load $1 failed."
 
     # prepare workdir and enter it
@@ -1030,21 +1033,19 @@ _compile() {
 
     # always start subshell
     (   
-        . helpers.sh
-
         trap _capture_reset EXIT
-        trap 'exit 1'   INT     # ctrl-c
+        trap 'exit 1'       INT     # ctrl-c
 
         set -eo pipefail
 
         # find latest commit hash
-        _COMMIT_HASH="$(_git_ls_hash "$1")"
+        _LIBS_COMMIT_HASH="$(_git_ls_hash "$1")"
 
         # prepare source codes
         _prepare "$1" || return $?
 
         declare -F libs_build > /dev/null || {
-            slogw "Missing function libs_build"
+            sloge "Missing libs_build routine"
             return 127
         }
 
@@ -1058,12 +1059,12 @@ _compile() {
             echo -e "----\n"
         } > "$_LOGFILE"
 
+        # read pkgbuild before clear
+        _LIBS_PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
+        test -n "$_LIBS_PKGBUILD" || _LIBS_PKGBUILD="build=0"
+
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
-
-        # read pkgbuild before clear
-        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
-        test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_TARGET_MANIFEST"
@@ -1561,7 +1562,7 @@ update() {
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
     # set libs_rev - cmdlet revision (packaging number)
-    #  - _PKGBUILD : real packaging number
+    #  - _LIBS_PKGBUILD : real packaging number
     sed -i "libs/$1.s" \
         -e '/^libs_rev=.*$/d' \
         -e '/^libs_ver=/a libs_rev=1'

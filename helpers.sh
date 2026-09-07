@@ -1,14 +1,16 @@
 #!/bin/bash
 #
-# helpers for build static libraries
+# helpers for build static libraries (libs = library static)
 #
-# this file be loaded when compile targets
-#
-# warning: variable not assigned
-# shellcheck disable=SC2154
+# this file should be loaded only when compile targets
 
-: "${_LIBS_MIRROR_GNU:=https://mirrors.tuna.tsinghua.edu.cn/gnu}"
-: "${_LIBS_BUILDDIR:=.build}"
+# environments for libs formula
+: "${LIBS_MIRROR_GNU:=https://mirrors.tuna.tsinghua.edu.cn/gnu}"
+
+# helpers internel variables
+: "${_LIBS_BUILDDIR:=".build"}"
+# _LIBS_PKGBUILD
+# _LIBS_COMMIT_HASH
 
 # show git tag > branch > commit
 git.version() {
@@ -389,7 +391,7 @@ cmake.setup() {
     export CMAKE_BUILD_PARALLEL_LEVEL=1
 
     # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$_LIBS_BUILDDIR" "${_CMAKE_STD[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
+    slogcmd "$CMAKE" -S . -B "$_LIBS_BUILDDIR" "${_CMAKE_ARGS[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
 
     pushd "$_LIBS_BUILDDIR" || die
 }
@@ -1024,7 +1026,7 @@ go.build() {
     # go embed version control
     if test -f main.go; then
         echo "$*" | grep -i main.version    || ldflags+=(-X main.version="$libs_ver")
-        echo "$*" | grep -i main.build      || ldflags+=(-X main.build="$((${_PKGBUILD#*=} + 1))")
+        echo "$*" | grep -i main.build      || ldflags+=(-X main.build="$((${_LIBS_PKGBUILD#*=} + 1))")
     fi
 
     [ "$CGO_ENABLED" -ne 0 ] || ldflags+=(-extldflags=-static)
@@ -1224,11 +1226,16 @@ cmdlet.pkgfile() {
     #    _make_link "$libs_name/$name@latest"   "$name@latest"
     #fi
 
-    # v3/manifest: name pkgfile sha build
+    # v3/manifest: name pkgfile sha [metadata]
     # clear versioned records
     sed -i "\#^$1 $pkgfile #d" "$_TARGET_MANIFEST"
-    # new records
-    echo "$1 $pkgfile $sha build=$((${_PKGBUILD#*=} + 1)) commit_hash=$_COMMIT_HASH" >> "$_TARGET_MANIFEST"
+
+    # append records with metadata
+    local pkgmeta=()
+    test -z "$_LIBS_PKGBUILD"    || pkgmeta+=("build=$((${_LIBS_PKGBUILD#*=} + 1))")
+    test -z "$_LIBS_COMMIT_HASH" || pkgmeta+=("commit_hash=$_LIBS_COMMIT_HASH")
+
+    echo "$1 $pkgfile $sha ${pkgmeta[*]}" >> "$_TARGET_MANIFEST"
 
     popd || die "popd failed."
 }
