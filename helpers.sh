@@ -25,51 +25,44 @@ date.iso8601() {
 # 通用的编译脚本设置函数
 #  禁用多线程编译：libs.requires -j1
 libs.requires() {
-    declare -a cflags cxxflags cppflags
+    declare -a cflags cxxflags cppflags ldflags
 
     local x y
     for x in "$@"; do
         case "$x" in
-            -j1)    _NJOBS=1 ;; # Deparallelization
-            -std=c++* | -std=gnu++*)
-                cxxflags+=("$x")
-                ;;
-            -std=*)
-                cflags+=("$x")
-                ;;
             -l* | -L* | -pthread | -Wl,*)
                 ldflags+=("$x")
                 ;;
-            -I*)
-                cppflags+=("$x")
-                ;;
-            -*)
-                cflags+=("$x")
-                cxxflags+=("$x")
-                ;;
+            -j1)            _NJOBS=1         ;; # Deparallelization
+            -fpermissive)   cxxflags+=("$x") ;;
+            -std=c++*)      cxxflags+=("$x") ;;
+            -std=gnu++*)    cxxflags+=("$x") ;;
+            -std=*)         cflags+=("$x")   ;;
+            -I*)            cppflags+=("$x") ;;
+            -*)             cflags+=("$x")   ;;
             *)
                 "$PKG_CONFIG" --exists "$x" || die "$x not found."
 
-                for y in $($PKG_CONFIG --cflags "$x"); do
+                for y in $("$PKG_CONFIG" --cflags "$x"); do
                     case "$y" in
-                        -std=c++* | -std=gnu++*) cxxflags+=("$y")   ;;
-                        -fpermissive)           cxxflags+=("$y")    ;;
-                        *)                      cflags+=("$y")      ;;
+                        -std=c++*)      cxxflags+=("$y") ;;
+                        -std=gnu++*)    cxxflags+=("$y") ;;
+                        -fpermissive)   cxxflags+=("$y") ;;
+                        *)              cflags+=("$y")   ;;
                     esac
                 done
 
-                ldflags+=" $($PKG_CONFIG --libs-only-l "$x")"
+                # shellcheck disable=SC2207
+                ldflags+=($("$PKG_CONFIG" --libs-only-l "$x"))
                 ;;
         esac
     done
 
     # append flags
-    CFLAGS+=" ${cflags[*]}"
-    CXXFLAGS+=" ${cflags[*]} ${cxxflags[*]}"
-    CPPFLAGS+=" ${cppflags[*]}"
-    LDFLAGS+=" ${ldflags[*]}"
-
-    export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+    test -z "${cflags[*]}"   || export CFLAGS="$CFLAGS ${cflags[*]}"
+    test -z "${cppflags[*]}" || export CPPFLAGS="$CPPFLAGS ${cppflags[*]}"
+    test -z "${cxxflags[*]}" || export CXXFLAGS="$CXXFLAGS ${cflags[*]} ${cxxflags[*]}"
+    test -z "${ldflags[*]}"  || export LDFLAGS="$LDFLAGS ${ldflags[*]}"
 }
 
 # 兼容 c89 + K&R
