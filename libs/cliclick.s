@@ -1,6 +1,8 @@
 # Simple terminal UI for git commands
 
 # shellcheck disable=SC2034
+libs_targets=(darwin)
+
 libs_lic=BSD-3-Clause
 libs_ver=5.1
 libs_url=https://github.com/BlueM/cliclick/archive/refs/tags/5.1.tar.gz
@@ -25,7 +27,5 @@ libs_build() {
 
     cmdlet.check cliclick
 }
-
-libs.depends is_darwin
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -22,11 +22,6 @@ date.iso8601() {
     date +%Y-%m-%dT%H:%M:%S
 }
 
-# deprecated
-libs.depends() {
-    eval -- "$*" || { unset libs_dep libs_args libs_build; }
-}
-
 # 通用的编译脚本设置函数
 #  禁用多线程编译：libs.requires -j1
 libs.requires() {

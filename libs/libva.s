@@ -1,6 +1,8 @@
 # Hardware accelerated video processing library (Linux)
 
 # shellcheck disable=SC2034
+libs_targets=(linux)
+
 libs_lic="MIT"
 libs_ver=2.24.1
 libs_rev=2
@@ -39,7 +41,5 @@ libs_build() {
 
     pkgfile libva -- make install
 }
-
-libs.depends is_linux
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

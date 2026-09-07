@@ -1,6 +1,7 @@
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 #
 # Libraries and utilities for handling ELF objects
+libs_targets=(linux)
 libs_stable=1
 
 # shellcheck disable=SC2034
@@ -83,8 +84,6 @@ libs_build() {
 
     pkgfile libelf -- make.install bin_PROGRAMS=
 }
-
-libs.depends is_linux
 
 # patch: enable static build
 __END__
