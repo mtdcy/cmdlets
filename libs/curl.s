@@ -79,9 +79,9 @@ libs_build() {
 
     slogcmd run src/curl -4 -fvIL https://www.google.com || die "curl test failed"
 
-    pkgconf libcurl.pc -DCURL_STATICLIB
+    cmdlet.pkgconf libcurl.pc -DCURL_STATICLIB
 
-    pkgfile libcurl -- make install bin_PROGRAMS=
+    cmdlet.pkgfile libcurl -- make install bin_PROGRAMS=
 
     cmdlet.install src/curl
 

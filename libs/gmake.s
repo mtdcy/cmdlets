@@ -22,18 +22,17 @@ libs_args=(
 )
 
 libs_build() {
-    configure &&
+    configure
 
-    make &&
+    make
 
     # check: some test fail
     # make check &&
 
-    cmdlet make gmake make &&
+    cmdlet.install make gmake make
 
     # verify
-    check gmake --version
+    cmdlet.check gmake --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

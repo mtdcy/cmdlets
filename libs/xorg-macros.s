@@ -5,7 +5,7 @@ libs_lic=MIT
 libs_ver=1.20.2
 libs_url=https://www.x.org/archive/individual/util/util-macros-1.20.2.tar.xz
 libs_sha=9ac269eba24f672d7d7b3574e4be5f333d13f04a7712303b1821b2a51ac82e8e
-libs_dep=( )
+libs_dep=()
 
 libs_args=(
     --disable-silent-rules
@@ -22,7 +22,7 @@ libs_build() {
 
     make all
 
-    pkgfile $libs_name -- make install
+    cmdlet.pkgfile $libs_name -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

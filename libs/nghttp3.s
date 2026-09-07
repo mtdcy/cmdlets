@@ -6,7 +6,7 @@ libs_ver=1.18.0
 libs_rev=1
 libs_url=https://github.com/ngtcp2/nghttp3/releases/download/v1.18.0/nghttp3-1.18.0.tar.xz
 libs_sha=aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19
-libs_dep=( )
+libs_dep=()
 
 # configure args
 libs_args=(
@@ -23,9 +23,9 @@ libs_build() {
 
     cmake.build
 
-    pkgconf lib/libnghttp3.pc -DNGHTTP3_STATICLIB
+    cmdlet.pkgconf lib/libnghttp3.pc -DNGHTTP3_STATICLIB
 
-    pkgfile libnghttp3 -- cmake.install
+    cmdlet.pkgfile libnghttp3 -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

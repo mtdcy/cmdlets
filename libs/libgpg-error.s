@@ -4,7 +4,7 @@
 libs_ver=1.61
 libs_url=https://github.com/gpg/libgpg-error/archive/refs/tags/libgpg-error-$libs_ver.tar.gz
 libs_sha=d856f3582d31fd754afe876abf6f269e4f2f4e75c7ca2047971fb6e9b1d6e552
-libs_dep=( )
+libs_dep=()
 
 libs_args=(
     --disable-option-checking
@@ -34,7 +34,7 @@ libs_build() {
     sed -i src/gpgrt-config \
         -e '/^enable_static/s/=.*/=yes/'
 
-    pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=gpgrt-config
+    cmdlet.pkgfile "$libs_name" -- make install bin_PROGRAMS= bin_SCRIPTS=gpgrt-config
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

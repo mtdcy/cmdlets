@@ -38,9 +38,9 @@ libs_build() {
 
     make PREFIX="'$PREFIX'" COPTS="'$COPTS'"
 
-    cmdlet ./src/dnsmasq
+    cmdlet.install ./src/dnsmasq
 
-    check dnsmasq --version
+    cmdlet.check dnsmasq --version
 
     if is_linux; then
         COPTS+=" -DNO_IPSET -DHAVE_NFTSET"
@@ -49,9 +49,9 @@ libs_build() {
 
         make PREFIX="'$PREFIX'" COPTS="'$COPTS'"
 
-        cmdlet ./src/dnsmasq dnsmasq-nftset
+        cmdlet.install ./src/dnsmasq dnsmasq-nftset
 
-        check dnsmasq-nftset --version
+        cmdlet.check dnsmasq-nftset --version
     fi
 }
 

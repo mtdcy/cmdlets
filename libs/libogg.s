@@ -18,11 +18,11 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p build && cd build
+    cmake.setup
 
-    cmake .. && make || return $?
+    cmake.build
 
-    cmdlet.pkgfile libogg -- make install
+    cmdlet.pkgfile libogg -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

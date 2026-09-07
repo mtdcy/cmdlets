@@ -12,14 +12,15 @@ libs_args=(
 )
 
 libs_build() {
-    go clean || true
+    go.clean || true
 
-    go build . &&
+    go.setup
 
-    cmdlet checkmake &&
+    go.build
 
-    check checkmake
+    cmdlet.install checkmake
+
+    cmdlet.check checkmake
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
-

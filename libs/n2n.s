@@ -11,16 +11,15 @@ libs_dep=()
 libs_build() {
     export CFLAGS="$CFLAGS -Wno-incompatible-function-pointer-types"
 
-    configure &&
+    configure
 
-    make &&
+    make
 
-    cmdlet supernode &&
+    cmdlet.install supernode
 
-    cmdlet edge &&
+    cmdlet.install edge
 
-    check supernode -h
+    cmdlet.check supernode -h
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
-

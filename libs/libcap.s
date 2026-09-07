@@ -34,12 +34,12 @@ libs_build() {
 
     make "${libs_args[@]}"
 
-    pkgfile libcap -- make -C libcap install "${libs_args[@]}"
+    cmdlet.pkgfile libcap -- make -C libcap install "${libs_args[@]}"
 
-    cmdlet ./progs/getcap
-    cmdlet ./progs/setcap
-    cmdlet ./progs/capsh
-    cmdlet ./progs/getpcaps
+    cmdlet.install ./progs/getcap
+    cmdlet.install ./progs/setcap
+    cmdlet.install ./progs/capsh
+    cmdlet.install ./progs/getpcaps
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -80,9 +80,9 @@ libs_build() {
     make all bin_PROGRAMS=
 
     # fix libelf.pc with musl libraries
-    pkgconf config/libelf.pc -largp -lfts -lobstack
+    cmdlet.pkgconf config/libelf.pc -largp -lfts -lobstack
 
-    pkgfile libelf -- make install bin_PROGRAMS=
+    cmdlet.pkgfile libelf -- make install bin_PROGRAMS=
 }
 
 # patch: enable static build

@@ -12,7 +12,7 @@ libs_args=(
     PREFIX="'$PREFIX'"
 
     CXX="'$CXX'"
-    CXXFLAGS="'$CXXFLAGS'" 
+    CXXFLAGS="'$CXXFLAGS'"
     CPPFLAGS="'$CPPFLAGS'"
     LDFLAGS="'$LDFLAGS'"
 
@@ -23,17 +23,16 @@ libs_args=(
 libs_build() {
     is_clang || sed 's/-Wno-logical-op-parentheses/-Wno-parentheses/g' -i Makefile
 
-    make -f makefile "${libs_args[@]}" &&
+    make -f makefile "${libs_args[@]}"
 
     # quick check
-    ./unrar | grep "${libs_ver%.*}" &&
+    run ./unrar | grep "${libs_ver%.*}"
 
     # install
-    cmdlet unrar &&
+    cmdlet.install unrar
 
     # visual verify
-    check unrar -version
+    cmdlet.check unrar -version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

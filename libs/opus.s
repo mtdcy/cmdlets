@@ -24,7 +24,11 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make && make check || return $?
+    configure
+
+    make
+
+    make check
 
     cmdlet.pkgfile libopus -- make install
 }

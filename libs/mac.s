@@ -12,10 +12,13 @@ libs_args=(
 )
 
 libs_build() {
-    cmake . && make || return $?
+    cmake.setup
 
-    cmdlet ./mac && check mac --version
+    cmake.build
+
+    cmdlet.install ./mac
+
+    cmdlet.check mac --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

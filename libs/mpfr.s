@@ -28,7 +28,11 @@ libs_args=(
 libs_build() {
     is_darwin || export CXXFLAGS+=" --static-libquadmath"
 
-    configure && make && make check || return $?
+    configure
+
+    make
+
+    make check
 
     # nobase_dist_doc_DATA: no examples
     cmdlet.pkgfile libmpfr -- make install nobase_dist_doc_DATA=

@@ -51,9 +51,9 @@ libs_build() {
 
     make CCOPT=
 
-    cmdlet ./hping3
+    cmdlet.install ./hping3
 
-    check hping3 --version
+    cmdlet.check hping3 --version
 }
 
 # patches from macport

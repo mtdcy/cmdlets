@@ -64,18 +64,17 @@ libs_args=(
 is_darwin && libs_args+=(bsd) || libs_args+=(unzips)
 
 libs_build() {
-    make -f unix/Makefile "${libs_args[@]}" V=1 &&
+    make -f unix/Makefile "${libs_args[@]}" V=1
 
-    make -f unix/Makefile check     &&
+    make -f unix/Makefile check
 
-    cmdlet ./unzip unzip zipinfo    &&
-    cmdlet ./unzipsfx               &&
-    cmdlet ./funzip                 &&
-    cmdlet ./unix/zipgrep           &&
+    cmdlet.install ./unzip unzip zipinfo
+    cmdlet.install ./unzipsfx
+    cmdlet.install ./funzip
+    cmdlet.install ./unix/zipgrep
 
     # verify
-    check unzip
+    cmdlet.check unzip
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -41,15 +41,15 @@ libs_build() {
     configure
 
     make nmap
-    cmdlet ./nmap
+    cmdlet.install ./nmap
 
     make -C nping
-    cmdlet ./nping/nping nmap-ping
+    cmdlet.install  ./nping/nping nmap-ping
 
     make -C ncat
-    cmdlet ./ncat/ncat nmap-cat
+    cmdlet.install ./ncat/ncat nmap-cat
 
-    check nmap --version
+    cmdlet.check nmap --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -43,7 +43,7 @@ libs_build() {
 
     make
 
-    pkgconf libnftables.pc -lnftables -lgmp -ljansson -ledit -lmnl -lnftnl
+    cmdlet.pkgconf libnftables.pc -lnftables -lgmp -ljansson -ledit -lmnl -lnftnl
 
     cmdlet.pkgfile libnftables -- make install sbin_PROGRAMS=
 

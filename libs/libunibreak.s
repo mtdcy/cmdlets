@@ -20,7 +20,9 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
+
+    make
 
     cmdlet.pkgfile libunibreak -- make install
 }

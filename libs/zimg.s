@@ -21,7 +21,9 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
+
+    make
 
     {
         if is_linux; then

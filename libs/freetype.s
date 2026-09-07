@@ -33,7 +33,9 @@ libs_build() {
     # for objs/apinames
     export CCexe_CFLAGS="$CFLAGS"
 
-    configure && make || return 1
+    configure
+
+    make
 
     #inspect make install
 

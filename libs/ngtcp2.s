@@ -8,7 +8,7 @@ libs_url=https://github.com/ngtcp2/ngtcp2/releases/download/v$libs_ver/ngtcp2-$l
 libs_rev=1
 libs_sha=2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb
 
-libs_deps=( openssl )
+libs_deps=(openssl)
 
 libs_args=(
     --disable-option-checking
@@ -34,11 +34,11 @@ libs_build() {
 
     # fix libngtcp2.pc
     is_listed openssl libs_deps &&
-    pkgconf lib/libngtcp2.pc -lngtcp2_crypto_ossl openssl || true
+        cmdlet.pkgconf lib/libngtcp2.pc -lngtcp2_crypto_ossl openssl || true
 
-    pkgconf lib/libngtcp2.pc -DNGTCP2_STATICLIB
+    cmdlet.pkgconf lib/libngtcp2.pc -DNGTCP2_STATICLIB
 
-    pkgfile libngtcp2 -- make install
+    cmdlet.pkgfile libngtcp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

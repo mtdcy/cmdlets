@@ -11,7 +11,7 @@ libs_url=(
     https://nlnetlabs.nl/downloads/ldns/ldns-1.8.3.tar.gz
 )
 libs_sha=33fb1a77f2de2fca9e749d17256334a3222a9e9d11b31c6d998bd920f3bd6776
-libs_dep=( openssl )
+libs_dep=(openssl)
 
 # https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-ldns
 if is_mingw; then
@@ -54,7 +54,7 @@ libs_build() {
 
     make
 
-    pkgfile libldns -- make install-h install-lib install-pc
+    cmdlet.pkgfile libldns -- make install-h install-lib install-pc
 
 }
 

@@ -22,10 +22,10 @@ libs_build() {
 
     make
 
-    cmdlet ./server/stunserver
-    cmdlet ./client/stunclient
+    cmdlet.install ./server/stunserver
+    cmdlet.install ./client/stunclient
 
-    check stunclient
+    cmdlet.check stunclient
 
     cmdlet.caveats << EOF
 static built stun client and server @ $libs_ver
