@@ -40,9 +40,6 @@ libs_args=(
 )
 
 libs_build() {
-
-    visibility.hidden
-
     hack.c.symbols include/utils.h __abi_breakage
 
     configure
