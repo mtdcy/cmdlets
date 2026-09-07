@@ -15,8 +15,9 @@ export CMDLETS_ARCH="$(uname -m)-pc-cygwin"
 
 CYGWIN_TOOLS=(
     # core
-    coreutils bash grep gawk gsed findutils
-    # extend
+    bash coreutils grep gawk gsed which
+    findutils diffutils file
+    # +ssl +git
     openssl curl git less
     # compress and decompress
     gtar gzip xz
@@ -31,45 +32,39 @@ die() {
     exit 1
 }
 
+TEMPDIR="$(mktemp -d)"
+_on_exit() {
+    wait
+    rm -rf "$TEMPDIR"
+}
+trap _on_exit EXIT
+trap 'exit 1' INT   # ctrl-c
+
 # Linux FHS
 info "Create Linux FHS"
-mkdir -pv bootstrap/{bin,lib,etc/ssl/certs,tmp,home/cmdlets,root}
+mkdir -pv bootstrap/{bin,lib,etc,tmp,home/cmdlets,root}
 mkdir -pv bootstrap/usr/{bin,lib}
 # cygwin 会自动处理 /usr/bin 与 /bin 之间的关系
+# !! 永远不要同时写入 /bin & /usr/bin，否则 mini_rootfs 会出错 !! #
 
-info "Download bootstrap files"
+info "Prepare bootstrap files"
+
+curl -fsSL https://mirrors.aliyun.com/cygwin/x86_64/release/cygwin/cygwin-3.6.10-1-x86_64.tar.xz |
+    tar -C "$TEMPDIR" -xvJ
+
+# 只取最小工具集
+cp -fv "$TEMPDIR/usr/bin/cygwin1.dll"   bootstrap/bin
+cp -fv "$TEMPDIR/usr/bin/cygcheck.exe"  bootstrap/bin
+cp -fv "$TEMPDIR/usr/bin/cygpath.exe"   bootstrap/bin
+
+cp -fv cmdlets.sh                       bootstrap
+cp -fv win32/make_entry.exe             bootstrap/bin
 
 bash cmdlets.sh fetch "${CYGWIN_TOOLS[@]}"
 
-info "Prepare CA Certificates"
-cat << 'EOF' > bootstrap/update-ca-certificates
-#!/bin/bash
-## !! no symlinks here !! ##
-
-: "${CA_ROOT:=}"
-: "${CA_CERT:=$CA_ROOT/etc/ssl/certs/ca-bundle.crt}"
-
-mkdir -pv "${CA_CERT%/*}"
-
-echo "-- ✨ curl ca certs file"
-curl --insecure -fvSL https://curl.se/ca/cacert.pem -o "$CA_CERT"
-
-echo "-- ✨ set alternative ca certs file path"
-
-#1. OpenSSL default cert.pem
-cp -fv "$CA_CERT" $CA_ROOT/etc/ssl/cert.pem
-#2. curl in-place ca-bundle.crt
-cp -fv "$CA_CERT" $CA_ROOT/bin/curl-ca-bundle.crt
-EOF
-chmod a+x bootstrap/update-ca-certificates
-CA_ROOT=bootstrap ./bootstrap/update-ca-certificates
-
 info "Prepare shell environment"
-bash libs.sh make_entry bootstrap/bin/bash.exe bootstrap/bin/sh.exe
 
-cp -f cmdlets.sh            bootstrap
-cp -f win32/cygwin1.dll     bootstrap/bin
-cp -f win32/make_entry.exe  bootstrap/bin
+bash libs.sh make_entry bash.exe bootstrap/bin/sh.exe
 
 cat << 'EOF' > bootstrap/etc/fstab
 # -------------------------------------------------------------------
@@ -95,7 +90,10 @@ db_shell: /bin/bash
 EOF
 
 cat << 'EOF' > bootstrap/etc/profile
-# etc/profile
+# /etc/profile
+
+test -d /etc/ssl || /update-ca-certificates
+
 export USER="cmdlets"
 export LOGIN="cmdlets"
 export HOME="/home/cmdlets"
@@ -116,12 +114,36 @@ $SHELL --version | head -n1
 cd "$HOME" || cd /
 EOF
 
+cat << 'EOF' > bootstrap/update-ca-certificates
+#!/bin/sh
+
+set -eo pipefail
+
+: "${CA_CERT:=/etc/ssl/certs/ca-bundle.crt}"
+
+mkdir -pv "${CA_CERT%/*}"
+
+echo "-- ✨ curl ca certs file"
+curl --insecure -fSL https://curl.se/ca/cacert.pem -o "$CA_CERT"
+
+echo "-- ✨ set alternative ca certs file path"
+#1. OpenSSL default cert.pem
+ln -srfv "$CA_CERT" /etc/ssl/cert.pem
+#2. curl in-place ca-bundle.crt
+ln -srfv "$CA_CERT" /bin/curl-ca-bundle.crt
+
+echo "-- ✨ check ca certs file"
+echo | openssl s_client -connect google.com:443 | grep --color=auto "Verification: OK"
+curl -fIL https://www.google.com
+EOF
+
 info "Prepare Program Entrance"
 
-cat << 'EOF' > bootstrap/shell.bat
+PROG=shell.bat && info "prepare $PROG"
+cat << 'EOF' > bootstrap/$PROG
 @echo off
 setlocal
-set "PATH=%~dp0;%~dp0bin;%PATH%"
+set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
 
 if "%~1"=="" (
     "%~dp0bin\bash.exe" -login -i
@@ -129,22 +151,24 @@ if "%~1"=="" (
     "%~dp0bin\bash.exe" -c "%*"
 )
 EOF
-sed -i 's/$/\r/' bootstrap/shell.bat
+sed -i 's/$/\r/' bootstrap/$PROG
 
-cat << 'EOF' > bootstrap/cmdlets.bat
+PROG=cmdlet.bat && info "prepare $PROG"
+cat << 'EOF' > bootstrap/$PROG
 @echo off
 setlocal
-set "PATH=%~dp0;%~dp0bin;%PATH%"
+set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
 
-"%~dp0bin\bash.exe" -c "cmdlets.sh %*"
+"%~dp0bin\bash.exe" -c "/cmdlets.sh %*"
 exit /b %errorlevel%
 EOF
-sed -i 's/$/\r/' bootstrap/cmdlets.bat
+sed -i 's/$/\r/' bootstrap/$PROG
 
-cat << 'EOF' > bootstrap/git.bat
+PROG=git.bat && info "prepare $PROG"
+cat << 'EOF' > bootstrap/$PROG
 @echo off
 setlocal
-set "PATH=%~dp0;%~dp0bin;%PATH%"
+set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
 
 set "SSL_CERT_FILE=%~dp0etc\ssl\cert.pem"
 set "GIT_EXEC_PATH=%~dp0bin"
@@ -154,4 +178,4 @@ set "GIT_TEMPLATE_DIR=%~dp0share\git-core\templates"
 "%~dp0bin\git.exe" %*
 exit /b %errorlevel%
 EOF
-sed -i 's/$/\r/' bootstrap/git.bat
+sed -i 's/$/\r/' bootstrap/$PROG

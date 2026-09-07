@@ -7,6 +7,7 @@
 # warning: variable not assigned
 # shellcheck disable=SC2154
 
+: "${_LIBS_MIRROR_GNU:=https://mirrors.tuna.tsinghua.edu.cn/gnu}"
 : "${_LIBS_BUILDDIR:=.build}"
 
 # show git tag > branch > commit

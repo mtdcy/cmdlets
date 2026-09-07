@@ -31,14 +31,15 @@ libs_build() {
     # test only find
     make -C find check
 
+    findutils=(find xargs)
+
+    # install find utils
+    for x in "${findutils[@]}"; do
+        cmdlet.install $x/$x
+    done
+
     # pack xargs with find
-    cmdlet.pkginst findutils bin \
-        ./find/find ./xargs/xargs
-
-    # seperate packing
-    cmdlet.install ./find/find
-
-    cmdlet.install ./xargs/xargs
+    cmdlet.pkgfile findutils $(printf "bin/%s " "${findutils[@]}")
 
     # verify
     check find --version

@@ -8,14 +8,7 @@ libs_lic="BSD-2-Clause"
 libs_ver=5.46
 libs_url=https://astron.com/pub/file/file-$libs_ver.tar.gz
 libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
-
-# mingw: HAVE_FORK
-#   file couldn't use those compression libraries
-#   because It requires fork function.
-#   see: https://github.com/file/file/blob/FILE5_46/src/compress.c#L229
 libs_deps=(zlib bzip2 xz zstd)
-
-is_mingw && libs_deps+=(libgnurx)
 
 # https://mirrors.wikimedia.org/ubuntu/pool/main/f/file/
 libs_resources=(
@@ -26,9 +19,6 @@ libs_patches=(
     # cherry-picked commits. Keep in upstream's chronological order
     debian/patches/1733423740.FILE5_46-7-gb3384a1f.pr-579-net147-fix-stack-overrun.patch
     debian/patches/1733427672.FILE5_46-14-g60b2032b.pr-571-jschleus-some-zip-files-are-misclassified-as-data.patch
-)
-
-is_mingw || libs_patches+=(
     debian/patches/1741021322.FILE5_46-55-gff9ba253.use-unsigned-byte-christoph-biedl.patch
     #debian/patches/1742485595.FILE5_46-68-g5089651f.fix-openstreetmap-christoph-biedl.patch
     debian/patches/1742492756.FILE5_46-69-g280e121f.remove-superfluous-christoph-biedl.patch
@@ -40,17 +30,10 @@ is_mingw || libs_patches+=(
 )
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    --enable-static --disable-shared
 
     --enable-fsect-man5
-
-    --disable-shared
-    --enable-static
 )
-
-is_mingw && libs_args+=(--disable-libseccomp)
 
 is_listed zlib  "${libs_deps[@]}" && libs_args+=(--enable-zlib)      || libs_args+=(--disable-zlib)
 is_listed bzip2 "${libs_deps[@]}" && libs_args+=(--enable-bzlib)     || libs_args+=(--disable-bzlib)
@@ -58,52 +41,59 @@ is_listed xz    "${libs_deps[@]}" && libs_args+=(--enable-xzlib)     || libs_arg
 is_listed zstd  "${libs_deps[@]}" && libs_args+=(--enable-zstdlib)   || libs_args+=(--disable-zstdlib)
 is_listed lzip  "${libs_deps[@]}" && libs_args+=(--enable-lzlib)     || libs_args+=(--disable-lzlib)
 
-# usage of the new file cmd
-#
-# option 1: file -m path/to/magic.mgc
-# option 2: ln -srfv path/to/magic.mgc $HOME/.magic.mgc
-#
-# version mismatched magic.mgc may not work
-
 libs_build() {
-    MAGIC_INSTALL_PATH="share/misc"
-
-    if is_mingw; then
-        CFLAGS+=" -Wno-incompatible-pointer-types"
+    # compile native file first
+    if is_xbuild; then
+        (   
+            unset CC CFLAGS CPPFLAGS LDFLAGS
+            mkdir -pv .host && cd .host
+            CC="$HOSTCC" ../configure && $MAKE -C src
+        ) || die "build native file failed"
     fi
-    export CFLAGS
 
     configure
-
-    # 1. user magic ~/.magic.mgc or ~/.magic or ~/.magic/magic.mgc
-    # 2. relative .magic.mgc in current dir
-    # 3. normal path /usr/share/file/magic => not working
-    #   'file: Size of `/usr/share/file/magic.mgc' 7273344 is not a multiple of 432'
-    sed -i "s%^MAGIC = .*$%MAGIC = .magic.mgc%" src/Makefile
 
     # it seems the dependencies checking is broken
     touch src/magic.c
 
-    make
+    # magic 文件并不通用，同时也避免加载主机的 magic.mgc
+    #  => 使用 /lib 而非 /usr/share
+    MAGIC_PATH=lib/file-$libs_ver
 
+    # make file.exe first
+    make -C src pkgdatadir=/$MAGIC_PATH MAGIC=/$MAGIC_PATH/magic.mgc
+
+    # make magic.mgc
+    #  PATH : 使用上面编译的而非主机自带的 file
+    if is_xbuild; then
+        make -C magic FILE_COMPILE="$PWD/.host/src/file"
+    else
+        make -C magic FILE_COMPILE="$PWD/src/file"
+    fi
+
+    # install libmagic
     cmdlet.pkgfile libmagic -- make.install -C src bin_PROGRAMS=
 
-    cmdlet.pkginst magic.mgc "$MAGIC_INSTALL_PATH" magic/magic.mgc
+    # install file program
+    if is_cygwin; then
+        cmdlet.pkginst  file \
+            bin         src/file \
+            $MAGIC_PATH magic/magic.mgc
+    else
+        # Linux: make an entry point
+        cat << EOF > file
+#!/bin/sh
+DIR=\$(dirname "\$0")/../$MAGIC_PATH
+MAGIC="\$DIR/magic.mgc" exec "\$DIR/file" "\$@"
+EOF
+        chmod a+x file
 
-    cmdlet.install src/file
+        cmdlet.pkginst  file \
+            bin         file \
+            $MAGIC_PATH src/file magic/magic.mgc
+    fi
 
     cmdlet.check file --version
-
-    caveats << EOF
-file @ $libs_ver
-
-magic file from ~/.magic.mgc:.magic.mgc only
-
-file needs magic.mgc to work properly:
-
-cmdlets.sh install magic.mgc
-cmdlets.sh link $MAGIC_INSTALL_PATH/magic.mgc ~/.magic.mgc
-EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
