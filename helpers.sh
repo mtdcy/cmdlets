@@ -150,15 +150,6 @@ _locate_bin() {
     fi
 }
 
-_libs_init() {
-    local x
-    for x in "${libs_deps[@]}"; do
-        case "$x" in
-            #glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
-        esac
-    done
-}
-
 # return 0 if $1 >= $2
 _version_ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
 _version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
@@ -176,9 +167,14 @@ bootstrap() {
     fi
 }
 
-# invoke just before configure or xxx.setup
-# shellcheck disable=SC2016
-_setup() {
+_libs_init() {
+    local x
+    for x in "${libs_deps[@]}"; do
+        case "$x" in
+            #glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
+        esac
+    done
+
     # env for xxx-config
     if test -x "$PREFIX/bin/krb5-config"; then
         export KRB5_CONFIG="$PREFIX/bin/krb5-config"
@@ -192,11 +188,11 @@ _setup() {
         export PCRE_CONFIG="$PREFIX/bin/pcre2-config"
     fi
 
+    # shellcheck disable=SC2016
     if test -f configure; then
         sed -i configure \
             -e 's/\<pkg-config\>/\$PKG_CONFIG/g' \
-            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g' ||
-               die "setup configure failed."
+            -e 's/\$PKGCONFIG/\$PKG_CONFIG/g' || die "setup configure failed."
         #1. replace pkg-config with PKG_CONFIG env
         #2. replace PKGCONFIG with PKG_CONFIG
 
@@ -206,15 +202,14 @@ _setup() {
             #2. `pcre2-config --cflags-posix`
             sed -i configure \
                 -e '/\$(.*\<pcre2-config\>.*)/s/\<pcre2-config\>/\$PCRE_CONFIG/g' \
-                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g' ||
-                   die "setup configure failed."
+                -e '/`.*\<pcre2-config\>.*`/s/\<pcre2-config\>/\$PCRE_CONFIG/g' || die "setup configure failed."
         fi
     fi
 }
 
 # shellcheck disable=SC2128
 configure() {
-    _setup
+    _libs_init
 
     local cmd args=()
 
