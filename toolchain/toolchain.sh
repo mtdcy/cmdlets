@@ -10,7 +10,7 @@ NAME="$(basename "$0")"
 
 # extra envs
 : "${PREFIX:=prebuilts/$_TARGET}"
-: "${_WORKDIR:=out/$_TARGET}"
+: "${_WORKDIR:="${_TARGET_WORKDIR:-out/$_TARGET}"}"
 : "${_LOGFILE:=$_WORKDIR/toolchain.log}"
 
 die() {
