@@ -8,10 +8,16 @@ libs_url=https://sourceware.org/pub/bzip2/bzip2-$libs_ver.tar.gz
 #https://ftp.osuosl.org/pub/clfs/conglomeration/bzip2/bzip2-$libs_ver.tar.gz
 libs_sha=ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269
 
-libs_build() {
-    hack.makefile Makefile CC AR RANLIB CFLAGS LDFLAGS
+libs_args=(
+    CC="$CC"
+    AR="$AR"
+    CFLAGS="$CFLAGS $CPPFLAGS"
+    LDFLAGS="$LDFLAGS"
+    RANLIB="$RANLIB"
+)
 
-    make bzip2
+libs_build() {
+    make bzip2 "${libs_args[@]}"
 
     # will not pass with mingw
     is_mingw || is_cygwin || make test
