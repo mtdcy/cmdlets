@@ -92,11 +92,20 @@ libs.requires.c89() {
 }
 
 # check if a func symbol exists
-# input: <include header> <function name>
-libs.func.exists() {
-    mkdir -p ".conftest"
-    echo -e "#include <$1>\nvoid *p = (void*)$2;" > ".conftest/$2.c"
-    "$CC" $CFLAGS $CPPFLAGS -c ".conftest/$2.c" -o /dev/null 2> /dev/null
+# input: <symbol name>
+libs.conftest() {
+    local conftest=".conftest/conftest_$1.c"
+    mkdir -pv .conftest && cat << EOF > "$conftest"
+#ifdef __cplusplus
+extern "C"
+#endif
+char $1(void);
+int main(void) {
+    return $1();
+}
+EOF
+    # shellcheck disable=SC2086
+    echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o /dev/null
 }
 
 # find samples by name

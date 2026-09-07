@@ -93,7 +93,7 @@ libs_build() {
         # It passes X_OK to access() on Windows which isn't supported with ucrt
         CFLAGS+=" -D__USE_MINGW_ACCESS"
 
-        if libs.func.exists time.h nanosleep; then
+        if libs.conftest nanosleep; then
             export gl_cv_func_nanosleep=yes
             export ac_cv_func_nanosleep=yes
         fi

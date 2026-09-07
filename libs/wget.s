@@ -55,7 +55,7 @@ libs_build() {
         # https://github.com/coreutils/gnulib/issues/20
         export gl_cv_var___daylight=__daylight
 
-        if libs.func.exists time.h nanosleep; then
+        if libs.conftest nanosleep; then
             echo "" > lib/nanosleep.c
         fi
     fi

@@ -29,7 +29,7 @@ is_listed pcre2     "${libs_deps[@]}" && libs_args+=(--enable-perl-regexp)   || 
 
 libs_build() {
     # fix error: redefinition of 'nanosleep'
-    if libs.func.exists time.h nanosleep; then
+    if libs.conftest nanosleep; then
         echo "" > gnulib-tests/nanosleep.c
     fi
 
