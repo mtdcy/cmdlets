@@ -19,7 +19,7 @@ libs_build() {
 
     make regex.o
 
-    cmdlet.archive libgnurx.a regex.o
+    libs.archive libgnurx.a regex.o
 
     cmdlet.pkgconf libgnurx.pc -lgnurx
 

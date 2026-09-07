@@ -108,6 +108,20 @@ EOF
     echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o /dev/null
 }
 
+# create static library archive
+#  input: name <object files ...>
+libs.archive() {
+    local name="${1%.a}" && shift
+
+    slogi $_EMOJI_PKGFILE "$name < $*"
+
+    if is_darwin; then
+        echocmd libtool -static -o "$name.a" "$@"
+    else
+        echocmd "$AR" rcs "$name.a" "$@"
+    fi
+}
+
 # find samples by name
 samples() {
     find "$_TOPDIR/samples" -type f -name "$*" | xargs
@@ -1456,20 +1470,6 @@ Libs: -L\${libdir} ${ldflags[@]}
 EOF
     fi
 
-}
-
-# create static library archive
-cmdlet.archive() {
-    local name="${1%.a}"
-    shift
-
-    slogi $_EMOJI_PKGFILE "$name < $*"
-
-    if is_darwin; then
-        echocmd libtool -static -o "$name.a" "$@"
-    else
-        echocmd "$AR" rcs "$name.a" "$@"
-    fi
 }
 
 # hack local symbols: append function with a random(pid) suffix
