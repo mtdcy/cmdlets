@@ -6,15 +6,15 @@ libs_ver=2.93
 libs_rev=1
 libs_url=https://thekelleys.org.uk/dnsmasq/dnsmasq-2.93.tar.gz
 libs_sha=cc967771abdafeb43d10db18932d6b59fd4bed2c69c22acf8cb96aff6920d55f
-libs_dep=( libidn2 nettle )
+libs_dep=(libidn2 nettle)
 
-is_linux && libs_dep+=( nftables )
+is_linux && libs_dep+=(nftables)
 
 libs_args=(
 )
 
 libs_build() {
-    deparallelize
+    libs.requires -j1
 
     # options
     COPTS="-DHAVE_LIBIDN2 -DHAVE_DNSSEC -DNO_I18N -DNO_DBUS -DNO_UBUS"

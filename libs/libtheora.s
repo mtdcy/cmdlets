@@ -31,7 +31,7 @@ is_darwin || libs_args+=(--build="$( uname -m)-linux-gnu")
 
 libs_build() {
     # parallel is broken (libtheoraenc is missing sometimes)
-    deparallelize
+    libs.requires -j1
 
     if is_mingw; then
         # /usr/bin/x86_64-w64-mingw32-ld: cannot find -ltheoradec: No such file or directory

@@ -22,23 +22,20 @@ date.iso8601() {
     date +%Y-%m-%dT%H:%M:%S
 }
 
-deparallelize() {
-    export _NJOBS=1
-}
-
 # deprecated
 libs.depends() {
     eval -- "$*" || { unset libs_dep libs_args libs_build; }
 }
 
+# 通用的编译脚本设置函数
+#  禁用多线程编译：libs.requires -j1
 libs.requires() {
     declare -a cflags cxxflags cppflags
 
     local x y
     for x in "$@"; do
         case "$x" in
-            -j)     _NJOBS=1    ;; # only support -j 1
-            -j1)    _NJOBS=1    ;;
+            -j1)    _NJOBS=1 ;; # Deparallelization
             -std=c++* | -std=gnu++*)
                 cxxflags+=("$x")
                 ;;
