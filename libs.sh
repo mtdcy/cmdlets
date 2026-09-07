@@ -231,16 +231,6 @@ die()   {
     exit 1 # exit shell
 }
 
-die_on_error() {
-    local ret=$? # save error code
-    [ $ret -ne 0 ] || return 0
-
-    _capture_reset # in case Ctrl-C happens
-
-    _slog error $_EMOJI_ERROR "die on error $ret"
-    exit $ret # exit shell
-}
-
 _capture() {
     test -n "$_LOGFILE" || return 0
     case "$_LOGGING" in
@@ -930,8 +920,6 @@ _supported_targets() {
 _load() {
     _init_target
 
-    . helpers.sh
-
     unset "${!libs_@}"
 
     local file="libs/$1.s"
@@ -1040,8 +1028,9 @@ _prepare() {
 _compile() {
     _init_target
 
+    # always start subshell
     (   
-        # always start subshell before _load()
+        . helpers.sh
 
         trap _capture_reset EXIT
         trap 'exit 1'   INT     # ctrl-c
@@ -1055,8 +1044,8 @@ _compile() {
         _prepare "$1" || return $?
 
         declare -F libs_build > /dev/null || {
-            slogw "Not supported or missing libs_build"
-            return 0
+            slogw "Missing function libs_build"
+            return 127
         }
 
         # clear and log all environments
