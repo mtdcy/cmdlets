@@ -1,7 +1,7 @@
 # Implementation of the DNS protocols
 
-# 
-libs_targets=( darwin )
+#
+libs_targets=(darwin)
 
 # shellcheck disable=SC2034
 libs_lic='MPL-2.0'
@@ -13,9 +13,9 @@ libs_ver=9.20.24
 libs_rev=2
 libs_url=https://downloads.isc.org/isc/bind9/9.20.24/bind-9.20.24.tar.xz
 libs_sha=989fef1fc88ea59d04cd86f854dca5a4616a20a9968bcdde3c1a3668ab36be08
-libs_dep=( zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc urcu )
+libs_dep=(zlib libxml2 json-c libidn2 nghttp2 libuv openssl readline jemalloc urcu)
 
-is_linux && libs_dep+=( libcap )
+is_linux && libs_dep+=(libcap)
 
 libs_args=(
     --disable-dependency-tracking
@@ -72,16 +72,16 @@ libs_build() {
     # add this line before configure will cause gcc test fails, why?
     libs.requires -Wl,--undefined=hook_isc__initialize
 
-    pkgfile bind-libs -- make -C lib install
+    cmdlet.pkgfile bind-libs -- make -C lib install
 
     # make all fails: build binaries only
     make -C bin/dig
 
-    cmdlet ./bin/dig/dig
-    cmdlet ./bin/dig/host
-    cmdlet ./bin/dig/nslookup
+    cmdlet.install ./bin/dig/dig
+    cmdlet.install ./bin/dig/host
+    cmdlet.install ./bin/dig/nslookup
 
-    check dig www.google.com
+    cmdlet.check dig www.google.com
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -7,7 +7,7 @@ libs_rev=1
 libs_url=https://downloads.sourceforge.net/project/libtirpc/libtirpc/1.3.7/libtirpc-1.3.7.tar.bz2
 libs_sha=b47d3ac19d3549e54a05d0019a6c400674da716123858cfdb6d3bdd70a66c702
 
-is_darwin || libs_dep=( krb5 )
+is_darwin || libs_dep=(krb5)
 
 libs_resources=(
     https://github.com/libevent/libevent/raw/refs/heads/master/compat/sys/queue.h
@@ -36,7 +36,7 @@ libs_build() {
 
     make
 
-    pkgfile $libs_name -- make install bin_SCRIPTS=
+    cmdlet.pkgfile $libs_name -- make install bin_SCRIPTS=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

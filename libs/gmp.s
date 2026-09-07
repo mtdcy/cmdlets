@@ -59,7 +59,7 @@ libs_build() {
 
     make check
 
-    pkgfile libgmp -- make install
+    cmdlet.pkgfile libgmp -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

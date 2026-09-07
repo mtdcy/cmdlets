@@ -4,7 +4,7 @@
 libs_ver=4.2.9
 libs_url=https://github.com/jasper-software/jasper/releases/download/version-$libs_ver/jasper-$libs_ver.tar.gz
 libs_sha=f71cf643937a5fcaedcfeb30a22ba406912948ad4413148214df280afc425454
-libs_dep=( libjpeg-turbo )
+libs_dep=(libjpeg-turbo)
 
 # configure args
 libs_args=(
@@ -35,28 +35,22 @@ else
 fi
 
 libs_build() {
-    mkdir -p static && cd static
+    cmake.setup
 
-    cmake .. && make || return 1
+    cmake.build
 
-    inspect make install &&
-
-    pkgfile libjasper               \
-            include/jasper          \
-            lib/libjasper.a         \
-            lib/pkgconfig/jasper.pc \
-            &&
+    cmdlet.pkgfile libjasper -- cmake.install --component Unspecified
 
     # opengl
     if is_darwin; then
-        cmdlet ./src/app/jiv || return 2
+        cmdlet.install ./src/app/jiv
     fi
 
-    cmdlet ./src/app/jasper  &&
-    cmdlet ./src/app/imginfo &&
-    cmdlet ./src/app/imgcmp  &&
+    cmdlet.install ./src/app/jasper
+    cmdlet.install ./src/app/imginfo
+    cmdlet.install ./src/app/imgcmp
 
-    check  jasper --version
+    cmdlet.check jasper --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

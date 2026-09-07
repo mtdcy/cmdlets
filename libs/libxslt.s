@@ -6,7 +6,7 @@ libs_ver=1.1.45
 libs_rev=2
 libs_url=https://github.com/GNOME/libxslt/archive/refs/tags/v$libs_ver.tar.gz
 libs_sha=023900618fbf789dba364f38f184a0fe2d3ebad2b2ab06003ffd2d1ee2d5461c
-libs_dep=( libxml2 libgcrypt libgpg-error )
+libs_dep=(libxml2 libgcrypt libgpg-error)
 
 libs_args=(
     --disable-option-checking
@@ -39,13 +39,13 @@ libs_build() {
 
     # link static libexslt by default
     #  => fix `xsltApplyStylesheet() failed' for some programs
-    pkgconf libxslt.pc -lexslt
+    cmdlet.pkgconf libxslt.pc -lexslt
 
     # install only libraries
-    pkgfile "$libs_name" -- make install \
-        SUBDIRS="'libxslt libexslt'"     \
-        bin_PROGRAMS=                    \
-        bin_SCRIPTS=                     \
+    cmdlet.pkgfile "$libs_name" -- make install \
+        SUBDIRS="'libxslt libexslt'" \
+        bin_PROGRAMS= \
+        bin_SCRIPTS=
 
     cmdlet.install  xsltproc/xsltproc
     cmdlet.check    xsltproc

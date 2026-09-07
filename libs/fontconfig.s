@@ -40,7 +40,7 @@ libs_build() {
 
     meson.compile
 
-    pkgfile libfontconfig -- meson.install --tags devel
+    cmdlet.pkgfile libfontconfig -- meson.install --tags devel
 
     # tools
     for x in fc-list fc-scan fc-query fc-validate; do

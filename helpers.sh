@@ -1391,13 +1391,6 @@ run() {
     fi
 }
 
-# deprecated
-pkginst()   { cmdlet.pkginst "$@";  }
-pkgfile()   { cmdlet.pkgfile "$@";  }
-cmdlet()    { cmdlet.install "$@";  }
-check()     { cmdlet.check "$@";    }
-caveats()   { cmdlet.caveats "$@";  }
-
 # find out which files are installed by `make install'
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
@@ -1464,12 +1457,11 @@ EOF
     fi
 
 }
-pkgconf() { cmdlet.pkgconf "$@";  }
 
 # create static library archive
 cmdlet.archive() {
     local name="${1%.a}"
-                          shift
+    shift
 
     slogi $_EMOJI_PKGFILE "$name < $*"
 

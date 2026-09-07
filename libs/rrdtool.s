@@ -68,7 +68,7 @@ libs_build() {
         $($PKG_CONFIG --cflags --libs glib-2.0 libpng) \
         $($PREFIX/bin/xml2-config --cflags --libs)
 
-    pkgfile librrd -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile librrd -- make.install bin_PROGRAMS=
 
     for x in rrdtool rrdupdate; do
         cmdlet.install "./src/$x"

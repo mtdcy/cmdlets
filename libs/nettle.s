@@ -21,16 +21,19 @@ libs_build() {
     # fix build with musl-gcc
     sed -i '/CC_FOR_BUILD/s/\$</$(CFLAGS) $(LDFLAGS) &/' Makefile.in
 
-    configure && make && make check || return $?
+    configure
 
-    pkgfile libnettle -- make install-static install-headers install-pkgconfig &&
+    make
 
-    cmdlet ./tools/pkcs1-conv           &&
-    cmdlet ./tools/sexp-conv            &&
-    cmdlet ./tools/nettle-hash          &&
-    cmdlet ./tools/nettle-pbkdf2        &&
-    cmdlet ./tools/nettle-lfib-stream
+    make check
+
+    cmdlet.pkgfile libnettle -- make install-static install-headers install-pkgconfig
+
+    cmdlet.install ./tools/pkcs1-conv
+    cmdlet.install ./tools/sexp-conv
+    cmdlet.install ./tools/nettle-hash
+    cmdlet.install ./tools/nettle-pbkdf2
+    cmdlet.install ./tools/nettle-lfib-stream
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

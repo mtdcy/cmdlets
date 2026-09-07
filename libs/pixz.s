@@ -26,7 +26,7 @@ libs_build() {
 
     cmdlet.check pixz
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built pixz @ $libs_ver
 
 Usage:

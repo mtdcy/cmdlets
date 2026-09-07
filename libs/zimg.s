@@ -29,7 +29,7 @@ libs_build() {
         fi
     }
 
-    pkgfile libzimg -- make install dist_example_DATA= dist_examplemisc_DATA=
+    cmdlet.pkgfile libzimg -- make install dist_example_DATA= dist_examplemisc_DATA=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

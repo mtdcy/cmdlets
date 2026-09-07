@@ -57,7 +57,7 @@ libs_build() (
     cmdlet.check docker-buildx
     cmdlet.check docker --version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static prebuilt docker client v$libs_ver
 
 Plugins:

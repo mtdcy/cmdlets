@@ -33,7 +33,7 @@ libs_build() {
 
         cmake.build
 
-        pkgfile libOpenCLHeaders -- cmake.install
+        cmdlet.pkgfile libOpenCLHeaders -- cmake.install
 
     ) || die "Build OpenCL Headers failed."
 

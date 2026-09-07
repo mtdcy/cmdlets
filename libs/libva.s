@@ -37,9 +37,11 @@ libs_args+=(
 
 libs_build() {
 
-    configure && make || return $?
+    configure
 
-    pkgfile libva -- make install
+    make
+
+    cmdlet.pkgfile libva -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

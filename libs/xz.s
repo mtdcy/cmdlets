@@ -28,20 +28,20 @@ libs_build() {
     configure && make && make check || return $?
 
     # libraries
-    pkgfile liblzma  -- make install -C src/liblzma
+    cmdlet.pkgfile liblzma  -- make install -C src/liblzma
 
     # binaries and links
-    pkgfile lzmainfo -- make install-exec -C src/lzmainfo
-    pkgfile xz       -- make install-exec -C src/xz
-    pkgfile xzdec    -- make install-exec -C src/xzdec
+    cmdlet.pkgfile lzmainfo -- make install-exec -C src/lzmainfo
+    cmdlet.pkgfile xz       -- make install-exec -C src/xz
+    cmdlet.pkgfile xzdec    -- make install-exec -C src/xzdec
 
     # scripts and links
-    pkgfile scripts  -- make install-exec -C src/scripts
+    cmdlet.pkgfile scripts  -- make install-exec -C src/scripts
 
     # visual verify
-    check xz --version
-    
-    # simple test 
+    cmdlet.check xz --version
+
+    # simple test
     echo "test" > foo && rm -f foo.xz
     run xz foo                                  || die "xz compress failed."
     run xz -t foo.xz                            || die "xz integrity test failed."

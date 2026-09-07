@@ -1,4 +1,3 @@
-
 #
 # shellcheck disable=SC2034
 libs_lic="LGPL-2.1-or-later"
@@ -12,7 +11,7 @@ libs_args=(
     # disable features
     -DBUILD_TESTS=OFF
     -DBUILD_EXAMPLES=OFF
-   
+
     # static
     -DBUILD_SHARED_LIBS=OFF
 
@@ -25,7 +24,7 @@ libs_args=(
 libs_build() {
     cmake . && make || return $?
 
-    pkgfile libsoxr -- make install
+    cmdlet.pkgfile libsoxr -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

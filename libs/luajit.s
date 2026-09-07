@@ -18,14 +18,14 @@ libs_args=(
 )
 
 libs_build() {
-    make "${libs_args[@]}" &&
+    make "${libs_args[@]}"
 
-    pkgfile libluajit -- make install "${libs_args[@]}" &&
+    cmdlet.pkgfile libluajit -- make install "${libs_args[@]}"
 
     # install as versioned and link to luajit
-    cmdlet ./src/luajit luajit-$libs_ver luajit &&
+    cmdlet.install ./src/luajit luajit-$libs_ver luajit
 
-    check luajit -v
+    cmdlet.check luajit -v
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

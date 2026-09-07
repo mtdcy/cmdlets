@@ -21,7 +21,7 @@ libs_args=(
 libs_build() {
     configure && make || return 1
 
-    pkgfile libyaml -- make install
+    cmdlet.pkgfile libyaml -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -49,7 +49,7 @@ libs_build() {
 
     sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
-    pkgfile libtheora -- make install
+    cmdlet.pkgfile libtheora -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -7,7 +7,7 @@ libs_rev=2
 libs_url=https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.8.tar.xz
 libs_sha=919f529512961a12e81cd4b4b466a48c3933469e7f9a310c6513cd4fb252ba3c
 
-libs_deps=( glib libjpeg-turbo libpng libtiff )
+libs_deps=(glib libjpeg-turbo libpng libtiff)
 
 # configure args
 libs_args=(
@@ -28,9 +28,9 @@ libs_args=(
     -Dinstalled_tests=false
 )
 
-is_listed libpng        libs_deps && libs_args+=( -Dpng=enabled  ) || libs_args+=( -Dpng=disabled  )
-is_listed libtiff       libs_deps && libs_args+=( -Dtiff=enabled ) || libs_args+=( -Dtiff=disabled )
-is_listed libjpeg-turbo libs_deps && libs_args+=( -Djpeg=enabled ) || libs_args+=( -Djpeg=disabled )
+is_listed libpng        libs_deps && libs_args+=(-Dpng=enabled)    || libs_args+=(-Dpng=disabled)
+is_listed libtiff       libs_deps && libs_args+=(-Dtiff=enabled)   || libs_args+=(-Dtiff=disabled)
+is_listed libjpeg-turbo libs_deps && libs_args+=(-Djpeg=enabled)   || libs_args+=(-Djpeg=disabled)
 
 libs_build() {
     # no subprojects, remove them in case someting went wrong.
@@ -46,7 +46,7 @@ libs_build() {
 
     meson.compile
 
-    pkgfile libgdk-pixbuf -- meson.install --tags devel
+    cmdlet.pkgfile libgdk-pixbuf -- meson.install --tags devel
 
     cmdlet.install gdk-pixbuf/gdk-pixbuf-query-loaders
 }

@@ -6,15 +6,10 @@ libs_ver=2.29
 libs_rev=2
 libs_url=https://github.com/ThomasHabets/arping/archive/refs/tags/arping-2.29.tar.gz
 libs_sha=387955d6ba8eedcf242bb3784bebf8e40fad39703117e21e02cec12820990a5c
-libs_dep=( libnet libpcap )
+libs_dep=(libnet libpcap)
 
 libs_args=(
-    --disable-dependency-tracking
-    --disable-silent-rules
-    --disable-dependency-tracking
-
-    --disable-shared
-    --enable-static
+    --enable-static --disable-shared
 )
 
 libs_build() {
@@ -29,9 +24,9 @@ libs_build() {
     # not build fuzz code
     make -C src arping
 
-    cmdlet ./src/arping
+    cmdlet.install ./src/arping
 
-    check arping --help
+    cmdlet.check arping --help
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

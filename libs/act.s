@@ -11,7 +11,13 @@ libs_args=(
 )
 
 libs_build() {
-    go.build && cmdlet act && check act
+    go.setup
+
+    go.build
+
+    cmdlet.install act
+
+    cmdlet.check act
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

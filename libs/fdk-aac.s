@@ -1,4 +1,3 @@
-
 #
 # shellcheck disable=SC2034
 libs_lic="Apache-2.0"
@@ -14,9 +13,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make && make check || return $?
+    configure
 
-    pkgfile libfdk-aac -- make install
+    make
+
+    make check
+
+    cmdlet.pkgfile libfdk-aac -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -6,7 +6,7 @@ libs_ver=4.14
 libs_rev=2
 libs_url=https://github.com/ntop/nDPI/archive/refs/tags/4.14.tar.gz
 libs_sha=954135ee14ad6bd74a78a10db560b534b8f2083ad0615f5c1a2c376fff0301e0
-libs_dep=( json-c libpcap )
+libs_dep=(json-c libpcap)
 
 libs_args=(
     --disable-dependency-tracking
@@ -31,7 +31,7 @@ libs_build() {
 
     make.all
 
-    pkgfile libndpi -- make.install
+    cmdlet.pkgfile libndpi -- make.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

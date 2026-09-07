@@ -83,7 +83,7 @@ libs_build() {
     # check linkage by build a program
     make readline
 
-    pkgfile libreadline -- make install-static
+    cmdlet.pkgfile libreadline -- make install-static
 
     cmdlet.install readline
 

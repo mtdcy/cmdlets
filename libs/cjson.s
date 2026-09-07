@@ -22,13 +22,11 @@ libs_build() {
 
     export CFLAGS
 
-    mkdir -p build
+    cmake.setup
 
-    cmake -S . -B build
+    cmake.build
 
-    cmake --build build
-
-    pkgfile libcjson -- cmake --install build
+    cmdlet.pkgfile libcjson -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

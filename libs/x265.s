@@ -119,7 +119,7 @@ EOF
         -e 's%/.*/libstdc++.a%-lstdc++%' \
         -e 's/-l-l/-l/g' || die "fix x265.pc failed"
 
-    pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
+    cmdlet.pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
 
     # FIXME: we have problem to compile a static x265 executable
 }

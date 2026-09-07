@@ -16,9 +16,9 @@ libs_build() {
     # will not pass with mingw
     is_mingw || is_cygwin || make test
 
-    pkgconf bz2     -lbz2
-    pkgconf bzip2   -lbz2
-    pkgconf libbz2  -lbz2
+    cmdlet.pkgconf bz2     -lbz2
+    cmdlet.pkgconf bzip2   -lbz2
+    cmdlet.pkgconf libbz2  -lbz2
 
     # install lib and headers
     cmdlet.pkginst libbz2 bzlib.h libbz2.a bz2.pc bzip2.pc libbz2.pc

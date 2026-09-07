@@ -48,7 +48,7 @@ libs_build() {
 
     make
 
-    pkgfile libfftw3 -- make.install bin_PROGRAMS= bin_SCRIPTS=
+    cmdlet.pkgfile libfftw3 -- make.install bin_PROGRAMS= bin_SCRIPTS=
 
     cmdlet.install tools/fftw-wisdom
 

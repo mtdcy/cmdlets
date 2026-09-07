@@ -27,7 +27,7 @@ libs_build() {
 
     check stunclient
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built stun client and server @ $libs_ver
 libs_rev=1
 

@@ -49,7 +49,7 @@ libs_build() {
     sed -i xml2-config \
         -e '/ --dynamic /d'
 
-    pkgfile libxml2 -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libxml2 -- make.install bin_PROGRAMS=
 
     for x in xmllint xmlcatalog; do
         cmdlet.install "$x"

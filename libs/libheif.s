@@ -6,7 +6,7 @@ libs_ver=1.23.4
 libs_rev=1
 libs_url=https://github.com/strukturag/libheif/releases/download/v$libs_ver/libheif-$libs_ver.tar.gz
 libs_sha=d0c02b4b0e978f34a1974b6f3eea7975a537bf7a9195ffeea38e7242ff316fdd
-libs_dep=( libjpeg-turbo openjpeg libpng libtiff libwebp x265 libde265 )
+libs_dep=(libjpeg-turbo openjpeg libpng libtiff libwebp x265 libde265)
 
 # configure args
 libs_args=(
@@ -58,7 +58,7 @@ libs_build() {
 
     cmake.build
 
-    pkgfile libheif -- cmake.install --component Unspecified
+    cmdlet.pkgfile libheif -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

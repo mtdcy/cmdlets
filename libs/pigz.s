@@ -6,7 +6,7 @@ libs_url=(
     https://zlib.net/pigz/pigz-$libs_ver.tar.gz
 )
 libs_sha=eb872b4f0e1f0ebe59c9f7bd8c506c4204893ba6a8492de31df416f0d5170fd0
-libs_dep=( zlib zopfli )
+libs_dep=(zlib zopfli)
 
 libs_args=(
     CC="'$CC'"
@@ -25,7 +25,7 @@ libs_build() {
 
     cmdlet.check pigz
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built pigz @ $libs_ver
 
 Usage:
@@ -38,6 +38,5 @@ Usage:
     tar -I pigz -cf archive.tar.gz -C /opt
 EOF
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

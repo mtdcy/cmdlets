@@ -1,7 +1,7 @@
 # netfilter libraries
 
 # shellcheck disable=SC2034
-libs_targets=( linux ) # libnetfiler/libnf is linux only
+libs_targets=(linux)   # libnetfiler/libnf is linux only
 
 libs_lic='LGPLv2+'
 
@@ -11,7 +11,7 @@ libs_ver=1.3.2
 libs_rev=1
 libs_url=https://www.netfilter.org/projects/libnftnl/files/libnftnl-$libs_ver.tar.xz
 libs_sha=c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0
-libs_dep=( libmnl )
+libs_dep=(libmnl)
 
 libs_resources=(
     # libnfnetlink is the low-level library for netfilter related kernel/userspace communication.
@@ -47,14 +47,14 @@ libs_build() {
 
     configure
 
-    pkgfile libnftnl -- make.install
+    cmdlet.pkgfile libnftnl -- make.install
 
     # netfilter extra libraries
     libnetfilter() {
-        (
+        (   
             cd "$1"-*
             configure
-            pkgfile "$1@$2" -- make.install
+            cmdlet.pkgfile "$1@$2" -- make.install
         ) || die "build $1 failed"
     }
 

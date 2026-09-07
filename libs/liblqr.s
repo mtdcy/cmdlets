@@ -8,7 +8,7 @@ libs_ver=0.4.3
 libs_rev=2
 libs_url=https://github.com/carlobaldassi/liblqr/archive/refs/tags/v$libs_ver.tar.gz
 libs_sha=64b0c4ac76d39cca79501b3f53544af3fc5f72b536ac0f28d2928319bfab6def
-libs_dep=( glib )
+libs_dep=(glib)
 
 is_darwin && libs_patches=(
     https://raw.githubusercontent.com/Homebrew/homebrew-core/1cf441a0/Patches/libtool/configure-big_sur.diff
@@ -29,13 +29,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure 
+    configure
 
-    make 
+    make
 
     is_mingw && pkgconf lqr-1.pc -DLQR_DISABLE_DECLSPEC
 
-    pkgfile liblqr -- make install
+    cmdlet.pkgfile liblqr -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

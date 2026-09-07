@@ -6,7 +6,7 @@ libs_ver=3.4.10
 libs_rev=1
 libs_url=https://github.com/mariadb-corporation/mariadb-connector-c/archive/refs/tags/v3.4.10.tar.gz
 libs_sha=28c38b597a51e8eddd685c675420dd15e290f72d89834a97063e50cdc386f500
-libs_dep=( zlib zstd krb5 curl openssl )
+libs_dep=(zlib zstd krb5 curl openssl)
 
 libs_args=(
     -DINSTALL_LIBDIR=lib
@@ -28,7 +28,7 @@ libs_args=(
 
 libs_build() {
     # remove included libraries
-    rm -rf external 
+    rm -rf external
 
     # static plugins
     find plugins -name CMakeLists.txt -exec sed -i \
@@ -40,7 +40,7 @@ libs_build() {
 
     cmake.build
 
-    pkgfile $libs_name -- cmake.install
+    cmdlet.pkgfile $libs_name -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

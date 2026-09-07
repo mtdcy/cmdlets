@@ -9,27 +9,27 @@ libs_sha=93a852c2b3efafee3723efd4636de855b46f9fe1efddd607e1f42f60fc8f2136
 libs_dep=(libpng giflib libtiff libjpeg-turbo)
 
 libs_args=(
-    -DWEBP_BUILD_CWEBP=ON 
+    -DWEBP_BUILD_CWEBP=ON
     -DWEBP_BUILD_DWEBP=ON
-    
+
     -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
-    cmake -S . -B build &&
+    cmake.setup
 
-    cmake --build build || return 1
+    cmake.build
 
-    pkgfile libwebp -- cmake --install build &&
+    cmdlet.pkgfile libwebp -- cmake.install
 
-    cmdlet ./build/cwebp &&
-    cmdlet ./build/dwebp &&
-    cmdlet ./build/img2webp &&
-    cmdlet ./build/webpinfo &&
-    cmdlet ./build/webpmux &&
-    cmdlet ./build/webp_quality &&
+    cmdlet.install ./build/cwebp
+    cmdlet.install ./build/dwebp
+    cmdlet.install ./build/img2webp
+    cmdlet.install ./build/webpinfo
+    cmdlet.install ./build/webpmux
+    cmdlet.install ./build/webp_quality
 
-    check img2webp -version
+    cmdlet.check img2webp -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

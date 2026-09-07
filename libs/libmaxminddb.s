@@ -5,7 +5,7 @@ libs_lic="Apache-2.0"
 libs_ver=1.13.3
 libs_url=https://github.com/maxmind/libmaxminddb/releases/download/$libs_ver/libmaxminddb-$libs_ver.tar.gz
 libs_sha=a66502ea76eadbe17f2cd6fd708946777253972d2ae8157dee1b23a2fb528171
-libs_dep=( )
+libs_dep=()
 
 libs_args=(
     --disable-option-checking
@@ -24,7 +24,7 @@ libs_build() {
 
     make
 
-    pkgfile "$libs_name" -- make install
+    cmdlet.pkgfile "$libs_name" -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

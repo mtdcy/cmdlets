@@ -38,7 +38,7 @@ libs_build() {
         make check
     fi
 
-    pkginst libgzip gzip.h lzw.h lib/libgzip.a
+    cmdlet.pkginst libgzip gzip.h lzw.h lib/libgzip.a
 
     cmdlet.install gzip
     cmdlet.install gunzip

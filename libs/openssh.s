@@ -6,10 +6,10 @@ libs_ver=10.2p1
 libs_rev=1
 libs_url=https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.2p1.tar.gz
 libs_sha=ccc42c0419937959263fa1dbd16dafc18c56b984c03562d2937ce56a60f798b2
-libs_dep=( ldns openssl libedit libxcrypt zlib )
+libs_dep=(ldns openssl libedit libxcrypt zlib)
 
 # macOS: use libpam from host
-is_linux && libs_dep+=( libpam )
+is_linux && libs_dep+=(libpam)
 
 libs_args=(
     --sysconfdir=/etc/ssh
@@ -26,7 +26,7 @@ libs_args=(
     #--enable-sk-internal
 )
 
-is_linux && libs_args+=( --with-privsep-path=/var/lib/sshd )
+is_linux && libs_args+=(--with-privsep-path=/var/lib/sshd)
 
 libs_build() {
     # no ldns-config present
@@ -62,28 +62,28 @@ libs_build() {
 
     # server
     make sshd sshd-session sshd-auth "${RELATIVE_PATHS[@]}"
-    pkginst sshd bin            \
-                 sshd           \
-                 sshd-auth      \
-                 sshd-session   \
+    cmdlet.pkginst sshd bin \
+                 sshd \
+                 sshd-auth \
+                 sshd-session
 
     # client tools
     make ssh ssh-keysign ssh-keygen ssh-add "${RELATIVE_PATHS[@]}"
-    pkginst ssh bin             \
-                ssh             \
-                ssh-keysign     \
-                ssh-keygen      \
-                ssh-add         \
+    cmdlet.pkginst ssh bin \
+                ssh \
+                ssh-keysign \
+                ssh-keygen \
+                ssh-add
 
     # seperate pkgfiles
-    pkgfile ssh-add     bin/ssh-add
-    pkgfile ssh-keygen  bin/ssh-keygen
-    pkgfile ssh-keysing bin/ssh-keysign
+    cmdlet.pkgfile ssh-add     bin/ssh-add
+    cmdlet.pkgfile ssh-keygen  bin/ssh-keygen
+    cmdlet.pkgfile ssh-keysing bin/ssh-keysign
 
     # standalone tools
     make scp sftp "${RELATIVE_PATHS[@]}"
-    cmdlet ./scp
-    cmdlet ./sftp
+    cmdlet.install ./scp
+    cmdlet.install ./sftp
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
