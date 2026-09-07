@@ -243,25 +243,38 @@ configure() {
 }
 
 make() {
-    local opts=() targets=() x njobs verbose
+    local opts=() targets=() x njobs="$_NJOBS" verbose="V=1"
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            -j)         njobs="$2" && shift ;;
-            -j*)        njobs="${1#-j}"     ;;
-            V=*)        verbose="$1"        ;;
-            *=*)        opts+=("$1")        ;;
-            *)          targets+=("$1")     ;;
+            -j)         njobs="$2" && shift         ;;
+            -j*)        njobs="${1#-j}"             ;;
+            -C)         opts+=("$1" "$2") && shift  ;;
+            V=*)        verbose="$1"                ;;
+            *=*)        opts+=("$1")                ;;
+            *)          targets+=("$1")             ;;
         esac
         shift
     done
 
-    [[ " ${targets[*]} " =~ " "(install|check)" " ]] && njobs=1
+    opts+=("$verbose")
 
-    test -z "$njobs"   || opts+=("-j$njobs")
-    test -n "$verbose" && opts+=("$verbose") || opts+=("V=1")
-
-    slogcmd "$MAKE" "${targets[@]}" "${opts[@]}" || die "make $libs_name failed."
+    # shellcheck disable=SC2086
+    if test -z "$targets"; then
+        # 这里不能简单的将默认目标定为 all
+        slogcmd "$MAKE" "${opts[@]}" -j$njobs || die "make $libs_name failed"
+    else
+        for x in "${targets[@]}"; do
+            case "$x" in
+                install | check)
+                    slogcmd "$MAKE" "$x" "${opts[@]}" -j1 || die "make $x failed"
+                    ;;
+                *)
+                    slogcmd "$MAKE" "$x" "${opts[@]}" -j$njobs || die "make $x failed"
+                    ;;
+            esac
+        done
+    fi
 }
 
 # setup cmake environments
@@ -1194,17 +1207,13 @@ cmdlet.pkgfile() {
     # create a version file
     grep -Fw "$pkgfile" "$pkginfo" > "$pkgvern"
 
-    _pkglink() {
-        echocmd ln -srf "$@"
-    }
-
     # v2/pkginfo
-    _pkglink "$pkgvern" "$libs_name/$name@latest"
-    _pkglink "$pkginfo" "$libs_name/pkginfo@latest"
+    echocmd ln -srf "$pkgvern" "$libs_name/$name@latest"
+    echocmd ln -srf "$pkginfo" "$libs_name/pkginfo@latest"
 
     if [ "$version" != "$libs_ver" ]; then
-        _pkglink "$pkgvern" "$libs_name/$name@$version"
-        _pkglink "$pkginfo" "$libs_name/pkginfo@$version"
+        echocmd ln -srf "$pkgvern" "$libs_name/$name@$version"
+        echocmd ln -srf "$pkginfo" "$libs_name/pkginfo@$version"
     fi
 
     # v3/manifest is ready, keep v2/pkgfile package() only
