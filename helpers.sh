@@ -292,13 +292,11 @@ _cmake_init() {
         export CMAKE_ASM_NASM_COMPILER="$NASM"
         export CMAKE_ASM_YASM_COMPILER="$YASM"
     }
+
     # compatible
     if _version_ge "$("$CMAKE" --version | grep -oE "[0-9.]+" -m1)" "4.0"; then
         export CMAKE_POLICY_VERSION_MINIMUM=3.5
     fi
-
-    # this env depends on generator, set MAKE or others instead
-    #export CMAKE_MAKE_PROGRAM="$MAKE"
 
     # remember envs
     {
@@ -309,7 +307,7 @@ _cmake_init() {
     } | _LOGGING=silent _capture
 
     # extend CMAKE with compile tools
-    _CMAKE_STD=(
+    _CMAKE_ARGS=(
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_INSTALL_PREFIX="'$PREFIX'"
         -DCMAKE_PREFIX_PATH="'$PREFIX'"
@@ -320,86 +318,71 @@ _cmake_init() {
 
     case "$_TARGET_NAME" in
         darwin)
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Darwin)
+            _CMAKE_ARGS+=(-DCMAKE_SYSTEM_NAME=Darwin)
             ;;
         windows)
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Windows)
+            _CMAKE_ARGS+=(-DCMAKE_SYSTEM_NAME=Windows)
             # alway search -lxxx for libxxx.a
-            _CMAKE_STD+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
+            _CMAKE_ARGS+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
             ;;
         cygwin)
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=CYGWIN)
+            _CMAKE_ARGS+=(-DCMAKE_SYSTEM_NAME=CYGWIN)
             # alway search -lxxx for libxxx.a
-            _CMAKE_STD+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
+            _CMAKE_ARGS+=(-DCMAKE_STATIC_LIBRARY_PREFIX="lib" -DCMAKE_STATIC_LIBRARY_SUFFIX=".a")
             ;;
         *)
-            _CMAKE_STD+=(-DCMAKE_SYSTEM_NAME=Linux)
+            _CMAKE_ARGS+=(-DCMAKE_SYSTEM_NAME=Linux)
             ;;
     esac
 
     # host or docker build, so `uname -m' is reliable
-    _CMAKE_STD+=(-DCMAKE_SYSTEM_PROCESSOR="$(uname -m)")
-
-    # sysroot
-    #local sysroot="$("$CC" -print-sysroot)"
-    #test -z "$sysroot" || _CMAKE_STD+=( -DCMAKE_SYSROOT="'$sysroot'" )
+    _CMAKE_ARGS+=(-DCMAKE_SYSTEM_PROCESSOR="$(uname -m)")
 
     export _CMAKE_READY=1
-}
-
-_cmake_filter_out_defines() {
-    local _options=()
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -D)     shift 2 ;;
-            -D*)    shift 1 ;;
-            *)
-                    _options+=("$1")
-                                        shift
-                                              ;;
-        esac
-    done
-    echo "${_options[@]}"
 }
 
 cmake() {
     _cmake_init
 
-    local cmdline=("$CMAKE")
-    case "$(_cmake_filter_out_defines "$@")" in
-        --build*)
+    local args=() action=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --build | --install)
+                action=("$1" "$2") && shift
+                ;;
+            *)
+                args+=("$1")
+                ;;
+        esac
+        shift
+    done
+
+    case "${action[0]}" in
+        --build)
             export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
-            cmdline+=("$@")
+            slogcmd "$CMAKE" "${action[@]}" "${args[@]}" || die "cmake $action failed."
             ;;
-        --install*)
+        --install)
             export CMAKE_BUILD_PARALLEL_LEVEL=1
-            cmdline+=("$@")
+            slogcmd "$CMAKE" "${action[@]}" "${args[@]}" || die "cmake $action failed."
             ;;
         *)
-            # std
-            cmdline+=("${_CMAKE_STD[@]}")
-            # append user args
-            cmdline+=("${libs_args[@]}" "$@")
+            export CMAKE_BUILD_PARALLEL_LEVEL=1
+            slogcmd "$CMAKE" "${_CMAKE_ARGS[@]}" "${libs_args[@]}" "${args[@]}" || die "cmake $libs_name failed."
             ;;
     esac
 
-    slogcmd "${cmdline[@]}" || die "cmake $libs_name failed."
 }
 
 cmake.setup() {
-    _cmake_init
-    export CMAKE_BUILD_PARALLEL_LEVEL=1
+    cmake "$@"
 
-    # std < libs_args < user args
-    slogcmd "$CMAKE" -S . -B "$_LIBS_BUILDDIR" "${_CMAKE_ARGS[@]}" "${libs_args[@]}" "$@" || die "cmake.setup $libs_name failed"
-
-    pushd "$_LIBS_BUILDDIR" || die
+    # pushd 之后，其他指令就不需要拼接路径 _LIBS_BUILDDIR
+    pushd "$_LIBS_BUILDDIR"
 }
 
 cmake.build() {
-    _cmake_init
-    export CMAKE_BUILD_PARALLEL_LEVEL="$_NJOBS"
-    slogcmd "$CMAKE" --build . "$@" || die "cmake.build $libs_name failed."
+    cmake --build . "$@"
 
     # bug fix
     # it seems configure_file() malformatted pc files
@@ -407,14 +390,7 @@ cmake.build() {
 }
 
 cmake.install() {
-    _cmake_init
-    export CMAKE_BUILD_PARALLEL_LEVEL=1
-
-    local cmdline=("$CMAKE")
-
-    is_listed "--install" "$@" || cmdline+=(--install .)
-
-    slogcmd "${cmdline[@]}" "$@" || die "cmake.install $libs_name failed."
+    cmake install . "$@"
 }
 
 _meson_init() {
