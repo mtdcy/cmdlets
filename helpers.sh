@@ -614,25 +614,30 @@ _cargo_init() {
     #  ** 优先级高的彻底覆盖低优先级的变量参数 **
     unset RUSTFLAGS
 
-    if is_darwin; then
-        # rustc use aarch64 instead of arm64 for macos
-        CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
-    elif is_cygwin; then
-        # target not ready
-        CARGO_BUILD_TARGET="$(uname -m)-pc-cygwin"
-    elif is_mingw; then
-        # win32
-        #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
-        #  *-windows-gnu => msvcrt
-        if is_clang; then
-            CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnullvm"
-        else
-            CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
-        fi
-    else
-        # musl
-        CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
-    fi
+    case "$_TARGET_NAME" in
+        darwin)
+            # rustc use aarch64 instead of arm64 for macos
+            CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
+            ;;
+        cygwin)
+            # target not ready
+            CARGO_BUILD_TARGET="$(uname -m)-pc-cygwin"
+            ;;
+        windows)
+            # win32
+            #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
+            #  *-windows-gnu => msvcrt
+            if is_clang; then
+                CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnullvm"
+            else
+                CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
+            fi
+            ;;
+        *)
+            # musl
+            CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
+            ;;
+    esac
 
     # error: toolchain 'stable-xxxx-unknown-linux-musl' may not be able to run on this system
     #rustup default "stable-$CARGO_BUILD_TARGET"
@@ -667,17 +672,39 @@ EOF
 cargo() {
     _cargo_init
 
-    local cmdline=("$CARGO" "$1")
-    case "$1" in
+    local args=() action profile
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -*)
+                if test -n "$2" && [[ ! "$2" =~ ^- ]]; then
+                    args+=("$1" "$2") && shift
+                else
+                    args+=("$1")
+                fi
+                ;;
+            *)
+                action="$1"
+                ;;
+        esac
+        shift
+    done
+
+    case "$action" in
         build)
-            cmdline+=("${libs_args[@]}" "${@:2}")
+            # default: release
+            list_has libs_args "--release|--profile" || args+=(--release)
+            list_has libs_args "--verbose"           || args+=(--verbose)
+
+            # If the --target flag (or build.target) is used, then
+            # the build.rustflags will only be passed to the compiler for the target.
+            #test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
+
+            slogcmd "$CARGO" build "${libs_args[@]}" "${args[@]}" -j "$_NJOBS" || die "cargo build failed."
             ;;
         *)
-            cmdline+=("${@:2}")
+            slogcmd "$CARGO" "$action" "${args[@]}" || die "cargo $action failed."
             ;;
     esac
-
-    slogcmd "${cmdline[@]}" || die "cargo $1 $libs_name failed."
 }
 
 # setup various rust things
@@ -740,8 +767,6 @@ cargo.setup() {
 }
 
 cargo.build() {
-    _cargo_init
-
     # remember envs
     {
         echo -e "\n---\ncargo envs:"
@@ -751,19 +776,7 @@ cargo.build() {
         echo -e "---\n"
     } | _LOGGING=silent _capture
 
-    # std < libs_args < user args
-    local std=("${libs_args[@]}" "$@")
-
-    # default: release
-    list_has std "--release|--profile" || std+=(--release)
-
-    list_has std "-j|--jobs" || std+=(-j "$_NJOBS")
-
-    # If the --target flag (or build.target) is used, then
-    # the build.rustflags will only be passed to the compiler for the target.
-    #test -z "$CARGO_BUILD_TARGET" || std+=( --target "$CARGO_BUILD_TARGET" )
-
-    slogcmd "$CARGO" build --locked "${std[@]}" || die "cargo.build $libs_name failed."
+    cargo build --locked "$@"
 }
 
 # requires host cargo tools
