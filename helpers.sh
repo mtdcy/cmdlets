@@ -806,16 +806,6 @@ _go_init() {
 
     _libs_init
 
-    # defaults:
-    # CGO_ENABLED=0 is necessary for build static binaries except macOS
-    if is_darwin; then
-        : "${CGO_ENABLED:=1}"
-    else
-        : "${CGO_ENABLED:=0}"
-    fi
-
-    export CGO_ENABLED
-
     # see _cargo_init notes
 
     # find go, prefer GOROOT
@@ -870,6 +860,18 @@ _go_init() {
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
 
+    case "$_TARGET_NAME" in
+        # go cannot link with cygwin1.dll
+        windows | cygwin)
+            export GOOS=windows
+            ;;
+        darwin)
+            CGO_ENABLED=1
+            ;;
+    esac
+
+    # CGO_ENABLED=0 is required for build static binaries except macOS
+    export CGO_ENABLED="${CGO_ENABLED:-0}"
     export CGO_CFLAGS="$CFLAGS"
     export CGO_CXXFLAGS="$CXXFLAGS"
     export CGO_CPPFLAGS="$CPPFLAGS"
@@ -880,89 +882,75 @@ _go_init() {
     export _GO_READY=1
 }
 
-# go can not amend `-ldflags='
-_go_filter_ldflags() {
-    local _ldflags=()
-    while [ $# -gt 0 ]; do
-        local args
-        case "$1" in
-            -ldflags=*)
-                # use xargs to remove quotes
-                IFS=' ' read -r -a args <<< "$(echo "${1#-ldflags=}" | xargs)"
-                _ldflags+=("${args[@]}")
-                ;;
-            -ldflags)
-                IFS=' ' read -r -a args <<< "$(echo "$2" | xargs)"
-                _ldflags+=("${args[@]}")
-                shift
-                ;;
-        esac
-        shift
-    done
-    echo "${_ldflags[@]}"
-}
-
-_go_filter_options() {
-    local _options=()
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -ldflags=*) ;;
-            -ldflags)   shift ;;
-            *)          _options+=("$1")   ;;
-        esac
-        shift
-    done
-    echo "${_options[@]}"
-}
-
-# shellcheck disable=SC2207
 go() {
     _go_init
 
-    local cmdline=("$GO" "$1")
-    case "$1" in
+    local args=() action packages=() ldflags=() tmp
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -ldflags=*)
+                # use xargs to remove quotes
+                IFS=' ' read -r -a tmp <<< "$(echo "${1#-ldflags=}" | xargs)"
+                ldflags+=("${tmp[@]}")
+                ;;
+            -ldflags)
+                IFS=' ' read -r -a tmp <<< "$(echo "$2" | xargs)"
+                ldflags+=("${tmp[@]}")
+                shift
+                ;;
+            -*)
+                if test -n "$2" && [[ ! "$2" =~ ^- ]]; then
+                    args+=("$1" "$2") && shift
+                else
+                    args+=("$1")
+                fi
+                ;;
+            *)
+                test -n "$action" && packages+=("$1") || action="$1"
+                ;;
+        esac
+        shift
+    done
+
+    test -n "$action" || die "go build $libs_name failed."
+
+    case "$action" in
         build)
-            # fix 'invalid go version'
-            if [ -f go.mod ]; then
-                local m n
-                IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
-                sed "s/^go [0-9.]\+$/go $m.$n/" -i go.mod
-                # go mod edit won't work here
-                #slogcmd "$GO" mod edit -go="$m.$n"
-                slogcmd "$GO" mod tidy
+            # static without dwarf and stripped
+            local std=(-w -s "-buildid=$libs_ver-${libs_rev:-1}")
+
+            [ "$CGO_ENABLED" -ne 0 ] || std+=("-extldflags=-static")
+
+            # go embed version control
+            if test -f main.go; then
+                is_listed main.version "${ldflags[@]}" || std+=("-X main.version=$libs_ver")
+                is_listed main.build   "${ldflags[@]}" || std+=("-X main.build=$((${_LIBS_PKGBUILD#*=} + 1))")
             fi
 
-            # verbose
-            cmdline+=(-x -v)
+            # ldflags: std + user ldflags
+            std=(-x -v -p $_NJOBS -ldflags="${std[*]} ${ldflags[*]}")
 
-            #1. static without dwarf and stripped
-            #2. add version info
-            local ldflags=(-w -s -X main.version="$libs_ver")
-
-            [ "$CGO_ENABLED" -ne 0 ] || ldflags+=(-extldflags=-static)
-
-            # merge user ldflags
-            ldflags+=($( _go_filter_ldflags "${@:2}"))
-
-            # set ldflags
-            cmdline+=(-ldflags="'${ldflags[*]}'")
-
-            # append user options
-            cmdline+=($( _go_filter_options "${@:2}"))
+            # std + libs_args + user args
+            slogcmd "$GO" build "${std[@]}" "${libs_args[@]}" "${args[@]}" "${packages[@]}" || die "go build failed."
             ;;
         *)
-            cmdline+=("${@:2}")
+            slogcmd "$GO" "$action" "${std[@]}" || die "go $action failed."
             ;;
     esac
-
-    slogcmd "${cmdline[@]}" || die "go $1 $libs_name failed."
 }
 
 go.setup() {
     _go_init
 
+    # remember envs
+    {
+        echo -e "\n---\ngo envs:"
+        env | grep GO
+        echo -e "---\n"
+    } | _LOGGING=silent _capture
+
     # fix 'invalid go version'
-    if [ -f go.mod ]; then
+    if test -f go.mod; then
         local m n
         IFS="." read -r m n _ <<< "$("$GO" version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')"
         sed "s/^go [0-9.]\+$/go $m.$n/" -i go.mod
@@ -973,42 +961,15 @@ go.setup() {
 }
 
 go.clean() {
-    _go_init
-
-    slogcmd "$GO" clean || die "go.clean $libs_name failed."
+    go clean "$@"
 }
 
 go.build() {
-    _go_init
-
-    # static without dwarf and stripped
-    local ldflags=(-w -s)
-
-    # go embed version control
-    if test -f main.go; then
-        echo "$*" | grep -i main.version    || ldflags+=(-X main.version="$libs_ver")
-        echo "$*" | grep -i main.build      || ldflags+=(-X main.build="$((${_LIBS_PKGBUILD#*=} + 1))")
-    fi
-
-    [ "$CGO_ENABLED" -ne 0 ] || ldflags+=(-extldflags=-static)
-
-    # merge user ldflags
-    ldflags+=($( _go_filter_ldflags "$@"))
-
-    # verbose
-    local std=(-x -v -p "$_NJOBS")
-
-    # set ldflags
-    std+=(-ldflags="'${ldflags[*]}'")
-
-    # append user options
-    std+=($( _go_filter_options "$@"))
-
-    slogcmd "$GO" build "${std[@]}" || die "go.build $libs_name failed."
+    go build "$@"
 }
 
 # libtool archive hardcoded PREFIX which is bad for us
-_rm_libtool_archive() {
+_libs_remove_la() {
     echocmd find "${1:-$PREFIX/lib}" -name "*.la" -exec rm -f {} \; || true
 }
 
@@ -1040,7 +1001,7 @@ _make_install() {
             *)      DESTDIR="$DESTDIR" "$@" ;;
         esac || die "$* failed."
 
-        _rm_libtool_archive DESTDIR || true
+        _libs_remove_la DESTDIR || true
 
         # install files to PREFIX
         local file dest
@@ -1378,12 +1339,13 @@ run() {
 }
 
 # find out which files are installed by `make install'
+# DEBUG ONLY
 inspect() {
     find "$PREFIX" > "$libs_name.pack.pre"
 
     slogcmd "$@" || die "${*:2} failed."
 
-    _rm_libtool_archive
+    _libs_remove_la
 
     find "$PREFIX" > "$libs_name.pack.post"
 
