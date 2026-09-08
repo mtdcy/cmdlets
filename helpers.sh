@@ -394,7 +394,9 @@ cmake.install() {
 }
 
 _meson_init() {
-    test -z "$_MESON_READY" || return 0
+    export _MESON_MACHINE_FILE=meson-static.ini
+
+    test -f "$_MESON_MACHINE_FILE" && return 0
 
     _libs_init
 
@@ -402,7 +404,7 @@ _meson_init() {
     CFLAGS+=" $CPPFLAGS"
     CXXFLAGS+=" $CPPFLAGS"
 
-    cat << EOF > meson-static.ini
+    cat << EOF > "$_MESON_MACHINE_FILE"
 [binaries]
 c = '$CC'
 cpp = '$CXX'
@@ -413,16 +415,15 @@ pkgconfig = '$PKG_CONFIG'
 EOF
 
     # cross compile
-    if is_mingw || is_cygwin; then
-        local _system='windows'
-        is_cygwin && _system='cygwin'
+    if is_xbuild; then
+        # 补充 binaries
+        test -z "$WINDRES"    || echo "windres = '$WINDRES'" >> "$_MESON_MACHINE_FILE"
+        test -z "$WINEPREFIX" || echo "exe_wrapper = 'wine'" >> "$_MESON_MACHINE_FILE"
 
-        cat << EOF >> meson-static.ini
-windres = '$WINDRES'
-exe_wrapper = 'wine'
-
+        # 补充 host_machine 信息
+        cat << EOF >> "$_MESON_MACHINE_FILE"
 [host_machine]
-system = '$_system'         # Target operating system
+system = '$_TARGET_NAME'    # Target operating system
 cpu_family = '$(uname -m)'  # Target CPU family
 cpu = '$(uname -m)'         # Specific CPU
 endian = 'little'           # Endianness
@@ -433,7 +434,7 @@ EOF
         export PATHEXT=".exe"
     fi
 
-    cat << EOF >> meson-static.ini
+    cat << EOF >> "$_MESON_MACHINE_FILE"
 [properties]
 # pkg-config & cmake 搜索路径
 pkg_config_path = ['$PKG_CONFIG_PATH']
@@ -443,11 +444,8 @@ cmake_prefix_path = ['$PREFIX']
 EOF
 
     # meson 交叉编译时会将 CFLAGS 等判断为 build machine flags
-    if is_mingw; then
-        # meson 交叉编译似乎不支持 CPPFLAGS
-        CFLAGS+=" $CPPFLAGS"
-        CXXFLAGS+=" $CPPFLAGS"
-
+    # 但实际上我们的 CFLAGS 等为 host machine flags
+    if is_xbuild; then
         for arg in c_args:CFLAGS c_link_args:LDFLAGS cpp_args:CXXFLAGS cpp_link_args:LDFLAGS; do
             IFS=':' read -r args name <<< "$arg"
             eval "local flags=( \${$name} )"
@@ -455,98 +453,85 @@ EOF
                 echo -en "host.$args = ["
                 printf "'%s'," "${flags[@]}" | sed -e 's/,$//'
                 echo -en "]\n"
-            } >> meson-static.ini
+            } >> "$_MESON_MACHINE_FILE"
         done
     fi
-
-    export _MESON_READY=1
 }
 
 meson() {
     _meson_init
 
-    local cmdline=("$MESON")
+    local args=() action targets=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -*)
+                if test -n "$2" && [[ ! "$2" =~ ^- ]]; then
+                    args+=("$1" "$2") && shift
+                else
+                    args+=("$1")
+                fi
+                ;;
+            *)
+                test -n "$action" && targets+=("$1") || action="$1"
+                ;;
+        esac
+        shift
+    done
 
-    # std args < meson configure
-    local std=()
+    # default action
+    test -n "$action" || action=setup
 
-    case "$1" in
+    case "$action" in
         setup)
             # meson builtin options: https://mesonbuild.com/Builtin-options.html
             #  libdir: some package prefer install to lib/<machine>/
-            std+=(
+            local std=(
                 -Dprefix="'$PREFIX'"
                 -Dlibdir=lib
                 -Dbuildtype=release
                 -Ddefault_library=static    # prefer static project libraries
             )
 
-            if is_mingw || is_cygwin; then
-                std+=(--cross-file=meson-static.ini)
-            else
-                std+=(--native-file=meson-static.ini)
-            fi
-
             # prefer static external dependencies
             #is_darwin || std+=( --prefer-static )
+            # prefer-static not always work for macOS, like libresolv which do not have static version.
+            # prefer-static not working like expected, -static-libgcc will not working with this
+            #  => use pkg-config and `-Wl,-Bstatic -latomic' instead
 
-            # append user args
-            cmdline+=(setup "${std[@]}" "${libs_args[@]}" "${@:2}")
+            if is_xbuild; then
+                std+=(--cross-file="$_MESON_MACHINE_FILE")
+            else
+                std+=(--native-file="$_MESON_MACHINE_FILE")
+            fi
+
+            slogcmd "$MESON" setup "${std[@]}" "${libs_args[@]}" "${args[@]}" "${targets[@]}" || die "meson setup failed."
             ;;
         compile)
-            cmdline+=("$1" "${std[@]}" "${@:2}" --jobs "$_NJOBS")
+            slogcmd "$MESON" compile "${args[@]}" --jobs "$_NJOBS" || die "meson compile failed."
             ;;
         *)
-            cmdline+=("$1" "${std[@]}" "${@:2}")
+            slogcmd "$MESON" "$action" "${args[@]}" || die "meson $action failed."
             ;;
     esac
-
-    slogcmd "${cmdline[@]}" || die "meson $1 $libs_name failed."
 }
 
 meson.setup() {
-    _meson_init
+    meson setup "$_LIBS_BUILDDIR" "$@"
 
-    local x std=()
-
-    # meson builtin options: https://mesonbuild.com/Builtin-options.html
-    #  libdir: some package prefer install to lib/<machine>/
-    std+=(
-        -Dprefix="'$PREFIX'"
-        -Dlibdir=lib
-        -Dbuildtype=release
-        -Ddefault_library=static    # prefer static project libraries
-    )
-
-    if is_mingw || is_cygwin; then
-        std+=(--cross-file=meson-static.ini)
-    else
-        std+=(--native-file=meson-static.ini)
-    fi
-
-    # prefer static external dependencies
-    #is_darwin || std+=( --prefer-static )
-    # prefer-static not always work for macOS, like libresolv which do not have static version.
-    # prefer-static not working like expected, -static-libgcc will not working with this
-    #  => use pkg-config and `-Wl,-Bstatic -latomic' instead
-
-    # std < libs_args < user args
-    slogcmd "$MESON" setup "$_LIBS_BUILDDIR" "${std[@]}" "${libs_args[@]}" "$@" || die "meson.setup $libs_name failed."
-
-    # enter builddir before return
-    pushd "$_LIBS_BUILDDIR" || die
+    # pushd 之后，其他指令就不需要拼接路径 _LIBS_BUILDDIR
+    pushd "$_LIBS_BUILDDIR"
 }
 
 meson.compile() {
-    _meson_init
-
-    slogcmd "$MESON" compile --verbose "-j$_NJOBS" "$@" || die "meson.compile $libs_name failed."
+    meson compile --verbose "$@"
 }
 
 meson.install() {
-    _meson_init
-
-    slogcmd "$MESON" install "$@" || die "meson.install $libs_name failed."
+    if test -n "$DESTDIR"; then
+        meson install --destdir "$DESTDIR" "$@"
+    else
+        meson install "$@"
+    fi
 }
 
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
