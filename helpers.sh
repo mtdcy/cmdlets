@@ -115,7 +115,7 @@ EOF
 libs.archive() {
     local name="${1%.a}" && shift
 
-    slogi $_EMOJI_PKGFILE "$name < $*"
+    slogi $_EMOJI_PKGFILE "$FUNCNAME $name < $*"
 
     if is_darwin; then
         echocmd libtool -static -o "$name.a" "$@"
@@ -1091,21 +1091,19 @@ _make_pkgfile() {
             */valgrind/*)   rm -f "$x" && continue ;;
             # no gettext(i18n & i10n) files
             */gettext/*)    rm -f "$x" && continue ;;
-            *.a)
-                # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
-                "$RANLIB" "$x"
-                ;;
+            # NEVER strip win32 targets, OR 'error: undefined symbol: xxx'
+            *.a)            "$RANLIB" "$x" ;;
+            # pkgconfig: replace prefix with env:PREFIX
             *.pc)
                 # shellcheck disable=SC2016
                 sed -i "$x" \
                     -e 's%^prefix=.*$%prefix=\${PREFIX}%' \
-                    -e "s%$PREFIX%\${prefix}%g" ||
-                       die "update $x failed."
+                    -e "s%$PREFIX%\${prefix}%g" || die "update $x failed."
                 ;;
+            # cmake: replace hardcoded prefix with CMAKE_INSTALL_PREFIX
             *.cmake)
                 sed -i "$x" \
-                    -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" ||
-                       die "update $x failed."
+                    -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" || die "update $x failed."
                 ;;
             bin/*)
                 x="$(_locate_exe "$x")" # tar will report error if not exists
@@ -1126,8 +1124,7 @@ _make_pkgfile() {
                                 #2. replace others with ${prefix}
                                 sed -i "$x" \
                                     -e "s%^prefix=.*%prefix=\"\${PREFIX:-/usr}\"%" \
-                                    -e "s%$PREFIX%\${prefix}%g" ||
-                                       die "update $x failed."
+                                    -e "s%$PREFIX%\${prefix}%g" || die "update $x failed."
                                 ;;
                         esac
                         ;;
@@ -1139,7 +1136,7 @@ _make_pkgfile() {
 
     slogi $_EMOJI_PKGFILE "$1 < ${files[*]}"
 
-    echocmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
+    slogcmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
 
 # create a pkgfile with given files
@@ -1148,8 +1145,6 @@ cmdlet.pkgfile() {
 
     # name contains version code?
     IFS='@' read -r name version <<< "$1"
-
-    test -z "$_BINEXT" || name="${name%$_BINEXT}"
 
     test -n "$version" || version="$libs_ver"
 
@@ -1171,7 +1166,8 @@ cmdlet.pkgfile() {
 
     # pkginfo is shared by library() and cmdlet(), full versioned
     local pkginfo="$libs_name/pkginfo@$libs_ver"
-                                                  touch "$pkginfo"
+
+    touch "$pkginfo"
 
     _make_pkgfile "$pkgfile" "${files[@]}"
 
@@ -1238,7 +1234,7 @@ cmdlet.pkginst() {
     local name="$1"
                      shift
 
-    slogi $_EMOJI_PKGFILE "$name < $*"
+    slogi $_EMOJI_PKGFILE "$FUNCNAME $name < $*"
 
     local sub installed
     while [ $# -ne 0 ]; do
@@ -1280,10 +1276,11 @@ cmdlet.pkginst() {
 cmdlet.install() {
     local name="${2:-"${1##*/}"}"
 
-    # append _BINEXT?
-    test -z "$_BINEXT" || [[ "$name" =~ "$_BINEXT"$ ]] || name+="$_BINEXT"
-
-    slogi $_EMOJI_PKGFILE "install cmdlet $1 => $name (alias ${*:3})"
+    if test -n "${*:3}"; then
+        slogi $_EMOJI_PKGFILE "$FUNCNAME $1 => $name (alias ${*:3})"
+    else
+        slogi $_EMOJI_PKGFILE "$FUNCNAME $1 => $name"
+    fi
 
     # executable
     local bin="$(_locate_exe "$1")"
@@ -1303,12 +1300,12 @@ cmdlet.install() {
     done
 
     # pack
-    cmdlet.pkgfile "${target##*/}" "$target" "${alias[@]/#/$PREFIX\/bin\/}"
+    cmdlet.pkgfile "$name" "$target" "${alias[@]/#/$PREFIX\/bin\/}"
 }
 
 # perform visual check on cmdlet
 cmdlet.check() {
-    slogi $_EMOJI_RUN "check $*"
+    slogi $_EMOJI_RUN "$FUNCNAME $*"
 
     local bin="$(_locate_bin "$1")"
 
@@ -1354,7 +1351,7 @@ cmdlet.caveats() {
     # no version for caveats file
     caveats="$PREFIX/$libs_name/$libs_name.caveats"
 
-    slogi $_EMOJI_NOTE "Caveats:"
+    slogi $_EMOJI_NOTE "$FUNCNAME:"
     if test -n "$*"; then
         echo "$*" | tee -a "$caveats" || die "write caveats failed."
     else
@@ -1430,7 +1427,7 @@ cmdlet.pkgconf() {
         esac
     done
 
-    slogi $_EMOJI_FILE "$name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
+    slogi $_EMOJI_FILE "$FUNCNAME $name.pc < ${cflags[*]} ${ldflags[*]} ${requires[*]}"
 
     if test -f "$name.pc"; then
         # append missing fields
