@@ -30,12 +30,13 @@ runs:
   steps:
     - name: Download packages
       uses: actions/download-artifact@v3
+      continue-on-error: true
       with:
         name: packages
         path: |
           packages
 
-    - name: Build
+    - name: Build cmdlets
       shell: bash
       run: |-
         set -ex
@@ -50,7 +51,7 @@ runs:
 
         ./.github/scripts/build.sh "${{ inputs.cmdlets }}"
 
-    - name: Release
+    - name: Release artifacts
       if: ${{ always() && inputs.artifacts-remote != '' }}
       shell: bash
       run: |-

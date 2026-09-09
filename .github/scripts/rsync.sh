@@ -44,6 +44,10 @@ opts=(
 )
 
 info "*** rsync $source => remote:$dest ***"
-rsync "${opts[@]}" "$source" "$remote"
+if test -d "$source"; then
+    rsync "${opts[@]}" "$source" "$remote"
+else
+    info "*** $source not exists, skip ***"
+fi
 
 exit $?

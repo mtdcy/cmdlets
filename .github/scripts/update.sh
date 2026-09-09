@@ -6,6 +6,7 @@ commits="$(mktemp)"
 
 trap 'rm -fv $commits' EXIT
 
+mkdir -pv packages
 true > "$commits"  # create empty file
 
 for lib in libs/*.s; do
@@ -15,7 +16,7 @@ for lib in libs/*.s; do
     [[ "$lib" =~ ^_ || "$lib" == ALL ]] && continue
 
     # update
-    (
+    (   
         . libs.sh
         _load "$lib"
 
@@ -55,23 +56,23 @@ done
 
 test -s "$commits" || exit 1
 
-# find out reverse dependencies
-IFS=' ' read -r -a libs < <(grep -oP "updated \K\S+" "$commits" | xargs)
-IFS=' ' read -r -a rdepends < <(bash libs.sh rdepends "${libs[@]}")
-
-if test -n "${rdepends[*]}"; then
-    echo -e "\n---\n" >> "$commits"
-    echo -e "rdepends:\n" >> "$commits"
-    for dep in "${rdepends[@]}"; do
-        read -r rev < <(grep -oP "libs_rev=\K\S+" "libs/$dep.s" | head -n1) || true
-        sed -i "libs/$dep.s" \
-            -e '/^libs_rev=.*$/d' \
-            -e "/^libs_ver=/a libs_rev=$((rev + 1))"
-        echo "  updated $dep revision => ${rev:-1}" >> "$commits"
-
-        git add "libs/$dep.s"
-    done
-fi
+## find out reverse dependencies
+#IFS=' ' read -r -a libs < <(grep -oP "updated \K\S+" "$commits" | xargs)
+#IFS=' ' read -r -a rdepends < <(bash libs.sh rdepends "${libs[@]}")
+#
+#if test -n "${rdepends[*]}"; then
+#    echo -e "\n---\n" >> "$commits"
+#    echo -e "rdepends:\n" >> "$commits"
+#    for dep in "${rdepends[@]}"; do
+#        read -r rev < <(grep -oP "libs_rev=\K\S+" "libs/$dep.s" | head -n1) || true
+#        sed -i "libs/$dep.s" \
+#            -e '/^libs_rev=.*$/d' \
+#            -e "/^libs_ver=/a libs_rev=$((rev + 1))"
+#        echo "  updated $dep revision => ${rev:-1}" >> "$commits"
+#
+#        git add "libs/$dep.s"
+#    done
+#fi
 
 git status
 

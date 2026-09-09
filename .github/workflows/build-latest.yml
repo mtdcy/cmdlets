@@ -15,63 +15,7 @@ on:
         description: Which cmdlets to build
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    container: lcr.io/mtdcy/builder:ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fetch packages
-        shell: bash
-        run: |-
-          set -ex
-
-          export CMDLET_MIRRORS="${{ vars.MIRRORS }}"
-
-          targets=(
-            # apple
-            arm64-apple-darwin
-            x86_64-apple-darwin
-            # linux
-            x86_64-linux-gnu
-            aarch64-linux-gnu
-            # cygwin
-            x86_64-pc-cygwin
-            # windows
-            # x86_64-w64-mingw32
-          )
-
-          IFS=', ' read -r -a cmdlets <<< "${{ github.event.inputs.cmdlets }}"
-          if test -z "${cmdlets[*]}"; then
-            for x in "${targets[@]}"; do
-              cmdlets+=( $(bash libs.sh _target_ls_changed "$x") )
-            done
-            IFS=' ' read -r -a cmdlets < <(printf '%s\n' "${cmdlets[@]}" | sort -u | xargs)
-          fi
-
-          ./.github/scripts/prepare.sh "${cmdlets[@]}"
-
-      - name: Upload packages
-        uses: actions/upload-artifact@v3
-        with:
-          name: packages
-          path: |
-            packages
-
-      - name: Deploy (rsync)
-        shell: bash
-        run: |-
-          export CMDLET_ARTIFACTS_TOKEN="${{ secrets.ARTIFACTS_REMOTE_TOKEN }}"
-
-          remote="${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}"
-
-          ./.github/scripts/rsync.sh packages/ "$remote/packages/"
-
   build-locally:
-    needs: prepare
     runs-on: ${{ vars.LOCAL_MACHINE || 'ubuntu-latest' }}
     container:
       image: ${{ vars.LOCAL_BUILDER || '' }}
@@ -94,7 +38,6 @@ jobs:
           mirrors: ${{ vars.MIRRORS }}
 
   build:
-    needs: prepare
     runs-on: ${{ matrix.machine }}
     container:
       image: ${{ matrix.builder }}
