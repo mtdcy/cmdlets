@@ -4,6 +4,7 @@
 
 libs_lic="libtiff"
 libs_ver=4.7.2
+libs_rev=1
 libs_url=https://download.osgeo.org/libtiff/tiff-$libs_ver.tar.gz
 libs_sha=672bd7d10aee4606171afb864f3570b83340f6a33e2c186dc0512f7145ffdf6a
 libs_dep=(zlib xz libjpeg-turbo zstd)

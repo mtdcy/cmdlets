@@ -7,6 +7,7 @@ libs_stable=1
 # shellcheck disable=SC2034
 libs_lic=GPLv2+,LGPLv2
 libs_ver=0.195
+libs_rev=1
 libs_url=https://sourceware.org/elfutils/ftp/0.195/elfutils-0.195.tar.bz2
 libs_sha=37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026
 libs_dep=( zlib bzip2 zstd xz )

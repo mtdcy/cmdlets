@@ -6,6 +6,7 @@ libs_stable=1
 # shellcheck disable=SC2034
 libs_lic="BSD-2-Clause"
 libs_ver=5.46
+libs_rev=1
 libs_url=https://astron.com/pub/file/file-$libs_ver.tar.gz
 libs_sha=c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
 libs_deps=(zlib bzip2 xz zstd)
