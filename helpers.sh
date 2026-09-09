@@ -352,7 +352,7 @@ cmake() {
 }
 
 cmake.setup() {
-    cmake "$@"
+    cmake -S . -B "$_LIBS_BUILDDIR" "$@"
 
     # pushd 之后，其他指令就不需要拼接路径 _LIBS_BUILDDIR
     pushd "$_LIBS_BUILDDIR"
@@ -367,7 +367,7 @@ cmake.build() {
 }
 
 cmake.install() {
-    cmake install . "$@"
+    cmake --install . "$@"
 }
 
 _meson_init() {
