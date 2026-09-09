@@ -42,7 +42,7 @@ cmdlets=()
 if test -n "$1"; then
     IFS=', ' read -r -a cmdlets <<< "$*"
 else
-    for x in $(bash libs.sh _target_ls_changed); do
+    for x in $(bash libs.sh _git_ls_changed); do
         bash libs.sh _pkgfile_ready "$x" || cmdlets+=("$x")
     done
 fi

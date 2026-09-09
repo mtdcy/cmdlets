@@ -1115,7 +1115,7 @@ _deps_init() {
 }
 
 depends() {
-    test -n "$*" || set -- $(_target_ls_changed)
+    test -n "$*" || set -- $(_git_ls_changed)
 
     _deps_init
 
@@ -1146,7 +1146,7 @@ depends() {
 
 # dependence (reverse dependencies)
 rdepends() {
-    test -n "$*" || set -- $(_target_ls_changed)
+    test -n "$*" || set -- $(_git_ls_changed)
 
     _deps_init
 
@@ -1249,7 +1249,7 @@ _deps_missing() {
 # build targets and its dependencies
 # build <lib list>
 build() {
-    test -n "$*" || set -- $(_target_ls_changed)
+    test -n "$*" || set -- $(_git_ls_changed)
 
     if test -z "$*"; then
         slogw "*** no cmdlets to build ***"
@@ -1407,7 +1407,7 @@ search() {
 
 # fetch libname
 fetch() {
-    test -n "$*" || set -- $(_target_ls_changed)
+    test -n "$*" || set -- $(_git_ls_changed)
 
     slogi "fetch packages $*"
     local libs x
@@ -1434,7 +1434,7 @@ fetch() {
 
 # prepare libraries source codes
 prepare() {
-    test -n "$*" || set -- $(_target_ls_changed)
+    test -n "$*" || set -- $(_git_ls_changed)
 
     _init_target
 
@@ -1446,7 +1446,7 @@ prepare() {
 }
 
 target() {
-    echo "$_TARGET"
+    _init_target && echo "$_TARGET"
 }
 
 # print remote branch hash
@@ -1478,31 +1478,9 @@ _git_ls_hash() {
     done
 }
 
-# make target tag on given commit or HEAD
-#  inputs: <target name> [commit id]
-maketag() {
-    local TAG="${1:-$(target)}"
-    local HEAD="${2:-HEAD}"
-
-    # tag if remote branch exists
-    if ! _git_ls_remote > /dev/null; then
-        slogw "MKTAG" "no tag on local branch"
-        return 0 # no error code
-    elif _git_ls_local > /dev/null; then
-        slogw "MKTAG" "no tag on unpushed commits"
-        return 0 # no error code
-    fi
-
-    slogi "MKTAG" "$TAG => $HEAD"
-
-    git tag -a "$TAG" -m "$TAG" --force "$HEAD"
-
-    slogi ".PUSH" "$TAG => origin"
-    git push origin "$TAG" --force
-}
-
 # list changed cmdlets for target
-_target_ls_changed() {
+# input: [target name]
+_git_ls_changed() {
     local TAG="${1:-$(target)}" list=() libs
 
     : "${OLDHEAD:="$(git tag -l "$TAG")"}"
@@ -1514,13 +1492,33 @@ _target_ls_changed() {
     [ "$OLDHEAD" = "$(git rev-parse HEAD)" ] && OLDHEAD="HEAD~1" || true
 
     while IFS='/' read -r _ libs; do
-        # file been deleted or renamed
-        test -e "libs/$libs" || continue
-
         list+=("${libs%.s}")
-    done < <( _git_ls_local "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
+    done < <( git diff --name-only --diff-filter=d HEAD "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
 
     echo "${list[@]}"
+}
+
+# make target tag on given commit or HEAD
+#  inputs: <target name> [commit id]
+maketag() {
+    local TAG="${1:-$(target)}"
+    local COMMIT="${2:-HEAD}"
+
+    # tag if remote branch exists
+    if ! _git_ls_remote > /dev/null; then
+        slogw "NO tag on local only branch."
+        return 0 # no error code
+    elif _git_ls_local > /dev/null; then
+        slogw "NO tag with unstaged changes."
+        return 0 # no error code
+    fi
+
+    slogi "$_EMOJI_GIT" "make tag $TAG => $COMMIT"
+
+    git tag -a "$TAG" -m "$TAG" --force "$COMMIT"
+
+    slogi "$_EMOJI_GIT" "push tag $TAG => origin"
+    git push origin "$TAG" --force
 }
 
 env() {
