@@ -40,14 +40,14 @@ libs_build() {
 
     meson.compile
 
-    pkgfile libfontconfig -- meson.install --tags devel
+    cmdlet.pkgfile libfontconfig -- meson.install --tags devel
 
     # tools
     for x in fc-list fc-scan fc-query fc-validate; do
         cmdlet.install "$x/$x" "$x"
     done
 
-    cmdlet.check fc-list --version
+    cmdlet.verify -- fc-list --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

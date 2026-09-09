@@ -32,7 +32,7 @@ libs_build() {
 
     cmdlet.install src/wayland-scanner
 
-    cmdlet.check wayland-scanner
+    cmdlet.verify -- wayland-scanner
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

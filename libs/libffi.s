@@ -24,7 +24,7 @@ libs_args=(
     --enable-static
 )
 
-is_mingw && libs_args+=( --disable-symvers )
+is_mingw && libs_args+=(--disable-symvers)
 
 libs_build() {
 
@@ -32,7 +32,7 @@ libs_build() {
 
     make
 
-    pkgfile libffi -- make.install
+    cmdlet.pkgfile libffi -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

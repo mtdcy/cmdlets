@@ -42,20 +42,20 @@ libs_build() {
     sed -i Makefile \
         -e '/^SUBDIRS/s/doc example//'
 
-    make.all
+    make all
 
     # fix xml2-config
     #  1. no dynamic support, some program test with help message
     sed -i xml2-config \
         -e '/ --dynamic /d'
 
-    pkgfile libxml2 -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libxml2 -- make install bin_PROGRAMS=
 
     for x in xmllint xmlcatalog; do
         cmdlet.install "$x"
     done
 
-    cmdlet.check xmllint
+    cmdlet.verify -- xmllint
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

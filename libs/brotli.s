@@ -20,7 +20,7 @@ libs_build() {
 
     cmake.build
 
-    pkgfile libbrotli -- cmake.install --component Unspecified
+    cmdlet.pkgfile libbrotli -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

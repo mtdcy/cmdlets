@@ -23,11 +23,11 @@ libs_build() {
 
     make
 
-    pkgfile libfribidi -- make.install SUBDIRS=lib
+    cmdlet.pkgfile libfribidi -- make install SUBDIRS=lib
 
     cmdlet.install bin/fribidi
 
-    cmdlet.check fribidi
+    cmdlet.verify -- fribidi
 
     echo "a _lsimple _RteST_o th_oat" > test.input || die
 
@@ -38,6 +38,5 @@ libs_build() {
 
     [ "${output#*=> }" = "a simple TSet that" ] || die "simple test failed."
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

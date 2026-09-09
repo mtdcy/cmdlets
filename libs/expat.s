@@ -25,11 +25,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
 
-    pkgfile libexpat -- make install SUBDIRS=lib &&
+    make
 
-    cmdlet ./xmlwf/xmlwf
+    cmdlet.pkgfile libexpat -- make install SUBDIRS=lib
+
+    cmdlet.install ./xmlwf/xmlwf
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

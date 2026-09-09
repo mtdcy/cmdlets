@@ -5,7 +5,7 @@ libs_lic='BSD-3-Clause'
 libs_ver=3.2.3
 libs_url=https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v$libs_ver.tar.gz
 libs_sha=e10c12b3f21f45bf08e09d4215d9c7691368d747beebd840de0b6fefed2df9f8
-libs_dep=( )
+libs_dep=()
 
 # configure args
 libs_args=(
@@ -13,11 +13,11 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p build && cd build 
+    cmake.setup
 
-    cmake .. && make || return 1
+    cmake.build
 
-    pkgfile libImath -- make install
+    cmake.pkgfile libImath -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

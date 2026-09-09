@@ -186,6 +186,7 @@ _EMOJI_PKGFILE="📦"
 _EMOJI_JOB="🚀"
 _EMOJI_OK="✅"
 _EMOJI_RUN="🟢"
+_EMOJI_EXEC="⚡️"
 _EMOJI_WARN="🟠"
 _EMOJI_ERROR="❌"
 
@@ -229,16 +230,6 @@ die()   {
         _slog error $_EMOJI_ERROR "$@"
     fi
     exit 1 # exit shell
-}
-
-die_on_error() {
-    local ret=$? # save error code
-    [ $ret -ne 0 ] || return 0
-
-    _capture_reset # in case Ctrl-C happens
-
-    _slog error $_EMOJI_ERROR "die on error $ret"
-    exit $ret # exit shell
 }
 
 _capture() {
@@ -930,8 +921,6 @@ _supported_targets() {
 _load() {
     _init_target
 
-    . helpers.sh
-
     unset "${!libs_@}"
 
     local file="libs/$1.s"
@@ -982,6 +971,9 @@ _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 #  input: name
 _prepare() {
     slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
+
+    # load libs helpers
+    . helpers.sh
 
     _load "$1" || die "load $1 failed."
 
@@ -1040,23 +1032,22 @@ _prepare() {
 _compile() {
     _init_target
 
+    # always start subshell
     (   
-        # always start subshell before _load()
-
         trap _capture_reset EXIT
-        trap 'exit 1'   INT     # ctrl-c
+        trap 'exit 1'       INT     # ctrl-c
 
         set -eo pipefail
 
         # find latest commit hash
-        _COMMIT_HASH="$(_git_ls_hash "$1")"
+        _LIBS_COMMIT_HASH="$(_git_ls_hash "$1")"
 
         # prepare source codes
         _prepare "$1" || return $?
 
         declare -F libs_build > /dev/null || {
-            slogw "Not supported or missing libs_build"
-            return 0
+            sloge "Missing libs_build routine"
+            return 127
         }
 
         # clear and log all environments
@@ -1069,12 +1060,12 @@ _compile() {
             echo -e "----\n"
         } > "$_LOGFILE"
 
+        # read pkgbuild before clear
+        _LIBS_PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
+        test -n "$_LIBS_PKGBUILD" || _LIBS_PKGBUILD="build=0"
+
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
-
-        # read pkgbuild before clear
-        _PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
-        test -n "$_PKGBUILD" || _PKGBUILD="build=0"
 
         # v3: clear manifest
         sed -i "\#\ $libs_name/.*@$libs_ver#d" "$_TARGET_MANIFEST"
@@ -1572,7 +1563,7 @@ update() {
     sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
 
     # set libs_rev - cmdlet revision (packaging number)
-    #  - _PKGBUILD : real packaging number
+    #  - _LIBS_PKGBUILD : real packaging number
     sed -i "libs/$1.s" \
         -e '/^libs_rev=.*$/d' \
         -e '/^libs_ver=/a libs_rev=1'

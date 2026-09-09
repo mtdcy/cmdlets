@@ -39,7 +39,7 @@ libs_build() {
     cmdlet.install ./src/iperf3 iperf3 iperf
 
     # verify
-    cmdlet.check iperf3
+    cmdlet.verify -- iperf3
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

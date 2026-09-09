@@ -34,7 +34,7 @@ libs_build() {
 
     make
 
-    pkgfile libass -- make.install
+    cmdlet.pkgfile libass -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

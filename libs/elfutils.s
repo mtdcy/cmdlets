@@ -1,6 +1,7 @@
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
 #
 # Libraries and utilities for handling ELF objects
+libs_targets=(linux)
 libs_stable=1
 
 # shellcheck disable=SC2034
@@ -76,15 +77,13 @@ libs_build() {
     configure
 
     # build and install only static libraries
-    make.all bin_PROGRAMS=
+    make all bin_PROGRAMS=
 
     # fix libelf.pc with musl libraries
-    pkgconf config/libelf.pc -largp -lfts -lobstack
+    cmdlet.pkgconf config/libelf.pc -largp -lfts -lobstack
 
-    pkgfile libelf -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libelf -- make install bin_PROGRAMS=
 }
-
-libs.depends is_linux
 
 # patch: enable static build
 __END__

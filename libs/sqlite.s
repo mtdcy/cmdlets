@@ -5,7 +5,7 @@ libs_lic='blessing'
 libs_ver=3.53.4
 libs_url=https://github.com/sqlite/sqlite/archive/refs/tags/version-$libs_ver.tar.gz
 libs_sha=16bc1b2027ba2653e3d262e740376be23f67cad77865db814493267494326c3c
-libs_dep=( zlib readline )
+libs_dep=(zlib readline)
 
 libs_build() {
     libs_args=(
@@ -19,7 +19,7 @@ libs_build() {
         --enable-session
         --with-readline-cflags="'$($PKG_CONFIG --cflags readline)'"
         --with-readline-ldflags="'$($PKG_CONFIG --libs readline)'"
-    
+
         --disable-nls
 
         # static
@@ -47,13 +47,15 @@ libs_build() {
     )
     export CPPFLAGS="$CPPFLAGS ${defines[*]}"
 
-    configure && make || return 1
+    configure
 
-    pkgfile libsqlite -- make install-lib install-headers install-pc
+    make
 
-    cmdlet ./sqlite3 && 
+    cmdlet.pkgfile libsqlite -- make install-lib install-headers install-pc
 
-    check sqlite3 --version
+    cmdlet.install ./sqlite3
+
+    cmdlet.verify -- sqlite3 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

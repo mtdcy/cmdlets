@@ -1,6 +1,9 @@
 # C routines to compute the Discrete Fourier Transform
-
 # shellcheck disable=SC2034
+
+# fftw requires aligned malloc, which is not ready on mingw
+libs_targets=(! windows)
+
 libs_lic=GPLv2+
 libs_ver=3.3.11
 libs_url=https://fftw.org/fftw-3.3.11.tar.gz
@@ -45,14 +48,11 @@ libs_build() {
 
     make
 
-    pkgfile libfftw3 -- make.install bin_PROGRAMS= bin_SCRIPTS=
+    cmdlet.pkgfile libfftw3 -- make install bin_PROGRAMS= bin_SCRIPTS=
 
     cmdlet.install tools/fftw-wisdom
 
-    cmdlet.check fftw-wisdom --version
+    cmdlet.verify fftw-wisdom -- fftw-wisdom --help
 }
-
-# fftw requires aligned malloc, which is not ready on mingw
-libs.depends ! is_mingw
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

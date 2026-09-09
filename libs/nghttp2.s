@@ -1,4 +1,3 @@
-
 # shellcheck disable=SC2034
 libs_desc="HTTP/2 C Library"
 libs_lic="MIT"
@@ -26,9 +25,9 @@ libs_build() {
 
     make -C lib V=1
 
-    pkgconf lib/libnghttp2.pc -DNGHTTP2_STATICLIB
+    cmdlet.pkgconf lib/libnghttp2.pc -DNGHTTP2_STATICLIB
 
-    pkgfile libnghttp2 -- make.install
+    cmdlet.pkgfile libnghttp2 -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

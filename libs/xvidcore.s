@@ -15,11 +15,11 @@ libs_build() {
 
     if is_mingw; then
         #1. x86_64-w64-mingw32-gcc-posix: error: unrecognized command-line option ‘-mno-cygwin’; did you mean ‘-mno-clwb’?
-        #2. fix STATIC_LIB 
+        #2. fix STATIC_LIB
         sed -i configure \
             -e 's/"-mno-cygwin"/""/g' \
-            -e 's/STATIC_LIB="xvidcore/STATIC_LIB="libxvidcore/g' \
-            || die "hack configure failed."
+            -e 's/STATIC_LIB="xvidcore/STATIC_LIB="libxvidcore/g' ||
+               die "hack configure failed."
     fi
 
     configure
@@ -27,10 +27,10 @@ libs_build() {
     make libxvidcore.a
 
     # create pc file
-    pkgconf xvidcore.pc -lxvidcore
+    cmdlet.pkgconf xvidcore.pc -lxvidcore
 
-    pkginst xvidcore                         \
-        include         ../../src/xvid.h     \
+    cmdlet.pkginst xvidcore \
+        include         ../../src/xvid.h \
         lib             =build/libxvidcore.a \
         lib/pkgconfig   xvidcore.pc
 }

@@ -6,7 +6,7 @@ libs_url=(
     https://github.com/google/zopfli/archive/refs/tags/zopfli-$libs_ver.tar.gz
 )
 libs_sha=e955a7739f71af37ef3349c4fa141c648e8775bceb2195be07e86f8e638814bd
-libs_dep=( )
+libs_dep=()
 
 libs_patches=(
     https://github.com/google/zopfli/commit/8ef44ffde0fd2bb2a658f75887e65b31c9e44985.patch?full_index=1
@@ -23,13 +23,13 @@ libs_build() {
 
     cmake.build
 
-    pkgfile libzopfli -- cmake.install
+    cmdlet.pkgfile libzopfli -- cmake.install
 
     cmdlet.install zopfli
 
     cmdlet.install zopflipng
 
-    cmdlet.check zopfli
+    cmdlet.verify -- zopfli
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

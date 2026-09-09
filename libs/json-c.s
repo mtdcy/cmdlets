@@ -16,11 +16,11 @@ libs_args=(
 )
 
 libs_build() {
-    cmake -S . -B build
+    cmake.setup
 
-    cmake --build build
+    cmake.build
 
-    pkgfile libjson-c -- cmake --install build
+    cmdlet.pkgfile libjson-c -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

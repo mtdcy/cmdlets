@@ -7,16 +7,13 @@ libs_ver=3.12
 libs_rev=1
 libs_url=https://ftpmirror.gnu.org/gnu/grep/grep-$libs_ver.tar.xz
 libs_sha=2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9
-libs_deps=(libiconv pcre2)
+libs_deps=(pcre2)
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
-
     # no i18n or nls
     --disable-nls
     --without-libintl-prefix
+    --without-libiconv-prefix
 
     # disabled features
     --without-selinux
@@ -24,12 +21,11 @@ libs_args=(
     --disable-man
 )
 
-is_listed libiconv  "${libs_deps[@]}" && libs_args+=(--with-libiconv)        || libs_args+=(--without-libiconv-prefix)
-is_listed pcre2     "${libs_deps[@]}" && libs_args+=(--enable-perl-regexp)   || libs_args+=(--disable-perl-regexp)
+is_listed pcre2 "${libs_deps[@]}" && libs_args+=(--enable-perl-regexp)   || libs_args+=(--disable-perl-regexp)
 
 libs_build() {
     # fix error: redefinition of 'nanosleep'
-    if libs.func.exists time.h nanosleep; then
+    if libs.conftest nanosleep; then
         echo "" > gnulib-tests/nanosleep.c
     fi
 
@@ -42,10 +38,10 @@ libs_build() {
     cmdlet.install src/grep
 
     # verify
-    cmdlet.check grep --version
-
-    # check: grep with pcre
-    is_cygwin || echo FOO | run grep -P '(?i)foo' || die "check grep with pcre failed"
+    if ! is_xbuild; then
+        echo "FOO" > foo.txt
+        cmdlet.verify grep -- grep -P "'(?i)foo'" foo.txt || die "grep with pcre failed."
+    fi
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

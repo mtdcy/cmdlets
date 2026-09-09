@@ -7,7 +7,7 @@ libs_rev=1
 libs_url=https://github.com/libevent/libevent/archive/refs/tags/release-$libs_ver-stable.tar.gz
 libs_rev=1
 libs_sha=1a0885e17dc78afbaeddf13cf849f9238bbc24acdc178464a0d1934d7c5ffbd5
-libs_dep=( openssl )
+libs_dep=(openssl)
 
 libs_args=(
     --disable-option-checking
@@ -27,8 +27,10 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
+    configure
 
-    pkgfile libevent -- make install
+    make
+
+    cmdlet.pkgfile libevent -- make install
 }
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

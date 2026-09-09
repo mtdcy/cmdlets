@@ -77,15 +77,15 @@ libs_build() {
 
     make
 
-    slogcmd run src/curl -4 -fvIL https://www.google.com || die "curl test failed"
+    cmdlet.execute -- src/curl -4 -fvIL https://www.google.com
 
-    pkgconf libcurl.pc -DCURL_STATICLIB
+    cmdlet.pkgconf libcurl.pc -DCURL_STATICLIB
 
-    pkgfile libcurl -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile libcurl -- make install bin_PROGRAMS=
 
     cmdlet.install src/curl
 
-    cmdlet.check curl --version
+    cmdlet.verify -- curl --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

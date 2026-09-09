@@ -28,26 +28,24 @@ libs_build() {
     fi
 
     # set binaries' component as Runtime
-    sed -i CMakeLists.txt                                         \
-        -e '/install(/s/PROGRAMS.*/& COMPONENT Runtime/g'         \
+    sed -i CMakeLists.txt \
+        -e '/install(/s/PROGRAMS.*/& COMPONENT Runtime/g' \
         -e '/install(/s/rdjpgcom wrjpgcom /& COMPONENT Runtime/g'
-    
-    mkdir -p build
 
-    cmake -S . -B build &&
+    cmake.setup
 
-    cmake --build build &&
+    cmake.build
 
-    pkgfile libturbojpeg -- cmake --install build --component Unspecified &&
+    cmdlet.pkgfile libturbojpeg -- cmake.install --component Unspecified
 
-    cmdlet  ./build/cjpeg-static cjpeg       &&
-    cmdlet  ./build/djpeg-static djpeg       &&
-    cmdlet  ./build/jpegtran-static jpegtran &&
-    cmdlet  ./build/tjbench-static tjbench   &&
-    cmdlet  ./build/wrjpgcom                 &&
-    cmdlet  ./build/rdjpgcom                 &&
+    cmdlet.install  ./build/cjpeg-static cjpeg
+    cmdlet.install  ./build/djpeg-static djpeg
+    cmdlet.install  ./build/jpegtran-static jpegtran
+    cmdlet.install  ./build/tjbench-static tjbench
+    cmdlet.install  ./build/wrjpgcom
+    cmdlet.install  ./build/rdjpgcom
 
-    check   cjpeg -version
+    cmdlet.verify --    cjpeg -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

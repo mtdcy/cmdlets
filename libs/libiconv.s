@@ -93,7 +93,7 @@ libs_build() {
     cmdlet.install src/iconv_no_i18n iconv
 
     # visual check
-    cmdlet.check iconv --version
+    cmdlet.verify -- iconv --version
 }
 
 # not necessary, make -f Makefile.devel will update lib/flags.h

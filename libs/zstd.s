@@ -20,7 +20,7 @@ libs_args=(
 )
 
 libs_build() {
-    pushd build/cmake 
+    pushd build/cmake
 
     cmake .
 
@@ -28,17 +28,19 @@ libs_build() {
 
     cmdlet.pkgfile libzstd -- make install -C lib
 
-    cmdlet.pkgfile zstd    -- make install -C programs
+    make -C programs
 
-    cmdlet.check zstd --version
-    
-    # simple test 
+    cmdlet.install ./programs/zstd zstd unzstd zstdcat zstdmt
+
+    # simple test
     echo "test" > foo && rm -f foo.zst
-    run zstd foo                                || die "zstd compress failed."
-    run zstd -t foo.zst                         || die "zstd integrity test failed."
-    run zstd -l foo.zst | grep -Fwq foo         || die "zstd list contents failed."
-    run zstd -d -c foo.zst | grep -Eq "^test$"  || die "zstd decompress failed."
+    cmdlet.verify zstd << EOF
+    zstd --version
+    zstd foo                                || die "zstd compress failed."
+    zstd -t foo.zst                         || die "zstd integrity test failed."
+    zstd -l foo.zst | grep -Fwq foo         || die "zstd list contents failed."
+    zstd -d -c foo.zst | grep -Eq "^test$"  || die "zstd decompress failed."
+EOF
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

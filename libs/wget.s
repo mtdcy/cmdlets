@@ -55,7 +55,7 @@ libs_build() {
         # https://github.com/coreutils/gnulib/issues/20
         export gl_cv_var___daylight=__daylight
 
-        if libs.func.exists time.h nanosleep; then
+        if libs.conftest nanosleep; then
             echo "" > lib/nanosleep.c
         fi
     fi
@@ -65,7 +65,7 @@ libs_build() {
     make
 
     # fast check
-    run src/wget -O /dev/null https://www.baidu.com || die "wget test failed."
+    cmdlet.verify -- src/wget -O /dev/null https://www.baidu.com || die "wget test failed."
 
     # no top level check: https://git.alpinelinux.org/aports/tree/main/wget/APKBUILD
     #make -C tests check
@@ -74,7 +74,7 @@ libs_build() {
     cmdlet.install src/wget
 
     # verify
-    cmdlet.check wget --version
+    cmdlet.verify -- wget --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

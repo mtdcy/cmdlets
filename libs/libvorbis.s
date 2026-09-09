@@ -13,11 +13,11 @@ libs_args=(
 )
 
 libs_build() {
-    cmake -S . -B build &&
+    cmake.setup
 
-    cmake --build build &&
+    cmake.build
 
-    pkgfile libvorbis -- cmake --install build 
+    cmdlet.pkgfile libvorbis -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

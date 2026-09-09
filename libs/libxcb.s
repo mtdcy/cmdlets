@@ -1,13 +1,13 @@
 # X.Org: Interface to the X Window System protocol
 
-libs_targets=( linux darwin )
+libs_targets=(linux darwin)
 
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=1.17.0
 libs_url=https://xorg.freedesktop.org/archive/individual/lib/libxcb-1.17.0.tar.xz
 libs_sha=599ebf9996710fea71622e6e184f3a8ad5b43d0e5fa8c4e407123c88a59a6d55
-libs_dep=( libxau libxdmcp xcb-proto )
+libs_dep=(libxau libxdmcp xcb-proto)
 
 libs_args=(
     --disable-silent-rules
@@ -32,9 +32,9 @@ libs_args=(
 libs_build() {
     configure
 
-    make.all
+    make all
 
-    pkgfile $libs_name -- make.install SUBDIRS=src BUILT_MAN_PAGES=
+    cmdlet.pkgfile $libs_name -- make install SUBDIRS=src BUILT_MAN_PAGES=
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

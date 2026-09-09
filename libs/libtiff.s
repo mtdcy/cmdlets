@@ -30,7 +30,7 @@ libs_build() {
 
     make
 
-    pkgfile libtiff -- make.install SUBDIRS=libtiff
+    cmdlet.pkgfile libtiff -- make install SUBDIRS=libtiff
 
     IFS=' ' read -r -a tools < <(find tools -name "*.o" | xargs)
 
@@ -38,7 +38,7 @@ libs_build() {
         test -x "$x" || continue
 
         cmdlet.install "$x"
-        cmdlet.check "$x"
+        cmdlet.verify -- "$x"
     done
 
 }

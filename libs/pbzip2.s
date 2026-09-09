@@ -29,11 +29,11 @@ libs_build() {
         LDFLAGS="'$LDFLAGS'"   \
         LDLIBS="'$LDLIBS'"
 
-    cmdlet ./pbzip2 pbzip2 pbunzip2 pbzcat
+    cmdlet.install ./pbzip2 pbzip2 pbunzip2 pbzcat
 
-    check pbzip2 --version
+    cmdlet.verify -- pbzip2 --version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built pbzip2 @ $libs_ver
 
 Usage:

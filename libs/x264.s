@@ -29,7 +29,7 @@ libs_args=(
 )
 
 # arm64: build fail with asm
-is_arm64 && libs_args+=( --disable-asm )
+is_arm64 && libs_args+=(--disable-asm)
 
 libs_build() {
     cmdlet.disclaim 0480cb05 3222
@@ -41,11 +41,11 @@ libs_build() {
 
     make
 
-    pkgfile libx264 -- make install-lib-static
+    cmdlet.pkgfile libx264 -- make install-lib-static
 
     cmdlet.install x264
 
-    cmdlet.check x264
+    cmdlet.verify -- x264
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

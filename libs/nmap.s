@@ -5,7 +5,7 @@ libs_ver=7.99
 libs_rev=3
 libs_url=https://nmap.org/dist/nmap-7.99.tar.bz2
 libs_sha=df512492ffd108e53a27a06f26d8635bbe89e0e569455dc8ffef058c035d51b2
-libs_dep=( zlib libpcap liblinear libssh2 openssl pcre2 )
+libs_dep=(zlib libpcap liblinear libssh2 openssl pcre2)
 
 libs_args=(
     --disable-dependency-tracking
@@ -32,7 +32,7 @@ libs_args=(
 )
 
 libs_build() {
-    deparallelize
+    libs.requires -j1
 
     # Fix to missing VERSION file
     # https://github.com/nmap/nmap/pull/3111
@@ -41,15 +41,15 @@ libs_build() {
     configure
 
     make nmap
-    cmdlet ./nmap
+    cmdlet.install ./nmap
 
     make -C nping
-    cmdlet ./nping/nping nmap-ping
+    cmdlet.install  ./nping/nping nmap-ping
 
     make -C ncat
-    cmdlet ./ncat/ncat nmap-cat
+    cmdlet.install ./ncat/ncat nmap-cat
 
-    check nmap --version
+    cmdlet.verify -- nmap --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

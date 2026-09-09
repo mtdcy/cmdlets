@@ -25,7 +25,7 @@ libs_build() {
 
     make
 
-    if is_mingw || is_cygwin; then
+    if is_xbuild; then
         slogw "skip make check"
     else
         make check
@@ -33,14 +33,13 @@ libs_build() {
 
     cmdlet.install lzip
 
-    # verify
-    cmdlet.check lzip --version
-
     echo "test" > foo && rm -f foo.lz
-    run lzip foo                                || die "lzip compress failed."
-    run lzip -t foo.lz                          || die "lzip integrity test failed."
-    run lzip --list foo.lz | grep -Fwq foo      || die "lzip list contents failed."
-    run lzip -d -c foo.lz | grep -Eq "^test$"   || die "lzip decompress failed."
+    cmdlet.verify <<- EOF
+    lzip foo                                || die "lzip compress failed."
+    lzip -t foo.lz                          || die "lzip integrity test failed."
+    lzip --list foo.lz | grep -Fwq foo      || die "lzip list contents failed."
+    lzip -d -c foo.lz | grep -Eq "^test$"   || die "lzip decompress failed."
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

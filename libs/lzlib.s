@@ -20,10 +20,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make && make check || return $?
+    configure
 
-    pkgfile liblz -- make install
+    make
+
+    make check
+
+    cmdlet.pkgfile liblz -- make install
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

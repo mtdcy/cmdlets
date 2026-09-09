@@ -19,14 +19,13 @@ libs_args=(
 )
 
 libs_build() {
-    configure && 
+    configure
 
-    make mawk &&
+    make mawk
 
-    cmdlet ./mawk && 
+    cmdlet.install ./mawk
 
-    check mawk --version
+    cmdlet.verify -- mawk --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

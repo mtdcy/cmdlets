@@ -48,7 +48,7 @@ libs_build() {
 
     cmdlet.install src/watch
 
-    cmdlet.check watch --version
+    cmdlet.verify -- watch --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

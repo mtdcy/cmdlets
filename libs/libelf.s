@@ -1,14 +1,14 @@
 # ELF object file access library
 
 # Linux uses elfutils
-libs_targets=( darwin )
+libs_targets=(darwin)
 
 # shellcheck disable=SC2034
 libs_lic=LGPLv2+
 libs_ver=0.8.13
 libs_url=https://fossies.org/linux/misc/old/libelf-0.8.13.tar.gz
 libs_sha=591a9b4ec81c1f2042a97aa60564e0cb79d041c52faa7416acb38bc95bd2c76d
-libs_dep=( )
+libs_dep=()
 
 libs_args=(
     --disable-option-checking
@@ -31,7 +31,7 @@ libs_build() {
     make
 
     # libelf Makefile do not support DESTDIR
-    pkginst "$libs_name" \
+    cmdlet.pkginst "$libs_name" \
             include/libelf  lib/{libelf.h,nlist.h,gelf.h,sys_elf.h,elf_repl.h} \
             lib             lib/libelf.a \
             lib/pkgconfig   libelf.pc

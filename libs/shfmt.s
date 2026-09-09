@@ -17,9 +17,9 @@ libs_build() {
 
     go.build ./cmd/shfmt
 
-    cmdlet shfmt
+    cmdlet.install shfmt
 
-    check shfmt
+    cmdlet.verify -- shfmt
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

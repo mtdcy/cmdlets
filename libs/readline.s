@@ -83,11 +83,11 @@ libs_build() {
     # check linkage by build a program
     make readline
 
-    pkgfile libreadline -- make install-static
+    cmdlet.pkgfile libreadline -- make install-static
 
     cmdlet.install readline
 
-    cmdlet.check readline
+    cmdlet.verify -- readline
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

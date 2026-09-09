@@ -26,11 +26,11 @@ libs_build() {
 
     make "${libs_args[@]}"
 
-    pkgfile libopenh264 -- make install-static "${libs_args[@]}"
+    cmdlet.pkgfile libopenh264 -- make install-static "${libs_args[@]}"
 
     for x in h264dec h264enc; do
         cmdlet.install "$x"
-        cmdlet.check "$x"
+        cmdlet.verify -- "$x"
     done
 }
 

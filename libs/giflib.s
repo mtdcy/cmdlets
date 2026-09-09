@@ -32,6 +32,6 @@ libs_build() {
 
     for x in "${giftools[@]}"; do
         cmdlet.install "$x"
-        cmdlet.check "$x"
+        cmdlet.verify -- "$x"
     done
 }

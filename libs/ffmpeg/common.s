@@ -206,7 +206,7 @@ ffmpeg_install() {
     cmdlet.install ffmpeg_g "ffmpeg@$version"
     cmdlet.install ffprobe_g "ffprobe@$version"
 
-    cmdlet.check "ffmpeg@$version" -version
+    cmdlet.verify -- "ffmpeg@$version" -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

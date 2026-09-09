@@ -38,9 +38,9 @@ libs_build() {
 
     cmake --build build
 
-    cmdlet ./build/httping
+    cmdlet.install ./build/httping
 
-    check httping --version
+    cmdlet.verify -- httping --version
 
     # macOS FIXME: SSL certificate validation failed: unable to get local issuer certificate
 }

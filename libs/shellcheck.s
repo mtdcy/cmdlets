@@ -16,7 +16,7 @@ libs_url=https://github.com/koalaman/shellcheck/releases/download/v$libs_ver/she
 libs_build() {
     cmdlet.install $(find . -name shellcheck)
 
-    cmdlet.check shellcheck --version
+    cmdlet.verify -- shellcheck --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

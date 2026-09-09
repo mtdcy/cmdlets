@@ -61,20 +61,20 @@ libs_build() {
                 s/-lxml2/& -llzma/;
             }'
 
-    make.all
+    make all
 
     # fix librrd.pc for static libraries
     pkgconf src/librrd.pc \
         $($PKG_CONFIG --cflags --libs glib-2.0 libpng) \
         $($PREFIX/bin/xml2-config --cflags --libs)
 
-    pkgfile librrd -- make.install bin_PROGRAMS=
+    cmdlet.pkgfile librrd -- make install bin_PROGRAMS=
 
     for x in rrdtool rrdupdate; do
         cmdlet.install "./src/$x"
     done
 
-    cmdlet.check rrdtool
+    cmdlet.verify -- rrdtool
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

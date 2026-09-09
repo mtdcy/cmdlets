@@ -7,7 +7,7 @@ libs_url=(
     https://download.savannah.gnu.org/releases/lzip/plzip/plzip-$libs_ver.tar.gz
 )
 libs_sha=64d49dde20daa5fdff2b3ff28e3348082de10dd54eb10df6da7d1bc6c7a6db64
-libs_dep=( lzlib )
+libs_dep=(lzlib)
 
 libs_args=(
     CXX="'$CXX'"
@@ -19,11 +19,11 @@ libs_args=(
 libs_build() {
     configure
 
-    pkgfile plzip -- make install-bin
+    cmdlet.pkgfile plzip -- make install-bin
 
-    check plzip --version
+    cmdlet.verify -- plzip --version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built plzip @ $libs_ver
 
 Usage:

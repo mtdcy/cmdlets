@@ -13,15 +13,14 @@ libs_args=(
 )
 
 libs_build() {
-    go version || true
+    go version
 
-    go clean || true
+    go clean
 
-    go build . &&
+    go build .
 
-    cmdlet lazygit &&
-
-    check lazygit
+    cmdlet.install lazygit
+    cmdlet.verify -- lazygit
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

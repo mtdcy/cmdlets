@@ -6,7 +6,7 @@ libs_rev=1
 libs_url=https://www.libssh.org/files/0.11/libssh-$libs_ver.tar.xz
 libs_rev=1
 libs_sha=6898ba9dd836d618b71dc7a4bb786a502c173cef5cafbf20fe5e0567ba4ea30c
-libs_dep=( zlib openssl )
+libs_dep=(zlib openssl)
 
 # configure args
 libs_args=(
@@ -21,16 +21,14 @@ libs_args=(
 )
 
 libs_build() {
-    mkdir -p build
+    cmake.setup
 
-    cmake -S . -B build
-
-    cmake --build build
+    cmake.build
 
     # fix pc
     echo "Libs.private: -L\${prefix}/lib -lssl -lcrypto -lz" >> ./build/libssh.pc
 
-    pkgfile libssh -- cmake --install build
+    cmdlet.pkgfile libssh -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -22,7 +22,7 @@ libs_build() {
 
     cmake.build
 
-    pkgfile libfrei0r -- cmake.install
+    cmdlet.pkgfile libfrei0r -- cmake.install --component Unspecified
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

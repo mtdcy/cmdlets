@@ -30,7 +30,7 @@ libs_build() {
 
     cmdlet.install mingw64/bin/cppwinrt.exe
 
-    cmdlet.check cppwinrt.exe
+    cmdlet.verify -- cppwinrt.exe
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

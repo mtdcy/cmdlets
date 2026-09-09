@@ -43,7 +43,7 @@ libs_build() {
         -e '/tests\/Makefile/d'
 
     for x in avutil avcodec avformat swscale swresample avfilter avdevice; do
-        cmdlet.pkgfile "lib$x" -- make.install FFLIBS="$x"
+        cmdlet.pkgfile "lib$x" -- make install FFLIBS="$x"
     done
 
     # install tools
@@ -51,12 +51,12 @@ libs_build() {
     cmdlet.install ffprobe
     cmdlet.install ffplay
 
-    cmdlet.check ffmpeg -version
+    cmdlet.verify -- ffmpeg -version
 
-    cmdlet.caveats << EOF
+    is_xbuild || cmdlet.caveats << EOF
 static build ffmpeg @ $libs_ver
 
-$(run ffmpeg -hide_banner -hwaccels)
+$(ffmpeg -hide_banner -hwaccels)
 EOF
 }
 

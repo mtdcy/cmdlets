@@ -9,7 +9,7 @@ libs_rev=2
 libs_url=https://github.com/dandavison/delta/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=f59b86f8c8dda4d76a3ba34b8553777a20c3b461646917d8e480fac6531bba9f
 
-libs_deps=( zlib libgit2 pcre2 oniguruma )
+libs_deps=(zlib libgit2 pcre2 oniguruma)
 
 libs_patches=(
     # Fixed 0.19.1
@@ -29,9 +29,9 @@ libs_build() {
 
     cmdlet.install "$(cargo.locate delta)"
 
-    cmdlet.check delta --version
+    cmdlet.verify -- delta --version
 
-    caveats <<EOF
+    cmdlet.caveats << EOF
 delta @ $libs_ver
 
 Usage:
@@ -47,6 +47,5 @@ git config --global delta.side-by-side true
 git config --global line-numbers true
 EOF
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

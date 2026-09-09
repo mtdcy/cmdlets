@@ -16,21 +16,22 @@ libs_args=(
 )
 
 libs_build() {
-    configure 
+    configure
 
-    make 
+    make
 
-    make check 
+    make check
 
-    cmdlet.install src/lzop 
+    cmdlet.install src/lzop
 
-    cmdlet.check lzop --version
-    
     echo "test" > foo && rm -f foo.lzo
-    run lzop foo                                || die "lzop compress failed."
-    run lzop -t foo.lzo                         || die "lzop integrity test failed."
-    run lzop -l foo.lzo | grep -Fwq foo         || die "lzop list contents failed."
-    run lzop -d -c foo.lzo | grep -Eq "^test$"  || die "lzop decompress failed."
+    cmdlet.verify lzop << EOF
+    lzop --version
+    lzop foo                                || die "lzop compress failed."
+    lzop -t foo.lzo                         || die "lzop integrity test failed."
+    lzop -l foo.lzo | grep -Fwq foo         || die "lzop list contents failed."
+    lzop -d -c foo.lzo | grep -Eq "^test$"  || die "lzop decompress failed."
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

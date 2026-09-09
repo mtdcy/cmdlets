@@ -72,7 +72,7 @@ libs_build() {
     fi
 
     # install libmagic
-    cmdlet.pkgfile libmagic -- make.install -C src bin_PROGRAMS=
+    cmdlet.pkgfile libmagic -- make install -C src bin_PROGRAMS=
 
     # install file program
     if is_cygwin; then
@@ -93,7 +93,7 @@ EOF
             $MAGIC_PATH src/file magic/magic.mgc
     fi
 
-    cmdlet.check file --version
+    cmdlet.verify -- file --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

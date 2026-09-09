@@ -1,4 +1,3 @@
-
 #
 # shellcheck disable=SC2034
 libs_lic='LGPL'
@@ -17,18 +16,20 @@ libs_args=(
 )
 
 libs_build() {
-    configure && make || return $?
-    
+    configure
+
+    make
+
     # make install SUBDIRS=lib fails
     sed -i 's/^SUBDIRS =.*$/SUBDIRS = lib/' Makefile
 
-    pkgfile libtasn1 -- make install &&
+    cmdlet.pkgfile libtasn1 -- make install
 
-    cmdlet src/asn1Coding            &&
-    cmdlet src/asn1Decoding          &&
-    cmdlet src/asn1Parser            &&
+    cmdlet.install src/asn1Coding
+    cmdlet.install src/asn1Decoding
+    cmdlet.install src/asn1Parser
 
-    check asn1Coding --version
+    cmdlet.verify -- asn1Coding --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

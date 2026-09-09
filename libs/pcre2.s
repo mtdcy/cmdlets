@@ -45,7 +45,7 @@ libs_build() {
         -e 's/echo \$includes *$/& -DPCRE2_STATIC/'
 
     # no prograns or docs
-    cmdlet.pkgfile libpcre2 -- make.install \
+    cmdlet.pkgfile libpcre2 -- make install \
         bin_PROGRAMS= \
         dist_man_MANS= \
         dist_doc_DATA= \
@@ -55,7 +55,7 @@ libs_build() {
         cmdlet.install "$x"
     done
 
-    cmdlet.check pcre2grep --version
+    cmdlet.verify -- pcre2grep --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

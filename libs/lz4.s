@@ -26,13 +26,13 @@ libs_build() {
 
     cmdlet.install programs/lz4 lz4 unlz4 lz4c lz4cat
 
-    cmdlet.check lz4 --version
-    
     echo "test" > foo && rm -f foo.lz4
-    run lz4 foo                                 || die "lz4 compress failed."
-    run lz4 -t foo.lz4                          || die "lz4 integrity test failed."
-    run lz4 --list foo.lz4 | grep -Fwq foo      || die "lz4 list contents failed."
-    run lz4 -d -c foo.lz4 | grep -Eq "^test$"   || die "lz4 decompress failed."
+    cmdlet.verify lz4 << EOF
+    lz4 foo                                 || die "lz4 compress failed."
+    lz4 -t foo.lz4                          || die "lz4 integrity test failed."
+    lz4 --list foo.lz4 | grep -Fwq foo      || die "lz4 list contents failed."
+    lz4 -d -c foo.lz4 | grep -Eq "^test$"   || die "lz4 decompress failed."
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

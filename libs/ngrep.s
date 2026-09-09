@@ -16,11 +16,11 @@ libs_args=(
 libs_build() {
     configure
 
-    make.all
+    make all
 
     cmdlet.install  ngrep
 
-    cmdlet.check    ngrep
+    cmdlet.verify --    ngrep
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

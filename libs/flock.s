@@ -24,7 +24,7 @@ libs_build() {
     cmdlet.install flock
 
     # visual verify
-    check flock --version
+    cmdlet.verify -- flock --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

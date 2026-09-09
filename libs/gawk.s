@@ -84,24 +84,21 @@ libs_build() {
         make
     fi
 
-    # wine: Call from 00006FFFFF3DD887 to unimplemented function ucrtbase.dll.mbrtoc32, aborting
-    if is_mingw && test -n "$WINEPREFIX"; then
-        slogw "skill gawk test with wine"
-    else
+    if ! is_xbuild; then
         # gawk: invalid char ''' in expression
         #  => cmd.exe does not treat single quotes as quotation marks, passing them directly to gawk
         echo '{ gsub(/World/, "Hello"); print }' > gsub.awk
 
         # check => XXX: there always 5 FAILs
         #make check &&
-        [ "HelloHello" = "$(run ./gawk -f gsub.awk <<< "HelloWorld")" ] || die "test failed"
+        [ "HelloHello" = "$(./gawk -f gsub.awk <<< "HelloWorld")" ] || die "test failed"
     fi
 
     #make install-exec &&
     cmdlet.install gawk gawk awk
 
     # visual verify
-    cmdlet.check gawk
+    cmdlet.verify -- gawk
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -27,8 +27,7 @@ libs_build() {
     make check
 
     # no doc
-    pkgfile liblzo2 -- make.install doc_DATA=
+    cmdlet.pkgfile liblzo2 -- make install doc_DATA=
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

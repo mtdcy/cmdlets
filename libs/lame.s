@@ -41,7 +41,7 @@ libs_build() {
 
     make check
 
-    cmdlet.pkgfile libmp3lame -- make.install
+    cmdlet.pkgfile libmp3lame -- make install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

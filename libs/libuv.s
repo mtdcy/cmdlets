@@ -15,11 +15,11 @@ libs_build() {
     # not everyone support '-l:libuv.a'
     sed -i 's/-l:libuv.a/-luv/g' libuv-static.pc.in
 
-    cmake -S . -B build
+    cmake.setup
 
-    cmake --build build
+    cmake.build
 
-    pkgfile $libs_name -- cmake --install build
+    cmdlet.pkgfile $libs_name -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

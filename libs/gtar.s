@@ -46,11 +46,11 @@ libs_build() {
     make V=1
 
     # simple test
-    if ! is_cygwin && ! is_mingw; then
+    if ! is_xbuild; then
         {
             echo "test" > test.txt
-            run src/tar -czvf test.tar.gz test.txt
-            [ "test" = "$(run src/tar -xOzf test.tar.gz)" ]
+            src/tar -czvf test.tar.gz test.txt
+            [ "test" = "$(src/tar -xOzf test.tar.gz)" ]
         } || die "test failed"
     fi
 
@@ -58,7 +58,7 @@ libs_build() {
     cmdlet.install src/tar gtar tar
 
     # visual verify
-    cmdlet.check gtar --version
+    cmdlet.verify -- gtar --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

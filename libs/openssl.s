@@ -89,16 +89,19 @@ libs_build() {
     # ossl-modules: reset MODULESDIR
     make ENGINESDIR= MODULESDIR=
 
+    # verify
+    cmdlet.verify -- apps/openssl version -a
+
     # simple tests/ssl
     # wine+cygwin: Verification error: unable to get local issuer certificate
-    if ! is_cygwin; then
-        echo | run apps/openssl s_client -connect baidu.com:443 | grep -q "Verification: OK" || die "openssl connect failed"
+    if ! is_xbuild; then
+        apps/openssl s_client -connect google.com:443 < /dev/null | grep "Verification: OK" || die "openssl connect failed"
 
         # crypto: common used ciphers
         local txt="This is a secret message"
         for cipher in aes-256-cbc aes-256-cfb chacha20; do
-            echo "$txt" | run apps/openssl enc -$cipher -a -salt -pass pass:passwd > encrypted.txt
-            local decrypted="$(cat encrypted.txt | run apps/openssl enc -$cipher -a -d -salt -pass pass:passwd 2> /dev/null)"
+            echo "$txt" | apps/openssl enc -$cipher -a -salt -pass pass:passwd > encrypted.txt
+            local decrypted="$(cat encrypted.txt | apps/openssl enc -$cipher -a -d -salt -pass pass:passwd 2> /dev/null)"
             [ "$decrypted" = "$txt" ] || die "openssl cipher $cipher failed: |$decrypted|"
         done
     fi
@@ -108,19 +111,16 @@ libs_build() {
     cmdlet.install apps/openssl
     cmdlet.install tools/c_rehash # legacy tools, use openssl rehash instead
 
-    # verify
-    cmdlet.check openssl version -a
-
-    cmdlet.caveats << EOF
+    is_xbuild || cmdlet.caveats << EOF
 prebuilt static openssl @ $libs_ver
 
-$(run apps/openssl version -a)
+$(apps/openssl version -a)
 
-$(run apps/openssl list -providers)
+$(apps/openssl list -providers)
 
     OR set env OPENSSL_MODULES instead
 
-$(run apps/openssl list -engines)
+$(apps/openssl list -engines)
 
     OR set env OPENSSL_ENGINES instead
 EOF

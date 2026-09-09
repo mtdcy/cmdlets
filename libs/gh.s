@@ -18,7 +18,7 @@ libs_build() {
     make bin/gh
 
     cmdlet.install  bin/gh
-    cmdlet.check    gh version
+    cmdlet.verify --    gh version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

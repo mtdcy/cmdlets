@@ -25,11 +25,11 @@ libs_build() {
     pkgconf src/kvazaar.pc -DKVZ_STATIC_LIB
 
     # bin/kvazaar also been installed
-    cmdlet.pkgfile libkvazaar -- make.install -C src bin_PROGRAMS=
+    cmdlet.pkgfile libkvazaar -- make install -C src bin_PROGRAMS=
 
     cmdlet.install src/kvazaar
 
-    cmdlet.check kvazaar --version
+    cmdlet.verify -- kvazaar --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

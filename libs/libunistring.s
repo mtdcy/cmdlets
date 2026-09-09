@@ -30,7 +30,7 @@ libs_build() {
     # FIXME: fail sometimes with musl-gcc
     ( make check ) || true
 
-    pkgfile libunistring -- make.install SUBDIRS=lib
+    cmdlet.pkgfile libunistring -- make install SUBDIRS=lib
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

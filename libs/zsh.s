@@ -5,7 +5,7 @@ libs_ver=5.9
 libs_rev=1
 libs_url=https://www.zsh.org/pub/zsh-$libs_ver.tar.xz
 libs_sha=9b8d1ecedd5b5e81fbf1918e876752a7dd948e05c1a0dba10ab863842d45acd5
-libs_dep=( ncurses pcre2 )
+libs_dep=(ncurses pcre2)
 
 # Use Debian patches to backport `pcre2` support:
 # * https://github.com/zsh-users/zsh/commit/b62e911341c8ec7446378b477c47da4256053dc0
@@ -58,15 +58,15 @@ libs_build() {
 
     # static modules
     sed -i '/pcre/s/link=no/link=static/g' config.modules && # enable-pcre not working
-    sed -i 's/link=dynamic/link=static/g' config.modules &&
-    sed -i 's/load=no/load=yes/g' config.modules &&
-    make prep
+        sed -i 's/link=dynamic/link=static/g' config.modules &&
+        sed -i 's/load=no/load=yes/g' config.modules &&
+        make prep
 
     # no common path for macOS and Linux
     make MODDIR=/no-zsh-modules
 
-    pkgfile functions   -- make install.fns \
-        datarootdir="$PREFIX/share/zsh"     \
+    cmdlet.pkgfile functions   -- make install.fns \
+        datarootdir="$PREFIX/share/zsh" \
         fndir="$PREFIX/share/zsh/functions"
 
     #pkgfile modules     -- make install.modules
@@ -74,11 +74,11 @@ libs_build() {
     # test zsh after install modules and functions
     slogcmd ./Src/zsh -c "'zmodload zsh/pcre'" || die "build static zsh failed"
 
-    cmdlet ./Src/zsh
+    cmdlet.install ./Src/zsh
 
-    check zsh --version
+    cmdlet.verify -- zsh --version
 
-    caveats << EOF
+    cmdlet.caveats << EOF
 static built zsh @ $libs_ver
 
 default modules are builtin

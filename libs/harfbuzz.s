@@ -32,7 +32,7 @@ libs_build() {
 
     meson.compile
 
-    pkgfile libharfbuzz -- meson.install --tags devel
+    cmdlet.pkgfile libharfbuzz -- meson.install --tags devel
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
