@@ -65,7 +65,8 @@ bash cmdlets.sh fetch "${CYGWIN_TOOLS[@]}"
 info "Prepare shell environment"
 
 # 创建必要的入口 /bin/sh => /bin/bash
-bash libs.sh make_entry bash.exe bootstrap/bin/sh.exe
+info "make_entry sh.exe => bash.exe"
+./win32/make_entry bash.exe bootstrap/bin/sh.exe
 
 cat << 'EOF' > bootstrap/etc/fstab
 # ------------------------------#

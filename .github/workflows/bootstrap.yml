@@ -5,22 +5,25 @@ on:
   push:
     paths:
       - bootstrap.windows.sh
-      - .github/workflows/bootstrap.yml
+      #- .github/workflows/bootstrap.yml
     branches:
       - main
+    tags:
+      - x86_64-pc-cygwin
 
   workflow_dispatch:
 
 jobs:
   make-bootstrap-files:
     runs-on: ubuntu-latest
-    container: lcr.io/mtdcy/builder:cygwin64-latest
+    # container: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USER }}/builder:cygwin64-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          set-safe-directory: true
 
       - name: Build
         id: build
@@ -32,20 +35,18 @@ jobs:
 
           bash bootstrap.windows.sh
 
-          rel=$(date +%y%m%d)
+          tar -C bootstrap --owner=root --group=root -czf bootstrap.windows.tar.gz .
 
-          tar -C bootstrap --owner=root --group=root -czf bootstrap.windows-$rel.tar.gz .
-
-          echo "rel=$rel" >> "$GITHUB_OUTPUT"
+          echo "rel=$(date +%y.%m.%d)" >> "$GITHUB_OUTPUT"
 
       - name: Release
-        uses: actions/gitea-release-action@v1
+        uses: softprops/action-gh-release@v3
         with:
-          token: ${{ secrets.COMMIT_TOKEN }}
-          name: ${{ steps.build.outputs.rel }}
-          tag_name: ${{ steps.build.outputs.rel }}
+          name: "Windows bootstrap files"
+          tag_name: x86_64-pc-cygwin
+          token: ${{ secrets.RELEASE_TOKEN }}
           files: |-
-            bootstrap.windows-*.tar.gz
+            bootstrap.windows.tar.gz
 
       - name: Notify on failure
         if: ${{ failure() && vars.NOTIFY_WEBHOOK != '' }}
