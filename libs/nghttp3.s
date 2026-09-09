@@ -1,5 +1,7 @@
 # HTTP/3 library written in C
 #
+# HTTP/3 不再运行于 TCP 之上，而是完全基于 UDP。为了实现这一点，nghttp3 和 ngtcp2 必须强强联手
+#
 # shellcheck disable=SC2034
 libs_lic=MIT
 libs_ver=1.18.0

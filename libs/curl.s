@@ -4,10 +4,11 @@
 libs_desc="Get a file from an HTTP, HTTPS or FTP server"
 libs_lic="curl"
 libs_ver=8.22.0
-libs_rev=1
+libs_rev=2
 libs_url=https://github.com/curl/curl/releases/download/curl-${libs_ver//./_}/curl-$libs_ver.tar.bz2
 libs_sha=5d956a6a22b3c279f50c421ee5d3c9e9d660cb6f115dcf881b579e952130549c
-libs_deps=(zlib zstd brotli libidn2 ngtcp2 nghttp2 nghttp3 libssh2 openssl)
+#libs_deps=(zlib zstd brotli libidn2 ngtcp2 nghttp2 nghttp3 libssh2 openssl)
+libs_deps=(zlib zstd brotli libidn2 nghttp2 libssh2 mbedtls)
 
 # libssh2 is widely used, notably in libcurl, and was historically faster for SCP,
 # but may lack some modern crypto support compared to newer libssh versions.
@@ -54,6 +55,10 @@ if list_has libs_deps openssl; then
     is_cygwin && libs_args+=(--disable-ca-search --without-schannel)
 fi
 
+if list_has libs_deps mbedtls; then
+    libs_args+=(--with-mbedtls)
+fi
+
 list_has libs_deps zlib     && libs_args+=(--with-zlib)     || libs_args+=(--without-zlib)
 list_has libs_deps zstd     && libs_args+=(--with-zstd)     || libs_args+=(--without-zstd)
 list_has libs_deps brotli   && libs_args+=(--with-brotli)   || libs_args+=(--without-brotli)
@@ -77,15 +82,16 @@ libs_build() {
 
     make
 
-    cmdlet.execute -- src/curl -4 -fvIL https://www.google.com
-
     cmdlet.pkgconf libcurl.pc -DCURL_STATICLIB
 
     cmdlet.pkgfile libcurl -- make install bin_PROGRAMS=
 
     cmdlet.install src/curl
 
-    cmdlet.verify -- curl --version
+    cmdlet.verify curl << EOF
+    curl --version
+    curl -4 -fvIL https://www.google.com
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

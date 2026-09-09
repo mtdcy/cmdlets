@@ -7,15 +7,12 @@ libs_rev=2
 libs_url=https://github.com/libgit2/libgit2/archive/refs/tags/v$libs_ver.tar.gz
 libs_sha=1a4fbe7589e814777ae76b64734ad80f4ecad22cd33a22682a2aaea4ae5375e7
 
-libs_deps=(zlib pcre2)
+libs_deps=(zlib pcre2 libssh2)
 
 # Optional dependencies:
 
 # HTTPS: is provided by the system libraries on macOS and Windows, or by OpenSSL or mbedTLS on other Unix systems.
-is_darwin || libs_deps+=(openssl)
-
-# SSH: is provided by libssh2 or by invoking OpenSSH.
-libs_deps+=(libssh2)
+#is_darwin || libs_deps+=(openssl)
 
 # configure args
 libs_args=(
@@ -28,10 +25,12 @@ libs_args=(
     -DBUILD_SHARED_LIBS=OFF
 )
 
-is_listed openssl   libs_deps && libs_args+=(-DUSE_HTTPS=OpenSSL)     || libs_args+=(-DUSE_HTTPS=ON)
-is_listed libiconv  libs_deps && libs_args+=(-DUSE_ICONV=ON)          || libs_args+=(-DUSE_ICONV=OFF)
-is_listed libssh2   libs_deps && libs_args+=(-DUSE_SSH=ON)            || libs_args+=(-DUSE_SSH=exec)
-is_listed pcre2     libs_deps && libs_args+=(-DREGEX_BACKEND=pcre2)   || libs_args+=(-DREGEX_BACKEND=builtin)
+is_listed pcre2     libs_deps && libs_args+=(-DREGEX_BACKEND=pcre2) || libs_args+=(-DREGEX_BACKEND=builtin)
+is_listed openssl   libs_deps && libs_args+=(-DUSE_HTTPS=OpenSSL)   || libs_args+=(-DUSE_HTTPS=ON)
+is_listed mbedtls   libs_deps && libs_args+=(-DUSE_HTTPS=mbedTLS)   || libs_args+=(-DUSE_HTTPS=ON)
+is_listed libiconv  libs_deps && libs_args+=(-DUSE_ICONV=ON)        || libs_args+=(-DUSE_ICONV=OFF)
+# SSH: is provided by libssh2 or by invoking OpenSSH.
+is_listed libssh2   libs_deps && libs_args+=(-DUSE_SSH=ON)          || libs_args+=(-DUSE_SSH=exec)
 
 libs_build() {
     # pcre static: -DPCRE2_STATIC

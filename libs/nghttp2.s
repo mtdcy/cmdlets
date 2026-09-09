@@ -1,4 +1,7 @@
 # shellcheck disable=SC2034
+#
+# nghttp2 是完全独立的。它在 TCP 时代生根发芽，与后面的 ngtcp2 和 nghttp3 没有任何代码依赖关系。
+
 libs_desc="HTTP/2 C Library"
 libs_lic="MIT"
 libs_ver=1.70.0

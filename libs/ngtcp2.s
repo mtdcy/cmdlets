@@ -8,6 +8,7 @@ libs_url=https://github.com/ngtcp2/ngtcp2/releases/download/v$libs_ver/ngtcp2-$l
 libs_rev=1
 libs_sha=2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb
 
+# ngtcp2 依赖于支持 QUIC API 的 TLS 库（例如 quictls、wolfSSL 或 BoringSSL）
 libs_deps=(openssl)
 
 libs_args=(

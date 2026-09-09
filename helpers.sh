@@ -389,6 +389,7 @@ ar = '$AR'
 ld = '$LD'
 strip = '$STRIP'
 pkgconfig = '$PKG_CONFIG'
+cmake = 'false' # 禁用 cmake 搜索
 EOF
 
     # cross compile

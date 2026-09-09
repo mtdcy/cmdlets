@@ -4,12 +4,13 @@
 libs_stable=1 # no auto update
 libs_lic=GPLv2
 libs_ver=2.52.0
-libs_rev=3
+libs_rev=4
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
 libs_sha=3cd8fee86f69a949cb610fee8cd9264e6873d07fa58411f6060b3d62729ed7c5
-libs_deps=(zlib zstd pcre2 libiconv expat curl)
+libs_deps=(zlib zstd pcre2 libiconv expat curl mbedtls)
+# mbedtls : git 对其没有直接依赖，这里只是用来控制后面的 libs_args
 
-is_darwin || libs_deps+=(openssl)
+is_listed mbedtls libs_deps || is_darwin || libs_deps+=(openssl)
 
 #is_mingw && libs_deps+=( libgnurx )
 
@@ -26,6 +27,7 @@ libs_args=(
     -Ddocs=''
     -Dtests=false
     -Dregex=disabled # system regex
+    --wrap-mode=nodownload
 
     # contrib
     -Dcontrib=subtree
@@ -53,6 +55,13 @@ is_listed pcre2    libs_deps && libs_args+=(-Dpcre2=enabled)           || libs_a
 is_listed expat    libs_deps && libs_args+=(-Dexpat=enabled)           || libs_args+=(-Dexpat=disabled)
 is_listed libiconv libs_deps && libs_args+=(-Diconv=enabled)           || libs_args+=(-Diconv=disabled)
 is_listed openssl  libs_deps && libs_args+=(-Dhttps_backend=openssl)   || libs_args+=(-Dhttps_backend=auto)
+
+# libcurl + mbedtls
+is_listed mbedtls  libs_deps && libs_args+=(
+    -Dlibcurl:tls=mbedtls
+    -Dlibcurl:http3=disabled
+    -Dlibcurl:ngtcp2=disabled
+)
 
 #1. 避免硬编码 PREFIX
 #2. 避免使用主机路径
@@ -181,7 +190,7 @@ EOF
             $_LIBEXEC/mergetools    ../mergetools/* \
             share/git-core/templates ./templates/*
 
-    cmdlet.verify -- git
+    cmdlet.verify -- git --version
 
     cmdlet.caveats << EOF
 static built git $libs_ver without i18n
