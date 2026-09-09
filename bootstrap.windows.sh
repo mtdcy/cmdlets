@@ -153,7 +153,7 @@ if "%~1"=="" (
 EOF
 sed -i 's/$/\r/' bootstrap/$PROG
 
-PROG=cmdlet.bat && info "prepare $PROG"
+PROG=cmdlets.bat && info "prepare $PROG"
 cat << 'EOF' > bootstrap/$PROG
 @echo off
 setlocal
