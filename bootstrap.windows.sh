@@ -17,8 +17,8 @@ CYGWIN_TOOLS=(
     # core
     bash coreutils grep gawk gsed which
     findutils diffutils file
-    # +ssl +git
-    openssl curl git less
+    # +curl +git
+    curl git less
     # compress and decompress
     gtar gzip xz
 )
@@ -64,12 +64,15 @@ bash cmdlets.sh fetch "${CYGWIN_TOOLS[@]}"
 
 info "Prepare shell environment"
 
+# 创建必要的入口 /bin/sh => /bin/bash
 bash libs.sh make_entry bash.exe bootstrap/bin/sh.exe
 
 cat << 'EOF' > bootstrap/etc/fstab
-# -------------------------------------------------------------------
-# bash.exe/cygwin 虚拟文件系统动态挂载表 (fstab)
-# -------------------------------------------------------------------
+# ------------------------------#
+# bash.exe/cygwin 虚拟文件系统  #
+# ------------------------------#
+# /etc/fstab
+
 # 1. 利用 none / cygdrive 机制，自动把 Windows 的盘符重定向到 /media/c 下
 none /media cygdrive binary,user,noacl 0 0
 
@@ -77,36 +80,26 @@ none /media cygdrive binary,user,noacl 0 0
 . / mini_rootfs binary,user,noacl 0 0
 EOF
 
-cat << 'EOF' > bootstrap/etc/nsswitch.conf
-# -------------------------------------------------------------------
-# 专属于 cmdlets 的动态用户自愈转换表 (nsswitch.conf)
-# -------------------------------------------------------------------
-# 让 passwd 引擎完全放弃 files(静态文件)，直接锁定全新的 db(动态算力)
-passwd: db
-group: db
-
-db_home: /home/%U
-db_shell: /bin/bash
-EOF
-
 cat << 'EOF' > bootstrap/etc/profile
+# ------------------------------#
+# bash.exe/cygwin 最小化环境    #
+# ------------------------------#
 # /etc/profile
 
-test -d /etc/ssl || /update-ca-certificates
-
-export USER="cmdlets"
-export LOGIN="cmdlets"
-export HOME="/home/cmdlets"
-
-export PATH=/bin:$PATH
+# Defaults
+export TZ=Asia/Shanghai
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 export TERM=xterm-256color
 export PS1="[\e[31mcmdlets\e[m] \e[34m\w \e[32m\$\e[m "
+export LS_COLORS="no=00;37:fi=00:di=34;40:ln=35;40:so=32;40:pi=33;40:ex=31;40:bd=31;40:cd=31;40:su=31;40:sg=31;40:tw=31;40:ow=31;40:"
 
-export LS_COLORS='no=00;37:fi=00:di=34;40:ln=35;40:so=32;40:pi=33;40:ex=31;40:bd=31;40:cd=31;40:su=31;40:sg=31;40:tw=31;40:ow=31;40:'
-
+alias ls='ls --color=auto'
 alias ll='ls -lha --color=auto'
-alias grep='grep --color=auto'
+alias grep='grep -R -H -n --color=auto'
 alias which='command -v'
+
+test -d /etc/ssl || /update-ca-certificates
 
 echo "🌹 Welcome to cmdlets Shell Env! 🌹"
 $SHELL --version | head -n1
@@ -139,25 +132,48 @@ EOF
 
 info "Prepare Program Entrance"
 
+PROG=env.bat && info "prepare $PROG"
+cat << 'EOF' > bootstrap/$PROG
+:: -----------------------------::
+:: bash.exe/cygwin 环境变量     ::
+:: -----------------------------::
+@echo off
+set "PATH=%~dp0;%~dp0bin;%PATH%"
+
+:: 始终使用单用户环境
+set "USER=cmdlets"
+set "HOME=/home/cmdlets"
+
+prompt [cmdlets] $P $G 
+EOF
+sed -i 's/$/\r/' bootstrap/$PROG
+
 PROG=shell.bat && info "prepare $PROG"
 cat << 'EOF' > bootstrap/$PROG
+:: -----------------------------::
+:: bash.exe/cygwin 快捷入口     ::
+:: -----------------------------::
 @echo off
 setlocal
-set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
+call "%~dp0env.bat"
 
 if "%~1"=="" (
     "%~dp0bin\bash.exe" -login -i
 ) else (
-    "%~dp0bin\bash.exe" -c "%*"
+    "%~dp0bin\bash.exe" %*
+    exit /b %errorlevel%
 )
 EOF
 sed -i 's/$/\r/' bootstrap/$PROG
 
 PROG=cmdlets.bat && info "prepare $PROG"
 cat << 'EOF' > bootstrap/$PROG
+:: -----------------------------::
+:: cmdlets.sh/cygwin 快捷入口   ::
+:: -----------------------------::
 @echo off
 setlocal
-set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
+call "%~dp0env.bat"
 
 "%~dp0bin\bash.exe" -c "/cmdlets.sh %*"
 exit /b %errorlevel%
@@ -166,11 +182,13 @@ sed -i 's/$/\r/' bootstrap/$PROG
 
 PROG=git.bat && info "prepare $PROG"
 cat << 'EOF' > bootstrap/$PROG
+:: -----------------------------::
+:: git/cygwin 快捷入口          ::
+:: -----------------------------::
 @echo off
 setlocal
-set "PATH=%~dp0bin;%~dp0usr\bin;%PATH%"
+call "%~dp0env.bat"
 
-set "SSL_CERT_FILE=%~dp0etc\ssl\cert.pem"
 set "GIT_EXEC_PATH=%~dp0bin"
 set "MERGE_TOOLS_DIR=%GIT_EXEC_PATH%\mergetools"
 set "GIT_TEMPLATE_DIR=%~dp0share\git-core\templates"
