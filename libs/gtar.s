@@ -4,7 +4,6 @@ libs_desc="GNU version of the tar archiving utility"
 
 libs_lic='GPL-3.0-or-later'
 libs_ver=1.35
-libs_rev=1
 libs_url=https://ftpmirror.gnu.org/gnu/tar/tar-$libs_ver.tar.xz
 libs_sha=4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16
 libs_dep=(gzip bzip2 xz zstd lzip lzop libiconv)

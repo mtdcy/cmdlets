@@ -4,7 +4,7 @@
 libs_desc="Get a file from an HTTP, HTTPS or FTP server"
 libs_lic="curl"
 libs_ver=8.22.0
-libs_rev=3
+libs_rev=2
 libs_url=https://github.com/curl/curl/releases/download/curl-${libs_ver//./_}/curl-$libs_ver.tar.bz2
 libs_sha=5d956a6a22b3c279f50c421ee5d3c9e9d660cb6f115dcf881b579e952130549c
 #libs_deps=(zlib zstd brotli libidn2 ngtcp2 nghttp2 nghttp3 libssh2 openssl)

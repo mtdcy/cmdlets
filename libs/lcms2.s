@@ -2,7 +2,6 @@
 
 # shellcheck disable=SC2034
 libs_ver=2.19
-libs_rev=1
 libs_url=https://downloads.sourceforge.net/project/lcms/lcms/$libs_ver/lcms2-$libs_ver.tar.gz
 libs_sha=49e7e134e4299733dd0eda434fa468997a28ab3d33fa397c642b03644f552216
 libs_dep=(zlib libjpeg-turbo libtiff)

@@ -3,7 +3,6 @@
 
 libs_lic="BSD|GPLv2"
 libs_ver=1.5.7
-libs_rev=1
 libs_url=https://github.com/facebook/zstd/releases/download/v$libs_ver/zstd-$libs_ver.tar.gz
 libs_sha=eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3
 

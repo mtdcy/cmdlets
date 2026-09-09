@@ -2,7 +2,6 @@
 
 # shellcheck disable=SC2034
 libs_ver=0.22.2
-libs_rev=1
 libs_url=https://github.com/LibRaw/LibRaw/archive/refs/tags/$libs_ver.tar.gz
 libs_sha=627928088300ecde6ca91ffd202e189203f04ad61ad12f0fe9dc57b9a7a0fb3c
 libs_dep=(zlib libjpeg-turbo lcms2)

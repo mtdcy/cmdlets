@@ -4,7 +4,7 @@
 libs_stable=1 # no auto update
 libs_lic=GPLv2
 libs_ver=2.52.0
-libs_rev=5
+libs_rev=4
 libs_url="https://mirrors.edge.kernel.org/pub/software/scm/git/git-$libs_ver.tar.xz"
 libs_sha=3cd8fee86f69a949cb610fee8cd9264e6873d07fa58411f6060b3d62729ed7c5
 libs_deps=(zlib zstd pcre2 libiconv expat curl mbedtls)
