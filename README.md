@@ -30,6 +30,16 @@ cmdlets.sh install bash@3.2:bash
 cmdlets.sh install zlib curl wget
 ```
 
+## Qucik Start (Windows)
+
+Download bootstrap files from release page, and extract it to where you want.
+
+Click shell.bat to start a login shell. (First run update ca certificates)
+
+### Git For Windows 
+
+Call env.bat to setup PATH in your session and then you can use `git' command anywhere.
+
 ## Supported Architectures
 
 | Platform | Architecture | Status |
@@ -38,6 +48,7 @@ cmdlets.sh install zlib curl wget
 | Linux | aarch64 (ARM64) | ✅ |
 | macOS | x86_64 (Intel) | ✅ |
 | macOS | arm64 (Apple Silicon) | ✅ |
+| Windows | x86_64 (amd64) | ✅ |
 
 ## Build
 
