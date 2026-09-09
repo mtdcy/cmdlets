@@ -43,6 +43,7 @@ if test -z "$ARCH"; then
         CYGWIN*)
             ARCH="$(uname -m)-pc-cygwin"
             unset PREBUILTS # use root /
+            NO_INSTALL=true # no install and no alias
             ;;
     esac
 fi
@@ -394,7 +395,7 @@ do_fetch() {
     test -f "$PREBUILTS/bin/$target" || target="${target%%@*}"  # remove pkgvern
 
     local links=()
-    if test -n "$install"; then
+    if test -n "$install" && test -z "$NO_INSTALL"; then
         info "✨ Install target and link(s):"
 
         # install default links
