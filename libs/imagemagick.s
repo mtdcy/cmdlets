@@ -82,11 +82,13 @@ libs_build() {
 
     cmdlet.install ./utilities/magick
 
-    cmdlet.check magick --version
+    cmdlet.verify -- magick --version
+
+    is_xbuild && return 0
 
     # testing
     check_magick_format() {
-        run utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
+        utilities/magick -version | grep "^Delegates" | grep -w "$1" || die "missing $1 support"
     }
 
     for x in "${libs_deps[@]}"; do
@@ -106,7 +108,7 @@ libs_build() {
     cmdlet.caveats << EOF
 static built ImageMagick
 
-$(run utilities/magick -version)
+$(utilities/magick -version)
 
 Configuration and resource files:
 

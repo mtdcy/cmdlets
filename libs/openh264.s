@@ -30,7 +30,7 @@ libs_build() {
 
     for x in h264dec h264enc; do
         cmdlet.install "$x"
-        cmdlet.check "$x"
+        cmdlet.verify -- "$x"
     done
 }
 

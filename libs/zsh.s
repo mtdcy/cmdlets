@@ -76,7 +76,7 @@ libs_build() {
 
     cmdlet.install ./Src/zsh
 
-    cmdlet.check zsh --version
+    cmdlet.verify -- zsh --version
 
     cmdlet.caveats << EOF
 static built zsh @ $libs_ver

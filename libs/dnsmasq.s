@@ -40,7 +40,7 @@ libs_build() {
 
     cmdlet.install ./src/dnsmasq
 
-    cmdlet.check dnsmasq --version
+    cmdlet.verify -- dnsmasq --version
 
     if is_linux; then
         COPTS+=" -DNO_IPSET -DHAVE_NFTSET"
@@ -51,7 +51,7 @@ libs_build() {
 
         cmdlet.install ./src/dnsmasq dnsmasq-nftset
 
-        cmdlet.check dnsmasq-nftset --version
+        cmdlet.verify -- dnsmasq-nftset --version
     fi
 }
 

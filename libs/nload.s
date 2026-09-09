@@ -26,7 +26,7 @@ libs_build() {
 
     cmdlet.install  src/nload
 
-    cmdlet.check    nload
+    cmdlet.verify --    nload
 }
 
 #1. Patching configure.in file to make configure compile on Mac OS.

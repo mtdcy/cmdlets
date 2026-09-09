@@ -25,7 +25,7 @@ libs_build() {
 
     cmdlet.install ./mawk
 
-    cmdlet.check mawk --version
+    cmdlet.verify -- mawk --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

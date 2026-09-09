@@ -46,17 +46,18 @@ libs_build() {
 
     make
 
+    # simple test
+    if ! is_xbuild; then
+        echo "HelloWorld" > hello.txt
+        echo "s/World/Hello/g" > sub.sed
+
+        [ "$(./sed/sed -f sub.sed hello.txt)" = "HelloHello" ] || die "sed test failed."
+    fi
+
     # install as gsed and symlink to sed
     cmdlet.install sed/sed gsed sed
 
-    cmdlet.check gsed --version
-
-    # simple test
-    echo "HelloWorld" > hello.txt
-    echo "s/World/Hello/g" > sub.sed
-
-    [ "$(run sed -f sub.sed hello.txt)" = "HelloHello" ] || die "sed test failed."
+    cmdlet.verify -- gsed --version
 }
-
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

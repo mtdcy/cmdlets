@@ -29,7 +29,7 @@ libs_build() {
     cmdlet.install src/asn1Decoding
     cmdlet.install src/asn1Parser
 
-    cmdlet.check asn1Coding --version
+    cmdlet.verify -- asn1Coding --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

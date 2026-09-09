@@ -53,9 +53,9 @@ libs_build() (
     cmdlet.pkginst docker \
         bin docker docker-compose docker-buildx
 
-    cmdlet.check docker-compose
-    cmdlet.check docker-buildx
-    cmdlet.check docker --version
+    cmdlet.verify -- docker-compose
+    cmdlet.verify -- docker-buildx
+    cmdlet.verify -- docker --version
 
     cmdlet.caveats << EOF
 static prebuilt docker client v$libs_ver

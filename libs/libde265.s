@@ -37,7 +37,7 @@ libs_build() {
 
     cmdlet.install dec265/dec265
 
-    cmdlet.check dec265 --help
+    cmdlet.verify -- dec265 --help
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

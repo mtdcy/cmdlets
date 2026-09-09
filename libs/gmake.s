@@ -32,7 +32,7 @@ libs_build() {
     cmdlet.install make gmake make
 
     # verify
-    cmdlet.check gmake --version
+    cmdlet.verify -- gmake --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

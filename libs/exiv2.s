@@ -52,7 +52,7 @@ libs_build() {
 
     cmdlet.install exiv2
 
-    cmdlet.check exiv2 --version --verbose
+    cmdlet.verify -- exiv2 --version --verbose
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

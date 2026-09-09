@@ -27,7 +27,7 @@ libs_build() {
 
     cmdlet.install bin/fribidi
 
-    cmdlet.check fribidi
+    cmdlet.verify -- fribidi
 
     echo "a _lsimple _RteST_o th_oat" > test.input || die
 

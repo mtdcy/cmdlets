@@ -138,7 +138,7 @@ libs_build() {
 
     cmdlet.install ./objs/nginx
 
-    cmdlet.check nginx -version
+    cmdlet.verify -- nginx -version
 
     cmdlet.caveats << EOF
 static built nginx @ $libs_ver with fancyindex

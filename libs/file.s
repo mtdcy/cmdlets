@@ -93,7 +93,7 @@ EOF
             $MAGIC_PATH src/file magic/magic.mgc
     fi
 
-    cmdlet.check file --version
+    cmdlet.verify -- file --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

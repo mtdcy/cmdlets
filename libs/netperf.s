@@ -29,7 +29,7 @@ libs_build() {
     cmdlet.install src/netserver
     cmdlet.install src/netperf
 
-    cmdlet.check netperf -V
+    cmdlet.verify -- netperf -V
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

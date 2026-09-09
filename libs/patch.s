@@ -35,7 +35,7 @@ libs_build() {
 
     cmdlet.install  ./src/patch
 
-    cmdlet.check patch --version
+    cmdlet.verify patch -- patch --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

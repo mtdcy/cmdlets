@@ -53,16 +53,16 @@ libs_build() {
     cmdlet.install zless
     cmdlet.install znew
 
-    cmdlet.check gzip
-
     # simple test
     echo "test" > foo && rm -f foo.gz
-    run gzip foo                                || die "gzip compress failed."
-    run gzip -t foo.gz                          || die "gzip integrity test failed."
-    run gzip -l foo.gz | grep -Fwq foo          || die "gzip list contents failed."
-    run gunzip -c foo.gz | grep -Eq "^test$"    || die "gunzip decompress failed."
-    run zcat foo.gz | grep -Eq "^test$"         || die "zcat failed."
-
+    cmdlet.verify gzip << EOF
+    gzip --version
+    gzip foo                                || die "gzip compress failed."
+    gzip -t foo.gz                          || die "gzip integrity test failed."
+    gzip -l foo.gz | grep -Fwq foo          || die "gzip list contents failed."
+    gunzip -c foo.gz | grep -Eq "^test$"    || die "gunzip decompress failed."
+    zcat foo.gz | grep -Eq "^test$"         || die "zcat failed."
+EOF
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

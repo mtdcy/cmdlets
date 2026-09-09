@@ -24,7 +24,7 @@ libs_build() {
 
     cmdlet.install src/pixz
 
-    cmdlet.check pixz
+    cmdlet.verify -- pixz
 
     cmdlet.caveats << EOF
 static built pixz @ $libs_ver

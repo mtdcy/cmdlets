@@ -21,7 +21,7 @@ libs_build() {
 
     cmdlet.pkgfile plzip -- make install-bin
 
-    cmdlet.check plzip --version
+    cmdlet.verify -- plzip --version
 
     cmdlet.caveats << EOF
 static built plzip @ $libs_ver

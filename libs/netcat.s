@@ -25,7 +25,7 @@ libs_build() {
 
     cmdlet.install ./src/netcat netcat nc
 
-    cmdlet.check netcat --version
+    cmdlet.verify -- netcat --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -47,7 +47,7 @@ libs_build() {
         cmdlet.install "$x/$x" "$x"
     done
 
-    cmdlet.check fc-list --version
+    cmdlet.verify -- fc-list --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

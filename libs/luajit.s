@@ -25,7 +25,7 @@ libs_build() {
     # install as versioned and link to luajit
     cmdlet.install ./src/luajit luajit-$libs_ver luajit
 
-    cmdlet.check luajit -v
+    cmdlet.verify -- luajit -v
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

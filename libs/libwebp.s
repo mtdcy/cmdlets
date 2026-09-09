@@ -29,7 +29,7 @@ libs_build() {
     cmdlet.install ./build/webpmux
     cmdlet.install ./build/webp_quality
 
-    cmdlet.check img2webp -version
+    cmdlet.verify -- img2webp -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

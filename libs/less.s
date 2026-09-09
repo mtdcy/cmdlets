@@ -23,7 +23,7 @@ libs_build() {
 
     cmdlet.install ./less
 
-    cmdlet.check less --version
+    cmdlet.verify less -- less --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -30,7 +30,7 @@ libs_build() {
 
     cmdlet.install ./tcptraceroute
 
-    cmdlet.check tcptraceroute --version
+    cmdlet.verify -- tcptraceroute --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -32,7 +32,7 @@ libs_build() {
 
     cmdlet.install "$(cargo.locate rg)"
 
-    cmdlet.check rg --version
+    cmdlet.verify -- rg --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

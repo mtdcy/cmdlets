@@ -52,7 +52,7 @@ libs_build() {
 
     cmdlet.install tools/fftw-wisdom
 
-    cmdlet.check fftw-wisdom --version
+    cmdlet.verify fftw-wisdom -- fftw-wisdom --help
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

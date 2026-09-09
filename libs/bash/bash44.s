@@ -55,7 +55,7 @@ libs_build() {
 
     # install versioned bash
     cmdlet.install bash bash@${libs_ver%.*} bash@${libs_ver%%.*} &&
-        cmdlet.check bash@4.4 --version
+        cmdlet.verify -- bash@4.4 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

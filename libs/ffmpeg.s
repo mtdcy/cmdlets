@@ -51,12 +51,12 @@ libs_build() {
     cmdlet.install ffprobe
     cmdlet.install ffplay
 
-    cmdlet.check ffmpeg -version
+    cmdlet.verify -- ffmpeg -version
 
-    cmdlet.caveats << EOF
+    is_xbuild || cmdlet.caveats << EOF
 static build ffmpeg @ $libs_ver
 
-$(run ffmpeg -hide_banner -hwaccels)
+$(ffmpeg -hide_banner -hwaccels)
 EOF
 }
 

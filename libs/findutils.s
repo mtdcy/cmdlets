@@ -42,7 +42,7 @@ libs_build() {
     cmdlet.pkgfile findutils $(printf "bin/%s " "${findutils[@]}")
 
     # verify
-    cmdlet.check find --version
+    cmdlet.verify -- find --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

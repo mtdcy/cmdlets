@@ -32,7 +32,7 @@ libs_build() {
     cmdlet.install src/dumpsexp
     cmdlet.install src/mpicalc
 
-    cmdlet.check hmac256
+    cmdlet.verify -- hmac256
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -81,7 +81,7 @@ libs_build() {
     cmdlet.install ./bin/dig/host
     cmdlet.install ./bin/dig/nslookup
 
-    cmdlet.check dig www.google.com
+    cmdlet.verify -- dig www.google.com
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

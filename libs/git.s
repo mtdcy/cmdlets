@@ -181,10 +181,10 @@ EOF
             $_LIBEXEC/mergetools    ../mergetools/* \
             share/git-core/templates ./templates/*
 
-    cmdlet.check git
+    cmdlet.verify -- git
 
     cmdlet.caveats << EOF
-static built $(run git --version) without i18n
+static built git $libs_ver without i18n
 EOF
 
     if is_darwin; then

@@ -45,7 +45,7 @@ libs_build() {
 
     cmdlet.install x264
 
-    cmdlet.check x264
+    cmdlet.verify -- x264
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

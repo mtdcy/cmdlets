@@ -31,6 +31,6 @@ libs_build() {
 
     cmdlet.install tmux
 
-    cmdlet.check tmux -V
+    cmdlet.verify -- tmux -V
 }
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

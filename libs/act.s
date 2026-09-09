@@ -17,7 +17,7 @@ libs_build() {
 
     cmdlet.install act
 
-    cmdlet.check act
+    cmdlet.verify -- act
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

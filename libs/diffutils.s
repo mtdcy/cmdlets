@@ -45,7 +45,7 @@ libs_build() {
     cmdlet.pkgfile diffutils $(printf "bin/%s " "${diffutils[@]}")
 
     # rust diffutils has no `--version'
-    cmdlet.check diff --version
+    cmdlet.verify -- diff --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

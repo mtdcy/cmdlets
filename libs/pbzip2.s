@@ -31,7 +31,7 @@ libs_build() {
 
     cmdlet.install ./pbzip2 pbzip2 pbunzip2 pbzcat
 
-    cmdlet.check pbzip2 --version
+    cmdlet.verify -- pbzip2 --version
 
     cmdlet.caveats << EOF
 static built pbzip2 @ $libs_ver

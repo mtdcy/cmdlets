@@ -127,7 +127,7 @@ libs_build() {
     cmdlet.install  ./progs/toe
 
     # verify
-    cmdlet.check tput
+    cmdlet.verify -- tput
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

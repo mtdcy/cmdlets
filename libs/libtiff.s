@@ -38,7 +38,7 @@ libs_build() {
         test -x "$x" || continue
 
         cmdlet.install "$x"
-        cmdlet.check "$x"
+        cmdlet.verify -- "$x"
     done
 
 }

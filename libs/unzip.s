@@ -74,7 +74,7 @@ libs_build() {
     cmdlet.install ./unix/zipgrep
 
     # verify
-    cmdlet.check unzip
+    cmdlet.verify -- unzip
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

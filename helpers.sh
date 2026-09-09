@@ -129,29 +129,6 @@ samples() {
     find "$_TOPDIR/samples" -type f -name "$*" | xargs
 }
 
-# locate executable by path
-_locate_exe() {
-    if test -f "$1"; then
-        echo "$1"
-    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
-        echo "$1"
-    else
-        echo "$1$_BINEXT"
-    fi
-}
-
-# locate executable in PREFIX/bin or workdir
-_locate_bin() {
-    local bin="$(_locate_exe "$PREFIX/bin/$1")"
-    if test -f "$bin"; then
-        echo "$bin"
-    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
-        echo "$1"
-    else
-        _locate_exe "$1"
-    fi
-}
-
 # return 0 if $1 >= $2
 _version_ge() { [ "$(printf '%s\n' "$@" | sort -V | tail -n1)" = "$1" ]; }
 _version_le() { [ "$(printf '%s\n' "$@" | sort -V | head -n1)" = "$1" ]; }
@@ -809,7 +786,7 @@ cargo.requires.rustc() {
 cargo.locate() {
     local targets=() x
     for x in "$@"; do
-        targets+=($( _locate_exe "target/$CARGO_BUILD_TARGET/release/$x"))
+        targets+=($( _cmdlet_expand "target/$CARGO_BUILD_TARGET/release/$x"))
     done
     echo "${targets[@]}"
 }
@@ -1065,7 +1042,7 @@ _make_pkgfile() {
                     -e "s%$PREFIX%\${CMAKE_INSTALL_PREFIX}%g" || die "update $x failed."
                 ;;
             bin/*)
-                x="$(_locate_exe "$x")" # tar will report error if not exists
+                x="$(_cmdlet_expand "$x")" # tar will report error if not exists
 
                 # strip binary executables
                 case "$("$FILE" -b "$x")" in
@@ -1222,7 +1199,7 @@ cmdlet.pkginst() {
                 ;;
         esac
 
-        [[ "$sub" =~ ^bin ]] && file="$(_locate_exe "$file")"
+        [[ "$sub" =~ ^bin ]] && file="$(_cmdlet_expand "$file")"
 
         echocmd cp -rfv "$file" "$PREFIX/$sub" || die "install $file failed."
         installed+=("$sub/${file##*/}")
@@ -1242,7 +1219,7 @@ cmdlet.install() {
     fi
 
     # executable
-    local bin="$(_locate_exe "$1")"
+    local bin="$(_cmdlet_expand "$1")"
     test -f "$bin" || die "$bin not found."
 
     # target
@@ -1262,47 +1239,108 @@ cmdlet.install() {
     cmdlet.pkgfile "$name" "$target" "${alias[@]/#/$PREFIX\/bin\/}"
 }
 
-# perform visual check on cmdlet
-cmdlet.check() {
+# expand cmdlet with _BINEXT
+_cmdlet_expand() {
+    if test -f "$1"; then
+        echo "$1"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        echo "$1$_BINEXT"
+    fi
+}
+
+# locate cmdlet in PREFIX/bin or workdir
+_cmdlet_locate() {
+    local bin="$(_cmdlet_expand "$PREFIX/bin/$1")"
+    if test -f "$bin"; then
+        echo "$bin"
+    elif [[ "$1" =~ "$_BINEXT"$ ]]; then
+        echo "$1"
+    else
+        _cmdlet_expand "$1"
+    fi
+}
+
+_cmdlet_exec_lines() {
+    local cmdline=()
+    while IFS=" " read -r -a cmdline; do
+        test -z "${cmdline[*]}"     && continue # 空行
+        [[ "${cmdline[0]}" =~ ^# ]] && continue # 注释
+
+        # find cmdlet full name
+        cmdline[0]=$(_cmdlet_locate "${cmdline[0]}")
+
+        slogi "$_EMOJI_EXEC" "${cmdline[*]}"
+        eval -- "${cmdline[*]}" || sloge "exec '${cmdline[*]}' failed"
+    done
+}
+
+# verify cmdlet
+#  input  : cmdlet -- commands
+#  return : give warnings if not runnable
+#  notes  : <commands> can call die if fails
+# example:
+#  #1. cmdlet.verify bzip2 -- bzip2 foo
+#  #2. cmdlet.verify -- bzip2 foo -> (compatible with old cmdlet.check)
+#  #3. cmdlet.verify bzip2 << EOF
+cmdlet.verify() {
     slogi $_EMOJI_RUN "$FUNCNAME $*"
 
-    local bin="$(_locate_bin "$1")"
+    local bin
+    if [ "$1" = "--" ]; then
+        shift && bin="$(_cmdlet_locate "$1")"
+    else
+        bin="$(_cmdlet_locate "$1")" && shift
+    fi
 
-    test -f "$bin" || die "check failed, $1 not found."
+    test -e "$bin" || die "$1 not exists or not executable"
 
-    # check file type
-    echocmd "$FILE" -b "$bin"
+    _LOGGING=plain echocmd "$FILE" -b "$bin"
 
-    # check linked libraries
-    case "$_TARGET_NAME" in
-        linux)
-            "$FILE" -b "$bin" | grep -Fw "dynamically linked" && {
-                echocmd ldd "$bin"
-                die "$bin is dynamically linked."
-            } || true
+    case "$("$FILE" -b "$bin")" in
+        Mach-O*executable)
+            otool -L "$bin" | grep -E "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
             ;;
-        darwin)
-            _LOGGING=plain echocmd otool -L "$bin" | grep -qE "/usr/local/|/opt/homebrew/|$PREFIX/lib|@rpath/.*\.dylib" && die "unexpected linked libraries" || true
-            ;;
-        windows | cygwin)
-            local dll system32="system32"
+        PE32+*)
+            local dll
             while read -r dll; do
-                [[ "$dll" =~ KERNEL32.dll|msvcrt.dll ]] && continue
+                [[ "$dll" =~ (KERNEL32.dll|msvcrt.dll) ]] && continue
 
                 if test -n "$WINEPREFIX"; then
-                    is_win64 || system32="syswow64"
-                    find "$WINEPREFIX/drive_c/windows/$system32" -iname "$dll" || die "unexpected dll $dll"
+                    find "$WINEPREFIX/drive_c/windows/system32" -iname "$dll" || die "unexpected dll $dll"
                 else
-                    [[ "$($CC -print-file-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
+                    [[ "$($CC -print-prog-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
                 fi
-
             done < <( "$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
+            ;;
+        *"dynamically linked"*)
+            ldd "$bin"
+            die "$bin is dynamically linked"
             ;;
     esac
 
-    # check version if options/arguments provide
-    if [ $# -gt 1 ]; then
-        run "$bin" "${@:2}" 2>&1 | grep -F "$libs_ver" || die "no version found"
+    # no command and no pipe in
+    test -z "$*" && test -t 0 && return 0
+
+    # always return true on this stage
+    if is_xbuild; then
+        if test -n "$WINEPREFIX"; then
+            update-binfmts --display wine 2> /dev/null | grep -qFw enabled || {
+                slogw "cmdlet is not runnable without wine" && return
+            }
+        else
+            slogw "cross built cmdlet is not runnable" && return
+        fi
+    fi
+
+    if test -n "$*"; then
+        # direct command
+        [ "$1" = "--" ] && shift
+        echo "$*" | _cmdlet_exec_lines
+    elif ! test -t 0; then
+        # heredoc
+        _cmdlet_exec_lines
     fi
 }
 
@@ -1316,54 +1354,6 @@ cmdlet.caveats() {
     else
         tee -a "$caveats" || die "write caveats failed."
     fi
-}
-
-# run command or die
-run() {
-    local bin="$(_locate_bin "$1")"
-
-    test -f "$bin" || die "$1 not found."
-
-    _run() {
-        # > stderr, avoid grep by pipe commands
-        echo "$@" | _LOGGING=silent _capture_stderr
-
-        # do not redirect stderr to stdout, vice versa
-        #  always logging as plain for piping
-        "$@" 2> >(_LOGGING=plain _capture_stderr) | _LOGGING=plain _capture
-    }
-
-    # capture only stderr to keep stdout as it is
-    if test -n "$WINEPREFIX"; then
-        case "$("$FILE" -b "$bin")" in
-            PE32+*)
-                # escape won't work for wine/cmd, which do not treat ' as quotation marks
-                #_run "$WINE" "$bin" $(escape.args "${@:2}") | escape.crlf
-                _run "$WINE" "$bin" "${@:2}" | escape.crlf
-                ;;
-            *)
-                _run "$SHELL" -c "$bin $(escape.args "${@:2}")"
-                ;;
-        esac
-    else
-        # use shell to catch "Killed" or "Abort trap" messages
-        _run "$SHELL" -c "$bin $(escape.args "${@:2}")"
-    fi
-}
-
-# find out which files are installed by `make install'
-# DEBUG ONLY
-inspect() {
-    find "$PREFIX" > "$libs_name.pack.pre"
-
-    slogcmd "$@" || die "${*:2} failed."
-
-    _libs_remove_la
-
-    find "$PREFIX" > "$libs_name.pack.post"
-
-    # diff returns 1 if differences found
-    diff "$libs_name.pack.post" "$libs_name.pack.pre" || true
 }
 
 # create pkg config file
@@ -1417,6 +1407,21 @@ Libs: -L\${libdir} ${ldflags[@]}
 EOF
     fi
 
+}
+
+# find out which files are installed by `make install'
+# DEBUG ONLY
+inspect() {
+    find "$PREFIX" > "$libs_name.pack.pre"
+
+    slogcmd "$@" || die "${*:2} failed."
+
+    _libs_remove_la
+
+    find "$PREFIX" > "$libs_name.pack.post"
+
+    # diff returns 1 if differences found
+    diff "$libs_name.pack.post" "$libs_name.pack.pre" || true
 }
 
 # hack local symbols: append function with a random(pid) suffix

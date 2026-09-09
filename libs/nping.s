@@ -22,7 +22,7 @@ libs_build() {
         cmdlet.install "$(find target -name "$libs_name")"
     fi
 
-    cmdlet.check "$libs_name" --version
+    cmdlet.verify -- "$libs_name" --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

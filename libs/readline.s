@@ -87,7 +87,7 @@ libs_build() {
 
     cmdlet.install readline
 
-    cmdlet.check readline
+    cmdlet.verify -- readline
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

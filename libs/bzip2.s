@@ -29,9 +29,16 @@ libs_build() {
     # install lib and headers
     cmdlet.pkginst libbz2 bzlib.h libbz2.a bz2.pc bzip2.pc libbz2.pc
 
+    echo "test" > foo && rm -f foo.bz2
+    cmdlet.verify bzip2 << EOF
+        bzip2 foo                               || die "bzip2 compress failed."
+        bzip2 -t foo.bz2                        || die "bzip2 integrity test failed."
+        bunzip2 -c foo.bz2 | grep -Eq "^test$"  || die "bunzip2 decompress failed."
+        bzcat foo.bz2 | grep -Eq "^test$"       || die "bzcat failed."
+EOF
+
     # install cmdlets and symlinks
     cmdlet.install bzip2 bzip2 bunzip2 bzcat
-    cmdlet.check bzip2 --help
 
     # no shell scripts for windows
     if ! is_mingw; then
@@ -39,12 +46,6 @@ libs_build() {
         cmdlet.install bzgrep bzgrep bzegrep bzfgrep
         cmdlet.install bzmore bzmore bzless
     fi
-
-    echo "test" > foo && rm -f foo.bz2
-    run bzip2 foo                               || die "bzip2 compress failed."
-    run bzip2 -t foo.bz2                        || die "bzip2 integrity test failed."
-    run bunzip2 -c foo.bz2 | grep -Eq "^test$"  || die "bunzip2 decompress failed."
-    run bzcat foo.bz2 | grep -Eq "^test$"       || die "bzcat failed."
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

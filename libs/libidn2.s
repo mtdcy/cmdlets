@@ -45,7 +45,7 @@ libs_build() {
 
     cmdlet.install src/idn2
 
-    cmdlet.check idn2 --version
+    cmdlet.verify -- idn2 --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -21,7 +21,7 @@ libs_build() {
 
     cmdlet.install ./tcpdump
 
-    cmdlet.check tcpdump --version
+    cmdlet.verify -- tcpdump --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

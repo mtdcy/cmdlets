@@ -25,14 +25,11 @@ libs_build() {
 
     make -f makefile "${libs_args[@]}"
 
-    # quick check
-    run ./unrar | grep "${libs_ver%.*}"
-
     # install
     cmdlet.install unrar
 
     # visual verify
-    cmdlet.check unrar -version
+    cmdlet.verify -- unrar -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

@@ -50,7 +50,7 @@ libs_build() {
     cmdlet.install ./src/app/imginfo
     cmdlet.install ./src/app/imgcmp
 
-    cmdlet.check jasper --version
+    cmdlet.verify -- jasper --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

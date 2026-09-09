@@ -66,7 +66,7 @@ libs_build() {
 
     cmdlet.install bsdtar
 
-    cmdlet.check bsdtar --help
+    cmdlet.verify -- bsdtar --help
 }
 
 __END__

@@ -29,7 +29,7 @@ libs_build() {
 
     cmdlet.install "$(cargo.locate delta)"
 
-    cmdlet.check delta --version
+    cmdlet.verify -- delta --version
 
     cmdlet.caveats << EOF
 delta @ $libs_ver

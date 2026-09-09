@@ -53,7 +53,7 @@ libs_build() {
 
     cmdlet.install ./hping3
 
-    cmdlet.check hping3 --version
+    cmdlet.verify -- hping3 --version
 }
 
 # patches from macport

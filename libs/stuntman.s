@@ -25,7 +25,7 @@ libs_build() {
     cmdlet.install ./server/stunserver
     cmdlet.install ./client/stunclient
 
-    cmdlet.check stunclient
+    cmdlet.verify -- stunclient
 
     cmdlet.caveats << EOF
 static built stun client and server @ $libs_ver

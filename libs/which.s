@@ -31,7 +31,7 @@ libs_build() {
 
     cmdlet.install ./which
 
-    cmdlet.check which --version
+    cmdlet.verify -- which --version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

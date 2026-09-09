@@ -23,7 +23,7 @@ libs_build() {
 
     cmdlet.install pigz pigz unpigz
 
-    cmdlet.check pigz
+    cmdlet.verify -- pigz
 
     cmdlet.caveats << EOF
 static built pigz @ $libs_ver
