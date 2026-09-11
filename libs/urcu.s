@@ -4,9 +4,10 @@ libs_targets=(linux darwin)
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
-libs_ver=0.15.6
-libs_url=https://lttng.org/files/urcu/userspace-rcu-0.15.6.tar.bz2
-libs_sha=850b192096eb11ebf2c70e8f97bc7da7479ee41da1bebeb44e3986908bac414f
+libs_ver=0.15.7
+libs_rev=1
+libs_url=https://lttng.org/files/urcu/userspace-rcu-0.15.7.tar.bz2
+libs_sha=2556b83adc0f9b3ac8024e613e17d014d04c4c49110604ce55fcb14eae32edd3
 libs_dep=()
 
 libs_args=(

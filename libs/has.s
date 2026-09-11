@@ -2,9 +2,10 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=1.5.2
-libs_url=https://github.com/kdabir/has/archive/refs/tags/v1.5.2.tar.gz
-libs_sha=965629d00b9c41fab2a9c37b551e3d860df986d86cdebd9b845178db8f1c998e
+libs_ver=1.6.0
+libs_rev=1
+libs_url=https://github.com/kdabir/has/archive/refs/tags/v1.6.0.tar.gz
+libs_sha=99b4b82d8b935521bd1b44bf7a6af3421f4c850a28b8edfee39e6ee75af4d78f
 libs_dep=( )
 
 libs_args=(
