@@ -12,17 +12,15 @@ libs_sha=3243ffbc8ea4d4ac22ddc7dd2a1dc54c57874c40648b60ff97009763554eaf13
 libs_deps=(openssl libedit)
 
 libs_args=(
-    --disable-dependency-tracking
-    --disable-silent-rules
-    --disable-dependency-tracking
+    --enable-static --disable-shared
 
     --disable-nls
     --without-system-verto
     --without-keyutils
-
-    --disable-shared
-    --enable-static
 )
+
+# fix  error: Cannot test for constructor/destructor support when cross compiling
+is_xbuild && libs_args+=(krb5_cv_attr_constructor_destructor=yes)
 
 libs_build() {
     # macOS has krb5
@@ -41,6 +39,10 @@ libs_build() {
     # refer winccld and stdcc in ccapi for details
     #  => is this a mistake or bug?
     sed -i '/USE_CCAPI_MACOS/d' include/autoconf.h
+
+    if is_cygwin; then
+        grep -wl __CYGWIN32__ . | xargs sed -i 's/__CYGWIN32__/__CYGWIN__/g'
+    fi
 
     # build only static client libraries
 
