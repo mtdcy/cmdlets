@@ -164,7 +164,7 @@ libs_build() {
         cat << EOF > bin/git
 #!/usr/bin/env bash
 
-export GIT_EXEC_PATH="\$(readlink -f "\$(dirname "\$0")/../$_LIBEXEC")"
+export GIT_EXEC_PATH="\$(realpath "\$0" | xargs dirname)/../$_LIBEXEC"
 export MERGE_TOOLS_DIR="\$GIT_EXEC_PATH/mergetools"
 export GIT_TEMPLATE_DIR="\$GIT_EXEC_PATH/../templates"
 export PATH="\$GIT_EXEC_PATH:\$PATH"
