@@ -7,9 +7,8 @@ libs_sha=d856f3582d31fd754afe876abf6f269e4f2f4e75c7ca2047971fb6e9b1d6e552
 libs_dep=()
 
 libs_args=(
-    --disable-option-checking
-    --disable-dependency-tracking
-    --disable-silent-rules
+    # static only
+    --enable-static --disable-shared
 
     # needed by some libraries, e.g: libgcrypt
     --enable-install-gpg-error-config
@@ -19,13 +18,14 @@ libs_args=(
     --disable-tests
     --without-libintl-prefix
     --without-libiconv-prefix
-
-    # static only
-    --disable-shared
-    --enable-static
 )
 
 libs_build() {
+    # fix error including `./syscfg/lock-obj-pub.cygwin.h': No such file or directory
+    if is_cygwin; then
+        cp -f src/syscfg/lock-obj-pub.{$(uname -m)-unknown-linux-gnu.h,cygwin.h}
+    fi
+
     configure
 
     make
