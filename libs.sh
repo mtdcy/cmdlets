@@ -306,7 +306,7 @@ echocmd() {
     done
 
     # stderr: grep won't filter out the command
-    echo -e "\n✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
+    echo -en "\n✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
     #  => logging as plain by default so grep will works
