@@ -3,6 +3,8 @@
 # Portable library for network traffic capture
 
 # shellcheck disable=SC2034
+libs_targets=(linux darwin)
+
 libs_lic='BSD-3-Clause'
 libs_ver=1.11.0
 libs_rev=1

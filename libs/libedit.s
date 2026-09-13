@@ -1,26 +1,29 @@
 # BSD-style licensed readline alternative
 
-libs_targets=(linux darwin)
+libs_targets=(! windows)
 
 # shellcheck disable=SC2034
 libs_lic='BSD-3-Clause'
-libs_ver=3.1
-libs_url=https://thrysoee.dk/editline/libedit-20251016-3.1.tar.gz
-libs_sha=21362b00653bbfc1c71f71a7578da66b5b5203559d43134d2dd7719e313ce041
+libs_ver=20260512-3.1
+libs_url=https://thrysoee.dk/editline/libedit-$libs_ver.tar.gz
+libs_sha=432d5e7ea8b0116dd39f2eca7bc11d0eed77faa6b77ea526ace89907c23ea4a0
 libs_dep=(ncurses)
 
 libs_args=(
-    --disable-dependency-tracking
-    --disable-silent-rules
-    --disable-dependency-tracking
-
-    --disable-shared
-    --enable-static
+    --enable-static --disable-shared
 )
 
 is_linux && libs_args+=(--with-privsep-path=/var/lib/sshd)
 
+is_cygwin && libs_patches=(
+    https://cygwin.com/cgit/cygwin-packages/libedit/plain/cygwin-build.patch
+    https://cygwin.com/cgit/cygwin-packages/libedit/plain/libedit.patch
+)
+
 libs_build() {
+    # historic: disclaim old libs_ver
+    cmdlet.disclaim 3.1
+
     # libedit do not use pkg-config
     libs.requires ncurses
 
