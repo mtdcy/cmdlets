@@ -1493,7 +1493,8 @@ _git_ls_changed() {
 
     while IFS='/' read -r _ libs; do
         list+=("${libs%.s}")
-    done < <( git diff --name-only --diff-filter=d HEAD "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
+    done < <( git diff --name-only --diff-filter=AM HEAD "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
+    # --diff-filter=AM : filter only added or modified
 
     echo "${list[@]}"
 }
