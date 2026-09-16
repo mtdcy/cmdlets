@@ -26,6 +26,10 @@ libs_args=(
 )
 
 libs_build() {
+    # fix error: 'alloca' was not declared in this scope
+    libs.conftest alloca.h && libs.requires -DHAVE_ALLOCA_H
+    # error: 'posix_memalign' was not declared in this scope
+    is_posix && libs.requires -D_POSIX_C_SOURCE=200112L
 
     cmake.setup
 
