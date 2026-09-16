@@ -27,7 +27,8 @@ date.iso8601() {
 # 通用的编译脚本设置函数
 #  禁用多线程编译：libs.requires -j1
 libs.requires() {
-    declare -a cflags cxxflags cppflags ldflags
+    local stdc stdcxx
+    declare -a cflags ldflags libs
 
     local x y
     for x in "$@"; do
@@ -36,29 +37,29 @@ libs.requires() {
                 ldflags+=("$x")
                 ;;
             -j1)            _NJOBS=1         ;; # Deparallelization
-            -fpermissive)   cxxflags+=("$x") ;;
-            -std=c++*)      cxxflags+=("$x") ;;
-            -std=gnu++*)    cxxflags+=("$x") ;;
-            -std=*)         cflags+=("$x")   ;;
-            -I*)            cppflags+=("$x") ;;
-            -*)
-                cflags+=("$x")
-                cxxflags+=("$x")
-                ;;
-            *)
-                "$PKG_CONFIG" --exists "$x" || die "$x not found."
-
-                # shellcheck disable=SC2046
-                libs.requires $("$PKG_CONFIG" --cflags --libs "$x")
-                ;;
+            -std=c++*)      stdcxx="$x"      ;;
+            -std=gnu++*)    stdcxx="$x"      ;;
+            -std=*)         stdc="$x"        ;;
+            -I*)            cflags+=("$x")   ;;
+            -*)             cflags+=("$x")   ;;
+            *)              libs+=("$x")     ;;
         esac
     done
 
-    # append flags
-    test -z "${cflags[*]}"   || export CFLAGS="$CFLAGS ${cflags[*]}"
-    test -z "${cppflags[*]}" || export CPPFLAGS="$CPPFLAGS ${cppflags[*]}"
-    test -z "${cxxflags[*]}" || export CXXFLAGS="$CXXFLAGS ${cflags[*]} ${cxxflags[*]}"
-    test -z "${ldflags[*]}"  || export LDFLAGS="$LDFLAGS ${ldflags[*]}"
+    # shellcheck disable=SC2207
+    if test -n "${libs[*]}"; then
+        cflags+=($("$PKG_CONFIG" --cflags "${libs[@]}"))
+        ldflags+=($("$PKG_CONFIG" --libs "${libs[@]}"))
+    fi
+
+    if test -n "${cflags[*]}" || test -n "$stdc" || test -n "$stdcxx"; then
+        export CFLAGS="$CFLAGS $stdc ${cflags[*]}"
+        export CXXFLAGS="$CXXFLAGS $stdcxx ${cflags[*]}"
+    fi
+
+    if test -n "${ldflags[*]}"; then
+        export LDFLAGS="$LDFLAGS ${ldflags[*]}"
+    fi
 }
 
 # 兼容 c89 + K&R
