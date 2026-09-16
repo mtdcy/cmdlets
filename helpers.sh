@@ -41,21 +41,15 @@ libs.requires() {
             -std=gnu++*)    cxxflags+=("$x") ;;
             -std=*)         cflags+=("$x")   ;;
             -I*)            cppflags+=("$x") ;;
-            -*)             cflags+=("$x")   ;;
+            -*)
+                cflags+=("$x")
+                cxxflags+=("$x")
+                ;;
             *)
                 "$PKG_CONFIG" --exists "$x" || die "$x not found."
 
-                for y in $("$PKG_CONFIG" --cflags "$x"); do
-                    case "$y" in
-                        -std=c++*)      cxxflags+=("$y") ;;
-                        -std=gnu++*)    cxxflags+=("$y") ;;
-                        -fpermissive)   cxxflags+=("$y") ;;
-                        *)              cflags+=("$y")   ;;
-                    esac
-                done
-
-                # shellcheck disable=SC2207
-                ldflags+=($("$PKG_CONFIG" --libs-only-l "$x"))
+                # shellcheck disable=SC2046
+                libs.requires $("$PKG_CONFIG" --cflags --libs "$x")
                 ;;
         esac
     done
@@ -94,10 +88,15 @@ libs.requires.c89() {
 }
 
 # check if a func symbol exists
-# input: <symbol name>
+# input: <symbol or header name>
 libs.conftest() {
-    local conftest=".conftest/conftest_$1.c"
-    mkdir -pv .conftest && cat << EOF > "$conftest"
+    case "$1" in
+        *.h)
+            echo "#include <$1>" | "$CC" -x c -fsyntax-only -w -
+            ;;
+        *)
+            local conftest=".conftest/conftest_$1.c"
+            mkdir -pv .conftest && cat << EOF > "$conftest"
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -106,8 +105,10 @@ int main(void) {
     return $1();
 }
 EOF
-    # shellcheck disable=SC2086
-    echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o /dev/null
+            # shellcheck disable=SC2086
+            echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o /dev/null
+            ;;
+    esac
 }
 
 # create static library archive
@@ -279,7 +280,7 @@ _cmake_init() {
     {
         echo -e "\n---"
         echo -e "cmake envs:"
-        env | grep -E "CMAKE"
+        env
         echo -e "---\n"
     } | _LOGGING=silent _capture
 
