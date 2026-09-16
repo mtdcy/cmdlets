@@ -53,6 +53,8 @@ libs_args=(
 libs_build() {
     # bug: cmake ignores cflags of static libraries
     libs.requires libde265
+    # fix error: 'mkstemp' was not declared in this scope
+    is_posix && libs.requires -D_POSIX_C_SOURCE=200112L
 
     cmake.setup
 
