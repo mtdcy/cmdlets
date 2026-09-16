@@ -1077,6 +1077,19 @@ _make_pkgfile() {
     slogcmd "$TAR" -czvf "$1" "${files[@]}" || die "create $1 failed."
 }
 
+# 支持管道输入，比如：
+#  libs.pkgfile xxx < install_manifest.txt
+_cmdlet_pkgfiles() {
+    true > .pkgfile
+
+    local line
+    while IFS= read -r line; do
+        test -n "$line" || continue     # empty line
+        [[ "$line" =~ ^# ]] && continue # comment line
+        echo "$line" >> .pkgfile
+    done
+}
+
 # create a pkgfile with given files
 cmdlet.pkgfile() {
     local name version files
@@ -1086,8 +1099,7 @@ cmdlet.pkgfile() {
 
     test -n "$version" || version="$libs_ver"
 
-    _make_install "${@:2}"
-
+    test -n "$2" && _make_install "${@:2}" || _cmdlet_pkgfiles
     IFS=' ' read -r -a files < <(xargs < .pkgfile)
 
     test -n "${files[*]}" || die "call pkgfile() without inputs."
