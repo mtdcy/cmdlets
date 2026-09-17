@@ -1,6 +1,8 @@
 # Implementation of malloc emphasizing fragmentation avoidance
 
 # shellcheck disable=SC2034
+libs_targets=(linux darwin)
+
 libs_lic='BSD-2-Clause'
 libs_ver=5.4.0
 libs_rev=1
@@ -20,6 +22,8 @@ libs_args=(
 is_linux && is_arm64 && libs_args+=(--with-lg-page=16)
 
 libs_build() {
+    # since 5.4.0 : fix error: invalid conversion from 'int' to 'char*'
+    libs.requires -fpermissive
 
     configure
 
