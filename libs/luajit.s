@@ -2,10 +2,12 @@
 
 # shellcheck disable=SC2034
 libs_lic="MIT"
-libs_ver=2.1
-libs_url=https://github.com/LuaJIT/LuaJIT/archive/refs/tags/v$libs_ver.ROLLING.tar.gz
-libs_sha=31d7a4853df4c548bf91c13d3b690d19663d4c06ae952b62606c8225d0b410ad
-libs_dep=()
+libs_ver=2.1.1788856981 # @see brew:luajit.rb
+libs_rev=2
+libs_url=https://github.com/LuaJIT/LuaJIT/archive/c6ffc141a8762b41703f9287d63d93622a13dd8f.tar.gz
+libs_sha=6e5fec07750add912e7c3eae0c194d24cd6d023714e1f04a0298a5b4819e4457
+
+libs_deps=()
 
 libs_args=(
     PREFIX="'$PREFIX'"
@@ -18,6 +20,8 @@ libs_args=(
 )
 
 libs_build() {
+    cmdlet.disclaim 2.1
+
     make "${libs_args[@]}"
 
     cmdlet.pkgfile libluajit -- make install "${libs_args[@]}"
