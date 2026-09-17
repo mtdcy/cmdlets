@@ -449,6 +449,7 @@ _init_target() {
         OBJDUMP:objdump
         RANLIB:ranlib
         READELF:readelf
+        HOSTCC:hostcc
     )
 
     # target specific toolchain utils

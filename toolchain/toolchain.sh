@@ -89,6 +89,10 @@ case "$NAME" in
         # must set -o pipefail
         "$EXE" --define-variable=PREFIX="$PREFIX" --static "$@" | tee -a "$_LOGFILE"
         ;;
+    hostcc)
+        unset CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
+        exec gcc "$@"
+        ;;
     *)
         exec "$EXE" "$@"
         ;;
