@@ -1,6 +1,6 @@
 # HTTP(S) server and reverse proxy, and IMAP/POP3 proxy server
 
-libs_targets=(! windows)
+libs_targets=(linux darwin)
 libs_stable_minor=1 # update revision only
 
 # shellcheck disable=SC2034,SC2154
@@ -9,7 +9,8 @@ libs_ver=1.30.5
 libs_rev=1
 libs_url=https://nginx.org/download/nginx-$libs_ver.tar.gz
 libs_sha=6c20565aa2325cb82216ae804f4a4ff1875179014759a381c42ddc8e11c4906d
-libs_dep=(zlib pcre2 libxcrypt openssl libxml2 libxslt libgd)
+
+libs_deps=(zlib pcre2 libxcrypt openssl libxml2 libxslt libgd)
 
 WITH_GEOIP2=1
 
@@ -89,15 +90,16 @@ libs_args=(
     --add-module=ngx-fancyindex-$NGX_FANCYINDEX_VER
 )
 
-is_mingw || libs_args+=(--with-threads)
-
 # geoip2: requires maxminddb
 if [ $WITH_GEOIP2 -ne 0 ]; then
-    libs_dep+=(libmaxminddb)
+    libs_deps+=(libmaxminddb)
     libs_args+=(--add-module=ngx_http_geoip2_module-$NGX_GEOIP2_VER)
 fi
 
-is_mingw && libs_args+=(--crossbuild=win32)
+# ./configure: --with-threads is not supported on Windows
+is_cygwin || libs_args+=(--with-threads)
+
+is_cygwin && libs_args+=(--crossbuild=win32)
 
 libs_build() {
     cmdlet.disclaim 1.31 # mainline version
@@ -105,32 +107,27 @@ libs_build() {
     # nginx config for shared only, we have to add static libraries manually
     # append libexslt: try fix xsltApplyStylesheet() failed
     #  => exsltRegisterAll()
-    libs.requires zlib libpcre2-8 libxcrypt openssl gdlib libexslt
+    libs.requires zlib libpcre2-8 libxcrypt openssl gdlib libexslt -D_GNU_SOURCE
 
     libs_args+=(
         # for NGX_CC_OPT
-        --with-cc-opt="'$CFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
+        --with-cc-opt="'$CFLAGS $CPPFLAGS -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2'"
         # for NGX_LD_OPT
         --with-ld-opt="'$LDFLAGS'"
     )
 
     # Fix configure for musl-gcc
-    export CC_AUX_FLAGS="$CFLAGS $LDFLAGS"
+    export CC_AUX_FLAGS="$CFLAGS $CPPFLAGS $LDFLAGS"
     # configure all unknown toolchain as gcc
     sed -i '/gcc)/i unknown) . auto/cc/gcc;;' auto/cc/conf
+    # fix autotest extension
+    sed -i "s%^NGX_AUTOTEST=.*$%NGX_AUTOTEST=\$NGX_OBJS/autotest$_BINEXT%" auto/init
 
-    if is_mingw; then
-        sed -i auto/feature \
-            -e 's/-x \$NGX_AUTOTEST/&.exe/g' \
-            -e 's/-c \$NGX_AUTOTEST/&.exe/g' ||
-               die "hack mingw exe failed."
-
-        sed -e 's/win32/xxx/' \
-            -i auto/lib/openssl/conf \
-            -i auto/lib/pcre/conf \
-            -i auto/lib/zlib/conf ||
-               die "hack for mingw failed."
-    fi
+    # unix style libraries
+    is_cygwin && sed -e 's/win32/xxx/' \
+        -i auto/lib/openssl/conf \
+        -i auto/lib/pcre/conf \
+        -i auto/lib/zlib/conf
 
     configure
 
