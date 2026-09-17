@@ -1182,12 +1182,11 @@ cmdlet.disclaim() {
 #         share             yyy         \
 #         share/man         zzz
 cmdlet.pkginst() {
-    local name="$1"
-                     shift
+    local name="$1" && shift
 
     slogi $_EMOJI_PKGFILE "$FUNCNAME $name < $*"
 
-    local sub installed
+    local sub installed=()
     while [ $# -ne 0 ]; do
         local file="$1"
                          shift
