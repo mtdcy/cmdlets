@@ -2,9 +2,10 @@
 
 # shellcheck disable=SC2034
 libs_lic='BSD-2-Clause'
-libs_ver=5.3.1
-libs_url=https://github.com/jemalloc/jemalloc/releases/download/5.3.1/jemalloc-5.3.1.tar.bz2
-libs_sha=3826bc80232f22ed5c4662f3034f799ca316e819103bdc7bb99018a421706f92
+libs_ver=5.4.0
+libs_rev=1
+libs_url=https://github.com/jemalloc/jemalloc/releases/download/5.4.0/jemalloc-5.4.0.tar.bz2
+libs_sha=200776fac271093e7c2f21edd6d62657ecd2be578d9328633f2a86bfa6ef4f1d
 libs_dep=()
 
 libs_args=(
