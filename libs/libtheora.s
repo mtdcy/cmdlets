@@ -9,25 +9,24 @@ libs_sha=279327339903b544c28a92aeada7d0dcfd0397b59c2f368cc698ac56f515906e
 
 libs_deps=(libogg libvorbis)
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    # static only
+    --enable-static --disable-shared
 
-    --with-ogg=$PREFIX
-    --with-vorbis=$PREFIX
+    --with-ogg="$PREFIX"
+    --with-vorbis="$PREFIX"
 
     --disable-examples
     --disable-oggtest
     --disable-vorbistest
     --disable-spec
-
-    # static only
-    --disable-shared
-    --enable-static
 )
 
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=(--build="$( uname -m)-linux-gnu")
+
+is_cygwin && libs_patches+=(
+    https://cygwin.com/cgit/cygwin-packages/libtheora/plain/01-no-undefined.patch
+)
 
 libs_build() {
     # parallel is broken (libtheoraenc is missing sometimes)
