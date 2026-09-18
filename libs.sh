@@ -968,6 +968,15 @@ _load_deps()    { (_load "$1" > /dev/null && echo "${libs_deps[@]}"     ); }
 # load libs_targets
 _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 
+_smart_patch() {
+    local num
+    for num in 0 1 2; do
+        "$PATCH" -p$num --dry-run --batch < "$1" > /dev/null 2>&1 && break
+    done
+
+    slogcmd "$PATCH" -Nbp$num -i "$1"
+}
+
 # prepare source code or die
 #  input: name
 _prepare() {
@@ -1010,10 +1019,10 @@ _prepare() {
             http://* | https://*)
                 local file="$(_url_file "$patch")"
                 test -f "$file" || _curl_timeout "$patch" "$file"
-                slogcmd "$PATCH" -Np1 -i "$file" || die "patch < $file failed."
+                _smart_patch "$file" || die "patch < $file failed."
                 ;;
             *)
-                slogcmd "$PATCH" -Np1 -i "$patch" || die "patch < $patch failed."
+                _smart_patch "$patch" || die "patch < $patch failed."
                 ;;
         esac
     done
@@ -1022,9 +1031,9 @@ _prepare() {
     #  `diff -u main.c.orig main.c' will create patch working with -p0
     if test -s "$TEMPDIR/$libs_name.patch"; then
         if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
-            slogcmd "$PATCH" -Np1 -i $TEMPDIR/$libs_name.patch || die "patch inlined failed."
+            _smart_patch $TEMPDIR/$libs_name.patch || die "patch inlined failed."
         else
-            slogcmd "$PATCH" -Np0 -i $TEMPDIR/$libs_name.patch || die "patch inlined failed."
+            _smart_patch $TEMPDIR/$libs_name.patch || die "patch inlined failed."
         fi
     fi
 }
