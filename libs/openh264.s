@@ -19,9 +19,25 @@ libs_args=(
     AS="'$AS'"
 )
 
-libs_build() {
+# xbuild: set OS type manually
+if is_xbuild; then
     if is_mingw; then
-        sed -i 's/^OS=.*$/OS=mingw_nt/' Makefile
+        libs_args+=(OS=mingw_nt)
+    elif is_cygwin; then
+        libs_args+=(OS=cygwin_nt)
+    fi
+fi
+
+libs_build() {
+    if is_cygwin; then
+        # fix error: cannot convert 'long int*' to 'LPLONG' {aka 'int*'}
+        # ??? why this happens ???
+        sed '/SemRelease/s/long/int/' \
+            -i codec/decoder/core/inc/wels_decoder_thread.h \
+            -i codec/decoder/core/src/wels_decoder_thread.cpp
+        # fix error: '_alloca' was not declared in this scope
+        sed '/namespace/i #include <intrin.h>' \
+            -i codec/decoder/plus/src/welsDecoderExt.cpp
     fi
 
     make "${libs_args[@]}"
@@ -30,7 +46,7 @@ libs_build() {
 
     for x in h264dec h264enc; do
         cmdlet.install "$x"
-        cmdlet.verify -- "$x"
+        cmdlet.verify "$x"
     done
 }
 
