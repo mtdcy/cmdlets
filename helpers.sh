@@ -848,7 +848,7 @@ _go_init() {
     #  set GOPATH in host profile
     export GOPATH="${GOPATH:-$_TOPDIR/.go}"
     #export GOCACHE="$_TOPDIR/.go/go-build"
-    export GOMODCACHE="$_TOPDIR/.go/pkg/mod" # OR pkg installed to workdir
+    export GOMODCACHE="$GOPATH/pkg/mod" # OR pkg installed to workdir
 
     export GOBIN="$PREFIX/bin"  # set install prefix
     export GO111MODULE=auto
