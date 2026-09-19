@@ -5,6 +5,7 @@
 # this file should be loaded only when compile targets
 
 # environments for libs formula
+: "${LIBS_TARGET:=$_TARGET_NAME}"
 : "${LIBS_MIRROR_GNU:=https://mirrors.tuna.tsinghua.edu.cn/gnu}"
 
 # helpers internel variables
