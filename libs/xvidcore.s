@@ -6,18 +6,16 @@ libs_ver=1.3.7
 libs_url=https://downloads.xvid.com/downloads/xvidcore-$libs_ver.tar.bz2
 libs_sha=aeeaae952d4db395249839a3bd03841d6844843f5a4f84c271ff88f7aa1acff7
 
-libs_patches=(
-    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-xvidcore/0001-remove-dll-option-clang.patch
-)
+#libs_patches=(
+#    https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-xvidcore/0001-remove-dll-option-clang.patch
+#)
 
 libs_build() {
     pushd build/generic
 
-    if is_mingw; then
-        #1. x86_64-w64-mingw32-gcc-posix: error: unrecognized command-line option ‘-mno-cygwin’; did you mean ‘-mno-clwb’?
-        #2. fix STATIC_LIB
+    if is_cygwin; then
+        #1. fix No rule to make target 'libxvidcore.a'
         sed -i configure \
-            -e 's/"-mno-cygwin"/""/g' \
             -e 's/STATIC_LIB="xvidcore/STATIC_LIB="libxvidcore/g' ||
                die "hack configure failed."
     fi
