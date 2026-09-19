@@ -1,9 +1,10 @@
 #
 # shellcheck disable=SC2034
 libs_lic="Zlib"
-libs_ver=2.30.12
+libs_ver=2.32.10
+libs_rev=1
 libs_url=https://github.com/libsdl-org/SDL/releases/download/release-$libs_ver/SDL2-$libs_ver.tar.gz
-libs_sha=ac356ea55e8b9dd0b2d1fa27da40ef7e238267ccf9324704850d5d47375b48ea
+libs_sha=5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
 
 libs_args=(
     --disable-option-checking
