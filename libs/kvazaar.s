@@ -22,7 +22,7 @@ libs_build() {
 
     make
 
-    pkgconf src/kvazaar.pc -DKVZ_STATIC_LIB
+    cmdlet.pkgconf src/kvazaar.pc -DKVZ_STATIC_LIB
 
     # bin/kvazaar also been installed
     cmdlet.pkgfile libkvazaar -- make install -C src bin_PROGRAMS=
