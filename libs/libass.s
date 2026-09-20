@@ -10,15 +10,10 @@ libs_dep=(freetype harfbuzz fribidi libunibreak)
 # harfbuzz & fribidi is mandatory for libass
 
 libs_args=(
-    --enable-silent-rules
-    --disable-option-checking
-    --disable-dependency-tracking
+    # static only
+    --enable-static --disable-shared
 
     #--disable-require-system-font-provider
-
-    # static only
-    --disable-shared
-    --enable-static
 )
 
 # libass uses coretext on macOS, fontconfig on Linux
@@ -27,6 +22,10 @@ if is_darwin; then
 else
     libs_dep+=(fontconfig)
     libs_args+=(--enable-fontconfig --disable-coretext)
+fi
+
+if is_cygwin || is_mingw; then
+    libs_args+=(--disable-directwrite)
 fi
 
 libs_build() {
