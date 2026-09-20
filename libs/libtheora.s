@@ -44,7 +44,7 @@ libs_build() {
     make
 
     # check fails with mingw
-    is_mingw || make check
+    is_xbuild || make check
 
     sed -i 's/^SUBDIRS = .*/SUBDIRS = lib include/' Makefile
 
