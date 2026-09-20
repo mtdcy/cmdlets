@@ -28,7 +28,11 @@ libs_args=(
 )
     #--disable-libyuv
 
-is_mingw && libs_args+=(--target=x86_64-win64-gcc)
+case "$LIBS_TARGET" in
+    windows | cygwin)
+        libs_args+=(--target=$(uname -m)-win64-gcc)
+        ;;
+esac
 
 libs_build() {
     configure
