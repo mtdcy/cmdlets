@@ -23,6 +23,8 @@ libs_deps+=(
     libxml2
     # filters
     freetype fontconfig fribidi
+    # ssl
+    openssl
 )
 
 libs_args+=(
@@ -44,14 +46,18 @@ libs_args+=(
     #--enable-shared
 )
 
-is_xbuild && libs_args+=(--enable-cross-compile)
+if is_xbuild; then
+    libs_args+=(
+        --enable-cross-compile
+        --host-cc="$HOSTCC"
+    )
+fi
 
-libs_args+=(--host-cc="$HOSTCC")
-
-case "$_TARGET" in
-    *-mingw32)  libs_args+=(--target-os=mingw32)    ;;
-    *-darwin*)  libs_args+=(--target-os=darwin)     ;;
-    *)          libs_args+=(--target-os=linux)      ;;
+case "$LIBS_TARGET" in
+    windows)    libs_args+=(--target-os=mingw32) ;;
+    cygwin)     libs_args+=(--target-os=cygwin)  ;;
+    darwin)     libs_args+=(--target-os=darwin)  ;;
+    *)          libs_args+=(--target-os=linux)   ;;
 esac
 
 # pthreads or winpthread(mingw/win32)
@@ -91,26 +97,28 @@ list_has libs_deps freetype   && libs_args+=(--enable-libfreetype)   || true # �
 list_has libs_deps fontconfig && libs_args+=(--enable-libfontconfig) || true # 管理并寻找合适的字体
 list_has libs_deps fribidi    && libs_args+=(--enable-libfribidi)    || true # 处理 RTL 文字的正确显示顺序
 
+list_has libs_deps openssl    && libs_args+=(--enable-openssl)
+
 #if version.ge 6.0.0; then
 #    libs_deps+=(harfbuzz)
 #    libs_args+=(--enable-libharfbuzz)
 #fi
-
-if is_darwin; then
-    # always enable hwaccels for macOS
-    libs_args+=(
-        --enable-hwaccels
-        --enable-securetransport    # TLS
-        --enable-coreimage          # for avfilter
-        --enable-audiotoolbox       # audio codecs
-        --enable-videotoolbox       # video codecs
-    )
-else
-    libs_deps+=(openssl)
-    libs_args+=(--enable-openssl)   # TLS
-fi
-
-is_linux && libs_args+=(--enable-libdrm)   && libs_deps+=(libdrm)
+case "$LIBS_TARGET" in
+    darwin)
+        # always enable hwaccels for macOS
+        libs_args+=(
+            --enable-hwaccels
+            --enable-securetransport # TLS
+            --enable-coreimage      # for avfilter
+            --enable-audiotoolbox   # audio codecs
+            --enable-videotoolbox   # video codecs
+        )
+        ;;
+    linux)
+        libs_deps+=(libdrm)
+        libs_args+=(--enable-libdrm)
+        ;;
+esac
 
 is_arm64 && libs_args+=(--enable-neon)
 
@@ -153,31 +161,39 @@ for v in ${FFMPEG_VARS//,/ }; do
             # https://trac.ffmpeg.org/wiki/HWAccelIntro
             libs_args+=(--enable-hwaccels)
 
-            if is_linux; then
-                # VAAPI by Intel, support Linux & Intel|AMD(UVD/VCE)
-                libs_deps+=(libva)
-                libs_args+=(--enable-vaapi)
-            elif is_win64 || is_mingw; then
-                # DXVA2 by Microsoft, support Windows & Intel|AMD|NVIDIA
-                libs_args+=(--enable-dxva2)
-            fi
+            case "$LIBS_TARGET" in
+                linux)
+                    # VAAPI by Intel, support Linux & Intel|AMD(UVD/VCE)
+                    libs_deps+=(libva)
+                    libs_args+=(--enable-vaapi)
+                    ;;
+                windows | cygwin)
+                    # DXVA2 by Microsoft, support Windows & Intel|AMD|NVIDIA
+                    libs_args+=(--enable-dxva2)
+                    ;;
+            esac
+
             # always enable hwaccels for darwin
 
             # opencl for all
-            is_darwin || libs_deps+=(OpenCL)   # use OpenCL.framework for darwin
+            #  musl-gcc built ffmpeg with opencl won't work on glibc platforms
+            #   as dlopen system libraries will fails
             libs_args+=(--enable-opencl)
-
-            is_mingw && FFMPEG_ELIBS+=(OpenCL)
+            is_darwin || libs_deps+=(OpenCL) # use OpenCL.framework for darwin
 
             # TODO: Vulkan
             ;;
         ffplay)
-            libs_deps+=(sdl2)
-            libs_args+=(
-                --enable-ffplay
-                --enable-sdl2
-                --enable-outdevs
-            )
+            if is_cygwin || is_mingw; then
+                slogw "no ffplay for cygwin|mingw"
+            else
+                libs_deps+=(sdl2)
+                libs_args+=(
+                    --enable-ffplay
+                    --enable-sdl2
+                    --enable-outdevs
+                )
+            fi
             ;;
         huge)
             # custom your own build here
@@ -190,12 +206,15 @@ for v in ${FFMPEG_VARS//,/ }; do
                 --enable-parsers
                 --enable-bsfs
                 --enable-filters
-                --enable-indevs
-                # no outdev here
+                # no indevs nor outdevs here
             )
             ;;
     esac
 done
+
+# no indevs nor outdevs by default
+[[ " ${libs_args[*]} " =~ " --enable-indevs " ]]  || libs_args+=(--disable-indevs)
+[[ " ${libs_args[*]} " =~ " --enable-outdevs " ]] || libs_args+=(--disable-outdevs)
 
 test -z "${FFMPEG_ELIBS[*]}" || libs_args+=(--extra-libs="'$( $PKG_CONFIG --libs-only-l "${FFMPEG_ELIBS[@]}")'")
 
