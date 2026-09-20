@@ -4,9 +4,10 @@
 # shellcheck disable=SC2034
 
 libs_lic=LGPL
-libs_ver=1.0.16
+libs_ver=1.0.17
+libs_rev=1
 libs_url=https://github.com/fribidi/fribidi/releases/download/v$libs_ver/fribidi-$libs_ver.tar.xz
-libs_sha=1b1cde5b235d40479e91be2f0e88a309e3214c8ab470ec8a2744d82a5a9ea05c
+libs_sha=6949dcde27d41cebad1fd741fcafc36d55a1020d2d872d4a6eb3914caabbada2
 
 libs_args=(
     --disable-dependency-tracking

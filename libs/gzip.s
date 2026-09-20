@@ -2,14 +2,15 @@
 libs_desc="Popular GNU data compression program"
 
 libs_lic=GPLv3+
-libs_ver=1.14
+libs_ver=1.15
+libs_rev=1
 libs_url=(
     https://ftpmirror.gnu.org/gnu/gzip/gzip-$libs_ver.tar.xz
     # mirrors
     https://ftp.gnu.org/gnu/gzip/gzip-$libs_ver.tar.xz
     https://mirrors.ustc.edu.cn/gnu/gzip/gzip-$libs_ver.tar.xz
 )
-libs_sha=01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6
+libs_sha=9aa0cc780dec156b8282844833b342ab7cb08c25d2cd9a1869cdd0df31deff48
 libs_dep=()
 
 libs_args=(
