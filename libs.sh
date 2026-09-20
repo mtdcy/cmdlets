@@ -306,7 +306,7 @@ echocmd() {
     done
 
     # stderr: grep won't filter out the command
-    echo -en "\n✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
+    echo -e "✨ ${quoted[*]}" | _LOGGING="${_LOGGING:-silent}" _capture_stderr
 
     # capture both stdout and stderr
     #  => logging as plain by default so grep will works
@@ -923,13 +923,20 @@ _load() {
 
     unset "${!libs_@}"
 
-    local file="libs/$1.s"
     local name="${1##*/}"
+    local rule="libs/$1.s"
 
-    test -f "$file" || die "$file not exists"
+    if test -f "$rule"; then
+        export _LOAD_MODE=plain
+    else
+        rule="libs/$1/RULES"
+        export _LOAD_MODE=complex
+    fi
+
+    test -f "$rule" || die "$1 rules file not found"
 
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$file" > "$TEMPDIR/$name"
+    sed '/__END__/Q' "$rule" > "$TEMPDIR/$name"
 
     . "$TEMPDIR/$name" || return $?
 
@@ -954,7 +961,7 @@ _load() {
     # supported targets
     IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}")
 
-    sed '1,/__END__/d' "$file" > "$TEMPDIR/$libs_name.patch"
+    sed '1,/__END__/d' "$rule" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
     mkdir -p "$_TARGET_LOGFILES"
@@ -992,6 +999,13 @@ _prepare() {
     mkdir -p "$PREFIX"
     mkdir -p "$workdir"
 
+    case "$_LOAD_MODE" in
+        complex)
+            # copy libs files
+            cp -rf "libs/$1"/* "$workdir"
+            ;;
+    esac
+
     cd "$workdir"
 
     slogi $_EMOJI_DIR "Workdir $_COLOR_NC${PWD#"$_TOPDIR/"}"
@@ -1000,6 +1014,13 @@ _prepare() {
     test -z "$libs_url" || _fetch_url "$libs_sha" "${libs_url[@]}"
 
     local x patch
+
+    # load/complex: apply patches
+    if test -f PATCHES; then
+        while read -r patch; do
+            _smart_patch "$patch" || die "patch < $patch failed"
+        done < PATCHES
+    fi
 
     # libs_resources: fetch and unzip to workdir, no mirrors
     if test -n "${libs_resources[*]}"; then

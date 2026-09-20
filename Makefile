@@ -44,10 +44,12 @@ ENVS := CMDLET_NJOBS    \
 #${warning $(MAKEOVERRIDES)}
 #${warning $(MAKEFLAGS)}
 
-vpath %.s libs
+.SUFFIXES:
 
-%: %.s
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+Makefile: ;
+
+%:
+	$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 %+:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:+=)" CMDLET_CHECK=1
