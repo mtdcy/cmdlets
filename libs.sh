@@ -72,10 +72,6 @@ fi
 # build args
 _NJOBS="${CMDLET_NJOBS:-1}"
 
-# defaults
-MACOSX_DEPLOYMENT_TARGET=11.0
-# check: otool -l <path_to_binary> | grep minos
-
 # clear envs => setup by _init
 unset _TOPDIR
 
@@ -135,7 +131,7 @@ list_has() {
 
 _INTERESTED_MACROS_=(
     __linux__
-    __apple__
+    __APPLE__
     __WINNT__
     __clang__
     __GNUC__
@@ -143,20 +139,21 @@ _INTERESTED_MACROS_=(
     __WIN64__
     __CYGWIN__
     __MINGW32__
+    __GLIBC__
 )
 
 # target tests:
-is_darwin()         { list_has _TARGET_VARS     "apple|__apple__";              }
-is_linux()          { list_has _TARGET_VARS     "linux|__linux__";              }
-is_cygwin()         { list_has _TARGET_VARS     "cygwin|__CYGWIN__";            } # !! cygwin is unix !! #
-is_mingw()          { list_has _TARGET_VARS     "mingw32|__MINGW32__";          }
+is_darwin()         { list_has _TARGET_VARS     "__APPLE__";                }
+is_linux()          { list_has _TARGET_VARS     "__linux__";                }
+is_cygwin()         { list_has _TARGET_VARS     "__CYGWIN__";               } # !! cygwin is unix !! #
+is_mingw()          { list_has _TARGET_VARS     "__MINGW32__";              }
 
 # gcc/clang tests:
 is_clang()          { list_has _TARGET_VARS     __clang__;                      }
 is_gcc()            { list_has _TARGET_VARS     __GNUC__;                       }
+is_glibc()          { list_has _TARGET_VARS     __GLIBC__;                      }
+is_musl()           { list_has _TARGET_VARS     __linux__ musl;                 }
 is_posix()          { list_has _TARGET_VARS     posix;                          }
-is_glibc()          { list_has _TARGET_VARS     gnu;                            }
-is_musl()           { list_has _TARGET_VARS     musl;                           }
 
 # architecture tests:
 is_amd64()          { list_has _TARGET_VARS     x86_64;                         }
@@ -326,14 +323,16 @@ _init_host() {
     _TOPDIR="$(pwd -P)"
 
     # _TARGET: toolchain prefix
-    if test -n "$BUILDER_NAME"; then
+    if test -z "$_TARGET"; then
         # run with builder docker image
         case "$BUILDER_NAME" in
             linux/*)    _TARGET="$(uname -m)-linux-musl"    ;;
             mingw/*)    _TARGET="$(uname -m)-w64-mingw32"   ;; # for windows bootstrap files only
             cygwin/*)   _TARGET="$(uname -m)-pc-cygwin"     ;; # preferred windows target
         esac
-    else
+    fi
+
+    if test -z "$_TARGET"; then
         # run with host machine
         case "$OSTYPE" in
             linux-*)    _TARGET="$(uname -m)-linux-gnu"     ;;
@@ -396,10 +395,11 @@ _init_target() {
     test -n "$_TARGET" || die "missing _TARGET"
 
     case "$_TARGET" in
-        *-cygwin)   _TARGET_NAME=cygwin     ;;
-        *-w64-*)    _TARGET_NAME=windows    ;;
-        *-darwin*)  _TARGET_NAME=darwin     ;;
-        *)          _TARGET_NAME=linux      ;;
+        *-cygwin*)      _TARGET_NAME=cygwin     ;;
+        *-windows-*)    _TARGET_NAME=windows    ;;
+        *-w64-*)        _TARGET_NAME=windows    ;;
+        *-darwin*)      _TARGET_NAME=darwin     ;;
+        *)              _TARGET_NAME=linux      ;;
     esac
 
     # prepare target variables and resources
@@ -436,7 +436,7 @@ _init_target() {
     export CXX="$_TARGET_TOOLCHAIN/g++"
 
     # test gcc
-    "$CC" -v &> /dev/null || die "$CC IS NOT RECOGNIZED"
+    "$CC" --version &> /dev/null || die "$CC IS NOT RECOGNIZED"
 
     # binutils envs
     local binutils=(
@@ -481,10 +481,12 @@ _init_target() {
     # for target checks
     IFS=' :-()' read -r -a _TARGET_VARS < <({
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
-        "$CC" -dM -E - < /dev/null | grep -oE "$(
+
+        echo "#include <stddef.h>" > $TEMPDIR/features.c
+        "$CC" -dM -E $TEMPDIR/features.c | grep -oE "$(
             IFS='|'
             echo "${_INTERESTED_MACROS_[*]}"
-        )"
+        )" || true
     } | xargs)
     IFS=' ' read -r -a _TARGET_VARS < <( printf '%s\n' "${_TARGET_VARS[@]}" | sort -u | xargs)
 
@@ -501,72 +503,80 @@ _init_target() {
         fi
     fi
 
-    local cflags ldflags
-
     # common flags for c/c++
-    cflags=(
-        -g0 -Os
+    local cflags=(
+        -g -Os -DNDEBUG     # defaults
         -fPIC -DPIC         # PIC
         -Wno-error          # no warnings as errors
     )
-    ldflags=(
-        -L"$PREFIX/lib"     # prebuilts
-    )
+    _target_cflags() {
+        local out="$TEMPDIR/cflags"
+        if echo "int main() { return 0; }" | "$CC" -Werror "$@" -x c - -c -o "$out" > /dev/null 2>&1; then
+            cflags+=("$@")
+        fi
+        rm -f "$out"
+    }
 
-    # target platform flags
-    case "$_TARGET_NAME" in
-        darwin)
-            # macOS does not support statically linked binaries
-            cflags+=(-mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET")
-            ldflags+=(-Wl,-dead_strip)
+    # ldflags:
+    local ldflags=(-L"$PREFIX/lib")
+    _target_ldflags() {
+        local out="$TEMPDIR/ldflags"
+        if echo "int main() { return 0; }" | "$CC" "$@" -x c - -o "$out" > /dev/null 2>&1; then
+            ldflags+=("$@")
+        fi
+        rm -f "$out"
+    }
 
-            export MACOSX_DEPLOYMENT_TARGET
-            ;;
-        windows | cygwin)
-            cflags+=(-ffunction-sections -fdata-sections)
+    if is_clang; then
+        # error: expansion of date or time macro is not reproducible [-Werror,-Wdate-time]
+        _target_cflags -Wno-error=date-time
+    else
+        # tell compiler to place each function and data into its own section
+        _target_cflags -ffunction-sections -fdata-sections
+        # remove unused sections
+        _target_ldflags -Wl,-gc-sections
+    fi
 
-            ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static-libstdc++ -static-libgcc)
-
-            # 解决静态库与 DLL 符号错配的问题
-            ldflags+=(-Wl,--enable-auto-import)
-
-            # mingw|cygwin : no -Wl,-Bstatic as linking to dll is allowed
-            # msvcrt|ucrt: follow builder toolchain settings
-
-            # POSIX is preferred
-            is_posix && cflags+=(-D_POSIX)
-            ;;
-        *)
-            #1. static linking => two '--' vs ldflags
-            #2. tell compiler to place each function and data into its own section
-            cflags+=(-ffunction-sections -fdata-sections)
-
-            # remove unused sections, need -ffunction-sections and -fdata-sections
-            ldflags+=(-Wl,-gc-sections)
-
-            # Security: FULL RELRO
-            ldflags+=(-Wl,-z,relro,-z,now)
-
-            # disable dynamic linking and link used symbols only
-            ldflags+=(-Wl,--as-needed -static-libstdc++ -static-libgcc)
-            ;;
-    esac
+    # only linking needed libraries
+    _target_ldflags -Wl,--as-needed
+    # only linking static libstdc++ and libgcc
+    _target_ldflags -static-libstdc++
+    _target_ldflags -static-libgcc
+    # Security: FULL RELRO
+    _target_ldflags -Wl,-z,relro,-z,now
 
     # target flags
     case "$_TARGET" in
+        *-darwin*)
+            export MACOSX_DEPLOYMENT_TARGET=11.0
+            # check: otool -l <path_to_binary> | grep minos
+
+            _target_cflags -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET
+            # only work for macOS clang, why?
+            _target_ldflags -Wl,-dead_strip
+
+            # macOS does not support statically linked binaries
+            ;;
         *-linux-musl)
             # musl-gcc : always static
-            ldflags+=(-static -Wl,-Bstatic)
+            _target_ldflags -static
+            _target_ldflags -Wl,-Bstatic
+            ;;
+        *-pc-cygwin | *-windows-*)
+            # 解决静态库与 DLL 符号错配的问题 (windows)
+            _target_ldflags -Wl,--enable-auto-import
+            # POSIX is preferred
+            is_posix && _target_cflags -D_POSIX
             ;;
     esac
 
     case "$CMDLET_VERBOSE" in
         1)
-            ldflags+=(-Wl,--trace)
+            _target_ldflags -Wl,--trace
             ;;
         2)
-            cflags+=(-v)
-            ldflags+=(-Wl,--verbose)
+            _target_cflags -v
+            _target_ldflags -Wl,--verbose
             ;;
     esac
 
@@ -921,6 +931,9 @@ _supported_targets() {
 _load() {
     _init_target
 
+    # load libs helpers
+    . helpers.sh
+
     unset "${!libs_@}"
 
     local name="${1##*/}"
@@ -969,7 +982,7 @@ _load() {
 }
 
 # load libs_deps
-_load_deps()    { (_load "$1" > /dev/null && echo "${libs_deps[@]}"     ); }
+_load_deps()    { (_load "$1" > /dev/null && echo "${libs_deps[@]}" ); }
 
 # load libs_targets
 _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
@@ -987,9 +1000,6 @@ _smart_patch() {
 #  input: name
 _prepare() {
     slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
-
-    # load libs helpers
-    . helpers.sh
 
     _load "$1" || die "load $1 failed."
 
@@ -1289,12 +1299,18 @@ build() {
     _init_target
     _init_pkgfile
 
-    slogi $_EMOJI_ROSE "cmdlets builder $(cat .version)"
+    # print host and target informations
+    cat << EOF
 
-    echo ""
-    echo "host   : ${_HOST_VARS[*]}"
-    echo "target : ${_TARGET_VARS[*]}"
-    echo ""
+$_EMOJI_ROSE Build for $_TARGET ($_TARGET_NAME) $_EMOJI_ROSE
+
+   host vars = ${_HOST_VARS[*]}
+ target vars = ${_TARGET_VARS[*]}
+
+      CFLAGS = $CFLAGS $CPPFLAGS
+     LDFLAGS = $LDFLAGS
+
+EOF
 
     # fetch dependencies
     _deps_fetch "$@"
