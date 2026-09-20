@@ -37,13 +37,15 @@ libs.requires() {
             -l* | -L* | -pthread | -Wl,*)
                 ldflags+=("$x")
                 ;;
-            -j1)            _NJOBS=1         ;; # Deparallelization
-            -std=c++*)      stdcxx="$x"      ;;
-            -std=gnu++*)    stdcxx="$x"      ;;
-            -std=*)         stdc="$x"        ;;
-            -I*)            cflags+=("$x")   ;;
-            -*)             cflags+=("$x")   ;;
-            *)              libs+=("$x")     ;;
+            -j1)            _NJOBS=1        ;; # Deparallelization
+            -std=c++*)      stdcxx="$x"     ;;
+            -std=gnu++*)    stdcxx="$x"     ;;
+            -std=*)         stdc="$x"       ;;
+            -I*)            cflags+=("$x")  ;;
+            --static)       cflags+=("$x")  ;;
+            -static)        ldflags+=("$x") ;;
+            -*)             cflags+=("$x")  ;;
+            *)              libs+=("$x")    ;;
         esac
     done
 
@@ -371,6 +373,13 @@ cmake.build() {
 
 cmake.install() {
     cmake --install . "$@"
+}
+
+# shellcheck disable=SC2119
+cmdlet.cmake() {
+    cmake.setup "$@"
+    cmake.build
+    cmake.install
 }
 
 _meson_init() {

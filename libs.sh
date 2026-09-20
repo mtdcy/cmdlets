@@ -513,42 +513,33 @@ _init_target() {
         -L"$PREFIX/lib"     # prebuilts
     )
 
+    # target platform flags
     case "$_TARGET_NAME" in
         darwin)
             # macOS does not support statically linked binaries
-            cflags+=(
-                # ISO C99 and later do not support implicit function declarations
-                -Wno-implicit-function-declaration
-                -Wno-deprecated-non-prototype
-                -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET"
-            )
+            cflags+=(-mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET")
             ldflags+=(-Wl,-dead_strip)
 
             export MACOSX_DEPLOYMENT_TARGET
             ;;
-        windows)
-            cflags+=(--static -ffunction-sections -fdata-sections)
+        windows | cygwin)
+            cflags+=(-ffunction-sections -fdata-sections)
 
-            is_posix && cflags+=(-D_POSIX)
-
-            # XXX: allow link with certain dlls?
-            ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static -static-libgcc -Wl,-Bstatic)
+            ldflags+=(-Wl,-gc-sections -Wl,--as-needed -static-libstdc++ -static-libgcc)
 
             # 解决静态库与 DLL 符号错配的问题
             ldflags+=(-Wl,--enable-auto-import)
 
-            # msvcrt or ucrt: follow builder toolchain settings
-            #  - mingw-w64  : msvcrt
-            #  - llvm-mingw : ucrt
-            ;;
-        cygwin)
-            cflags+=(-ffunction-sections -fdata-sections)
-            ldflags+=(-Wl,-gc-sections -static -static-libstdc++ -static-libgcc)
+            # mingw|cygwin : no -Wl,-Bstatic as linking to dll is allowed
+            # msvcrt|ucrt: follow builder toolchain settings
+
+            # POSIX is preferred
+            is_posix && cflags+=(-D_POSIX)
             ;;
         *)
             #1. static linking => two '--' vs ldflags
             #2. tell compiler to place each function and data into its own section
-            cflags+=(--static -ffunction-sections -fdata-sections)
+            cflags+=(-ffunction-sections -fdata-sections)
 
             # remove unused sections, need -ffunction-sections and -fdata-sections
             ldflags+=(-Wl,-gc-sections)
@@ -557,7 +548,15 @@ _init_target() {
             ldflags+=(-Wl,-z,relro,-z,now)
 
             # disable dynamic linking and link used symbols only
-            ldflags+=(-Wl,--as-needed -static -static-libstdc++ -static-libgcc -Wl,-Bstatic)
+            ldflags+=(-Wl,--as-needed -static-libstdc++ -static-libgcc)
+            ;;
+    esac
+
+    # target flags
+    case "$_TARGET" in
+        *-linux-musl)
+            # musl-gcc : always static
+            ldflags+=(-static -Wl,-Bstatic)
             ;;
     esac
 
