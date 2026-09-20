@@ -1396,6 +1396,7 @@ cmdlet.pkgconf() {
             -l* | -L*)  ldflags+=("$arg")               ;;
             -framework) ldflags+=("$arg" "$1") && shift ;; # -framework AppKit
             -pthread)   ldflags+=("$arg")               ;; # -pthread
+            -Wl*)       ldflags+=("$arg")               ;; # -Wl,-Bdynamic
             -*)         cflags+=("$arg")                ;; # -DXXX -std=xxx
             *)          requires+=("$arg")              ;;
         esac

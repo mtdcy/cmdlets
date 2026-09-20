@@ -1,5 +1,6 @@
 # OpenCL ICD Loader
 
+# shellcheck disable=SC2034
 # darwin: use OpenCL.framework instead
 libs_targets=(! darwin)
 
@@ -37,23 +38,24 @@ libs_build() {
 
     ) || die "Build OpenCL Headers failed."
 
-    if is_mingw; then
-        # always build as libOpenCL.a
-        sed -i CMakeLists.txt \
-            -e '/OpenCL PROPERTIES PREFIX ""/d'
+    # generate dll.a for windows/system32/opencl.dll
+    if is_cygwin || is_mingw; then
+        "$DLLTOOL" -d win32/opencl.def -l libOpenCL.dll.a
+
+        cmdlet.pkgconf OpenCL.pc -Wl,-Bdynamic -lOpenCL
+
+        cmdlet.pkginst libOpenCL \
+            bin win32/opencl.dll \
+            lib libOpenCL.dll.a OpenCL.pc
+    else
+        # build OpenCL ICD Loader
+        cmake.setup
+
+        cmake.build
+
+        cmdlet.pkgfile libOpenCL -- cmake.install
     fi
 
-    # build OpenCL ICD Loader
-    cmake.setup
-
-    cmake.build
-
-    # fix pc file
-    if is_mingw; then
-        cmdlet.pkgconf pkgconfig_install/OpenCL.pc -lcfgmgr32 -lruntimeobject -lole32
-    fi
-
-    cmdlet.pkgfile libOpenCL -- cmake.install
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
