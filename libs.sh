@@ -30,6 +30,7 @@ export LANG=C
      CMDLET_PKGFILES=${CMDLET_PKGFILES:-1}      # use pkgfiles as deps
         CMDLET_CHECK=${CMDLET_CHECK:-0}         # build/check rdepends
       CMDLET_VERBOSE=${CMDLET_VERBOSE:-0}       # build with verbose mode
+          CMDLET_ZIG=${CMDLET_ZIG:-0}           # build with zig cc (experimental)
 
 # toolchain prefix
 
@@ -77,10 +78,10 @@ unset _TOPDIR
 
 is_true() {
     local opt="$1"
-    case "${!opt}" in
-        1 | yes) return 0           ;;
-        0 | no) return 1            ;;
-        *)      test -n "${!opt}"   ;;
+    case "$(tr A-z a-z <<< ${!opt})" in
+        1 | y | yes) return 0          ;;
+        0 | n | no)  return 1          ;;
+        *)           test -n "${!opt}" ;;
     esac
 }
 is_false() { ! is_true "$1"; }
@@ -421,6 +422,19 @@ _init_target() {
     # tools like glib-compile-resources needs seat in PATH
     export PATH="$PREFIX/bin:$PATH"
 
+    # build with zig cc (experimental)
+    if is_true CMDLET_ZIG; then
+        case "$_TARGET" in
+            *-linux-*)  _ZIG_TARGET="$_TARGET"  ;;
+            *-darwin*)  unset _ZIG_TARGET       ;; # no zig cc for macOS
+        esac
+        export _ZIG_TARGET
+
+        # zig cache system
+        export ZIG_GLOBAL_CACHE_DIR="$_TOPDIR/.zig"
+        export ZIG_LOCAL_CACHE_DIR="$_TARGET_WORKDIR/.zig"
+    fi
+
     # init _LOGFILE for toolchain.sh
     export _LOGFILE="$_TOPDIR/init.log"
     {
@@ -544,6 +558,8 @@ _init_target() {
     _target_ldflags -static-libgcc
     # Security: FULL RELRO
     _target_ldflags -Wl,-z,relro,-z,now
+    # warning: argument unused during compilation: 'xxx'
+    _target_cflags -Wno-unused-command-line-argument
 
     # target flags
     case "$_TARGET" in
@@ -1307,7 +1323,7 @@ $_EMOJI_ROSE Build for $_TARGET ($_TARGET_NAME) $_EMOJI_ROSE
    host vars = ${_HOST_VARS[*]}
  target vars = ${_TARGET_VARS[*]}
 
-      CFLAGS = $CFLAGS $CPPFLAGS
+      CFLAGS = $CPPFLAGS $CFLAGS
      LDFLAGS = $LDFLAGS
 
 EOF

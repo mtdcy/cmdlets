@@ -38,6 +38,7 @@ ENVS := CMDLET_NJOBS    \
 		CMDLET_MIRRORS  \
 		CMDLET_REPO     \
 		CMDLET_VERBOSE 	\
+		CMDLET_ZIG 		\
 
 ##############################################################################
 # Build Binaries & Libraries
@@ -105,7 +106,7 @@ prepare: prepare-host
 endif
 
 mrproper:
-	rm -rf out prebuilts logs packages .cargo .go .pip .rustup node_modules
+	rm -rf out prebuilts logs packages .cargo .go .pip .rustup node_modules .zig
 
 .PHONY: clean distclean shell prepare runc test mrproper
 

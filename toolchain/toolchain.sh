@@ -58,8 +58,13 @@ case "$NAME" in
 esac
 
 if test -n "$_ZIG_TARGET"; then
+    # reset envs
+    #  https://wiki.gentoo.org/wiki/Zig#Environment_variables
+    unset ZIG_TARGET ZIG_CPU ZBS_ARGS_EXTRA
+
+    # set zig target
     case "$_ZIG_TARGET" in
-        *-gnu)
+        *-linux-gnu)
             # default glibc 2.31 (ubuntu 20.04, Debian 11, ...)
             #  compatible + modern c++ and posix features
             _ZIG_TARGET="$_ZIG_TARGET.2.31"
