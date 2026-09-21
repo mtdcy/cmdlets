@@ -61,26 +61,18 @@ libs_build() {
             slogcmd autoreconf -fiv
         )
         slogcmd autoreconf -fiv
-
-        configure
-
-        make
-    
-        # make check: build test files fails
     else
         # generate files
-        CC="'$CC'"                            \
-        CFLAGS="'$CFLAGS $CPPFLAGS $LDFLAGS'" \
-        ACLOCAL=aclocal                       \
-        AUTOMAKE=automake                     \
-        make -f Makefile.devel all
-
-        configure 
-
-        make
-        
-        is_mingw || make check
+        make -f Makefile.devel all \
+            CC="$CC" CFLAGS="$CFLAGS $CPPFLAGS $LDFLAGS" \
+            ACLOCAL=aclocal AUTOMAKE=automake
     fi
+
+    configure
+
+    make
+
+    is_xbuild || make check
 
     cmdlet.pkgconf iconv -liconv -lcharset
     cmdlet.pkgconf libiconv -liconv -lcharset

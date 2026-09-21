@@ -23,8 +23,6 @@ libs_deps+=(
     libxml2
     # filters
     freetype fontconfig fribidi
-    # ssl
-    openssl
 )
 
 libs_args+=(
@@ -97,7 +95,16 @@ list_has libs_deps freetype   && libs_args+=(--enable-libfreetype)   || true # �
 list_has libs_deps fontconfig && libs_args+=(--enable-libfontconfig) || true # 管理并寻找合适的字体
 list_has libs_deps fribidi    && libs_args+=(--enable-libfribidi)    || true # 处理 RTL 文字的正确显示顺序
 
-list_has libs_deps openssl    && libs_args+=(--enable-openssl)
+# ssl
+case "$LIBS_TARGET" in
+    darwin)
+        libs_args+=(--enable-securetransport)
+        ;;
+    *)
+        libs_deps+=(openssl)
+        libs_args+=(--enable-openssl)
+        ;;
+esac
 
 #if version.ge 6.0.0; then
 #    libs_deps+=(harfbuzz)
@@ -108,7 +115,6 @@ case "$LIBS_TARGET" in
         # always enable hwaccels for macOS
         libs_args+=(
             --enable-hwaccels
-            --enable-securetransport # TLS
             --enable-coreimage      # for avfilter
             --enable-audiotoolbox   # audio codecs
             --enable-videotoolbox   # video codecs

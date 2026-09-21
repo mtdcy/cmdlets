@@ -38,14 +38,14 @@ libs_build() {
 
     cmdlet.pkgfile libturbojpeg -- cmake.install --component Unspecified
 
-    cmdlet.install  ./build/cjpeg-static cjpeg
-    cmdlet.install  ./build/djpeg-static djpeg
-    cmdlet.install  ./build/jpegtran-static jpegtran
-    cmdlet.install  ./build/tjbench-static tjbench
-    cmdlet.install  ./build/wrjpgcom
-    cmdlet.install  ./build/rdjpgcom
+    cmdlet.install  ./cjpeg-static cjpeg
+    cmdlet.install  ./djpeg-static djpeg
+    cmdlet.install  ./jpegtran-static jpegtran
+    cmdlet.install  ./tjbench-static tjbench
+    cmdlet.install  ./wrjpgcom
+    cmdlet.install  ./rdjpgcom
 
-    cmdlet.verify --    cjpeg -version
+    cmdlet.verify -- cjpeg -version
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

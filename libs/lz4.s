@@ -4,27 +4,25 @@
 libs_name=lz4
 libs_lic="BSD-2-Clause"
 libs_ver=1.10.0
+libs_rev=2
 libs_url=https://github.com/lz4/lz4/releases/download/v$libs_ver/lz4-$libs_ver.tar.gz
 libs_sha=537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
 libs_dep=()
 
 libs_args=(
-    PREFIX="'$PREFIX'"
-
-    CC="'$CC'"
-    USERCFLAGS="'$CFLAGS'"
-    LDFLAGS="'$LDFLAGS'"
-
-    BUILD_SHARED=no
-    BUILD_STATIC=yes
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 libs_build() {
-    make "${libs_args[@]}"
+    pushd build/cmake
 
-    cmdlet.pkgfile liblz4 -- make install -C lib "${libs_args[@]}"
+    cmake.setup
 
-    cmdlet.install programs/lz4 lz4 unlz4 lz4c lz4cat
+    cmake.build
+
+    cmdlet.pkgfile liblz4 -- cmake.install
+
+    cmdlet.install ./lz4 lz4 unlz4 lz4c lz4cat
 
     echo "test" > foo && rm -f foo.lz4
     cmdlet.verify lz4 << EOF

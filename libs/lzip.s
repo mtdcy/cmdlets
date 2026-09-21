@@ -34,7 +34,7 @@ libs_build() {
     cmdlet.install lzip
 
     echo "test" > foo && rm -f foo.lz
-    cmdlet.verify <<- EOF
+    cmdlet.verify lzip <<- EOF
     lzip foo                                || die "lzip compress failed."
     lzip -t foo.lz                          || die "lzip integrity test failed."
     lzip --list foo.lz | grep -Fwq foo      || die "lzip list contents failed."
