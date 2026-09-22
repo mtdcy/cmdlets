@@ -1,24 +1,21 @@
 .NOTPARALLEL:
-
-SHELL := /bin/bash
-
-all: shell
+.ONESHELL:
 
 .PHONY: all
+all: shell
+
+SHELL := /bin/bash
 
 # read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
 #CMDLET_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
 CMDLET_NJOBS 	?= $(shell nproc)
-CMDLET_MIRRORS 		?= https://mirrors.mtdcy.top
-CMDLET_LOGGING 		?= tty
-
-MAKEFLAGS 	+= --always-make
+CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
+CMDLET_LOGGING 	?= tty
 
 ##############################################################################
-.ONESHELL:
-
+env.example:
 cmdlets.env: env.example
-	cp $< $@
+	@cp -fv $< $@
 	@echo "== Please edit $@ first, then"
 	@echo "    source $@"
 	@echo "    make prepare-host"
@@ -45,18 +42,21 @@ ENVS := CMDLET_NJOBS    \
 #${warning $(MAKEOVERRIDES)}
 #${warning $(MAKEFLAGS)}
 
-.SUFFIXES:
+# ignore subdirs
+SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
+.PHONY: $(SUBDIRS)
 
-Makefile: ;
+%: libs/%.s
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
-%:
-	$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+%: libs/%/RULES
+	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
 
 %+:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:+=)" CMDLET_CHECK=1
+	@$(MAKE) $(@:+=) CMDLET_CHECK=1
 
 %-:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_PKGFILES=0
+	@$(MAKE) $(@:-=) CMDLET_PKGFILES=0
 
 clean:
 	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
@@ -156,7 +156,7 @@ else ifneq (,$(shell which apk))
 prepare-host: prepare-host-alpine
 endif
 
-HOST_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v))))
+HOST_ENVS := $(strip $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)))))
 
 runc-host:
 	$(HOST_ENVS) $(OPCODE)
@@ -237,7 +237,7 @@ DOCKER_ARGS += -v ~/.gitconfig:/home/buildbot/.gitconfig
 DOCKER_ARGS += -v ~/.ssh:/home/buildbot/.ssh
 
 # envs
-DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
+DOCKER_ARGS += $(strip $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v)))))
 
 # SSH_CLIENT
 ifneq ($(SSH_CLIENT),)
@@ -265,7 +265,7 @@ ifneq ($(REMOTE_HOST),)
 # remote:
 REMOTE_WORKDIR ?= cmdlets
 
-SSH_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),))
+SSH_ENVS := $(strip $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),)))
 
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
