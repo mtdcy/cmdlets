@@ -44,11 +44,11 @@ SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
 .PHONY: $(SUBDIRS)
 
 %: libs/%.s
-	@$(MAKE) runc OPCODE="bash libs.sh build $@" \
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh build $@" \
 		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
 %: libs/%/RULES
-	@$(MAKE) runc OPCODE="bash libs.sh build $@" \
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh build $@" \
 		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
 %+:
@@ -58,31 +58,31 @@ SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
 	@$(MAKE) $(@:-=) CMDLET_PKGFILES=0
 
 clean:
-	@$(MAKE) runc OPCODE="bash libs.sh clean"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh clean"
 
 distclean:
-	@$(MAKE) runc OPCODE="bash libs.sh distclean"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh distclean"
 
 check:
-	@$(MAKE) runc OPCODE="bash .github/scripts/build.sh"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/build.sh"
 
 update:
-	@$(MAKE) runc OPCODE="bash .github/scripts/update.sh"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/update.sh"
 
 ARTIFACTS_REMOTE ?=
 publish:
-	@$(MAKE) runc OPCODE="bash .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
-	@$(MAKE) runc OPCODE="bash .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
 
 inspect:
-	@$(MAKE) runc OPCODE="bash libs.sh env"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh env"
 
 shell:
-	@$(MAKE) runc OPCODE="bash"
+	@$(MAKE) runc OPCODE="$(SHELL)"
 
 # tag to HEAD
 tag:
-	@$(MAKE) runc OPCODE="bash libs.sh maketag"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh maketag"
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
@@ -155,10 +155,15 @@ else ifneq (,$(shell which apk))
 prepare-host: prepare-host-alpine
 endif
 
-HOST_ENVS := $(strip $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)))))
+# 1. 定义一个包含真正换行符的宏（必须留空一行）
+define newline
+
+
+endef
 
 runc-host:
-	$(HOST_ENVS) $(OPCODE)
+	$(foreach v,$(ENVS),$(if $($(v)),export $(v)=$($(v))$(newline)))
+	$(OPCODE)
 
 ##############################################################################
 ifneq ($(DOCKER_IMAGE),)
@@ -299,19 +304,19 @@ RSYNC_ARGS += --exclude='out'
 # contants: use '-acz' for remote without time sync.
 REMOTE_SYNC := rsync -e 'ssh $(SSH_OPTS)' $(RSYNC_ARGS)
 push-remote:
-	@bash libs.sh slogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_SYNC) --exclude='prebuilts' --exclude='logs' --delete $(WORKDIR)/ $(REMOTE_HOST):$(REMOTE_WORKDIR)/
 
 pull-remote:
-	@bash libs.sh slogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
+	@$(SHELL) libs.sh slogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
 	$(REMOTE_SYNC) $(REMOTE_HOST):$(REMOTE_WORKDIR)/ $(WORKDIR)/
 
 # ToDo: enable AcceptEnv ?
 runc-remote: push-remote
-	@bash libs.sh slogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(OPCODE)"'
 	@make pull-remote
-	@bash libs.sh slogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 
 endif
 
