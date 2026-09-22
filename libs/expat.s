@@ -4,10 +4,10 @@
 # shellcheck disable=SC2034
 libs_name=expat
 libs_lic="MIT"
-libs_ver=2.8.4
+libs_ver=2.8.5
 libs_rev=1
 libs_url=https://github.com/libexpat/libexpat/releases/download/R_${libs_ver//./_}/expat-$libs_ver.tar.gz
-libs_sha=b8ece2437692dad44d851c4532723390a5a330990007706be9c8d2b90d294f36
+libs_sha=920dde485e15eda0cce8d2310b41d492c534e5e3d89ad407a0b4176dd2ff88fe
 libs_dep=()
 
 # configure args
