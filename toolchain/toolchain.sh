@@ -87,7 +87,7 @@ if test -n "$_ZIG_TARGET"; then
             *.o | *.a)
                 has_object_files=true
                 ;;
-            *.c | *.cc | *.cpp)
+            -c | *.h | *.c | *.cc | *.cpp | *.s | *.S)
                 has_source_files=true
                 ;;
         esac
@@ -103,6 +103,10 @@ if test -n "$_ZIG_TARGET"; then
 
     unset flags
     #test -n "$cpp" || flags+=(-flto) #=> ld.lld: warning: ./libreadline.a: archive member 'readline.o' is neither ET_REL nor LLVM bitcode
+
+    # build fontconfig with zig cc -E fails:
+    #  zig cc -E 太严格，无法像 gcc -E 一样输出无法识别的字符
+    #test -n "$cpp" && test -n "$has_source_files" && flags+=(-x assembler-with-cpp) || true
 
     case "$NAME" in
         gcc | cc | as | ld)

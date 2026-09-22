@@ -6,9 +6,6 @@ all: shell
 
 SHELL := /bin/bash
 
-# read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
-#CMDLET_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
-CMDLET_NJOBS 	?= $(shell nproc)
 CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
 CMDLET_LOGGING 	?= tty
 
@@ -47,10 +44,12 @@ SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
 .PHONY: $(SUBDIRS)
 
 %: libs/%.s
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+	@$(MAKE) runc OPCODE="bash libs.sh build $@" \
+		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
 %: libs/%/RULES
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+	@$(MAKE) runc OPCODE="bash libs.sh build $@" \
+		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
 %+:
 	@$(MAKE) $(@:+=) CMDLET_CHECK=1
@@ -59,31 +58,31 @@ SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
 	@$(MAKE) $(@:-=) CMDLET_PKGFILES=0
 
 clean:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
+	@$(MAKE) runc OPCODE="bash libs.sh clean"
 
 distclean:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
+	@$(MAKE) runc OPCODE="bash libs.sh distclean"
 
 check:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
+	@$(MAKE) runc OPCODE="bash .github/scripts/build.sh"
 
 update:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/update.sh"
+	@$(MAKE) runc OPCODE="bash .github/scripts/update.sh"
 
 ARTIFACTS_REMOTE ?=
 publish:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
+	@$(MAKE) runc OPCODE="bash .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
+	@$(MAKE) runc OPCODE="bash .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
 
 inspect:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
+	@$(MAKE) runc OPCODE="bash libs.sh env"
 
 shell:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
+	@$(MAKE) runc OPCODE="bash"
 
 # tag to HEAD
 tag:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh maketag"
+	@$(MAKE) runc OPCODE="bash libs.sh maketag"
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
