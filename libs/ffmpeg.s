@@ -56,7 +56,7 @@ libs_build() {
     # install tools
     cmdlet.install ffmpeg
     cmdlet.install ffprobe
-    cmdlet.install ffplay
+    test -f ffplay && cmdlet.install ffplay
 
     # hwaccels embedded inside h264 decoder, search for "Supported hardware devices:"
     cmdlet.verify -- ffmpeg -hide_banner -h decoder=h264
