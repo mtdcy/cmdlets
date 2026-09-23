@@ -1550,12 +1550,14 @@ _git_ls_changed() {
     # is tag point at HEAD?
     [ "$OLDHEAD" = "$(git rev-parse HEAD)" ] && OLDHEAD="HEAD~1" || true
 
-    while IFS='/' read -r _ libs; do
+    while IFS='/.' read -r _ libs _; do
+        [ "$libs" = archived ] && continue
         list+=("${libs%.s}")
-    done < <( git diff --name-only --diff-filter=AM HEAD "$OLDHEAD" | grep -E "^libs/[^/]+\.s")
+    done < <( git diff --name-only --diff-filter=AMR -M HEAD "$OLDHEAD" | grep -E "^libs/")
     # --diff-filter=AM : filter only added or modified
 
-    echo "${list[@]}"
+    # dedup
+    printf '%s\n' "${list[@]}" | sort -u | xargs
 }
 
 # make target tag on given commit or HEAD
