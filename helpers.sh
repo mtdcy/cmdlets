@@ -34,15 +34,15 @@ libs.requires() {
     local x y
     for x in "$@"; do
         case "$x" in
-            -l* | -L* | -pthread | -Wl,*)
-                ldflags+=("$x")
-                ;;
             -j1)            _NJOBS=1        ;; # Deparallelization
             -std=c++*)      stdcxx="$x"     ;;
             -std=gnu++*)    stdcxx="$x"     ;;
             -std=*)         stdc="$x"       ;;
             -I*)            cflags+=("$x")  ;;
             --static)       cflags+=("$x")  ;;
+            -l* | -L*)      ldflags+=("$x") ;;
+            -Wl,*)          ldflags+=("$x") ;;
+            -pthread)       ldflags+=("$x") ;;
             -static)        ldflags+=("$x") ;;
             -*)             cflags+=("$x")  ;;
             *)              libs+=("$x")    ;;
@@ -93,26 +93,42 @@ libs.requires.c89() {
 
 # check if a func symbol exists
 # input: <symbol or header name>
+# usage:
+#   libs.conftest <symbol>
+#   libs.conftest <headers> [symbol]
+# shellcheck disable=SC2086
 libs.conftest() {
-    case "$1" in
-        *.h)
-            echo "#include <$1>" | "$CC" -x c -fsyntax-only -w -
-            ;;
-        *)
-            local conftest=".conftest/conftest_$1.c"
-            mkdir -pv .conftest && cat << EOF > "$conftest"
+    local conftest="${TEMPDIR:-/tmp}/libs_conftest.c"
+
+    true > "$conftest"
+
+    local x ret=0
+    for x in "$@"; do
+        case "$x" in
+            *.h)
+                echo "#include <$1>" >> "$conftest"
+                echocmd "$CC" $CFLAGS $CPPFLAGS -x c -fsyntax-only -w "$conftest" || ret=1
+                ;;
+            *)
+                cat << EOF >> "$conftest"
 #ifdef __cplusplus
 extern "C"
 #endif
-char $1(void);
+char $x(void);
 int main(void) {
-    return $1();
+    return $x();
 }
 EOF
-            # shellcheck disable=SC2086
-            echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o /dev/null
-            ;;
-    esac
+                echocmd "$CC" $CFLAGS $CPPFLAGS "$conftest" -o "${conftest%.c}" || ret=2
+
+                # test only one symbol
+                break
+                ;;
+        esac
+    done
+
+    rm -f "$conftest" "${conftest%.c}"
+    return "$ret"
 }
 
 # create static library archive
