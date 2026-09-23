@@ -40,7 +40,7 @@ libs_build() {
     make
 
     # make sure we are linked to libiconv:libiconv_open
-    slogcmd "$NM" -g libass/.libs/libass.a | grep -F libiconv_open || die "broken linkage"
+    "$NM" -g libass/.libs/libass.a | grep -F libiconv_open || die "broken linkage"
 
     cmdlet.pkgfile libass -- make install
 }

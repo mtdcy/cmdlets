@@ -1,6 +1,8 @@
 # Command-line packet analyzer
 
 # shellcheck disable=SC2034
+libs_targets=(linux darwin)
+
 libs_lic='BSD-3-Clause'
 libs_ver=4.99.7
 libs_rev=1

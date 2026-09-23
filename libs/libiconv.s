@@ -28,9 +28,8 @@ is_cygwin && libs_patches=(
 # https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-libiconv
 
 libs_args=(
-    --disable-option-checking
-    --disable-dependency-tracking
-    --enable-silent-rules
+    # static only
+    --enable-static --disable-shared
 
     --enable-pic
     --enable-extra-encodings
@@ -38,39 +37,41 @@ libs_args=(
     # no these for single static executables
     --disable-nls
     --without-libintl-prefix
-
-    # static only
-    --disable-shared
-    --enable-static
 )
 
 #  Linux glibc/musl provides iconv.h, but we want universal static binaries,
 #  so always link libiconv for both Linux and macOS
 libs_build() {
-    # Reported at https://savannah.gnu.org/bugs/index.php?66170
-    is_darwin && export CFLAGS+=" -Wno-incompatible-function-pointer-types"
+    # deparallelize
+    libs.requires -j1
 
-    sed -i '/utf8.h/a utf8mac.h \\' lib/Makefile.in
+    # Reported at https://savannah.gnu.org/bugs/index.php?66170
+    if is_darwin; then
+        libs.requires -Wno-incompatible-function-pointer-types
+        sed -i '/utf8.h/a utf8mac.h \\' lib/Makefile.in
+    fi
 
     if is_cygwin; then
         # borrow from https://github.com/msys2/MSYS2-packages/blob/master/libiconv/PKGBUILD
         #  => why this build proc not working for linux and macOS
         cp -f srcm4/* m4/
-        (
-            cd libcharset 
+        (   
+            cd libcharset
             slogcmd autoreconf -fiv
         )
         slogcmd autoreconf -fiv
+
+        configure
+
+        make
     else
+        configure
+
         # generate files
         make -f Makefile.devel all \
             CC="$CC" CFLAGS="$CFLAGS $CPPFLAGS $LDFLAGS" \
             ACLOCAL=aclocal AUTOMAKE=automake
     fi
-
-    configure
-
-    make
 
     is_xbuild || make check
 
@@ -87,19 +88,3 @@ libs_build() {
     # visual check
     cmdlet.verify -- iconv --version
 }
-
-# not necessary, make -f Makefile.devel will update lib/flags.h
-# keep it here for inline patch example
-__END__
-diff --git a/lib/flags.h b/lib/flags.h
-index d7cda21..4cabcac 100644
---- a/lib/flags.h
-+++ b/lib/flags.h
-@@ -14,6 +14,7 @@
-
- #define ei_ascii_oflags (0)
- #define ei_utf8_oflags (HAVE_ACCENTS | HAVE_QUOTATION_MARKS | HAVE_HANGUL_JAMO)
-+#define ei_utf8mac_oflags (HAVE_ACCENTS | HAVE_QUOTATION_MARKS | HAVE_HANGUL_JAMO)
- #define ei_ucs2_oflags (HAVE_ACCENTS | HAVE_QUOTATION_MARKS | HAVE_HANGUL_JAMO)
- #define ei_ucs2be_oflags (HAVE_ACCENTS | HAVE_QUOTATION_MARKS | HAVE_HANGUL_JAMO)
- #define ei_ucs2le_oflags (HAVE_ACCENTS | HAVE_QUOTATION_MARKS | HAVE_HANGUL_JAMO)
