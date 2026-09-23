@@ -995,9 +995,6 @@ _load() {
     # prepare logfile
     mkdir -p "$_TARGET_LOGFILES"
     export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
-
-    test -s "$_LOGFILE" && cp -f "$_LOGFILE" "$_LOGFILE.old" || true
-    true > "$_LOGFILE"
 }
 
 # load libs_deps
@@ -1018,9 +1015,7 @@ _smart_patch() {
 # prepare source code or die
 #  input: name
 _prepare() {
-    slogi $_EMOJI_FILE "Loading ${_COLOR_NC}libs/$1.s"
-
-    _load "$1" || die "load $1 failed."
+    slogi $_EMOJI_FILE "Prepare ${_COLOR_NC}libs/$1.s"
 
     # prepare workdir and enter it
     local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
@@ -1095,6 +1090,11 @@ _compile() {
 
         # find latest commit hash
         _LIBS_COMMIT_HASH="$(_git_ls_hash "$1")"
+
+        _load "$1" || die "load $1 failed."
+
+        test -s "$_LOGFILE" && cp -f "$_LOGFILE" "$_LOGFILE.old" || true
+        true > "$_LOGFILE"
 
         # prepare source codes
         _prepare "$1" || return $?
@@ -1500,7 +1500,7 @@ prepare() {
     _deps_fetch "$@"
 
     for x in "$@"; do
-        ( _prepare "$x"  )
+        ( _load "$x" && _prepare "$x"  )
     done
 }
 
