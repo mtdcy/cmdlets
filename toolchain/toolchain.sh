@@ -135,6 +135,9 @@ if test -n "$_ZIG_TARGET"; then
             EXE=(zig $NAME) # no -target
             ;;
     esac
+
+    # openh264 + zig cc: error: unknown CPU: 'armv8'
+    [[ "$*" =~ "-march=armv8-a" ]] && set -- "${@//-march=armv8-a/-mcpu=generic}"
 else
     CONFIG="$_WORKDIR/$_TARGET.cfg"
 
