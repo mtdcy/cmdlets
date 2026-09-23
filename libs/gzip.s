@@ -27,6 +27,12 @@ libs_args=(
 
 )
 
+# Fix compile error on aarch64 Linux
+# gzip.h:120:21: error: expected ')' before '+' token
+libs_patches=(
+    https://raw.githubusercontent.com/OpenMandrivaAssociation/gzip/5a3c8e5316bac3ac837f7aa8dc7e3a4b0ba74321/gzip-1.15-aarch64-head-macro.patch
+)
+
 libs_build() {
     configure
 
