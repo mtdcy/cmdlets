@@ -113,11 +113,15 @@ EOF
     fi
 
     # bugfix:
-    # 1. x265 hard code libstdc++.a into x265.pc
+    # 1. x265 hard code libstdc++.a into x265.pc:Libs.private
+    if is_clang; then
+        sed -i 's/Libs.private:.*$/Libs.private: -lc++/' x265.pc
+    else
+        sed -i 's/Libs.private:.*$/Libs.private: -lstdc++/' x265.pc
+    fi
+
     # 2. something went wrong with configure_file()
-    sed -i x265.pc \
-        -e 's%/.*/libstdc++.a%-lstdc++%' \
-        -e 's/-l-l/-l/g' || die "fix x265.pc failed"
+    sed -i x265.pc -e 's/-l-l/-l/g'
 
     cmdlet.pkginst libx265 x265_config.h ../source/x265.h libx265.a x265.pc
 
