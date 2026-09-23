@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.1.1
+VERSION=1.1.2
 
 # Changes:
+#  1.1.2    - 20260924      - windows/cygwin support
 #  1.1.1    - 20260822      - 稳定性优化和日志美化
 #  1.1.0    - 20260821      - new stable release
 #  1.0.8    - 20260820      - fix bugs
