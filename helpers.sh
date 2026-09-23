@@ -233,7 +233,7 @@ make() {
         case "$1" in
             -j)         njobs="$2" && shift         ;;
             -j*)        njobs="${1#-j}"             ;;
-            -C)         opts+=("$1" "$2") && shift  ;;
+            -C | -f)    opts+=("$1" "$2") && shift  ;;
             V=*)        verbose="$1"                ;;
             *=*)        opts+=("$1")                ;;
             *)          targets+=("$1")             ;;
@@ -1336,11 +1336,25 @@ cmdlet.verify() {
                 else
                     [[ "$($CC -print-prog-name="$dll")" =~ ^/ ]] || die "unexpected dll $dll"
                 fi
-            done < <( "$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
+            done < <("$OBJDUMP" -p "$bin" | grep -Fw "DLL Name:" | cut -d':' -f2)
             ;;
         *"dynamically linked"*)
             ldd "$bin"
-            die "$bin is dynamically linked"
+            if is_musl; then
+                die "$bin is dynamically linked"
+            else
+                local so
+                while read -r so; do
+                    [[ "$so" =~ ld-linux-.*\.so ]] && continue
+                    [[ "$so" =~ ^linux-vdso\.so ]] && continue
+                    [[ "$so" =~ ^libc\.so       ]] && continue
+                    [[ "$so" =~ ^libm\.so       ]] && continue
+                    [[ "$so" =~ ^libdl\.so      ]] && continue
+                    [[ "$so" =~ ^libpthread\.so ]] && continue
+
+                    die "unexpected shared library $so"
+                done < <(ldd "$bin")
+            fi
             ;;
     esac
 

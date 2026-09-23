@@ -10,37 +10,45 @@ libs_url=(
     #https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/$libs_ver/fontconfig-$libs_ver.tar.gz
 )
 libs_sha=9ae01e1d53acdef56010c5451cd34aa41d325b2faccd8606448d8fa01b2496b3
+libs_dep=(freetype libxml2)
 
-libs_deps=(freetype libxml2)
-
-# XXX: meson compile fails with clang (zig cc)
 # configure args
 libs_args=(
-    # static only
-    --enable-static --disable-shared
+    --localstatedir=/var
+    --sysconfdir=/etc
+    --auto-features=enabled
 
-    # libxml2 vs expat
-    --enable-libxml2
+    -Dxml-backend=libxml2   # lightweight expat vs libxml2
 
-    --disable-nls
-    --disable-docs
-    --disable-docbook
-    --disable-cache-build
+    -Dtools=enabled
+
+    # disabled features
+    -Dnls=disabled
+    -Ddoc=disabled
+    -Dtests=disabled
+    -Dtests-bwrap=disabled
+    -Dtests-external-fonts=disabled
+
+    -Dadditional-fonts-dirs=no
+    -Dcache-build=disabled
+    -Dwrap_mode=nodownload
+
+    # avoid hardcode PREFIX
+    -Dtemplate-dir=/usr/share/fontconfig/conf.avail
+    -Dxml-dir=/usr/share/xml/fontconfig
 )
-
-list_has libs_deps libiconv && libs_args+=(--enable-iconv) || libs_args+=(--disable-iconv)
 
 # Cannot use default dirs on macOS due to fc-cache recursing unnecessary directories
 # Issue ref: https://gitlab.freedesktop.org/fontconfig/fontconfig/-/work_items/547
-is_darwin && libs_args+=(--with-default-fonts-dirs="/System/Library/Fonts,/Library/Fonts,~/Library/Fonts")
+is_darwin && libs_args+=(-Ddefault-fonts-dirs="/System/Library/Fonts,/Library/Fonts,~/Library/Fonts")
 
 libs_build() {
 
-    configure
+    meson.setup
 
-    make
+    meson.compile
 
-    cmdlet.pkgfile libfontconfig -- make install SUBDIRS="fontconfig src"
+    cmdlet.pkgfile libfontconfig -- meson.install --tags devel
 
     # tools
     for x in fc-list fc-scan fc-query fc-validate; do

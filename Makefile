@@ -1,24 +1,18 @@
 .NOTPARALLEL:
+.ONESHELL:
+
+.PHONY: all
+all: shell
 
 SHELL := /bin/bash
 
-all: shell
-
-.PHONY: all
-
-# read njobs from -j (bad: -jN not in MAKEFLAGS when job server is enabled)
-#CMDLET_NJOBS ?= $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
-CMDLET_NJOBS 	?= $(shell nproc)
-CMDLET_MIRRORS 		?= https://mirrors.mtdcy.top
-CMDLET_LOGGING 		?= tty
-
-MAKEFLAGS 	+= --always-make
+CMDLET_MIRRORS 	?= https://mirrors.mtdcy.top
+CMDLET_LOGGING 	?= tty
 
 ##############################################################################
-.ONESHELL:
-
+env.example:
 cmdlets.env: env.example
-	cp $< $@
+	@cp -fv $< $@
 	@echo "== Please edit $@ first, then"
 	@echo "    source $@"
 	@echo "    make prepare-host"
@@ -38,51 +32,57 @@ ENVS := CMDLET_NJOBS    \
 		CMDLET_MIRRORS  \
 		CMDLET_REPO     \
 		CMDLET_VERBOSE 	\
+		CMDLET_ZIG 		\
 
 ##############################################################################
 # Build Binaries & Libraries
 #${warning $(MAKEOVERRIDES)}
 #${warning $(MAKEFLAGS)}
 
-.SUFFIXES:
+# ignore subdirs
+SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
+.PHONY: $(SUBDIRS)
 
-Makefile: ;
+%: libs/%.s
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh build $@" \
+		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
-%:
-	$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $@"
+%: libs/%/RULES
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh build $@" \
+		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
 %+:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:+=)" CMDLET_CHECK=1
+	@$(MAKE) $(@:+=) CMDLET_CHECK=1
 
 %-:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh build $(@:-=)" CMDLET_PKGFILES=0
+	@$(MAKE) $(@:-=) CMDLET_PKGFILES=0
 
 clean:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh clean"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh clean"
 
 distclean:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh distclean"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh distclean"
 
 check:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/build.sh"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/build.sh"
 
 update:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/update.sh"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/update.sh"
 
 ARTIFACTS_REMOTE ?=
 publish:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/rsync.sh prebuilts/ $(ARTIFACTS_REMOTE)/cmdlets/latest/"
+	@$(MAKE) runc OPCODE="$(SHELL) .github/scripts/rsync.sh packages/  $(ARTIFACTS_REMOTE)/packages/"
 
 inspect:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh env"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh env"
 
 shell:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash"
+	@$(MAKE) runc OPCODE="$(SHELL)"
 
 # tag to HEAD
 tag:
-	@$(MAKE) runc MAKEFLAGS= OPCODE="bash libs.sh maketag"
+	@$(MAKE) runc OPCODE="$(SHELL) libs.sh maketag"
 
 ifneq ($(REMOTE_HOST),)
 runc: runc-remote
@@ -105,7 +105,7 @@ prepare: prepare-host
 endif
 
 mrproper:
-	rm -rf out prebuilts logs packages .cargo .go .pip .rustup node_modules
+	rm -rf out prebuilts logs packages .cargo .go .pip .rustup node_modules .zig
 
 .PHONY: clean distclean shell prepare runc test mrproper
 
@@ -117,7 +117,7 @@ BREW_PACKAGES 	= coreutils grep gnu-sed findutils                 \
 				  gnu-tar xz lzip unzip                            \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex gettext texinfo             \
-				  luajit perl
+				  luajit perl gperf
 
 DEB_PACKAGES 	= wget curl git                                    \
 				  xz-utils lzip unzip                              \
@@ -125,7 +125,7 @@ DEB_PACKAGES 	= wget curl git                                    \
 				  automake autoconf libtool pkg-config cmake meson \
 				  nasm yasm bison flex texinfo                     \
 				  luajit perl libhttp-daemon-perl                  \
-				  musl-tools
+				  musl-tools gperf llvm
 
 APK_PACKAGES 	= wget curl git                                    \
 				  grep sed gawk coreutils                          \
@@ -133,7 +133,7 @@ APK_PACKAGES 	= wget curl git                                    \
 				  build-base gettext                               \
 				  automake autoconf libtool pkgconfig cmake meson  \
 				  nasm yasm bison flex texinfo                     \
-				  luajit perl perl-http-daemon
+				  luajit perl perl-http-daemon gperf llvm
 
 prepare-host-homebrew:
 	brew update
@@ -155,10 +155,15 @@ else ifneq (,$(shell which apk))
 prepare-host: prepare-host-alpine
 endif
 
-HOST_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v))))
+# 1. 定义一个包含真正换行符的宏（必须留空一行）
+define newline
+
+
+endef
 
 runc-host:
-	$(HOST_ENVS) $(OPCODE)
+	$(foreach v,$(ENVS),$(if $($(v)),export $(v)=$($(v))$(newline)))
+	$(OPCODE)
 
 ##############################################################################
 ifneq ($(DOCKER_IMAGE),)
@@ -236,7 +241,7 @@ DOCKER_ARGS += -v ~/.gitconfig:/home/buildbot/.gitconfig
 DOCKER_ARGS += -v ~/.ssh:/home/buildbot/.ssh
 
 # envs
-DOCKER_ARGS += $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v))))
+DOCKER_ARGS += $(strip $(foreach v,$(ENVS),$(if $($(v)),-e $(v)=$($(v)))))
 
 # SSH_CLIENT
 ifneq ($(SSH_CLIENT),)
@@ -264,7 +269,7 @@ ifneq ($(REMOTE_HOST),)
 # remote:
 REMOTE_WORKDIR ?= cmdlets
 
-SSH_ENVS := $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),))
+SSH_ENVS := $(strip $(foreach v,$(ENVS),$(if $($(v)),$(v)=$($(v)),)))
 
 SSH_OPTS += -o BatchMode=yes
 SSH_OPTS += -o StrictHostKeyChecking=no
@@ -299,19 +304,19 @@ RSYNC_ARGS += --exclude='out'
 # contants: use '-acz' for remote without time sync.
 REMOTE_SYNC := rsync -e 'ssh $(SSH_OPTS)' $(RSYNC_ARGS)
 push-remote:
-	@bash libs.sh slogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "@Push" "$(WORKDIR) => $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_SYNC) --exclude='prebuilts' --exclude='logs' --delete $(WORKDIR)/ $(REMOTE_HOST):$(REMOTE_WORKDIR)/
 
 pull-remote:
-	@bash libs.sh slogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
+	@$(SHELL) libs.sh slogi "@Pull" "$(REMOTE_HOST):$(REMOTE_WORKDIR) => $(WORKDIR)"
 	$(REMOTE_SYNC) $(REMOTE_HOST):$(REMOTE_WORKDIR)/ $(WORKDIR)/
 
 # ToDo: enable AcceptEnv ?
 runc-remote: push-remote
-	@bash libs.sh slogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "SHELL" "$(OPCODE) @ $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 	$(REMOTE_RUNC) '$$SHELL -l -c "cd $(REMOTE_WORKDIR) && $(SSH_ENVS) $(OPCODE)"'
 	@make pull-remote
-	@bash libs.sh slogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
+	@$(SHELL) libs.sh slogi "@END@" "Leaving $(REMOTE_HOST):$(REMOTE_WORKDIR)"
 
 endif
 

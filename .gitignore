@@ -22,3 +22,4 @@ toolchain.log
 *.log
 /bootstrap
 /win32/template.exe
+/.zig

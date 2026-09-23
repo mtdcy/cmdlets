@@ -5,19 +5,16 @@
 # shellcheck disable=SC2034
 libs_stable=1 # depends on patches
 
-READLINE_URL=https://mirrors.tuna.tsinghua.edu.cn/gnu/readline
+READLINE_URL=${LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/readline
 
 libs_lic='GPLv3.0+'
 libs_ver=8.3
-libs_url=(
-    $READLINE_URL/readline-$libs_ver.tar.gz
-    https://ftpmirror.gnu.org/gnu/readline/readline-$libs_ver.tar.gz
-)
+libs_url=$READLINE_URL/readline-$libs_ver.tar.gz
 libs_sha=fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc
 
 libs_deps=(ncurses)
 
-libs_resources=(
+libs_patches=(
     $READLINE_URL/readline-$libs_ver-patches/readline83-001
     $READLINE_URL/readline-$libs_ver-patches/readline83-002
     $READLINE_URL/readline-$libs_ver-patches/readline83-003
@@ -42,37 +39,25 @@ elif is_cygwin; then
 fi
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    # static only
+    --enable-static --disable-shared
 
     # use ncurses instead of termcap
     --with-curses
 
     # no share/readline/*.c
     --disable-install-examples
-
-    # static
-    --disable-shared
-    --enable-static
 )
 
 libs_build() {
-    # patch manually
-    slogcmd patch -Np0 -i readline83-001 || die "patch readline83-001 failed."
-    slogcmd patch -Np0 -i readline83-002 || die "patch readline83-002 failed."
-    slogcmd patch -Np0 -i readline83-003 || die "patch readline83-003 failed."
-
-    # set ncurses cflags and ldflags
-    libs.requires ncurses
+    # set ncurses flags
+    #libs.requires ncurses # => wrong -lncurses -lreadline order cause zig cc error: duplicate symbol
+    libs.requires -DNCURSES_STATIC
     # 解决链接 ncurses 后 'UP' 等符号多重定义的问题
-    libs.requires -DNCURSES_VERSION -DNEED_EXTERN_PC
-
-    # hack: readline do not respect LDFLAGS
-    export CFLAGS="$CFLAGS $LDFLAGS"
+    #libs.requires -DNCURSES_VERSION -DNEED_EXTERN_PC
 
     # force ncurses: --with-curses not working
-    is_listed ncurses libs_deps && export bash_cv_termcap_lib=libncurses
+    #is_listed ncurses libs_deps && export bash_cv_termcap_lib=libncurses
 
     configure
 
@@ -80,14 +65,14 @@ libs_build() {
 
     make check
 
-    # check linkage by build a program
-    make readline
-
     cmdlet.pkgfile libreadline -- make install-static
 
-    cmdlet.install readline
+    # check linkage by build a program
+    make readline TERMCAP_LIB="-L$PREFIX/lib -lncurses"
 
-    cmdlet.verify -- readline
+    cmdlet.install ./readline
+
+    cmdlet.verify readline
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

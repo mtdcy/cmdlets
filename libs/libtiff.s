@@ -38,9 +38,8 @@ libs_build() {
         test -x "$x" || continue
 
         cmdlet.install "$x"
-        cmdlet.verify -- "$x"
+        cmdlet.verify "$x"
     done
-
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

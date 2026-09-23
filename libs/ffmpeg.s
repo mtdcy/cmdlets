@@ -17,6 +17,13 @@ libs_build() {
     #    sed -i 's/av_malloc(/av_mallocz(/' libavcodec/tableprint_vlc.h
     #fi
 
+    case "$LIBS_TARGET" in
+        linux)
+            # glibc 2.31 还残留着 sysctl 符号
+            sed -i '/sysctl/d' configure
+            ;;
+    esac
+
     CC_C='' configure || {
         cat ffbuild/config.log >> "$_LOGFILE" &&
             die "configure ffmpeg failed."
@@ -51,13 +58,30 @@ libs_build() {
     cmdlet.install ffprobe
     cmdlet.install ffplay
 
-    cmdlet.verify -- ffmpeg -version
+    # hwaccels embedded inside h264 decoder, search for "Supported hardware devices:"
+    cmdlet.verify -- ffmpeg -hide_banner -h decoder=h264
 
     is_xbuild || cmdlet.caveats << EOF
 static build ffmpeg @ $libs_ver
 
 $(ffmpeg -hide_banner -hwaccels)
+
+Hardware acceleration methods:
+
+    # list hwaccels
+    ffmpeg -hide_banner -hwaccels
+
+    # vaapi (Linux)
+    ffmpeg -hide_banner -codecs | grep vaapi
+
+    # videotoolbox (macOS)
+    ffmpeg -hide_banner -codecs | grep videotoolbox
+
+    # opencl
+    sudo apt install clinfo pocl-opencl-icd
+    ffmpeg -hide_banner -v debug -init_hw_device opencl 2>&1 | grep "OpenCL platforms found." || echo -e "OpenCL init failed."
 EOF
+
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
