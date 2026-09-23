@@ -30,6 +30,10 @@ libs_build() {
     libs.conftest alloca.h && libs.requires -DHAVE_ALLOCA_H
     # error: 'posix_memalign' was not declared in this scope
     is_posix && libs.requires -D_POSIX_C_SOURCE=200112L
+    # ld.lld: error: undefined symbol: __cpu_indicator_init
+    #  https://github.com/ziglang/zig/issues/18074
+    #  https://github.com/nunomaduro/static-php-builds/pull/2
+    libs.conftest __cpu_indicator_init || libs_args+=(-DENABLE_AVX2=OFF -DENABLE_AVX512=OFF)
 
     cmake.setup
 
