@@ -1,0 +1,10 @@
+# FIXME: fontconfig prefer meson compile, but 
+#  zig cc preprocess (clang) won't work for it
+
+if test -n "$_ZIG_TARGET"; then
+    source libs/fontconfig/RULES.zig
+else
+    source libs/fontconfig/RULES.meson
+fi
+
+# vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4

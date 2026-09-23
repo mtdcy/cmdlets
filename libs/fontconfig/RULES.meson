@@ -43,7 +43,6 @@ libs_args=(
 is_darwin && libs_args+=(-Ddefault-fonts-dirs="/System/Library/Fonts,/Library/Fonts,~/Library/Fonts")
 
 libs_build() {
-
     meson.setup
 
     meson.compile
