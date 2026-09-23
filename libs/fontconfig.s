@@ -35,6 +35,9 @@ list_has libs_deps libiconv && libs_args+=(--enable-iconv) || libs_args+=(--disa
 is_darwin && libs_args+=(--with-default-fonts-dirs="/System/Library/Fonts,/Library/Fonts,~/Library/Fonts")
 
 libs_build() {
+    # configure does NOT test xlocale.h but meson does
+    libs.conftest "xlocale.h" && libs.requires -DHAVE_XLOCALE_H
+
     slogcmd autoreconf -fiv
 
     configure
