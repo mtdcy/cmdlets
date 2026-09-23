@@ -995,6 +995,9 @@ _load() {
     # prepare logfile
     mkdir -p "$_TARGET_LOGFILES"
     export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
+
+    test -s "$_LOGFILE" && cp -f "$_LOGFILE" "$_LOGFILE.old" || true
+    true > "$_LOGFILE"
 }
 
 # load libs_deps
@@ -1006,10 +1009,10 @@ _load_targets() { (_load "$1" > /dev/null && echo "${libs_targets[@]}"  ); }
 _smart_patch() {
     local num
     for num in 0 1 2; do
-        "$PATCH" -p$num --dry-run --batch < "$1" > /dev/null 2>&1 && break
+        _LOGGING=silent echocmd "$PATCH" -p$num --dry-run --batch -i "$1" 2>&1 && break
     done
 
-    slogcmd "$PATCH" -Nbp$num -i "$1"
+    slogcmd "$PATCH" -Nb -p$num -i "$1"
 }
 
 # prepare source code or die
@@ -1073,14 +1076,9 @@ _prepare() {
         esac
     done
 
-    # inline patch: always patch with -p0:
-    #  `diff -u main.c.orig main.c' will create patch working with -p0
+    # inline patch:
     if test -s "$TEMPDIR/$libs_name.patch"; then
-        if grep -qE "(--- a|\+\+\+ b)/" "$TEMPDIR/$libs_name.patch"; then
-            _smart_patch $TEMPDIR/$libs_name.patch || die "patch inlined failed."
-        else
-            _smart_patch $TEMPDIR/$libs_name.patch || die "patch inlined failed."
-        fi
+        _smart_patch $TEMPDIR/$libs_name.patch || die "patch inlined failed."
     fi
 }
 
@@ -1107,14 +1105,13 @@ _compile() {
         }
 
         # clear and log all environments
-        test -f "$_LOGFILE" && mv "$_LOGFILE" "$_LOGFILE.old" || true
         {
-            echo -e "**** start build $libs_name ****\n$(date)\n"
+            echo -e "\n**** start build $libs_name ****\n$(date)\n"
             echo -e "PATH: $PATH\n"
             echo -e "----\n"
             env
             echo -e "----\n"
-        } > "$_LOGFILE"
+        } >> "$_LOGFILE"
 
         # read pkgbuild before clear
         _LIBS_PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
