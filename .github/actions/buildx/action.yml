@@ -23,6 +23,10 @@ inputs:
     description: 'package mirrors'
     required: false
     type: string
+  target:
+    description: 'cmdlets target'
+    required: false
+    type: string
 
 runs:
   using: 'composite'
@@ -43,6 +47,12 @@ runs:
 
         export CMDLET_MIRRORS="${{ inputs.mirrors }}"
         export CMDLET_WEBHOOK="${{ inputs.webhook }}"
+        export CMDLET_TARGET="${{ inputs.target }}"
+
+        # enable zig cc for linux-gnu
+        case "$CMDLET_TARGET" in
+          *-linux-gnu)  export CMDLET_ZIG=y ;;
+        esac
 
         # fix: detected dubious ownership in repository
         git config --global --add safe.directory '*'

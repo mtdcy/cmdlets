@@ -47,20 +47,25 @@ jobs:
       matrix:
         include:
           # for arm64-apple-darwin or x86_64-apple-darwin
-          - machine: macos-arm64
-          - machine: macos-intel
-          # for x86_64-linux-gnu
-          - machine: ubuntu-latest
+          - target: arm64-apple-darwin
+            machine: macos-arm64
+          - target: x86_64-apple-darwin
+            machine: macos-intel
+          - target: x86_64-linux-gnu
+            machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:ubuntu-latest
-          # for aarch64-linux-gnu
-          - machine: ubuntu-latest-arm
+          - target: x86_64-linux-musl
+            machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:ubuntu-latest
-          # for x86_64-pc-cygwin
-          - machine: ubuntu-latest
+          - target: aarch64-linux-gnu
+            machine: ubuntu-latest-arm
+            builder: lcr.io/mtdcy/builder:ubuntu-latest
+          - target: aarch64-linux-musl
+            machine: ubuntu-latest-arm
+            builder: lcr.io/mtdcy/builder:ubuntu-latest
+          - target: x86_64-pc-cygwin
+            machine: ubuntu-latest
             builder: lcr.io/mtdcy/builder:cygwin64-latest
-          ## for x86_64-w64-mingw32
-          #- machine: ubuntu-latest
-          #  builder: lcr.io/mtdcy/builder:mingw64-latest
     if: ${{ vars.LOCAL_REGISTRY == 'lcr.io' && vars.LOCAL_MACHINE == '' }}
     steps:
       - name: Checkout
@@ -72,6 +77,7 @@ jobs:
         uses: ./.github/actions/buildx
         with:
           cmdlets: ${{ inputs.cmdlets }}
+          target: ${{ matrix.target }}
           webhook: ${{ vars.NOTIFY_WEBHOOK }}${{ secrets.NOTIFY_TOKEN }}
           artifacts-remote: ${{ vars.ARTIFACTS_REMOTE_USER }}@${{ vars.ARTIFACTS_REMOTE_HOST }}:${{ vars.ARTIFACTS_REMOTE_PORT }}:${{ vars.ARTIFACTS_REMOTE_PATH }}
           artifacts-token: ${{ secrets.ARTIFACTS_REMOTE_TOKEN }}
