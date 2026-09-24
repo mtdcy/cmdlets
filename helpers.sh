@@ -266,7 +266,16 @@ make() {
     else
         for x in "${targets[@]}"; do
             case "$x" in
-                install | check)
+                check | test)
+                    _cmdlet_runnable || {
+                        slogw "make $x skipped"
+                        continue
+                    }
+                    ;;
+            esac
+
+            case "$x" in
+                install | check | test)
                     slogcmd "$MAKE" "$x" "${opts[@]}" -j1 || die "make $x failed"
                     ;;
                 *)
@@ -1328,6 +1337,20 @@ _cmdlet_exec_lines() {
     done
 }
 
+_cmdlet_runnable() {
+    if is_xbuild; then
+        if test -n "$WINEPREFIX"; then
+            update-binfmts --display wine 2> /dev/null | grep -qFw enabled || {
+                slogw "cmdlet is not runnable without wine" && return 1
+            }
+        else
+            slogw "cross built cmdlet is not runnable" && return 1
+        fi
+    fi
+
+    return 0
+}
+
 # verify cmdlet
 #  input  : cmdlet -- commands
 #  return : give warnings if not runnable
@@ -1390,15 +1413,7 @@ cmdlet.verify() {
     test -z "$*" && test -t 0 && return 0
 
     # always return true on this stage
-    if is_xbuild; then
-        if test -n "$WINEPREFIX"; then
-            update-binfmts --display wine 2> /dev/null | grep -qFw enabled || {
-                slogw "cmdlet is not runnable without wine" && return
-            }
-        else
-            slogw "cross built cmdlet is not runnable" && return
-        fi
-    fi
+    _cmdlet_runnable || return 0
 
     if test -n "$*"; then
         # direct command
