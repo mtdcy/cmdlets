@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.1.2
+VERSION=1.2.0
 
 # Changes:
+#  1.2.0    - 20260924      - set arch to linux-gnu by default
 #  1.1.2    - 20260924      - windows/cygwin support
 #  1.1.1    - 20260822      - 稳定性优化和日志美化
 #  1.1.0    - 20260821      - new stable release
