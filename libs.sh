@@ -1553,7 +1553,7 @@ _git_ls_changed() {
     while IFS='/.' read -r _ libs _; do
         [ "$libs" = archived ] && continue
         list+=("${libs%.s}")
-    done < <( git diff --name-only --diff-filter=AMR -M HEAD "$OLDHEAD" | grep -E "^libs/")
+    done < <( git diff --name-only --diff-filter=AMR -M "$OLDHEAD" HEAD | grep -E "^libs/")
     # --diff-filter=AM : filter only added or modified
 
     # dedup
