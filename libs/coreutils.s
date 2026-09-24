@@ -5,13 +5,10 @@ libs_stable=1
 
 libs_name=coreutils
 libs_lic=GPLv3+
-libs_ver=9.11
+libs_ver=9.12
 libs_rev=1
-libs_url=(
-    https://mirrors.aliyun.com/gnu/coreutils/coreutils-9.11.tar.xz
-    https://ftpmirror.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz
-)
-libs_sha=394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3
+libs_url=${LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/coreutils/coreutils-9.12.tar.xz
+libs_sha=a480198559733e9b3da999e90543ac6f888a2caa544d8d664c5a1f17e528e210
 libs_dep=(gmp)
 
 libs_args=(
@@ -75,9 +72,24 @@ _tools=(
     base32 base64 md5sum sha1sum sha256sum sha512sum
 )
 
+# GNU coreutils-9.12 added quoting to 'env' and 'printenv'. This has caused
+# some unforeseen issues in some invocations. Use a patch from upstream which
+# only quotes when standard output is not a terminal. See the following
+# mailing list discussion:
+# https://lists.gnu.org/archive/html/coreutils/2026-09/msg00061.html
+libs_patches=(
+    https://github.com/coreutils/coreutils/commit/782a1e5bc2090212273bb731dceee2cc2a071e54.patch?full_index=1
+)
+
 libs_build() {
     # disclaim rust coreutils
     cmdlet.disclaim 0.10.0
+
+    # undefined symbol: __memset_explicit_chk
+    # GLIBC 2.31 does NOT compatible with c23 or gnu23
+    if is_glibc; then
+        libs.requires -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
+    fi
 
     configure
 
