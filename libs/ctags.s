@@ -10,18 +10,14 @@ libs_sha=2c63efe9e0e083dc50e6fdd8c5414781cc8873d8c8940cf553c01870ed962f8c
 libs_dep=(pcre2 libyaml jansson libxml2 libiconv)
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
-
     --with-included-regex
     --disable-external-sort
 )
 
 # macOS not support --enable-static.
-is_darwin || libs_args+=(
-    --disable-shared
-    --enable-static
+# linux-gnu + zig cc will fail with --enable-static
+is_musl && libs_args+=(
+    --enable-static --disable-shared
 )
 
 [[ "${libs_dep[*]}" =~ libiconv ]] || libs_args+=(--disable-iconv)
@@ -33,7 +29,7 @@ libs_build() {
 
     cmdlet.install ./ctags ctags etags
 
-    cmdlet.verify -- ctags
+    cmdlet.verify ctags
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
