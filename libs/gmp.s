@@ -4,32 +4,25 @@
 
 libs_lic='LGPLv3+|GPLv2+'
 libs_ver=6.3.0
+libs_rev=1
 
 # gmplib.org blocks GitHub server IPs, so it should not be the primary URL
-libs_url=(
-    https://mirrors.ustc.edu.cn/gnu/gmp/gmp-$libs_ver.tar.xz
-    https://ftpmirror.gnu.org/gnu/gmp/gmp-$libs_ver.tar.xz
-)
+libs_url=${LIBS_MIRROR_GNU:-https://ftpmirror.gnu.org/gnu}/gmp/gmp-$libs_ver.tar.xz
 libs_sha=a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898
 
 libs_deps=()
 
 # bad patch level, use libs_resources instead
-is_mingw && libs_resources=(
+is_mingw && libs_patches=(
     https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-gmp/do-not-use-dllimport.diff
     https://github.com/msys2/MINGW-packages/raw/refs/heads/master/mingw-w64-gmp/gmp-staticlib.diff
 )
 
 libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --disable-dependency-tracking
+    # static only
+    --enable-static --disable-shared
 
     --enable-cxx
-
-    # static only
-    --disable-shared
-    --enable-static
 )
 
 if is_mingw; then
@@ -41,14 +34,7 @@ fi
 
 libs_build() {
     # https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-gmp/PKGBUILD
-    CFLAGS+=" -Wno-attributes -Wno-ignored-attributes"
-
-    if is_mingw; then
-        slogcmd patch -Np2 -i do-not-use-dllimport.diff
-        slogcmd patch -Np1 -i gmp-staticlib.diff
-    fi
-
-    export CFLAGS
+    libs.requires -Wno-attributes -Wno-ignored-attributes
 
     bootstrap
 
