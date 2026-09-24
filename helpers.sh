@@ -65,30 +65,21 @@ libs.requires() {
     fi
 }
 
+_libs_cflags_c89=(
+    -Wno-error=int-conversion
+    -Wno-error=implicit-int
+    -Wno-error=incompatible-pointer-types
+    -Wno-error=implicit-function-declaration
+    # 补丁：允许 foo() 这种未指定具体形参的旧声明
+    -Wno-error=strict-prototypes
+    -Wno-error=old-style-definition
+    # cc1: error: ‘-Wno-error=deprecated-non-prototype’: no option ‘-Wdeprecated-non-prototype’
+    -Wno-deprecated-non-prototype
+)
+
 # 兼容 c89 + K&R
 libs.requires.c89() {
-    local flags=(
-        -Wno-error=int-conversion
-        -Wno-error=implicit-int
-        -Wno-error=incompatible-pointer-types
-        -Wno-error=implicit-function-declaration
-        # 补丁：允许 foo() 这种未指定具体形参的旧声明
-        -Wno-error=strict-prototypes
-        -Wno-error=old-style-definition
-    )
-
-    if is_clang; then
-        flags+=(
-            -Wno-error=deprecated-non-prototype
-        )
-    else
-        flags+=(
-            # cc1: error: '-Wno-error=deprecated-non-prototype'
-            -Wno-deprecated-non-prototype
-        )
-    fi
-
-    export CFLAGS="$CFLAGS ${flags[*]}"
+    export CFLAGS="$CFLAGS ${_libs_cflags_c89[*]}"
 }
 
 # check if a func symbol exists
