@@ -1,6 +1,6 @@
 # Improved top (interactive process viewer)
 
-libs_targets=( linux darwin )
+libs_targets=(linux darwin)
 
 # shellcheck disable=SC2034
 libs_name=htop
@@ -11,22 +11,13 @@ libs_sha=a8b164386494cb85bb255a415a3f5f80afe7a0c4491da5d113b3a0f951087e65
 
 libs_deps=(ncurses) # enables mouse scroll
 
-libs_args=(
-    --disable-option-checking
-    --enable-silent-rules
-    --enable-dependency-tracking
-
-    --enable-static
-)
+# always build as static except macOS or zig (clang)
+is_clang || libs_args=(--enable-static)
 
 libs_build() {
     #1. wrong htop_git_version
     sed -i configure.ac \
         -e 's/\[git describe.*\]/[echo '']/'
-
-    #2. no -static LDFLAGS for darwin
-    #   => BUILD_STATIC is enough for darwin
-    is_darwin && sed -i '/FLAGS -static/d' configure.ac
 
     bootstrap
 
