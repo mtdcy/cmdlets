@@ -620,16 +620,16 @@ _cargo_init() {
     #  ** 优先级高的彻底覆盖低优先级的变量参数 **
     unset RUSTFLAGS
 
-    case "$_TARGET_NAME" in
-        darwin)
+    case "$_TARGET" in
+        *-darwin*)
             # rustc use aarch64 instead of arm64 for macos
             CARGO_BUILD_TARGET="$(sed 's/arm64/aarch64/' <<< "$(uname -m)-apple-darwin")"
             ;;
-        cygwin)
+        *-cygwin*)
             # target not ready
             CARGO_BUILD_TARGET="$(uname -m)-pc-cygwin"
             ;;
-        windows)
+        *-windows*)
             # win32
             #  *-windows-msvc => ucrt => vcruntime140.dll api-ms-win-crt-*.dll
             #  *-windows-gnu => msvcrt
@@ -639,9 +639,11 @@ _cargo_init() {
                 CARGO_BUILD_TARGET="$(uname -m)-pc-windows-gnu"
             fi
             ;;
-        *)
-            # musl
+        *-linux-musl)
             CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-musl"
+            ;;
+        *)
+            CARGO_BUILD_TARGET="$(uname -m)-unknown-linux-gnu"
             ;;
     esac
 
@@ -650,6 +652,9 @@ _cargo_init() {
     if test -n "$CARGO_BUILD_TARGET" && test -w "$RUSTUP_HOME"; then
         slogcmd rustup target add "$CARGO_BUILD_TARGET"
     fi
+
+    # error: unable to parse target query 'x86_64-unknown-linux-gnu': UnknownOperatingSystem
+    is_true CMDLET_ZIG && export CRATE_CC_NO_DEFAULTS=1 || true
 
     export CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
 
@@ -758,6 +763,9 @@ cargo.setup() {
         case "$x" in
             pcre2)
                 export PCRE2_SYS_STATIC=1
+                export PCRE2_8_NO_PKG_CONFIG=1
+                export PCRE2_8_LIB_DIR="$PREFIX/lib"
+                export PCRE2_8_INCLUDE_DIR="$PREFIX/include"
                 ;;
             libgit2)
                 export LIBGIT2_NO_VENDOR=1
@@ -770,6 +778,10 @@ cargo.setup() {
                 ;;
         esac
     done
+
+    # force pkg-config
+    export X86_64_UNKNOWN_LINUX_GNU_PKG_CONFIG="$PKG_CONFIG"
+    export PKG_CONFIG_ALLOW_CROSS=1
 }
 
 cargo.build() {
