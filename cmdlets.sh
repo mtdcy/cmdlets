@@ -33,21 +33,22 @@ PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_REPO
 
 # detect architecture
-if test -z "$ARCH"; then
-    case "$(uname -s)" in
-        Darwin)
-            ARCH="$(uname -m)-apple-darwin"
-            ;;
-        Linux)
-            ARCH="$(uname -m)-linux-gnu"
-            ;;
-        CYGWIN*)
-            ARCH="$(uname -m)-pc-cygwin"
-            unset PREBUILTS # use root /
-            NO_INSTALL=true # no install and no alias
-            ;;
-    esac
-fi
+test -n "$ARCH" || case "$OSTYPE" in
+    darwin*)
+        ARCH="$(uname -m)-apple-darwin"
+        ;;
+    cygwin*)
+        ARCH="$(uname -m)-pc-cygwin"
+        unset PREBUILTS # use root /
+        NO_INSTALL=true # no install and no alias
+        ;;
+    linux-musl)
+        ARCH="$(uname -m)-linux-musl"
+        ;;
+    *)
+        ARCH="$(uname -m)-linux-gnu"
+        ;;
+esac
 
 # constants
 CLI="$0"
