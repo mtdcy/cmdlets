@@ -496,7 +496,7 @@ _init_target() {
     IFS=' :-()' read -r -a _TARGET_VARS < <({
         "$CC" -v 2>&1 | grep -E "Target:|Thread model:" | cut -d':' -f2
 
-        echo "#include <stddef.h>" > $TEMPDIR/features.c
+        echo "#include <stdio.h>" > $TEMPDIR/features.c
         "$CC" -dM -E $TEMPDIR/features.c | grep -oE "$(
             IFS='|'
             echo "${_INTERESTED_MACROS_[*]}"
