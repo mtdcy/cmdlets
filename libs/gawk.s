@@ -32,7 +32,7 @@ libs_build() {
     # refer to: https://github.com/macports/macports-ports/blob/master/lang/gawk/Portfile
     is_darwin && sed -i 's:-Xlinker -no_pie::' configure
 
-    libs.requires readline mpfr
+    #libs.requires readline mpfr
 
     # local support/regex.h first (libgnurx also provides regex.h)
     sed -i support/regex.c \
@@ -98,7 +98,7 @@ libs_build() {
     cmdlet.install gawk gawk awk
 
     # visual verify
-    cmdlet.verify -- gawk
+    cmdlet.verify gawk
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
