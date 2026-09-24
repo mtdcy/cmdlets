@@ -1154,15 +1154,24 @@ _deps_init() {
     local libs
     if test -s "$_DEPS_FILE"; then
         # update dependencies
-        while IFS='/.' read -r _ libs _; do
+        while IFS='/' read -r _ libs _; do
+            libs=${libs%.s} # remove suffix .s
+
             sed -i "/^$libs:/d" "$_DEPS_FILE"
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
-        done < <( find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s")
+        done < <(
+            find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s"
+            find libs -maxdepth 2 -type f -newer "$_DEPS_FILE" -name "RULES"
+        )
     else
         # write dependencies
-        while IFS='/.' read -r _ libs _; do
+        while IFS='/' read -r _ libs _; do
+            libs=${libs%.s} # remove suffix .s
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
-        done < <( find libs -maxdepth 1 -type f -name "*.s")
+        done < <(
+            find libs -maxdepth 1 -type f -name "*.s"
+            find libs -maxdepth 2 -type f -name "RULES"
+        )
     fi
     export _DEPS_READY=1
 }
@@ -1550,7 +1559,9 @@ _git_ls_changed() {
     # is tag point at HEAD?
     [ "$OLDHEAD" = "$(git rev-parse HEAD)" ] && OLDHEAD="HEAD~1" || true
 
-    while IFS='/.' read -r _ libs _; do
+    while IFS='/' read -r _ libs _; do
+        libs="${libs%.s}"
+
         [ "$libs" = archived ] && continue
         list+=("${libs%.s}")
     done < <( git diff --name-only --diff-filter=AMR -M "$OLDHEAD" HEAD | grep -E "^libs/")
