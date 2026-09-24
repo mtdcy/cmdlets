@@ -46,7 +46,8 @@ libs_args=(
     --without-bash-malloc
 )
 
-is_darwin || libs_args+=(--enable-static-link)
+# always build as static except macOS or zig (clang)
+is_clang || libs_args+=(--enable-static-link)
 
 # fix 'error: cannot guess build type'
 is_darwin || libs_args+=(--build="$( uname -m)-unknown-linux-gnu")
