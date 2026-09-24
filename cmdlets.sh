@@ -2,9 +2,11 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.1.1
+VERSION=1.2.0
 
 # Changes:
+#  1.2.0    - 20260924      - set arch to linux-gnu by default
+#  1.1.2    - 20260924      - windows/cygwin support
 #  1.1.1    - 20260822      - 稳定性优化和日志美化
 #  1.1.0    - 20260821      - new stable release
 #  1.0.8    - 20260820      - fix bugs
@@ -32,21 +34,22 @@ PREBUILTS="${CMDLETS_PREBUILTS:-prebuilts}"
 unset CMDLETS_ARCH CMDLETS_PREBUILTS CMDLETS_REPO
 
 # detect architecture
-if test -z "$ARCH"; then
-    case "$(uname -s)" in
-        Darwin)
-            ARCH="$(uname -m)-apple-darwin"
-            ;;
-        Linux)
-            ARCH="$(uname -m)-linux-gnu"
-            ;;
-        CYGWIN*)
-            ARCH="$(uname -m)-pc-cygwin"
-            unset PREBUILTS # use root /
-            NO_INSTALL=true # no install and no alias
-            ;;
-    esac
-fi
+test -n "$ARCH" || case "$OSTYPE" in
+    darwin*)
+        ARCH="$(uname -m)-apple-darwin"
+        ;;
+    cygwin*)
+        ARCH="$(uname -m)-pc-cygwin"
+        unset PREBUILTS # use root /
+        NO_INSTALL=true # no install and no alias
+        ;;
+    linux-musl)
+        ARCH="$(uname -m)-linux-musl"
+        ;;
+    *)
+        ARCH="$(uname -m)-linux-gnu"
+        ;;
+esac
 
 # constants
 CLI="$0"
@@ -189,18 +192,23 @@ do_unzip() {
 }
 
 # dump system info
-do_system() {
-    cat << EOF
-$NAME $VERSION
+do_dump() {
+    echo -e "$NAME $VERSION"
+    echo -e "---"
 
----
+    if test -f /etc/os-release; then
+        . /etc/os-release
+        echo -e "  OS\t: $ID $VERSION ($(uname -m))"
+    elif command -v sw_vers > /dev/null; then
+        echo -e "  OS\t: $(sw_vers --productName) $(sw_vers --productVersion) $(sw_vers --buildVersion) ($(uname -m))"
+    fi
 
-curl: $(curl --version | head -n1) ${CURL_OPTS[*]}
-ln  : $(ln --version 2> /dev/null || echo "bsd version")
-sed : $(sed --version 2> /dev/null | head -n1 || echo "bsd version")
-tar : $(tar --version | head -n1)
-grep: $(grep --version | head -n1)
-EOF
+    echo -e "  ln  \t: $(ln --version 2> /dev/null  | head -n1 || echo "bsd version")"
+    echo -e "  sed \t: $(sed --version 2> /dev/null | head -n1 || echo "bsd version")"
+    echo -e "  awk \t: $(awk --version | head -n1)"
+    echo -e "  grep\t: $(grep --version | head -n1)"
+    echo -e "  curl\t: $(curl --version | head -n1) ${CURL_OPTS[*]}"
+    echo -e "  tar \t: $(tar --version | head -n1)"
 }
 
 # search manifest for package
@@ -706,13 +714,13 @@ do_main() {
             do_bootstrap
             ;;
         version)
-            echo "$VERSION"
+            echo "$NAME $VERSION"
             ;;
         usage | help)
             usage
             ;;
         info)
-            do_system
+            do_dump
             ;;
         *)
             done=0
