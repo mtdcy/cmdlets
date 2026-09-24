@@ -190,18 +190,23 @@ do_unzip() {
 }
 
 # dump system info
-do_system() {
-    cat << EOF
-$NAME $VERSION
+do_dump() {
+    echo -e "$NAME $VERSION"
+    echo -e "---"
 
----
+    if test -f /etc/os-release; then
+        . /etc/os-release
+        echo -e "  OS\t: $ID $VERSION ($(uname -m))"
+    elif command -v sw_vers > /dev/null; then
+        echo -e "  OS\t: $(sw_vers --productName) $(sw_vers --productVersion) $(sw_vers --buildVersion) ($(uname -m))"
+    fi
 
-curl: $(curl --version | head -n1) ${CURL_OPTS[*]}
-ln  : $(ln --version 2> /dev/null || echo "bsd version")
-sed : $(sed --version 2> /dev/null | head -n1 || echo "bsd version")
-tar : $(tar --version | head -n1)
-grep: $(grep --version | head -n1)
-EOF
+    echo -e "  ln  \t: $(ln --version 2> /dev/null  | head -n1 || echo "bsd version")"
+    echo -e "  sed \t: $(sed --version 2> /dev/null | head -n1 || echo "bsd version")"
+    echo -e "  awk \t: $(awk --version | head -n1)"
+    echo -e "  grep\t: $(grep --version | head -n1)"
+    echo -e "  curl\t: $(curl --version | head -n1) ${CURL_OPTS[*]}"
+    echo -e "  tar \t: $(tar --version | head -n1)"
 }
 
 # search manifest for package
@@ -707,13 +712,13 @@ do_main() {
             do_bootstrap
             ;;
         version)
-            echo "$VERSION"
+            echo "$NAME $VERSION"
             ;;
         usage | help)
             usage
             ;;
         info)
-            do_system
+            do_dump
             ;;
         *)
             done=0
