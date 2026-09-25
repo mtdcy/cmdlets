@@ -14,9 +14,9 @@ libs_args=(
     --with-regex=pcre2
 )
 
-libs_build() {
-    libs.requires ncurses
+is_xbuild && libs_args+=(--host=$(uname -m)-linux-gnu)
 
+libs_build() {
     configure
 
     make
