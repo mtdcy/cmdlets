@@ -918,7 +918,7 @@ _pkgfile_ready() {
 
     local hash0 hash1
 
-    hash0="$(_git_ls_hash "$1")"
+    hash0="$(_git_ls_hash)"
     hash1=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "commit_hash=[0-9a-fA-F]+")
 
     [[ "$hash1" =~ "=$hash0"$ ]] && return 0 || return 1
@@ -945,6 +945,8 @@ _supported_targets() {
 #   _load zlib
 #   _load ffmpeg/ffmpeg4.s  # archived cmdlets
 _load() {
+    local name="${1##*/}"
+
     _init_target
 
     # load libs helpers
@@ -952,20 +954,19 @@ _load() {
 
     unset "${!libs_@}"
 
-    local name="${1##*/}"
-    local rule="libs/$1.s"
+    _LOAD_FILE="$_TOPDIR/libs/$1.rules"
 
-    if test -f "$rule"; then
-        export _LOAD_MODE=plain
+    if test -f "$_LOAD_FILE"; then
+        _LOAD_MODE=plain
     else
-        rule="libs/$1/RULES"
-        export _LOAD_MODE=complex
+        _LOAD_FILE="$_TOPDIR/libs/$1/RULES"
+        _LOAD_MODE=complex
     fi
 
-    test -f "$rule" || die "$1 rules file not found"
+    test -f "$_LOAD_FILE" || die "$1 rules file not found"
 
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$rule" > "$TEMPDIR/$name"
+    sed '/__END__/Q' "$_LOAD_FILE" > "$TEMPDIR/$name"
 
     . "$TEMPDIR/$name" || return $?
 
@@ -980,9 +981,9 @@ _load() {
     if is_musl; then
         compat+=(libargp musl-obstack musl-fts)
     fi
-    if test -n "${compat[*]}"; then
-        is_listed "$libs_name" "${compat[@]}" || libs_deps+=("${compat[@]}")
-    fi
+
+    # append compat layer libraries
+    test -z "${compat[*]}" || is_listed "$libs_name" "${compat[@]}" || libs_deps+=("${compat[@]}")
 
     # dedup
     IFS=' ' read -r -a libs_deps < <(printf "%s\n" "${libs_deps[@]}" | sort -u | xargs)
@@ -990,11 +991,11 @@ _load() {
     # supported targets
     IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}")
 
-    sed '1,/__END__/d' "$rule" > "$TEMPDIR/$libs_name.patch"
+    sed '1,/__END__/d' "$_LOAD_FILE" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
     mkdir -p "$_TARGET_LOGFILES"
-    export _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
+    _LOGFILE="$_TARGET_LOGFILES/$libs_name.log"
 }
 
 # load libs_deps
@@ -1013,9 +1014,9 @@ _smart_patch() {
 }
 
 # prepare source code or die
-#  input: name
+#  input: <libs name>
 _prepare() {
-    slogi $_EMOJI_FILE "Prepare ${_COLOR_NC}libs/$1.s"
+    slogi $_EMOJI_FILE "Prepare ${_COLOR_NC}$1"
 
     # prepare workdir and enter it
     local workdir="$_TARGET_WORKDIR/$libs_name-$libs_ver"
@@ -1088,9 +1089,6 @@ _compile() {
 
         set -eo pipefail
 
-        # find latest commit hash
-        _LIBS_COMMIT_HASH="$(_git_ls_hash "$1")"
-
         _load "$1" || die "load $1 failed."
 
         test -s "$_LOGFILE" && cp -f "$_LOGFILE" "$_LOGFILE.old" || true
@@ -1116,6 +1114,9 @@ _compile() {
         # read pkgbuild before clear
         _LIBS_PKGBUILD=$(grep " $libs_name/.*@$libs_ver" "$_TARGET_MANIFEST" | tail -n1 | grep -oE "build=[0-9]+")
         test -n "$_LIBS_PKGBUILD" || _LIBS_PKGBUILD="build=0"
+
+        # find latest commit hash
+        _LIBS_COMMIT_HASH="$(_git_ls_hash)"
 
         # v2: clear pkgfiles
         rm -rf "$PREFIX/$libs_name"
@@ -1146,8 +1147,8 @@ _deps_init() {
     _init_target
 
     # envs
-    export _DEPS_FILE="$_TARGET_WORKDIR/.deps"
-    export _DEPS_STATUS_MISSING="$_TARGET_WORKDIR/.deps_missed"
+    _DEPS_FILE="$_TARGET_WORKDIR/.deps"
+    _DEPS_STATUS_MISSING="$_TARGET_WORKDIR/.deps_missed"
 
     test -f "$_DEPS_FILE" || true > "$_DEPS_FILE"
 
@@ -1155,25 +1156,26 @@ _deps_init() {
     if test -s "$_DEPS_FILE"; then
         # update dependencies
         while IFS='/' read -r _ libs _; do
-            libs=${libs%.s} # remove suffix .s
+            libs=${libs%.rules} # remove rules suffix
 
             sed -i "/^$libs:/d" "$_DEPS_FILE"
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <(
-            find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.s"
+            find libs -maxdepth 1 -type f -newer "$_DEPS_FILE" -name "*.rules"
             find libs -maxdepth 2 -type f -newer "$_DEPS_FILE" -name "RULES"
         )
     else
         # write dependencies
         while IFS='/' read -r _ libs _; do
-            libs=${libs%.s} # remove suffix .s
+            libs=${libs%.rules} # remove rules suffix
             echo "$libs: $(_load_deps "$libs")" >> "$_DEPS_FILE"
         done < <(
-            find libs -maxdepth 1 -type f -name "*.s"
+            find libs -maxdepth 1 -type f -name "*.rules"
             find libs -maxdepth 2 -type f -name "RULES"
         )
     fi
-    export _DEPS_READY=1
+
+    _DEPS_READY=1
 }
 
 depends() {
@@ -1288,8 +1290,11 @@ _deps_fetch() {
 
     # check dependencies: libraries updated or not ready
     for x in "${deps[@]}"; do
+        # deps missing => fetch
         test -e "$PREFIX/.$x.d" || pkgfiles+=("$x")
-        [ "$_TOPDIR/libs/$x.s" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
+
+        # deps updated => force rebuild
+        [ "$_LOAD_FILE" -nt "$PREFIX/.$x.d" ] && rm -f "$PREFIX/.$x.d" || true
     done
 
     test -z "${pkgfiles[*]}" || pkgfiles "${pkgfiles[@]}" || true # ignore errors
@@ -1428,7 +1433,7 @@ info() {
     _load "$1"
 
     if test -z "$libs_desc"; then
-        libs_desc="$(grep "^#" "libs/$1.s" | grep -vE "vim:|#!" | head -n1 | sed 's/[# ]*//')"
+        libs_desc="$(grep "^#" "$_LOAD_FILE" | grep -vE "vim:|#!" | head -n1 | sed 's/[# ]*//')"
     fi
 
     slogi "$libs_name: $libs_desc"
@@ -1537,13 +1542,10 @@ _git_ls_local() {
         ! git diff --name-only --exit-code "$HEAD" "$(git rev-parse --abbrev-ref --symbolic-full-name @{u})"
 }
 
-# print last commit of file
-# input: <lib name> ...
-# output: multiple lines of short commit hash
+# print the last short commit hash of rules file
+# notes: MUST _load before _git_ls_hash
 _git_ls_hash() {
-    for x in "$@"; do
-        git log -1 --format="%h" -- "libs/$x.s"
-    done
+    git log -1 --format="%h" -- "$_LOAD_FILE"
 }
 
 # list changed cmdlets for target
@@ -1560,10 +1562,10 @@ _git_ls_changed() {
     [ "$OLDHEAD" = "$(git rev-parse HEAD)" ] && OLDHEAD="HEAD~1" || true
 
     while IFS='/' read -r _ libs _; do
-        libs="${libs%.s}"
+        libs="${libs%.rules}"
 
         [ "$libs" = archived ] && continue
-        list+=("${libs%.s}")
+        list+=("$libs")
     done < <( git diff --name-only --diff-filter=AMR -M "$OLDHEAD" HEAD | grep -E "^libs/")
     # --diff-filter=AM : filter only added or modified
 
@@ -1619,10 +1621,11 @@ distclean() {
 update() {
     _load "$1"
 
-    slogi "$_EMOJI_RUN" ">>>>> update $1 $libs_ver => $2 <<<<<"
-    sed -i "libs/$1.s" \
+    slogi "$_EMOJI_RUN" ">>>>> update $1 $libs_ver-${libs_rev:-1} => $2 <<<<<"
+
+    sed -i "$_LOAD_FILE" \
         -e "/libs_ver=/,/libs_build/s/$libs_ver/$2/g" \
-        -e "/libs_sha=/s/=.*$/=/" || die
+        -e "/libs_sha=/s/=.*$/=/" || die "update $1 failed."
 
     # load again
     _load "$1"
@@ -1631,11 +1634,11 @@ update() {
     _curl_urls "$(_url_file "$libs_url")" "${libs_url[@]}" || die "No update found"
 
     IFS=' ' read -r sha _ < <(sha256sum "$(_url_file "$libs_url")")
-    sed "s/libs_sha=.*$/libs_sha=$sha/" -i "libs/$1.s"
+    sed "s/libs_sha=.*$/libs_sha=$sha/" -i "$_LOAD_FILE"
 
     # set libs_rev - cmdlet revision (packaging number)
     #  - _LIBS_PKGBUILD : real packaging number
-    sed -i "libs/$1.s" \
+    sed -i "$_LOAD_FILE" \
         -e '/^libs_rev=.*$/d' \
         -e '/^libs_ver=/a libs_rev=1'
 

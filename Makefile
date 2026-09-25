@@ -43,7 +43,7 @@ ENVS := CMDLET_NJOBS    \
 SUBDIRS = $(patsubst %/,%,$(dir $(wildcard */)))
 .PHONY: $(SUBDIRS)
 
-%: libs/%.s
+%: libs/%.rules
 	@$(MAKE) runc OPCODE="$(SHELL) libs.sh build $@" \
 		CMDLET_NJOBS=$(or $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),$(shell nproc))
 
