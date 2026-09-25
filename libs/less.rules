@@ -15,8 +15,6 @@ libs_args=(
 )
 
 libs_build() {
-    libs.requires ncurses
-
     configure
 
     make
