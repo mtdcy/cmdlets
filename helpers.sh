@@ -163,6 +163,7 @@ _libs_init() {
     for x in "${libs_deps[@]}"; do
         case "$x" in
             #glib)   libs.requires -DG_INTL_STATIC_COMPILATION  ;;
+            ncurses) libs.requires -DNCURSES_STATIC ;;
         esac
     done
 
