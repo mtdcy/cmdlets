@@ -72,8 +72,8 @@ if test -n "$_ZIG_TARGET"; then
     esac
 
     unset cpp
-    for x in "$@"; do
-        case "$x" in
+    for arg in "$@"; do
+        case "$arg" in
             -E | --help | -help | -print-* | -dump* | --version)
                 cpp=true
                 ;;
@@ -101,20 +101,35 @@ if test -n "$_ZIG_TARGET"; then
     # force use system linker
     #export ZIG_SYSTEM_LINKER_HACK=1
 
-    unset flags
-    #test -n "$cpp" || flags+=(-flto) #=> ld.lld: warning: ./libreadline.a: archive member 'readline.o' is neither ET_REL nor LLVM bitcode
-
-    # build fontconfig with zig cc -E fails:
-    #  zig cc -E 太严格，无法像 gcc -E 一样输出无法识别的字符
-    #test -n "$cpp" && test -n "$has_source_files" && flags+=(-x assembler-with-cpp) || true
+    # filter args
+    args=()
+    for arg in "$@"; do
+        case "$arg" in
+            # filter out unsupported args
+            -Wl,--fix-cortex-a53-843419) ;;
+            # libc of the specified target requires dynamic linking
+            -static | -Wl,-static)
+                [[ "$_ZIG_TARGET" = *-linux-gnu* ]] || args+=("$arg")
+                ;;
+            # openh264 + zig cc: error: unknown CPU: 'armv8'
+            -march=armv8-a)
+                args+=("-mcpu=generic")
+                ;;
+            *)
+                args+=("$arg")
+                ;;
+        esac
+    done
+    set -- "${args[@]}"
+    unset args
 
     case "$NAME" in
         gcc | cc | as | ld)
-            EXE=(zig cc -target $_ZIG_TARGET "${flags[@]}")
+            EXE=(zig cc -target $_ZIG_TARGET)
             ;;
 
         g++ | c++)
-            EXE=(zig c++ -target $_ZIG_TARGET "${flags[@]}")
+            EXE=(zig c++ -target $_ZIG_TARGET)
             ;;
 
         # no zig strip
@@ -135,9 +150,6 @@ if test -n "$_ZIG_TARGET"; then
             EXE=(zig $NAME) # no -target
             ;;
     esac
-
-    # openh264 + zig cc: error: unknown CPU: 'armv8'
-    [[ "$*" =~ "-march=armv8-a" ]] && set -- "${@//-march=armv8-a/-mcpu=generic}"
 else
     CONFIG="$_WORKDIR/$_TARGET.cfg"
 
