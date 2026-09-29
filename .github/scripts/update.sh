@@ -9,16 +9,28 @@ trap 'rm -fv $commits' EXIT
 mkdir -pv packages
 true > "$commits"  # create empty file
 
-for lib in libs/*.s; do
-    IFS='/.' read -r _ lib _ <<< "$lib"
+cmdlets=()
+
+while IFS='/' read -r _ libs _; do
+    libs=${libs%.rules} # remove rules suffix
 
     # ignores
-    [[ "$lib" =~ ^_ || "$lib" == ALL ]] && continue
+    [[ "$libs" == ALL ]] && continue
+
+    cmdlets+=("$libs")
+done < <(
+    find libs -maxdepth 1 -type f -name "*.rules"
+    find libs -maxdepth 2 -type f -name "RULES"
+)
+
+for libs in "${cmdlets[@]}"; do
+    # ignores
+    [[ "$libs" == ALL ]] && continue
 
     # update
     (   
         . libs.sh
-        _load "$lib"
+        _load "$libs"
 
         test -n "$libs_ver" || exit
         test -z "$libs_stable" || exit
@@ -26,29 +38,29 @@ for lib in libs/*.s; do
         # version in url?
         echo "$libs_url" | grep -qF "$libs_ver" || exit
 
-        trap 'git checkout libs/$lib.s' EXIT
+        trap "git checkout $_LOAD_FILE" EXIT
         trap 'exit 1' INT # ctrl-c
 
         IFS='.-' read -r m n r _ <<< "$libs_ver"
 
         if test -n "$r"; then
             newver="$m.$n.$((r + 1))"
-            bash libs.sh update "$lib" "$newver" || {
+            bash libs.sh update "$libs" "$newver" || {
                 test -z "$libs_stable_minor" || exit
                 # try update minor version
                 newver="$m.$((n + 1)).0"
-                bash libs.sh update "$lib" "$newver" || exit
+                bash libs.sh update "$libs" "$newver" || exit
             }
         elif test -n "$n"; then
             newver="$m.$((n + 1))"
-            bash libs.sh update "$lib" "$newver" || exit
+            bash libs.sh update "$libs" "$newver" || exit
         else
             exit
         fi
         echo "" # new line
 
-        git add "libs/$lib.s"
-        echo "updated $lib => $newver" >> "$commits"
+        git add "$_LOAD_FILE"
+        echo "updated $libs => $newver" >> "$commits"
     ) || true
 
     echo "" # new line
