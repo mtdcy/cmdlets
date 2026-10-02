@@ -1,12 +1,13 @@
 # Run arbitrary commands when files change
 
 # shellcheck disable=SC2034
+libs_targets=(linux darwin)
+
 libs_lic=ISC
-libs_ver=5.9
-libs_rev=1
-libs_url=https://eradman.com/entrproject/code/entr-5.9.tar.gz
-libs_sha=0ef2ce7db728167844a91904944cd07c7ccc6fd3041b849cad861224d106a845
-libs_dep=( )
+libs_ver=5.8
+libs_url=https://eradman.com/entrproject/code/entr-5.8.tar.gz
+libs_sha=dc9a2bdc556b2be900c1d8cdf432de26492de5af3ffade000d4bfd97f3122bfb
+libs_dep=()
 
 libs_args=(
     --disable-dependency-tracking
@@ -27,7 +28,7 @@ libs_build() {
 
     cmdlet.install entr
 
-    cmdlet.verify -- entr
+    cmdlet.verify entr
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
