@@ -5,10 +5,10 @@ libs_stable_minor=1 # update revision only
 
 # shellcheck disable=SC2034,SC2154
 libs_lic="BSD-2-Clause"
-libs_ver=1.30.5
+libs_ver=1.30.6
 libs_rev=1
 libs_url=https://nginx.org/download/nginx-$libs_ver.tar.gz
-libs_sha=6c20565aa2325cb82216ae804f4a4ff1875179014759a381c42ddc8e11c4906d
+libs_sha=3cf46f5ed7504d460125866b7bea99fb357f31d887e2e63b35503310e9b8b6c8
 
 libs_deps=(zlib pcre2 libxcrypt openssl libxml2 libxslt libgd)
 
