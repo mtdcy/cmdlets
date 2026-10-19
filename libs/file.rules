@@ -83,7 +83,7 @@ libs_build() {
         # Linux: make an entry point
         cat << EOF > file
 #!/bin/sh
-DIR=\$(dirname "\$0")/../$MAGIC_PATH
+DIR=\$(realpath "\$0" | xargs dirname)/../$MAGIC_PATH
 MAGIC="\$DIR/magic.mgc" exec "\$DIR/file" "\$@"
 EOF
         chmod a+x file
