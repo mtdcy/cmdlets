@@ -6,7 +6,7 @@ libs_stable_minor=1 # update revision only
 # shellcheck disable=SC2034,SC2154
 libs_lic="BSD-2-Clause"
 libs_ver=1.30.6
-libs_rev=1
+libs_rev=2
 libs_url=https://nginx.org/download/nginx-$libs_ver.tar.gz
 libs_sha=3cf46f5ed7504d460125866b7bea99fb357f31d887e2e63b35503310e9b8b6c8
 
@@ -122,6 +122,8 @@ libs_build() {
     sed -i '/gcc)/i unknown) . auto/cc/gcc;;' auto/cc/conf
     # fix autotest extension
     sed -i "s%^NGX_AUTOTEST=.*$%NGX_AUTOTEST=\$NGX_OBJS/autotest$_BINEXT%" auto/init
+    # fix auto/include: add include paths
+    sed -i "s%\$CC%& $CFLAGS%" auto/include
 
     # unix style libraries
     is_cygwin && sed -e 's/win32/xxx/' \
