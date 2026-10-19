@@ -14,13 +14,17 @@ libs_args=(
 libs_build() {
     pushd gopls || die
 
-    go build && cmdlet ./gopls
+    go build
+
+    cmdlet.install ./gopls
 
     popd || die
 
     pushd cmd/goimports || die
 
-    go build && cmdlet ./goimports
+    go build
+
+    cmdlet.install ./goimports
 
     popd || die
 
