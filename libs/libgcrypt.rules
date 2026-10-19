@@ -8,20 +8,22 @@ libs_sha=236c50d0d07743cf57ceafe8e044dfd5d8ff38e4dc04a4313814a97d989dfcc3
 libs_dep=(libxml2 libgpg-error)
 
 libs_args=(
-    --disable-option-checking
-    --disable-dependency-tracking
-    --disable-silent-rules
+    # static only
+    --enable-static --disable-shared
 
     --disable-doc
 
-    # static only
-    --disable-shared
-    --enable-static
+    # security
+    --enable-no-exec-stack
+    --enable-random=getentropy
 )
 
 is_arm64 && libs_args+=(--disable-asm)
 
 libs_build() {
+    # ld.lld: error: undefined symbol: __ubsan_handle_shift_out_of_bounds
+    is_glibc && libs.requires -fno-sanitize=all -fno-sanitize-trap=all
+
     configure
 
     make
@@ -32,7 +34,7 @@ libs_build() {
     cmdlet.install src/dumpsexp
     cmdlet.install src/mpicalc
 
-    cmdlet.verify -- hmac256
+    cmdlet.verify hmac256
 }
 
 # vim:ft=sh:syntax=bash:ff=unix:fenc=utf-8:et:ts=4:sw=4:sts=4
