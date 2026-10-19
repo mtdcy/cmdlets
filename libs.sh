@@ -966,7 +966,7 @@ _load() {
     test -f "$_LOAD_FILE" || die "$1 rules file not found"
 
     # sed: delete all lines after __END__
-    sed '/__END__/Q' "$_LOAD_FILE" > "$TEMPDIR/$name"
+    sed '/^__END__/Q' "$_LOAD_FILE" > "$TEMPDIR/$name"
 
     . "$TEMPDIR/$name" || return $?
 
@@ -991,7 +991,7 @@ _load() {
     # supported targets
     IFS=' ' read -r -a libs_targets < <( _supported_targets "${libs_targets[@]}")
 
-    sed '1,/__END__/d' "$_LOAD_FILE" > "$TEMPDIR/$libs_name.patch"
+    sed '1,/^__END__/d' "$_LOAD_FILE" > "$TEMPDIR/$libs_name.patch"
 
     # prepare logfile
     mkdir -p "$_TARGET_LOGFILES"
