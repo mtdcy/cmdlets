@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2034
 libs_lic="BSD-2-Clause"
-libs_ver=2.6.0
+libs_ver=2.7.0
+libs_rev=1
 libs_url=https://github.com/cisco/openh264/archive/v$libs_ver.tar.gz
-libs_sha=558544ad358283a7ab2930d69a9ceddf913f4a51ee9bf1bfb9e377322af81a69
+libs_sha=5178775c8b440073e70920e97d195efff721c0e56d0a78cc82c919e95d54924d
 
 libs_args=(
     PREFIX="'$PREFIX'"
