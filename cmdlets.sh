@@ -2,9 +2,10 @@
 #
 # shellcheck disable=SC2155
 
-VERSION=1.2.0
+VERSION=1.2.1
 
 # Changes:
+#  1.2.1    - 20261025      - fix do_update
 #  1.2.0    - 20260924      - set arch to linux-gnu by default
 #  1.1.2    - 20260924      - windows/cygwin support
 #  1.1.1    - 20260822      - 稳定性优化和日志美化
@@ -324,7 +325,7 @@ do_fetch() {
 
     # cmdlet v2: name
     _v2() {
-        IFS='@' read -r pkgfile pkgvern <<< "${1%.tar.*}"
+        IFS='@' read -r pkgfile pkgvern <<< "$1"
         test -n "$pkgvern" || pkgvern="latest"
 
         IFS='/' read -r pkgname pkgfile <<< "$pkgfile"
@@ -343,17 +344,18 @@ do_fetch() {
         IFS='@' read -r _ pkgvern <<< "${pkgfile%.tar.*}"
     }
 
-    # cmdlet v3/manifest: name pkgfile sha pkgbuild
+    # cmdlet v3/manifest: name pkgfile sha pkgbuild ...
     _v3() {
-        # must update target name, e.g: bash@3.2 bash32/bash@3.2.57.tar.gz ...
-        IFS=' ' read -r target pkgfile _ pkgbuild _ < <( _search "${1%.tar.*}" --pkgfile | tail -n 1)
+        # must update target name here, e.g: bash@3.2 bash32/bash@3.2.57.tar.gz ...
+        IFS=' ' read -r target pkgfile _ pkgbuild _ < <( _search "$1" --pkgfile | tail -n 1)
         test -n "$pkgfile" || return 1
 
         info3 "📦 Fetch $1 ($pkgfile)"
         do_unzip "$pkgfile" || return 2
 
         # have to update pkgname here
-        IFS='/@' read -r pkgname pkgfile pkgvern <<< "${pkgfile%.tar.*}"
+        IFS='/' read -r pkgname pkgfile <<< "${pkgfile%.tar.*}"
+        IFS='@' read -r pkgfile pkgvern <<< "$pkgfile"
 
         # caveats: v3 only
         true > "$caveats"
@@ -572,8 +574,8 @@ do_update_int() {
     done
 
     while IFS=' ' read -r target pkgvern curbuild; do
-        # name pkgfile sha build
-        IFS=' ' read -r _ pkgfile _ newbuild < <( _search "$target" --pkgfile | tail -n 1)
+        # name pkgfile sha build ...
+        IFS=' ' read -r _ pkgfile _ newbuild _ < <( _search "$target" --pkgfile | tail -n 1)
 
         if test -z "$pkgfile"; then
             info "⚠️ No update found for $target"
@@ -581,12 +583,12 @@ do_update_int() {
             info "🚀 Force update $target => $pkgfile $newbuild"
             do_fetch "$target" --install
         elif [[ "$pkgfile" = *"@$pkgvern.tar."* ]] && [[ "$curbuild" = "$newbuild" ]]; then
-            info "🟢 No update for $target"
+            true
         else
             info "🚀 Update $target => $pkgfile $newbuild"
             do_fetch "$target" --install
         fi
-    done < <( sort "$CMDLETS_LIST")
+    done < <(sort "$CMDLETS_LIST")
 }
 
 do_fetch_manifest() {
