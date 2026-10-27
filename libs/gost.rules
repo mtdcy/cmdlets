@@ -2,10 +2,10 @@
 
 # shellcheck disable=SC2034
 libs_lic='MIT'
-libs_ver=3.3.1
+libs_ver=3.3.2
 libs_rev=1
-libs_url=https://github.com/go-gost/gost/archive/refs/tags/v3.3.1.tar.gz
-libs_sha=3b5241edbc69d9578a37b3e950cf02ca7a7dc2aa2f688457affc63d966b93012
+libs_url=https://github.com/go-gost/gost/archive/refs/tags/v3.3.2.tar.gz
+libs_sha=838674347bfd7a7df43cab5ca25a21992a247fe50fe61e9a12497d5a1699a3d5
 libs_dep=()
 
 # configure args
