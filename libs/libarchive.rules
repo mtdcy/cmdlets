@@ -2,15 +2,15 @@
 # shellcheck disable=SC2034
 libs_desc="Multi-format archive and compression library"
 libs_lic='BSD-2-Clause'
-libs_ver=3.8.10
-libs_rev=2
+libs_ver=3.8.11
+libs_rev=1
 libs_url=https://www.libarchive.org/downloads/libarchive-$libs_ver.tar.xz
-libs_sha=56cad765459d5ee25a3b761f90c47d99379d28297fbfb72d908880d6b875fb96
+libs_sha=a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2
 
 libs_deps=(lz4 xz zstd bzip2 expat zlib lzo libiconv pcre2)
 # includes all kinds of compressed files
 
-# since 3.8.10:
+# since 3.8.11:
 #  error: undefined reference to `blake2sp_final'
 #   fix with --without-libb2
 
