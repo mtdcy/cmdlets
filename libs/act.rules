@@ -3,10 +3,10 @@
 # shellcheck disable=SC2034
 libs_name=act
 libs_lic="MIT"
-libs_ver=0.2.93
+libs_ver=0.2.94
 libs_rev=1
 libs_url=https://github.com/nektos/act/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=47a24e03e0ba9f8279dd835b1e334326af486b6046dd7d7915599fa38adc5519
+libs_sha=0e1881bcf1cc9217d1ff8f4c5dba56004a0609502e55b059c0518f4c49153a9a
 
 libs_args=(
 )
