@@ -3,10 +3,10 @@
 
 libs_name=lz4
 libs_lic="BSD-2-Clause"
-libs_ver=1.10.0
-libs_rev=2
+libs_ver=1.11.0
+libs_rev=1
 libs_url=https://github.com/lz4/lz4/releases/download/v$libs_ver/lz4-$libs_ver.tar.gz
-libs_sha=537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
+libs_sha=247e5fa64da5f7b75ee3dd3bed484076396c9ebe8254d9ccf693eb62800c5e26
 libs_dep=()
 
 libs_args=(
