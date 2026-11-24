@@ -2,9 +2,10 @@
 # shellcheck disable=SC2034
 
 libs_lic="BSD|GPLv2"
-libs_ver=1.5.7
+libs_ver=1.6.0
+libs_rev=1
 libs_url=https://github.com/facebook/zstd/releases/download/v$libs_ver/zstd-$libs_ver.tar.gz
-libs_sha=eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3
+libs_sha=2ba599ae2a257976278e7e71e998433a387bfd18aa7b78678229fd5d84f5e9b8
 
 libs_deps=(zlib xz lz4)
 libs_args=(
