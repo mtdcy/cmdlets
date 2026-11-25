@@ -5,10 +5,10 @@
 libs_targets=(! windows)
 
 # shellcheck disable=SC2034,SC2248
-libs_ver=29.10.0
+libs_ver=29.10.1
 libs_rev=1
 libs_url=https://github.com/docker/cli/archive/refs/tags/v$libs_ver.tar.gz
-libs_sha=7b955259e070e839586faff4957ce71484380f3aff5caf519470c1448f9e9192
+libs_sha=64701a1a4a2d3906f43809cd7b8636246e73432715d1fb279c35b18bca0e4b76
 
 compose_ver=5.0.2
 buildx_ver=0.31.1
